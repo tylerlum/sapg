@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 if [ $# -lt 2 ]
 then
     echo "Usage: ./train.sh <checkpoint_dir> <num-policies> [--multi-gpu]"

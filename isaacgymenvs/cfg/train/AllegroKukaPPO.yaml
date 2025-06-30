@@ -36,6 +36,7 @@ params:
 
   config:
     name: ${resolve_default:AllegroKukaPPO,${....experiment}}
+    device_name: ${resolve_default:cuda:0,${....rl_device}}
 #    full_experiment_name: ${.name}
     env_name: rlgpu
     multi_gpu: ${....multi_gpu}

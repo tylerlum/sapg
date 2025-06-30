@@ -1482,8 +1482,9 @@ class AllegroKukaBase(VecTask):
             self.extras["scalars"]["success_tolerance"] = self.success_tolerance
 
     def pre_physics_step(self, actions):
+        actions = actions.to(self.device)
 
-        self.actions = actions.clone().to(self.device)
+        self.actions = actions.clone()
 
         if self.privileged_actions:
             torque_actions = actions[:, :3]

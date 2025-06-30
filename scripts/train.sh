@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 if [ $# -lt 5 ]
 then
     echo "Usage: ./train.sh <task> <experiment_prefix> <num_policies> <num_envs> <wandb_tags> <extra_args>"

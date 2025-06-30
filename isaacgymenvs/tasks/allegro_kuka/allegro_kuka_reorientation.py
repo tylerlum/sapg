@@ -161,7 +161,7 @@ class AllegroKukaReorientation(AllegroKukaBase):
         state_ddict: defaultdict of the form Dict[str, List[Tensor]]
         """
         isaacgym_to_blender_name = {
-            'allegro/iiwa7_link_0': 'link_0',
+            'allegro/iiwa7_base_link': 'link_0',
             'allegro/iiwa7_link_1': 'link_1',
             'allegro/iiwa7_link_2': 'link_2',
             'allegro/iiwa7_link_3': 'link_3',
@@ -170,8 +170,8 @@ class AllegroKukaReorientation(AllegroKukaBase):
             'allegro/iiwa7_link_6': 'link_6',
             'allegro/iiwa7_link_7': 'link_7',
             #'allegro/iiwa7_link_ee': 'link_ee',
-            'allegro/allegro_mount': 'allegro_mount',
-            'allegro/palm_link': 'base_link',
+            # 'allegro/allegro_mount': 'allegro_mount',
+            # 'allegro/palm_link': 'base_link',
             'allegro/index_link_0': 'primary_base',
             'allegro/index_link_1': 'primary_proximal',
             'allegro/index_link_2': 'primary_medial',
