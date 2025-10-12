@@ -1,6 +1,6 @@
 from pathlib import Path
 
-def generate_single_link_hammer_urdf(
+def generate_hammer_urdf(
     filepath: Path,
     handle_length=0.10,
     handle_width=0.05,
@@ -13,7 +13,7 @@ def generate_single_link_hammer_urdf(
     robot_name="cuboidal_hammer",
 ):
     """
-    Generate a URDF of a hammer as a single link with two visuals and collisions.
+    Generate a URDF of a hammer consisting of a handle and head.
 
     handle_length: along +x
     handle_width:  along +y
@@ -22,16 +22,14 @@ def generate_single_link_hammer_urdf(
     head_width: along +x
     head_length: along +y
     """
-    # Offset of head relative to handle center
+    # Distance between centers (no collision)
     x_offset = handle_length / 2 + head_width / 2
-
-    total_mass = handle_mass + head_mass
 
     urdf = f"""<?xml version="1.0"?>
 <robot name="{robot_name}">
 
-  <link name="hammer">
-    <!-- Handle -->
+  <!-- Handle -->
+  <link name="handle">
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
@@ -47,10 +45,16 @@ def generate_single_link_hammer_urdf(
         <box size="{handle_length} {handle_width} {handle_thickness}"/>
       </geometry>
     </collision>
+    <inertial>
+      <mass value="{handle_mass}"/>
+      <inertia ixx="0.0001" iyy="0.0001" izz="0.0001" ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </link>
 
-    <!-- Head -->
+  <!-- Head -->
+  <link name="head">
     <visual>
-      <origin xyz="{x_offset} 0 0" rpy="0 0 0"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
         <box size="{head_width} {head_length} {head_thickness}"/>
       </geometry>
@@ -59,17 +63,23 @@ def generate_single_link_hammer_urdf(
       </material>
     </visual>
     <collision>
-      <origin xyz="{x_offset} 0 0" rpy="0 0 0"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
         <box size="{head_width} {head_length} {head_thickness}"/>
       </geometry>
     </collision>
-
     <inertial>
-      <mass value="{total_mass}"/>
-      <inertia ixx="0.0001" iyy="0.0001" izz="0.0001" ixy="0" ixz="0" iyz="0"/>
+      <mass value="{head_mass}"/>
+      <inertia ixx="0.0002" iyy="0.0002" izz="0.0002" ixy="0" ixz="0" iyz="0"/>
     </inertial>
   </link>
+
+  <!-- Joint connecting handle and head -->
+  <joint name="handle_to_head" type="fixed">
+    <parent link="handle"/>
+    <child link="head"/>
+    <origin xyz="{x_offset} 0 0" rpy="0 0 0"/>
+  </joint>
 
 </robot>
 """
@@ -88,14 +98,11 @@ if __name__ == "__main__":
     HEAD_LENGTH = 0.1
     HANDLE_MASS = 0.1
     HEAD_MASS = 0.2
-
     folder = Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/cuboidal_hammer")
-    folder.mkdir(parents=True, exist_ok=True)
-
-    filename = f"single_link_cuboidal_hammer_{HANDLE_LENGTH}_{HANDLE_WIDTH}_{HANDLE_THICKNESS}_{HEAD_WIDTH}_{HEAD_LENGTH}_{HEAD_THICKNESS}_{HANDLE_MASS}_{HEAD_MASS}.urdf"
+    assert folder.exists(), f"Folder {folder} does not exist"
+    filename = f"cuboidal_hammer_{HANDLE_LENGTH}_{HANDLE_WIDTH}_{HANDLE_THICKNESS}_{HEAD_WIDTH}_{HEAD_LENGTH}_{HEAD_THICKNESS}_{HANDLE_MASS}_{HEAD_MASS}.urdf"
     filepath = folder / filename
-
-    generate_single_link_hammer_urdf(
+    generate_hammer_urdf(
         filepath=filepath,
         handle_length=HANDLE_LENGTH,
         handle_width=HANDLE_WIDTH,
