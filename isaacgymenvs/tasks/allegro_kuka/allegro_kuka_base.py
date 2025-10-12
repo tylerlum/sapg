@@ -469,15 +469,45 @@ class AllegroKukaBase(VecTask):
         rng.shuffle(files_and_scales)
 
         object_asset_files, object_asset_scales = zip(*files_and_scales)
-        return object_asset_files, object_asset_scales
+        need_vhacds = [False] * len(object_asset_files)
+
+        # HACK
+        USE_HAMMERS = True
+        if USE_HAMMERS:
+            object_asset_files = [
+                "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/hammer_1/hammer_1.urdf",
+                "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/hammer_2/hammer_2.urdf",
+                "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/YcbHammer/model.urdf",
+                "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/cuboidal_hammer/single_link_cuboidal_hammer_0.3_0.03_0.02_0.03_0.1_0.02_0.1_0.2.urdf"
+                "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0.3_0.015_0.015_0.1_0.1_0.2.urdf"
+                # "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/048_hammer/048_hammer.urdf",
+            ]
+            object_asset_scales = [
+                [3.0, 0.5, 0.5],
+                [3.0, 0.5, 0.5],
+                [3.0, 0.5, 0.5],
+                [3.0, 0.5, 0.5],
+                [3.0, 0.5, 0.5],
+                # [3.0, 0.5, 0.5],
+            ]
+            need_vhacds = [
+                True,
+                True,
+                True,
+                False,
+            ]
+        return object_asset_files, object_asset_scales, need_vhacds
 
     def _load_main_object_asset(self):
         """Load manipulated object and goal assets."""
-        object_asset_options = gymapi.AssetOptions()
         object_assets = []
-        for object_asset_file in self.object_asset_files:
+        for object_asset_file, need_vhacd in zip(self.object_asset_files, self.object_need_vhacds):
+            object_asset_options = gymapi.AssetOptions()
+            object_asset_options.vhacd_enabled = need_vhacd
+
             object_asset_dir = os.path.dirname(object_asset_file)
             object_asset_fname = os.path.basename(object_asset_file)
+
             object_asset_ = self.gym.load_asset(self.sim, object_asset_dir, object_asset_fname, object_asset_options)
             object_assets.append(object_asset_)
         object_rb_count = self.gym.get_asset_rigid_body_count(
@@ -649,7 +679,7 @@ class AllegroKukaBase(VecTask):
 
         object_asset_root = asset_root
         tmp_assets_dir = tempfile.TemporaryDirectory()
-        self.object_asset_files, self.object_asset_scales = self._main_object_assets_and_scales(
+        self.object_asset_files, self.object_asset_scales, self.object_need_vhacds = self._main_object_assets_and_scales(
             object_asset_root, tmp_assets_dir.name
         )
 
