@@ -27,7 +27,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import os
-from typing import List
+from typing import List, Tuple
 
 import torch
 from isaacgym import gymapi
@@ -36,6 +36,8 @@ from torch import Tensor
 from isaacgymenvs.utils.torch_jit_utils import to_torch, torch_rand_float
 from isaacgymenvs.tasks.allegro_kuka.allegro_kuka_base import AllegroKukaBase
 from isaacgymenvs.tasks.allegro_kuka.allegro_kuka_utils import tolerance_curriculum, tolerance_successes_objective
+
+GREEN = (0.0, 1.0, 0.0)
 
 
 class AllegroKukaReorientation(AllegroKukaBase):
@@ -90,8 +92,9 @@ class AllegroKukaReorientation(AllegroKukaBase):
         for name in self.gym.get_actor_rigid_body_names(env_ptr, goal_handle):
             self.rigid_body_name_to_idx['goal/' + name] = self.gym.find_actor_rigid_body_index(env_ptr, goal_handle, name, gymapi.DOMAIN_ENV)
 
-        if self.object_type != "block":
-            self.gym.set_rigid_body_color(env_ptr, goal_handle, 0, gymapi.MESH_VISUAL, gymapi.Vec3(0.6, 0.72, 0.98))
+        # if self.object_type != "block":
+        #     self.gym.set_rigid_body_color(env_ptr, goal_handle, 0, gymapi.MESH_VISUAL, gymapi.Vec3(0.6, 0.72, 0.98))
+        self._set_actor_color(env_ptr, goal_handle, GREEN)
 
     def _after_envs_created(self):
         self.goal_object_indices = to_torch(self.goal_object_indices, dtype=torch.long, device=self.device)
@@ -204,3 +207,13 @@ class AllegroKukaReorientation(AllegroKukaBase):
             rot = transforms3d.euler.quat2euler([quat[3], quat[0], quat[1], quat[2]])
             
             state_ddict[value].append((pos, rot))
+
+    def _set_actor_color(self, env, actor, color: Tuple[float, float, float]) -> None:
+        for rigid_body_idx in range(self.gym.get_actor_rigid_body_count(env, actor)):
+            self.gym.set_rigid_body_color(
+                env,
+                actor,
+                rigid_body_idx,
+                gymapi.MESH_VISUAL,
+                gymapi.Vec3(*color),
+            )
