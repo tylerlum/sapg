@@ -91,7 +91,7 @@ if __name__ == "__main__":
     folder = Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/cylindrical_hammer")
     folder.mkdir(parents=True, exist_ok=True)
 
-    filename = f"cylindrical_hammer_{HANDLE_LENGTH}_{HANDLE_RADIUS}_{HEAD_RADIUS}_{HEAD_LENGTH}_{HANDLE_MASS}_{HEAD_MASS}.urdf"
+    filename = f"cylindrical_hammer_{HANDLE_LENGTH}_{HANDLE_RADIUS}_{HEAD_RADIUS}_{HEAD_LENGTH}_{HANDLE_MASS}_{HEAD_MASS}".replace(".", "-") + ".urdf"
     filepath = folder / filename
 
     generate_cylindrical_hammer_urdf(

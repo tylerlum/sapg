@@ -92,7 +92,7 @@ if __name__ == "__main__":
     folder = Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/cuboidal_hammer")
     folder.mkdir(parents=True, exist_ok=True)
 
-    filename = f"single_link_cuboidal_hammer_{HANDLE_LENGTH}_{HANDLE_WIDTH}_{HANDLE_THICKNESS}_{HEAD_WIDTH}_{HEAD_LENGTH}_{HEAD_THICKNESS}_{HANDLE_MASS}_{HEAD_MASS}.urdf"
+    filename = f"cuboidal_hammer_{HANDLE_LENGTH}_{HANDLE_WIDTH}_{HANDLE_THICKNESS}_{HEAD_WIDTH}_{HEAD_LENGTH}_{HEAD_THICKNESS}_{HANDLE_MASS}_{HEAD_MASS}".replace(".", "-") + ".urdf"
     filepath = folder / filename
 
     generate_single_link_hammer_urdf(

@@ -478,15 +478,15 @@ class AllegroKukaBase(VecTask):
                 "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/hammer_1/hammer_1.urdf",
                 "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/hammer_2/hammer_2.urdf",
                 "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/YcbHammer/model.urdf",
-                "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/cuboidal_hammer/single_link_cuboidal_hammer_0.3_0.03_0.02_0.03_0.1_0.02_0.1_0.2.urdf"
-                "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0.3_0.015_0.015_0.1_0.1_0.2.urdf"
+                # "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_0-3_0-03_0-02_0-03_0-1_0-02_0-1_0-2.urdf"
+                "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0-3_0-015_0-015_0-1_0-1_0-2.urdf"
                 # "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/048_hammer/048_hammer.urdf",
             ]
             object_asset_scales = [
                 [3.0, 0.5, 0.5],
                 [3.0, 0.5, 0.5],
                 [3.0, 0.5, 0.5],
-                [3.0, 0.5, 0.5],
+                # [3.0, 0.5, 0.5],
                 [3.0, 0.5, 0.5],
                 # [3.0, 0.5, 0.5],
             ]
@@ -494,7 +494,9 @@ class AllegroKukaBase(VecTask):
                 True,
                 True,
                 True,
+                # False,
                 False,
+                # True,
             ]
         return object_asset_files, object_asset_scales, need_vhacds
 
