@@ -15,7 +15,9 @@
             <geometry>
                 <mesh filename="hammer_1.obj" scale="1 1 1"/>
             </geometry>
+            <!-- The following material makes the object white in Isaac Gym, so we comment it out.
             <material name="white"> <color rgba="1. 1. 1. 1."/> </material>
+            -->
             </visual>
             <collision>
             <geometry>
