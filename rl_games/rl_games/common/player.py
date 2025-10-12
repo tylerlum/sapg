@@ -326,7 +326,9 @@ class BasePlayer(object):
                 break
 
             obses = self.env_reset(self.env)
-            self.env.update_rigid_body_state_dict(rigid_body_state_tracker)
+            UPDATE_RIGID_BODY_STATE_DICT = False
+            if UPDATE_RIGID_BODY_STATE_DICT:
+                self.env.update_rigid_body_state_dict(rigid_body_state_tracker)
             batch_size = 1
             batch_size = self.get_batch_size(obses, batch_size)
 
@@ -354,7 +356,9 @@ class BasePlayer(object):
                     action = self.get_action(obses, is_deterministic)
 
                 obses, r, done, info = self.env_step(self.env, action)
-                self.env.update_rigid_body_state_dict(rigid_body_state_tracker)
+                UPDATE_RIGID_BODY_STATE_DICT = False
+                if UPDATE_RIGID_BODY_STATE_DICT:
+                    self.env.update_rigid_body_state_dict(rigid_body_state_tracker)
                 cr += r
                 steps += 1
 
