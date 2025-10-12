@@ -237,6 +237,9 @@ class AllegroKukaBase(VecTask):
         self.cfg["device_id"] = int(sim_device.split(":")[1]) if sim_device.find(":") != -1 else 0
         self.cfg["headless"] = headless
 
+        # Must subscribe to keyboard events before calling super().__init__()
+        self._subscribe_to_keyboard_events()
+
         super().__init__(
             config=self.cfg, rl_device=rl_device, sim_device=sim_device, graphics_device_id=graphics_device_id,
             headless=headless, virtual_screen_capture=virtual_screen_capture, force_render=force_render,
@@ -410,6 +413,44 @@ class AllegroKukaBase(VecTask):
 
                 shutil.rmtree(self.eval_summary_dir)
             self.eval_summaries = SummaryWriter(self.eval_summary_dir, flush_secs=3)
+
+    ##### KEYBOARD START #####
+    def _subscribe_to_keyboard_events(self) -> None:
+        from dataclasses import dataclass
+        from typing import Callable
+
+        @dataclass
+        class KeyboardShortcut:
+            name: str
+            key: int
+            function: Callable
+
+        keyboard_shortcuts = [
+            KeyboardShortcut(
+                name="breakpoint",
+                key=gymapi.KEY_B,
+                function=self._breakpoint_callback,
+            ),
+            KeyboardShortcut(
+                name="reset",
+                key=gymapi.KEY_R,
+                function=self._reset_callback,
+            ),
+        ]
+        self.name_to_keyboard_shortcut_dict = {
+            keyboard_shortcut.name: keyboard_shortcut
+            for keyboard_shortcut in keyboard_shortcuts
+        }
+
+    def _breakpoint_callback(self) -> None:
+        print("Breakpoint")
+        breakpoint()
+
+    def _reset_callback(self) -> None:
+        print("Resetting...")
+        self.reset_all_idxs()
+
+    ##### KEYBOARD END #####
 
     # AllegroKukaBase abstract interface - to be overriden in derived classes
     def change_on_restart(self, cfg):

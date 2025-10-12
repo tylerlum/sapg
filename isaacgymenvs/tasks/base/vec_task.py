@@ -286,6 +286,17 @@ class VecTask(Env):
             self.gym.subscribe_viewer_keyboard_event(
                 self.viewer, gymapi.KEY_R, "record_frames")
 
+            ### ADDITIONAL KEYBOARD SHORTCUTS START ###
+            if hasattr(self, "name_to_keyboard_shortcut_dict"):
+                for (
+                    name,
+                    keyboard_shortcut,
+                ) in self.name_to_keyboard_shortcut_dict.items():
+                    self.gym.subscribe_viewer_keyboard_event(
+                        self.viewer, keyboard_shortcut.key, name
+                    )
+            ### ADDITIONAL KEYBOARD SHORTCUTS END ###
+
             # set the camera position based on up axis
             sim_params = self.gym.get_sim_params(self.sim)
             if sim_params.up_axis == gymapi.UP_AXIS_Z:
@@ -469,6 +480,15 @@ class VecTask(Env):
                     self.enable_viewer_sync = not self.enable_viewer_sync
                 elif evt.action == "record_frames" and evt.value > 0:
                     self.record_frames = not self.record_frames
+                ### ADDITIONAL KEYBOARD SHORTCUTS START ###
+                elif (
+                    hasattr(self, "name_to_keyboard_shortcut_dict")
+                    and evt.action in self.name_to_keyboard_shortcut_dict.keys()
+                    and evt.value > 0
+                ):
+                    keyboard_shortcut = self.name_to_keyboard_shortcut_dict[evt.action]
+                    keyboard_shortcut.function()
+                ### ADDITIONAL KEYBOARD SHORTCUTS END ###
 
             # fetch results
             if self.device != 'cpu':
