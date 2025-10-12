@@ -433,14 +433,20 @@ class AllegroKukaBase(VecTask):
             ),
             KeyboardShortcut(
                 name="reset",
-                key=gymapi.KEY_R,
+                key=gymapi.KEY_E,
                 function=self._reset_callback,
+            ),
+            KeyboardShortcut(
+                name="toggle_do_not_move",
+                key=gymapi.KEY_T,
+                function=self._toggle_do_not_move_callback,
             ),
         ]
         self.name_to_keyboard_shortcut_dict = {
             keyboard_shortcut.name: keyboard_shortcut
             for keyboard_shortcut in keyboard_shortcuts
         }
+        self._DO_NOT_MOVE = False
 
     def _breakpoint_callback(self) -> None:
         print("Breakpoint")
@@ -448,7 +454,12 @@ class AllegroKukaBase(VecTask):
 
     def _reset_callback(self) -> None:
         print("Resetting...")
-        self.reset_all_idxs()
+        self.reset_idx(torch.ones_like(self.reset_buf).nonzero(as_tuple=False).squeeze(dim=-1))
+
+    def _toggle_do_not_move_callback(self) -> None:
+        print("Toggling do not move...")
+        self._DO_NOT_MOVE = not self._DO_NOT_MOVE
+        print(f"Do not move is now {self._DO_NOT_MOVE}")
 
     ##### KEYBOARD END #####
 
@@ -1615,6 +1626,9 @@ class AllegroKukaBase(VecTask):
             self.cur_targets[:, :7] = tensor_clamp(
                 targets, self.arm_hand_dof_lower_limits[:7], self.arm_hand_dof_upper_limits[:7]
             )
+
+        if self._DO_NOT_MOVE:
+            self.cur_targets[:, :] = self.prev_targets[:, :]
 
         self.prev_targets[:, :] = self.cur_targets[:, :]
 
