@@ -120,29 +120,46 @@ class AllegroKukaReorientation(AllegroKukaBase):
             target_coords = target_volume_min_coord + rand_pos_floats * target_volume_size
 
             #HACK:
-            HARDCODED = True
-            if HARDCODED:
+            USE_FIXED_SET_OF_GOAL_STATES = self.cfg["env"]["use_fixed_set_of_goal_states"]
+            if USE_FIXED_SET_OF_GOAL_STATES:
                 self.goal_states[env_ids] = self.object_init_state[env_ids].clone()
                 self.goal_states[env_ids, 2] += 0.4  # Above table
 
-                STATE = "LIFT_AND_ROTATE_AND_UPRIGHT"
-                if STATE == "LIFT_ONLY":
-                    self.goal_states[env_ids, 3] = 0.0
-                    self.goal_states[env_ids, 4] = 0.0
-                    self.goal_states[env_ids, 5] = 0.0
-                    self.goal_states[env_ids, 6] = 1.0
-                elif STATE == "LIFT_AND_ROTATE":
-                    self.goal_states[env_ids, 3] = -0.707
-                    self.goal_states[env_ids, 4] = 0.0
-                    self.goal_states[env_ids, 5] = 0.0
-                    self.goal_states[env_ids, 6] = 0.707
-                elif STATE == "LIFT_AND_ROTATE_AND_UPRIGHT":
-                    self.goal_states[env_ids, 3] = -0.5
-                    self.goal_states[env_ids, 4] = -0.5
-                    self.goal_states[env_ids, 5] = -0.5
-                    self.goal_states[env_ids, 6] = 0.5
-                else:
-                    raise ValueError(f"Invalid state: {STATE}")
+                # Initialize goal_type if not already present
+                if not hasattr(self, "goal_type"):
+                    # Random ints in [0, 2] for each environment
+                    self.goal_type = torch.randint(0, 3, (self.goal_states.shape[0],), device=self.goal_states.device)
+
+                # Resample goal_type for given env_ids, ensuring it changes
+                new_goal_type = torch.randint(0, 3, (env_ids.shape[0],), device=self.goal_states.device)
+                # If the new sample is the same as current, shift by 1 modulo 3
+                new_goal_type = torch.where(
+                    new_goal_type == self.goal_type[env_ids],
+                    (self.goal_type[env_ids] + 1) % 3,
+                    new_goal_type
+                )
+                self.goal_type[env_ids] = new_goal_type
+
+                # Create masks based on goal_type
+                lift_only_state = self.goal_type[env_ids] == 0
+                lift_and_rotate_state = self.goal_type[env_ids] == 1
+                lift_and_rotate_and_upright_state = self.goal_type[env_ids] == 2
+
+                # Set goal_states explicitly
+                self.goal_states[env_ids[lift_only_state], 3] = 0.0
+                self.goal_states[env_ids[lift_only_state], 4] = 0.0
+                self.goal_states[env_ids[lift_only_state], 5] = 0.0
+                self.goal_states[env_ids[lift_only_state], 6] = 1.0
+
+                self.goal_states[env_ids[lift_and_rotate_state], 3] = -0.707
+                self.goal_states[env_ids[lift_and_rotate_state], 4] = 0.0
+                self.goal_states[env_ids[lift_and_rotate_state], 5] = 0.0
+                self.goal_states[env_ids[lift_and_rotate_state], 6] = 0.707
+
+                self.goal_states[env_ids[lift_and_rotate_and_upright_state], 3] = -0.5
+                self.goal_states[env_ids[lift_and_rotate_and_upright_state], 4] = -0.5
+                self.goal_states[env_ids[lift_and_rotate_and_upright_state], 5] = -0.5
+                self.goal_states[env_ids[lift_and_rotate_and_upright_state], 6] = 0.5
             else:
                 self.goal_states[env_ids, 0:3] = target_coords
                 new_rot = self.get_random_quat(env_ids)

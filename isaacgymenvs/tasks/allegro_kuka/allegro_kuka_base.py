@@ -1476,12 +1476,11 @@ class AllegroKukaBase(VecTask):
         if len(env_ids) > 0 and reset_buf_idxs is None and tensor_reset:
             obj_indices = self.object_indices[env_ids]
 
-            #HACK
-            HARDCODED = True
+            USE_FIXED_INIT_OBJECT_POSE = self.cfg["env"]["use_fixed_init_object_pose"]
 
             # reset object
             rand_pos_floats = torch_rand_float(-1.0, 1.0, (len(env_ids), 3), device=self.device)
-            if HARDCODED:
+            if USE_FIXED_INIT_OBJECT_POSE:
                 rand_pos_floats[:] = 0.0 #HACK
 
             self.root_state_tensor[obj_indices] = self.object_init_state[env_ids].clone()
@@ -1497,7 +1496,7 @@ class AllegroKukaBase(VecTask):
                 self.object_init_state[env_ids, 2:3] + self.reset_position_noise_z * rand_pos_floats[:, 2:3]
             )
             new_object_rot = self.get_random_quat(env_ids)
-            if HARDCODED:
+            if USE_FIXED_INIT_OBJECT_POSE:
                 new_object_rot[:] = 0.0 #HACK
                 new_object_rot[:, -1] = 1.0 #HACK  xyzw
 

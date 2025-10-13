@@ -96,6 +96,8 @@ env:
   goodResetBoundary: 0
 
   object_type: "scanned_hammer_1"
+  use_fixed_set_of_goal_states: False
+  use_fixed_init_object_pose: False
 
   asset:
     # Whis was the original kuka_allegro asset.
