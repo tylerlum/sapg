@@ -525,33 +525,112 @@ class AllegroKukaBase(VecTask):
         object_asset_files, object_asset_scales = zip(*files_and_scales)
         need_vhacds = [False] * len(object_asset_files)
 
-        # HACK
-        USE_HAMMERS = True
-        if USE_HAMMERS:
-            object_asset_files = [
-                "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/hammer_1/hammer_1.urdf",
-                "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/hammer_2/hammer_2.urdf",
-                "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/YcbHammer/model.urdf",
-                "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_0-3_0-03_0-02_0-03_0-1_0-02_0-1_0-2.urdf",
-                "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0-3_0-015_0-015_0-1_0-1_0-2.urdf",
-                # "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/048_hammer/048_hammer.urdf",
-            ]
-            object_asset_scales = [
-                [3.0, 0.5, 0.5],
-                [3.0, 0.5, 0.5],
-                [3.0, 0.5, 0.5],
-                [3.0, 0.5, 0.5],
-                [3.0, 0.5, 0.5],
-                # [3.0, 0.5, 0.5],
-            ]
-            need_vhacds = [
-                True,
-                True,
-                True,
-                False,
-                False,
-                # True,
-            ]
+        # Hammers
+        from dataclasses import dataclass
+        @dataclass
+        class Hammer:
+            file: str
+            scale: List[float]
+            need_vhacd: bool
+
+        name_to_hammer_dict = {
+            "scanned_hammer_1": Hammer(
+                file="/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/hammer_1/hammer_1.urdf",
+                scale=[3.0, 0.5, 0.5],
+                need_vhacd=True,
+            ),
+            "scanned_hammer_2": Hammer(
+                file="/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/hammer_2/hammer_2.urdf",
+                scale=[3.0, 0.5, 0.5],
+                need_vhacd=True,
+            ),
+            "YcbHammer": Hammer(
+                file="/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/YcbHammer/model.urdf",
+                scale=[3.0, 0.5, 0.5],
+                need_vhacd=True,
+            ),
+            "cuboidal_hammer": Hammer(
+                file="/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_0-3_0-03_0-02_0-03_0-1_0-02_0-1_0-2.urdf",
+                scale=[3.0, 0.5, 0.5],
+                need_vhacd=True,
+            ),
+            "cylindrical_hammer": Hammer(
+                file="/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0-3_0-015_0-015_0-1_0-1_0-2.urdf",
+                scale=[3.0, 0.5, 0.5],
+                need_vhacd=True,
+            ),
+            "cuboidal_hammer_2x": Hammer(
+                file="/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_0-6_0-06_0-04_0-06_0-2_0-04_0-1_0-2.urdf",
+                scale=[3.0, 0.5, 0.5],
+                need_vhacd=True,
+            ),
+            "cuboidal_hammer_4x": Hammer(
+                file="/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_1-2_0-12_0-08_0-12_0-4_0-08_0-1_0-2.urdf",
+                scale=[3.0, 0.5, 0.5],
+                need_vhacd=True,
+            ),
+            "cylindrical_hammer_2x": Hammer(
+                file="/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0-6_0-03_0-03_0-2_0-2_0-2.urdf",
+                scale=[3.0, 0.5, 0.5],
+                need_vhacd=True,
+            ),
+            "cylindrical_hammer_4x": Hammer(
+                file="/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_1-2_0-06_0-06_0-4_0-4_0-2.urdf",
+                scale=[3.0, 0.5, 0.5],
+                need_vhacd=True,
+            ),
+        }
+        for hammer in name_to_hammer_dict.values():
+            from pathlib import Path
+            assert Path(hammer.file).exists(), f"Hammer file {hammer.file} does not exist"
+
+        object_type = self.cfg["env"]["object_type"]
+        if object_type == "scanned_hammer_1":
+            object_asset_files = [name_to_hammer_dict["scanned_hammer_1"].file]
+            object_asset_scales = [name_to_hammer_dict["scanned_hammer_1"].scale]
+            need_vhacds = [name_to_hammer_dict["scanned_hammer_1"].need_vhacd]
+        elif object_type == "scanned_hammer_2":
+            object_asset_files = [name_to_hammer_dict["scanned_hammer_2"].file]
+            object_asset_scales = [name_to_hammer_dict["scanned_hammer_2"].scale]
+            need_vhacds = [name_to_hammer_dict["scanned_hammer_2"].need_vhacd]
+        elif object_type == "YcbHammer":
+            object_asset_files = [name_to_hammer_dict["YcbHammer"].file]
+            object_asset_scales = [name_to_hammer_dict["YcbHammer"].scale]
+            need_vhacds = [name_to_hammer_dict["YcbHammer"].need_vhacd]
+        elif object_type == "cuboidal_hammer":
+            object_asset_files = [name_to_hammer_dict["cuboidal_hammer"].file]
+            object_asset_scales = [name_to_hammer_dict["cuboidal_hammer"].scale]
+            need_vhacds = [name_to_hammer_dict["cuboidal_hammer"].need_vhacd]
+        elif object_type == "cylindrical_hammer":
+            object_asset_files = [name_to_hammer_dict["cylindrical_hammer"].file]
+            object_asset_scales = [name_to_hammer_dict["cylindrical_hammer"].scale]
+            need_vhacds = [name_to_hammer_dict["cylindrical_hammer"].need_vhacd]
+        elif object_type == "cuboidal_hammer_2x":
+            object_asset_files = [name_to_hammer_dict["cuboidal_hammer_2x"].file]
+            object_asset_scales = [name_to_hammer_dict["cuboidal_hammer_2x"].scale]
+            need_vhacds = [name_to_hammer_dict["cuboidal_hammer_2x"].need_vhacd]
+        elif object_type == "cuboidal_hammer_4x":
+            object_asset_files = [name_to_hammer_dict["cuboidal_hammer_4x"].file]
+            object_asset_scales = [name_to_hammer_dict["cuboidal_hammer_4x"].scale]
+            need_vhacds = [name_to_hammer_dict["cuboidal_hammer_4x"].need_vhacd]
+        elif object_type == "cylindrical_hammer_2x":
+            object_asset_files = [name_to_hammer_dict["cylindrical_hammer_2x"].file]
+            object_asset_scales = [name_to_hammer_dict["cylindrical_hammer_2x"].scale]
+            need_vhacds = [name_to_hammer_dict["cylindrical_hammer_2x"].need_vhacd]
+        elif object_type == "cylindrical_hammer_4x":
+            object_asset_files = [name_to_hammer_dict["cylindrical_hammer_4x"].file]
+            object_asset_scales = [name_to_hammer_dict["cylindrical_hammer_4x"].scale]
+            need_vhacds = [name_to_hammer_dict["cylindrical_hammer_4x"].need_vhacd]
+        elif object_type == "all_hammers":
+            object_asset_files = [hammer.file for hammer in name_to_hammer_dict.values()]
+            object_asset_scales = [hammer.scale for hammer in name_to_hammer_dict.values()]
+            need_vhacds = [hammer.need_vhacd for hammer in name_to_hammer_dict.values()]
+        elif object_type == "cuboid":
+            # Use what was already used before
+            pass
+        else:
+            raise ValueError(f"Unknown object type: {object_type}")
+
         return object_asset_files, object_asset_scales, need_vhacds
 
     def _load_main_object_asset(self):
