@@ -1279,6 +1279,7 @@ class AllegroKukaBase(VecTask):
         self.object_state = self.root_state_tensor[self.object_indices, 0:13]
         self.object_pose = self.root_state_tensor[self.object_indices, 0:7]
         self.object_pos = self.root_state_tensor[self.object_indices, 0:3]
+
         self.object_rot = self.root_state_tensor[self.object_indices, 3:7]
         self.object_linvel = self.root_state_tensor[self.object_indices, 7:10]
         self.object_angvel = self.root_state_tensor[self.object_indices, 10:13]
@@ -1286,6 +1287,15 @@ class AllegroKukaBase(VecTask):
         self.goal_pose = self.goal_states[:, 0:7]
         self.goal_pos = self.goal_states[:, 0:3]
         self.goal_rot = self.goal_states[:, 3:7]
+
+        # HACK: Move offsets down by X along x axis to grab hammer on bottom of handle
+        use_hack_object_pos_offset = self.cfg["env"]["use_hack_object_pos_offset"]
+        if use_hack_object_pos_offset:
+            self.object_pos_offset = torch.tensor([
+                -0.05, 0.0, 0.0
+            ], device=self.device)[None]
+            self.object_pos = self.object_pos + quat_rotate(self.object_rot, self.object_pos_offset)
+            self.goal_pos = self.goal_pos + quat_rotate(self.goal_rot, self.object_pos_offset)
 
         self.palm_center_offset = torch.from_numpy(self.palm_offset).to(self.device).repeat((self.num_envs, 1))
         self._palm_state = self.rigid_body_states[:, self.allegro_palm_handle][:, 0:13]
@@ -1823,35 +1833,35 @@ class AllegroKukaBase(VecTask):
             palm_center_pos_cpu = self.palm_center_pos.cpu().numpy()
             palm_rot_cpu = self._palm_rot.cpu().numpy()
 
-            for i in range(self.num_envs):
-                palm_center_transform = gymapi.Transform()
-                palm_center_transform.p = gymapi.Vec3(*palm_center_pos_cpu[i])
-                palm_center_transform.r = gymapi.Quat(*palm_rot_cpu[i])
-                gymutil.draw_lines(sphere_geom_white, self.gym, self.viewer, self.envs[i], palm_center_transform)
+            # for i in range(self.num_envs):
+            #     palm_center_transform = gymapi.Transform()
+            #     palm_center_transform.p = gymapi.Vec3(*palm_center_pos_cpu[i])
+            #     palm_center_transform.r = gymapi.Quat(*palm_rot_cpu[i])
+            #     gymutil.draw_lines(sphere_geom_white, self.gym, self.viewer, self.envs[i], palm_center_transform)
 
-            for j in range(self.num_allegro_fingertips):
-                fingertip_pos_cpu = self.fingertip_pos_offset[:, j].cpu().numpy()
-                fingertip_rot_cpu = self.fingertip_rot[:, j].cpu().numpy()
+            # for j in range(self.num_allegro_fingertips):
+            #     fingertip_pos_cpu = self.fingertip_pos_offset[:, j].cpu().numpy()
+            #     fingertip_rot_cpu = self.fingertip_rot[:, j].cpu().numpy()
 
-                for i in range(self.num_envs):
-                    fingertip_transform = gymapi.Transform()
-                    fingertip_transform.p = gymapi.Vec3(*fingertip_pos_cpu[i])
-                    fingertip_transform.r = gymapi.Quat(*fingertip_rot_cpu[i])
+            #     for i in range(self.num_envs):
+            #         fingertip_transform = gymapi.Transform()
+            #         fingertip_transform.p = gymapi.Vec3(*fingertip_pos_cpu[i])
+            #         fingertip_transform.r = gymapi.Quat(*fingertip_rot_cpu[i])
 
-                    gymutil.draw_lines(sphere_geom, self.gym, self.viewer, self.envs[i], fingertip_transform)
+            #         gymutil.draw_lines(sphere_geom, self.gym, self.viewer, self.envs[i], fingertip_transform)
 
             for j in range(self.num_keypoints):
                 keypoint_pos_cpu = self.obj_keypoint_pos[:, j].cpu().numpy()
-                goal_keypoint_pos_cpu = self.goal_keypoint_pos[:, j].cpu().numpy()
+                # goal_keypoint_pos_cpu = self.goal_keypoint_pos[:, j].cpu().numpy()
 
                 for i in range(self.num_envs):
                     keypoint_transform = gymapi.Transform()
                     keypoint_transform.p = gymapi.Vec3(*keypoint_pos_cpu[i])
                     gymutil.draw_lines(sphere_geom, self.gym, self.viewer, self.envs[i], keypoint_transform)
 
-                    goal_keypoint_transform = gymapi.Transform()
-                    goal_keypoint_transform.p = gymapi.Vec3(*goal_keypoint_pos_cpu[i])
-                    gymutil.draw_lines(sphere_geom, self.gym, self.viewer, self.envs[i], goal_keypoint_transform)
+                    # goal_keypoint_transform = gymapi.Transform()
+                    # goal_keypoint_transform.p = gymapi.Vec3(*goal_keypoint_pos_cpu[i])
+                    # gymutil.draw_lines(sphere_geom, self.gym, self.viewer, self.envs[i], goal_keypoint_transform)
 
     def accumulate_env_states(self):
         root_state_tensor = self.root_state_tensor.reshape(
