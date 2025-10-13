@@ -114,6 +114,22 @@ def launch_rlg_hydra(cfg: DictConfig, vec_env=None):
 
     # ensure checkpoints can be specified as relative paths
     if cfg.checkpoint:
+        ### WANDB CHECKPOINT START ###
+        if cfg.checkpoint.startswith("https://wandb.ai"):
+            from isaacgymenvs.utils.wandb_utils import (
+                restore_model_file_from_wandb,
+            )
+
+            print("-" * 80)
+            print(f"Attempting to restore model from {cfg.checkpoint}")
+            cfg.checkpoint = restore_model_file_from_wandb(
+                wandb_file_url=cfg.checkpoint,
+            )
+            print(f"Restored model from {cfg.checkpoint}")
+            print("-" * 80)
+            print()
+        ### WANDB CHECKPOINT END ###
+
         cfg.checkpoint = to_absolute_path(cfg.checkpoint)
 
     cfg_dict = omegaconf_to_dict(cfg)
