@@ -118,13 +118,37 @@ class AllegroKukaReorientation(AllegroKukaBase):
 
             rand_pos_floats = torch_rand_float(0.0, 1.0, (len(env_ids), 3), device=self.device)
             target_coords = target_volume_min_coord + rand_pos_floats * target_volume_size
-            self.goal_states[env_ids, 0:3] = target_coords
+
+            #HACK:
+            HARDCODED = True
+            if HARDCODED:
+                self.goal_states[env_ids] = self.object_init_state[env_ids].clone()
+                self.goal_states[env_ids, 2] += 0.4  # Above table
+
+                STATE = "LIFT_AND_ROTATE_AND_UPRIGHT"
+                if STATE == "LIFT_ONLY":
+                    self.goal_states[env_ids, 3] = 0.0
+                    self.goal_states[env_ids, 4] = 0.0
+                    self.goal_states[env_ids, 5] = 0.0
+                    self.goal_states[env_ids, 6] = 1.0
+                elif STATE == "LIFT_AND_ROTATE":
+                    self.goal_states[env_ids, 3] = -0.707
+                    self.goal_states[env_ids, 4] = 0.0
+                    self.goal_states[env_ids, 5] = 0.0
+                    self.goal_states[env_ids, 6] = 0.707
+                elif STATE == "LIFT_AND_ROTATE_AND_UPRIGHT":
+                    self.goal_states[env_ids, 3] = -0.5
+                    self.goal_states[env_ids, 4] = -0.5
+                    self.goal_states[env_ids, 5] = -0.5
+                    self.goal_states[env_ids, 6] = 0.5
+                else:
+                    raise ValueError(f"Invalid state: {STATE}")
+            else:
+                self.goal_states[env_ids, 0:3] = target_coords
+                new_rot = self.get_random_quat(env_ids)
+                self.goal_states[env_ids, 3:7] = new_rot
 
             self.root_state_tensor[self.goal_object_indices[env_ids], 0:3] = self.goal_states[env_ids, 0:3]
-
-            new_rot = self.get_random_quat(env_ids)
-            self.goal_states[env_ids, 3:7] = new_rot
-
             self.root_state_tensor[self.goal_object_indices[env_ids], 3:7] = self.goal_states[env_ids, 3:7]
             self.root_state_tensor[self.goal_object_indices[env_ids], 7:13] = torch.zeros_like(
                 self.root_state_tensor[self.goal_object_indices[env_ids], 7:13]
