@@ -122,20 +122,35 @@ class AllegroKukaReorientation(AllegroKukaBase):
             #HACK:
             USE_FIXED_SET_OF_GOAL_STATES = self.cfg["env"]["use_fixed_set_of_goal_states"]
             if USE_FIXED_SET_OF_GOAL_STATES:
-                self.goal_states[env_ids] = self.object_init_state[env_ids].clone()
-                self.goal_states[env_ids, 2] += 0.4  # Above table
-
                 # Initialize goal_type if not already present
                 if not hasattr(self, "goal_type"):
                     # Random ints in [0, 2] for each environment
                     self.goal_type = torch.randint(0, 3, (self.goal_states.shape[0],), device=self.goal_states.device)
 
+                self.goal_states[env_ids] = self.object_init_state[env_ids].clone()
+
                 # Resample goal_type for given env_ids, ensuring it changes
-                new_goal_type = torch.randint(0, 3, (env_ids.shape[0],), device=self.goal_states.device)
+                new_goal_type = self.successes[env_ids].long()
                 # If the new sample is the same as current, shift by 1 modulo 3
+                # new_goal_type = torch.where(
+                #     new_goal_type == self.goal_type[env_ids],
+                #     (self.goal_type[env_ids] + 1) % 3,
+                #     new_goal_type
+                # )
+                # new_goal_type = torch.clamp(new_goal_type, 0, 2)
                 new_goal_type = torch.where(
-                    new_goal_type == self.goal_type[env_ids],
-                    (self.goal_type[env_ids] + 1) % 3,
+                    new_goal_type % 2 == 1,
+                    1,
+                    new_goal_type
+                )
+                new_goal_type = torch.where(
+                    (new_goal_type % 2 == 0) & (new_goal_type != 0),
+                    2,
+                    new_goal_type
+                )
+                new_goal_type = torch.where(
+                    new_goal_type == 0,
+                    0,
                     new_goal_type
                 )
                 self.goal_type[env_ids] = new_goal_type
@@ -146,20 +161,23 @@ class AllegroKukaReorientation(AllegroKukaBase):
                 lift_and_rotate_and_upright_state = self.goal_type[env_ids] == 2
 
                 # Set goal_states explicitly
+                self.goal_states[env_ids[lift_only_state], 2] += 0.2  # Above table
                 self.goal_states[env_ids[lift_only_state], 3] = 0.0
                 self.goal_states[env_ids[lift_only_state], 4] = 0.0
                 self.goal_states[env_ids[lift_only_state], 5] = 0.0
                 self.goal_states[env_ids[lift_only_state], 6] = 1.0
 
+                self.goal_states[env_ids[lift_and_rotate_state], 2] += 0.2  # Above table
                 self.goal_states[env_ids[lift_and_rotate_state], 3] = -0.707
                 self.goal_states[env_ids[lift_and_rotate_state], 4] = 0.0
                 self.goal_states[env_ids[lift_and_rotate_state], 5] = 0.0
                 self.goal_states[env_ids[lift_and_rotate_state], 6] = 0.707
 
-                self.goal_states[env_ids[lift_and_rotate_and_upright_state], 3] = -0.5
-                self.goal_states[env_ids[lift_and_rotate_and_upright_state], 4] = -0.5
-                self.goal_states[env_ids[lift_and_rotate_and_upright_state], 5] = -0.5
-                self.goal_states[env_ids[lift_and_rotate_and_upright_state], 6] = 0.5
+                self.goal_states[env_ids[lift_and_rotate_and_upright_state], 2] += -0.05  # Above table
+                self.goal_states[env_ids[lift_and_rotate_and_upright_state], 3] = -0.707
+                self.goal_states[env_ids[lift_and_rotate_and_upright_state], 4] = 0.0
+                self.goal_states[env_ids[lift_and_rotate_and_upright_state], 5] = 0.0
+                self.goal_states[env_ids[lift_and_rotate_and_upright_state], 6] = 0.707
             else:
                 self.goal_states[env_ids, 0:3] = target_coords
                 new_rot = self.get_random_quat(env_ids)
