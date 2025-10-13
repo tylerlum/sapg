@@ -454,7 +454,9 @@ class AllegroKukaBase(VecTask):
 
     def _reset_callback(self) -> None:
         print("Resetting...")
-        self.reset_idx(torch.ones_like(self.reset_buf).nonzero(as_tuple=False).squeeze(dim=-1))
+        # Easiest way to reset without other issues (reset being overwritten)
+        # Is to set the progress buffer to the max episode length - 2 so it will reset shortly
+        self.progress_buf[:] = self.max_episode_length - 2
 
     def _toggle_do_not_move_callback(self) -> None:
         print("Toggling do not move...")
