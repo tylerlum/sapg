@@ -1607,6 +1607,9 @@ class AllegroKukaBase(VecTask):
         self.reset_target_pose(random_reset_goal_env_ids, None)
         self.reset_idx(good_reset_goal_env_ids, reset_buf_idxs, False)
 
+        #HACK
+        self.reset_target_pose(torch.ones_like(self.reset_buf).nonzero(as_tuple=False).squeeze(dim=-1), None)
+
         if len(reset_env_ids) > 0:
             self.reset_idx(random_reset_env_ids, None)
             self.reset_idx(good_reset_env_ids, reset_buf_idxs)
@@ -1771,6 +1774,72 @@ class AllegroKukaBase(VecTask):
                     goal_keypoint_transform = gymapi.Transform()
                     goal_keypoint_transform.p = gymapi.Vec3(*goal_keypoint_pos_cpu[i])
                     gymutil.draw_lines(sphere_geom, self.gym, self.viewer, self.envs[i], goal_keypoint_transform)
+        if self.viewer:
+            self.gym.clear_lines(self.viewer)
+            BLUE = (0.0, 0.0, 1.0)
+            self._draw_horizontal_progress_bar(
+                progress=self.progress_buf,
+                total=self.max_episode_length,
+                color=BLUE,
+                above_table_m=1.0,
+            )
+
+    def _draw_horizontal_progress_bar(
+        self,
+        progress: torch.Tensor,
+        total: float,
+        color: Tuple[float, float, float],
+        above_table_m: float,
+    ) -> None:
+        self.index_to_view = 0
+        TABLE_LENGTH_X = 0.6
+        env = self.envs[self.index_to_view]
+        start_pos = torch.tensor(
+            [-TABLE_LENGTH_X / 2, 0.0, above_table_m],
+            dtype=torch.float,
+            device=self.device,
+        )
+        end_pos = torch.tensor(
+            [TABLE_LENGTH_X / 2, 0.0, above_table_m],
+            dtype=torch.float,
+            device=self.device,
+        )
+        fraction = progress[self.index_to_view] / total
+        progress_pos = start_pos + fraction * (end_pos - start_pos)
+
+        gymutil.draw_line(
+            p1=gymapi.Vec3(*start_pos.cpu().numpy()),
+            p2=gymapi.Vec3(*progress_pos.cpu().numpy()),
+            color=gymapi.Vec3(*color),
+            gym=self.gym,
+            viewer=self.viewer,
+            env=env,
+        )
+
+        # Vertical lines start and end
+        DELTA_VERTICAL = 0.02
+        delta_vertical_up = torch.tensor(
+            [0.0, 0.0, DELTA_VERTICAL], dtype=torch.float, device=self.device
+        )
+        delta_vertical_down = torch.tensor(
+            [0.0, 0.0, -DELTA_VERTICAL], dtype=torch.float, device=self.device
+        )
+        gymutil.draw_line(
+            p1=gymapi.Vec3(*(start_pos + delta_vertical_up).cpu().numpy()),
+            p2=gymapi.Vec3(*(start_pos + delta_vertical_down).cpu().numpy()),
+            color=gymapi.Vec3(*color),
+            gym=self.gym,
+            viewer=self.viewer,
+            env=env,
+        )
+        gymutil.draw_line(
+            p1=gymapi.Vec3(*(end_pos + delta_vertical_up).cpu().numpy()),
+            p2=gymapi.Vec3(*(end_pos + delta_vertical_down).cpu().numpy()),
+            color=gymapi.Vec3(*color),
+            gym=self.gym,
+            viewer=self.viewer,
+            env=env,
+        )
 
     def accumulate_env_states(self):
         root_state_tensor = self.root_state_tensor.reshape(

@@ -125,24 +125,72 @@ class AllegroKukaReorientation(AllegroKukaBase):
                 self.goal_states[env_ids] = self.object_init_state[env_ids].clone()
                 self.goal_states[env_ids, 2] += 0.4  # Above table
 
-                STATE = "LIFT_AND_ROTATE_AND_UPRIGHT"
-                if STATE == "LIFT_ONLY":
-                    self.goal_states[env_ids, 3] = 0.0
-                    self.goal_states[env_ids, 4] = 0.0
-                    self.goal_states[env_ids, 5] = 0.0
-                    self.goal_states[env_ids, 6] = 1.0
-                elif STATE == "LIFT_AND_ROTATE":
-                    self.goal_states[env_ids, 3] = -0.707
-                    self.goal_states[env_ids, 4] = 0.0
-                    self.goal_states[env_ids, 5] = 0.0
-                    self.goal_states[env_ids, 6] = 0.707
-                elif STATE == "LIFT_AND_ROTATE_AND_UPRIGHT":
-                    self.goal_states[env_ids, 3] = -0.5
-                    self.goal_states[env_ids, 4] = -0.5
-                    self.goal_states[env_ids, 5] = -0.5
-                    self.goal_states[env_ids, 6] = 0.5
-                else:
-                    raise ValueError(f"Invalid state: {STATE}")
+
+                # T = self.max_episode_length
+                # T = self.max_episode_length * 0.
+                T = 200
+                progress_buf_circular = (self.progress_buf[env_ids] % T)
+                lift_only_state = (progress_buf_circular < T * 0.25)
+                lift_and_rotate_state = (
+                    ~lift_only_state & (progress_buf_circular < T * 0.5)
+                )
+                lift_and_rotate_and_upright_state = (
+                    ~lift_only_state & ~lift_and_rotate_state & (progress_buf_circular < T * 0.75)
+                )
+                swing_state = (
+                    ~lift_only_state & ~lift_and_rotate_state & ~lift_and_rotate_and_upright_state & (progress_buf_circular < T)
+                )
+                # breakpoint()
+                # print(f"lift_only_state: {lift_only_state}")
+                # print(f"lift_and_rotate_state: {lift_and_rotate_state}")
+                # print(f"lift_and_rotate_and_upright_state: {lift_and_rotate_and_upright_state}")
+                # print(f"swing_state: {swing_state}")
+                # print(f"env_ids: {env_ids}")
+                # print(f"self.progress_buf[env_ids]: {self.progress_buf[env_ids]}")
+                # print(f"T: {T}")
+                # print(f"env_ids[lift_only_state]: {env_ids[lift_only_state]}")
+                # print(f"env_ids[lift_and_rotate_state]: {env_ids[lift_and_rotate_state]}")
+                # print(f"env_ids[lift_and_rotate_and_upright_state]: {env_ids[lift_and_rotate_and_upright_state]}")
+                # print(f"env_ids[swing_state]: {env_ids[swing_state]}")
+                # print()
+                self.goal_states[env_ids[lift_only_state], 3] = 0.0
+                self.goal_states[env_ids[lift_only_state], 4] = 0.0
+                self.goal_states[env_ids[lift_only_state], 5] = 0.0
+                self.goal_states[env_ids[lift_only_state], 6] = 1.0
+
+                self.goal_states[env_ids[lift_and_rotate_state], 3] = -0.707
+                self.goal_states[env_ids[lift_and_rotate_state], 4] = 0.0
+                self.goal_states[env_ids[lift_and_rotate_state], 5] = 0.0
+                self.goal_states[env_ids[lift_and_rotate_state], 6] = 0.707
+
+                self.goal_states[env_ids[lift_and_rotate_and_upright_state], 3] = -0.5
+                self.goal_states[env_ids[lift_and_rotate_and_upright_state], 4] = -0.5
+                self.goal_states[env_ids[lift_and_rotate_and_upright_state], 5] = -0.5
+                self.goal_states[env_ids[lift_and_rotate_and_upright_state], 6] = 0.5
+
+                self.goal_states[env_ids[swing_state], 3] = 0.0
+                self.goal_states[env_ids[swing_state], 4] = 0.0
+                self.goal_states[env_ids[swing_state], 5] = 0.0
+                self.goal_states[env_ids[swing_state], 6] = 1.0
+
+                # STATE = "LIFT_AND_ROTATE_AND_UPRIGHT"
+                # if STATE == "LIFT_ONLY":
+                #     self.goal_states[env_ids, 3] = 0.0
+                #     self.goal_states[env_ids, 4] = 0.0
+                #     self.goal_states[env_ids, 5] = 0.0
+                #     self.goal_states[env_ids, 6] = 1.0
+                # elif STATE == "LIFT_AND_ROTATE":
+                #     self.goal_states[env_ids, 3] = -0.707
+                #     self.goal_states[env_ids, 4] = 0.0
+                #     self.goal_states[env_ids, 5] = 0.0
+                #     self.goal_states[env_ids, 6] = 0.707
+                # elif STATE == "LIFT_AND_ROTATE_AND_UPRIGHT":
+                #     self.goal_states[env_ids, 3] = -0.5
+                #     self.goal_states[env_ids, 4] = -0.5
+                #     self.goal_states[env_ids, 5] = -0.5
+                #     self.goal_states[env_ids, 6] = 0.5
+                # else:
+                #     raise ValueError(f"Invalid state: {STATE}")
             else:
                 self.goal_states[env_ids, 0:3] = target_coords
                 new_rot = self.get_random_quat(env_ids)
