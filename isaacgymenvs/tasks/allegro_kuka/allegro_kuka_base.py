@@ -1320,9 +1320,10 @@ class AllegroKukaBase(VecTask):
 
         # HACK: Move offsets down by X along x axis to grab hammer on bottom of handle
         use_hack_object_pos_offset = self.cfg["env"]["use_hack_object_pos_offset"]
+        hack_object_pos_offset = self.cfg["env"]["hack_object_pos_offset"]
         if use_hack_object_pos_offset:
             self.object_pos_offset = torch.tensor([
-                -0.05, 0.0, 0.0
+                -hack_object_pos_offset, 0.0, 0.0
             ], device=self.device)[None]
             self.object_pos = self.object_pos + quat_rotate(self.object_rot, self.object_pos_offset)
             self.goal_pos = self.goal_pos + quat_rotate(self.goal_rot, self.object_pos_offset)
