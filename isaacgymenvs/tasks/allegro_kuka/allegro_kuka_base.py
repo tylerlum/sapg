@@ -563,13 +563,43 @@ class AllegroKukaBase(VecTask):
                 scale=[3.0, 0.5, 0.5],
                 need_vhacd=False,
             ),
+            "cuboidal_hammer_1-25x": Hammer(
+                file=str(root_dir / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_0-375_0-0375_0-025_0-0375_0-125_0-025_0-1_0-2.urdf"),
+                scale=[3.0, 0.5, 0.5],
+                need_vhacd=False,
+            ),
+            "cuboidal_hammer_1-5x": Hammer(
+                file=str(root_dir / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_0-44999999999999996_0-045_0-03_0-045_0-15000000000000002_0-03_0-1_0-2.urdf"),
+                scale=[3.0, 0.5, 0.5],
+                need_vhacd=False,
+            ),
+            "cuboidal_hammer_1-75x": Hammer(
+                file=str(root_dir / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_0-525_0-0525_0-035_0-0525_0-17500000000000002_0-035_0-1_0-2.urdf"),
+                scale=[3.0, 0.5, 0.5],
+                need_vhacd=False,
+            ),
             "cuboidal_hammer_2x": Hammer(
                 file=str(root_dir / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_0-6_0-06_0-04_0-06_0-2_0-04_0-1_0-2.urdf"),
                 scale=[3.0, 0.5, 0.5],
                 need_vhacd=False,
             ),
-            "cuboidal_hammer_4x": Hammer(
-                file=str(root_dir / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_1-2_0-12_0-08_0-12_0-4_0-08_0-1_0-2.urdf"),
+            # "cuboidal_hammer_4x": Hammer(
+            #     file=str(root_dir / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_1-2_0-12_0-08_0-12_0-4_0-08_0-1_0-2.urdf"),
+            #     scale=[3.0, 0.5, 0.5],
+            #     need_vhacd=False,
+            # ),
+            "cylindrical_hammer_1-25x": Hammer(
+                file=str(root_dir / "assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0-375_0-01875_0-01875_0-125_0-125_0-2.urdf"),
+                scale=[3.0, 0.5, 0.5],
+                need_vhacd=False,
+            ),
+            "cylindrical_hammer_1-5x": Hammer(
+                file=str(root_dir / "assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0-44999999999999996_0-0225_0-0225_0-15000000000000002_0-15000000000000002_0-2.urdf"),
+                scale=[3.0, 0.5, 0.5],
+                need_vhacd=False,
+            ),
+            "cylindrical_hammer_1-75x": Hammer(
+                file=str(root_dir / "assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0-525_0-02625_0-02625_0-17500000000000002_0-17500000000000002_0-2.urdf"),
                 scale=[3.0, 0.5, 0.5],
                 need_vhacd=False,
             ),
@@ -578,11 +608,11 @@ class AllegroKukaBase(VecTask):
                 scale=[3.0, 0.5, 0.5],
                 need_vhacd=False,
             ),
-            "cylindrical_hammer_4x": Hammer(
-                file=str(root_dir / "assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_1-2_0-06_0-06_0-4_0-4_0-2.urdf"),
-                scale=[3.0, 0.5, 0.5],
-                need_vhacd=False,
-            ),
+            # "cylindrical_hammer_4x": Hammer(
+            #     file=str(root_dir / "assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_1-2_0-06_0-06_0-4_0-4_0-2.urdf"),
+            #     scale=[3.0, 0.5, 0.5],
+            #     need_vhacd=False,
+            # ),
         }
         for hammer in name_to_hammer_dict.values():
             assert Path(hammer.file).exists(), f"Hammer file {hammer.file} does not exist"
