@@ -138,6 +138,7 @@ class AllegroKukaReorientation(AllegroKukaBase):
                 #     new_goal_type
                 # )
                 # new_goal_type = torch.clamp(new_goal_type, 0, 2)
+                new_goal_type = new_goal_type % self.max_consecutive_successes
                 new_goal_type = torch.where(
                     new_goal_type % 2 == 1,
                     1,
@@ -173,11 +174,23 @@ class AllegroKukaReorientation(AllegroKukaBase):
                 self.goal_states[env_ids[lift_and_rotate_state], 5] = 0.0
                 self.goal_states[env_ids[lift_and_rotate_state], 6] = 0.707
 
-                self.goal_states[env_ids[lift_and_rotate_and_upright_state], 2] += -0.05  # Above table
-                self.goal_states[env_ids[lift_and_rotate_and_upright_state], 3] = -0.707
-                self.goal_states[env_ids[lift_and_rotate_and_upright_state], 4] = 0.0
-                self.goal_states[env_ids[lift_and_rotate_and_upright_state], 5] = 0.0
-                self.goal_states[env_ids[lift_and_rotate_and_upright_state], 6] = 0.707
+                # # Flat
+                # self.goal_states[env_ids[lift_and_rotate_and_upright_state], 2] += -0.05  # Above table
+                # self.goal_states[env_ids[lift_and_rotate_and_upright_state], 3] = -0.707
+                # self.goal_states[env_ids[lift_and_rotate_and_upright_state], 4] = 0.0
+                # self.goal_states[env_ids[lift_and_rotate_and_upright_state], 5] = 0.0
+                # self.goal_states[env_ids[lift_and_rotate_and_upright_state], 6] = 0.707
+
+                # 25 degrees downwards
+                self.goal_states[env_ids[lift_and_rotate_and_upright_state], 2] += -0.01  # Above table
+                # self.goal_states[env_ids[lift_and_rotate_and_upright_state], 3] = -0.653
+                # self.goal_states[env_ids[lift_and_rotate_and_upright_state], 4] = 0.271
+                # self.goal_states[env_ids[lift_and_rotate_and_upright_state], 5] = 0.271
+                # self.goal_states[env_ids[lift_and_rotate_and_upright_state], 6] = 0.653
+                self.goal_states[env_ids[lift_and_rotate_and_upright_state], 3] = -0.693
+                self.goal_states[env_ids[lift_and_rotate_and_upright_state], 4] = 0.138
+                self.goal_states[env_ids[lift_and_rotate_and_upright_state], 5] = 0.138
+                self.goal_states[env_ids[lift_and_rotate_and_upright_state], 6] = 0.693
             else:
                 self.goal_states[env_ids, 0:3] = target_coords
                 new_rot = self.get_random_quat(env_ids)
