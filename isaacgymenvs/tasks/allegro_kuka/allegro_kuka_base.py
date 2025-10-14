@@ -1339,7 +1339,7 @@ class AllegroKukaBase(VecTask):
         if use_hack_object_pos_offset:
             self.object_pos_offset = torch.tensor([
                 -hack_object_pos_offset, 0.0, 0.0
-            ], device=self.device)[None]
+            ], device=self.device)[None].repeat_interleave(self.num_envs, dim=0)
             self.object_pos = self.object_pos + quat_rotate(self.object_rot, self.object_pos_offset)
             self.goal_pos = self.goal_pos + quat_rotate(self.goal_rot, self.object_pos_offset)
 
