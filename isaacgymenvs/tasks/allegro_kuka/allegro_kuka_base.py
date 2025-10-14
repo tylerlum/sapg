@@ -658,6 +658,21 @@ class AllegroKukaBase(VecTask):
             object_asset_files = [hammer.file for hammer in name_to_hammer_dict.values()]
             object_asset_scales = [hammer.scale for hammer in name_to_hammer_dict.values()]
             need_vhacds = [hammer.need_vhacd for hammer in name_to_hammer_dict.values()]
+        elif object_type == "all_cuboidal_hammers":
+            cuboidal_hammer_names = ["cuboidal_hammer", "cuboidal_hammer_1-25x", "cuboidal_hammer_1-5x", "cuboidal_hammer_1-75x", "cuboidal_hammer_2x"]
+            object_asset_files = [name_to_hammer_dict[name].file for name in cuboidal_hammer_names]
+            object_asset_scales = [name_to_hammer_dict[name].scale for name in cuboidal_hammer_names]
+            need_vhacds = [name_to_hammer_dict[name].need_vhacd for name in cuboidal_hammer_names]
+        elif object_type == "all_cylindrical_hammers":
+            cylindrical_hammer_names = ["cylindrical_hammer", "cylindrical_hammer_1-25x", "cylindrical_hammer_1-5x", "cylindrical_hammer_1-75x", "cylindrical_hammer_2x"]
+            object_asset_files = [name_to_hammer_dict[name].file for name in cylindrical_hammer_names]
+            object_asset_scales = [name_to_hammer_dict[name].scale for name in cylindrical_hammer_names]
+            need_vhacds = [name_to_hammer_dict[name].need_vhacd for name in cylindrical_hammer_names]
+        elif object_type == "all_cuboidal_and_cylindrical_hammers":
+            cuboidal_and_cylindrical_hammer_names = ["cuboidal_hammer", "cuboidal_hammer_1-25x", "cuboidal_hammer_1-5x", "cuboidal_hammer_1-75x", "cuboidal_hammer_2x", "cylindrical_hammer", "cylindrical_hammer_1-25x", "cylindrical_hammer_1-5x", "cylindrical_hammer_1-75x", "cylindrical_hammer_2x"]
+            object_asset_files = [name_to_hammer_dict[name].file for name in cuboidal_and_cylindrical_hammer_names]
+            object_asset_scales = [name_to_hammer_dict[name].scale for name in cuboidal_and_cylindrical_hammer_names]
+            need_vhacds = [name_to_hammer_dict[name].need_vhacd for name in cuboidal_and_cylindrical_hammer_names]
         elif object_type == "cuboid":
             # Use what was already used before
             pass
