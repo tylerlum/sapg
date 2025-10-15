@@ -1278,6 +1278,13 @@ class AllegroKukaBase(VecTask):
         self.object_scales = to_torch(object_scales, dtype=torch.float, device=self.device)
         self.object_keypoint_offsets = to_torch(object_keypoint_offsets, dtype=torch.float, device=self.device)
 
+        self.joint_names = self.gym.get_actor_joint_names(env_ptr, allegro_actor)
+        props = self.gym.get_actor_dof_properties(env_ptr, allegro_actor)
+        self.joint_lower_limits = props["lower"]
+        self.joint_upper_limits = props["upper"]
+
+        print(f"Allegro joint names: {self.joint_names}")
+
         self._after_envs_created()
 
         try:
@@ -2018,6 +2025,39 @@ class AllegroKukaBase(VecTask):
             self.action_torques[:, self.object_rb_handles, :] = torque_actions
             self.gym.apply_rigid_body_force_tensors(
                 self.sim, None, gymtorch.unwrap_tensor(self.action_torques), gymapi.ENV_SPACE
+            )
+
+        USE_LIVE_PLOTTER = False
+        if USE_LIVE_PLOTTER:
+            if not hasattr(self, "live_plotter"):
+                from live_plotter import FastLivePlotter
+                self.live_plotter = FastLivePlotter(
+                    n_plots=len(self.joint_names),
+                    titles=self.joint_names,
+                    xlabels=["idx"] * len(self.joint_names),
+                    ylabels=["joint pos"] * len(self.joint_names),
+                    ylims=[(self.joint_lower_limits[i], self.joint_upper_limits[i]) for i in range(len(self.joint_names))],
+                    legends=[["pos", "target"]] * len(self.joint_names),
+                )
+                self.joint_pos_history = []
+                self.joint_target_history = []
+
+            ENV_IDX = 0
+            joint_pos = self.arm_hand_dof_pos[ENV_IDX].cpu().numpy().copy()
+            joint_target = self.cur_targets[ENV_IDX].cpu().numpy().copy()
+            assert joint_pos.shape == joint_target.shape == (len(self.joint_names),), f"{joint_pos.shape} != {joint_target.shape} != {len(self.joint_names)}"
+            self.joint_pos_history.append(joint_pos)
+            self.joint_target_history.append(joint_target)
+            joint_pos_history = np.stack(self.joint_pos_history, axis=0)
+            joint_target_history = np.stack(self.joint_target_history, axis=0)
+            joint_pos_and_target_history = np.stack([joint_pos_history, joint_target_history], axis=-1)
+            assert joint_pos_and_target_history.shape == (len(self.joint_pos_history), len(self.joint_names), 2), f"{joint_pos_and_target_history.shape} != ({len(self.joint_pos_history)}, {len(self.joint_names)}, 2)"
+
+            # Should be (N, 2)
+            self.live_plotter.plot(
+                y_data_list=[
+                    joint_pos_and_target_history[:, i, :] for i in range(len(self.joint_names))
+                ]
             )
 
     def post_physics_step(self):
