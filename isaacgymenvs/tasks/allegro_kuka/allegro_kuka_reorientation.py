@@ -161,19 +161,23 @@ class AllegroKukaReorientation(AllegroKukaBase):
                 lift_and_rotate_state = self.goal_type[env_ids] == 1
                 lift_and_rotate_and_upright_state = self.goal_type[env_ids] == 2
 
+                from scipy.spatial.transform import Rotation as R
+
                 # Set goal_states explicitly
                 OFFSET = 0.05
                 self.goal_states[env_ids[lift_only_state], 2] += 0.2 + OFFSET  # Above table
-                self.goal_states[env_ids[lift_only_state], 3] = 0.0
-                self.goal_states[env_ids[lift_only_state], 4] = 0.0
-                self.goal_states[env_ids[lift_only_state], 5] = 0.0
-                self.goal_states[env_ids[lift_only_state], 6] = 1.0
+                lift_only_quat_xyzw = R.from_euler('xyz', [0, 0, 0], degrees=True).as_quat()
+                self.goal_states[env_ids[lift_only_state], 3] = lift_only_quat_xyzw[0]
+                self.goal_states[env_ids[lift_only_state], 4] = lift_only_quat_xyzw[1]
+                self.goal_states[env_ids[lift_only_state], 5] = lift_only_quat_xyzw[2]
+                self.goal_states[env_ids[lift_only_state], 6] = lift_only_quat_xyzw[3]
 
                 self.goal_states[env_ids[lift_and_rotate_state], 2] += 0.2 + OFFSET  # Above table
-                self.goal_states[env_ids[lift_and_rotate_state], 3] = -0.707
-                self.goal_states[env_ids[lift_and_rotate_state], 4] = 0.0
-                self.goal_states[env_ids[lift_and_rotate_state], 5] = 0.0
-                self.goal_states[env_ids[lift_and_rotate_state], 6] = 0.707
+                lift_and_rotate_quat_xyzw = R.from_euler('xyz', [-90, 0, 0], degrees=True).as_quat()
+                self.goal_states[env_ids[lift_and_rotate_state], 3] = lift_and_rotate_quat_xyzw[0]
+                self.goal_states[env_ids[lift_and_rotate_state], 4] = lift_and_rotate_quat_xyzw[1]
+                self.goal_states[env_ids[lift_and_rotate_state], 5] = lift_and_rotate_quat_xyzw[2]
+                self.goal_states[env_ids[lift_and_rotate_state], 6] = lift_and_rotate_quat_xyzw[3]
 
                 # # Flat
                 # self.goal_states[env_ids[lift_and_rotate_and_upright_state], 2] += -0.05  # Above table
@@ -184,14 +188,11 @@ class AllegroKukaReorientation(AllegroKukaBase):
 
                 # 25 degrees downwards
                 self.goal_states[env_ids[lift_and_rotate_and_upright_state], 2] += -0.01 + OFFSET  # Above table
-                # self.goal_states[env_ids[lift_and_rotate_and_upright_state], 3] = -0.653
-                # self.goal_states[env_ids[lift_and_rotate_and_upright_state], 4] = 0.271
-                # self.goal_states[env_ids[lift_and_rotate_and_upright_state], 5] = 0.271
-                # self.goal_states[env_ids[lift_and_rotate_and_upright_state], 6] = 0.653
-                self.goal_states[env_ids[lift_and_rotate_and_upright_state], 3] = -0.693
-                self.goal_states[env_ids[lift_and_rotate_and_upright_state], 4] = 0.138
-                self.goal_states[env_ids[lift_and_rotate_and_upright_state], 5] = 0.138
-                self.goal_states[env_ids[lift_and_rotate_and_upright_state], 6] = 0.693
+                lift_and_rotate_and_upright_quat_xyzw = R.from_euler('xyz', [-90, 22.5, 0], degrees=True).as_quat()
+                self.goal_states[env_ids[lift_and_rotate_and_upright_state], 3] = lift_and_rotate_and_upright_quat_xyzw[0]
+                self.goal_states[env_ids[lift_and_rotate_and_upright_state], 4] = lift_and_rotate_and_upright_quat_xyzw[1]
+                self.goal_states[env_ids[lift_and_rotate_and_upright_state], 5] = lift_and_rotate_and_upright_quat_xyzw[2]
+                self.goal_states[env_ids[lift_and_rotate_and_upright_state], 6] = lift_and_rotate_and_upright_quat_xyzw[3]
             else:
                 self.goal_states[env_ids, 0:3] = target_coords
                 new_rot = self.get_random_quat(env_ids)
