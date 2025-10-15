@@ -876,7 +876,7 @@ class AllegroKukaBase(VecTask):
         cuboid_y_lengths = np.random.uniform(CUBOID_Y_MIN, CUBOID_Y_MAX, size=NUM_CUBOIDS)
         cuboid_z_lengths = np.random.uniform(CUBOID_Z_MIN, CUBOID_Z_MAX, size=NUM_CUBOIDS)
         cuboid_scales = np.stack([cuboid_x_lengths, cuboid_y_lengths, cuboid_z_lengths], axis=1).tolist()
-        CUBOID_COM_X_RANGE = 0.05
+        CUBOID_COM_X_RANGE = 0.1
         CUBOID_COM_Y_RANGE = 0.02
         CUBOID_COM_Z_RANGE = 0.02
         cuboid_coms = np.stack([
@@ -904,7 +904,7 @@ class AllegroKukaBase(VecTask):
         cylinder_diameters = np.random.uniform(CYLINDER_DIAMETER_MIN, CYLINDER_DIAMETER_MAX, size=NUM_CYLINDERS)
         cylinder_heights = np.random.uniform(CYLINDER_HEIGHT_MIN, CYLINDER_HEIGHT_MAX, size=NUM_CYLINDERS)
         cylinder_scales = np.stack([cylinder_heights, cylinder_diameters, cylinder_diameters], axis=1).tolist()
-        CYLINDER_COM_X_RANGE = 0.05
+        CYLINDER_COM_X_RANGE = 0.1
         CYLINDER_COM_Y_RANGE = 0.02
         CYLINDER_COM_Z_RANGE = 0.02
         cylinder_coms = np.stack([
