@@ -676,6 +676,11 @@ class AllegroKukaBase(VecTask):
         elif object_type == "cuboid":
             # Use what was already used before
             pass
+        elif object_type == "tyler_cuboid_cylinder":
+            from pathlib import Path
+            object_asset_files, object_asset_scales, need_vhacds = self._tyler_cuboid_cylinder(
+                str(Path(tmp_assets_dir) / "tyler_cuboid_cylinder"),
+            )
         else:
             raise ValueError(f"Unknown object type: {object_type}")
 
@@ -850,6 +855,133 @@ class AllegroKukaBase(VecTask):
                 scales.append([float(scale_token) / 100 for scale_token in scale_tokens])
 
         return files, scales
+
+    def _tyler_cuboid_cylinder(self, generated_assets_dir):
+        if not os.path.exists(generated_assets_dir):
+            os.makedirs(generated_assets_dir)
+
+        try:
+            filenames = os.listdir(generated_assets_dir)
+            for fname in filenames:
+                if fname.endswith(".urdf"):
+                    os.remove(join(generated_assets_dir, fname))
+        except Exception as exc:
+            print(f"Exception {exc} while removing older procedurally-generated urdf assets")
+
+        NUM_CUBOIDS = 50
+        CUBOID_X_MIN, CUBOID_X_MAX = 0.1, 0.4
+        CUBOID_Y_MIN, CUBOID_Y_MAX = 0.02, 0.1
+        CUBOID_Z_MIN, CUBOID_Z_MAX = 0.02, 0.1
+        cuboid_x_lengths = np.random.uniform(CUBOID_X_MIN, CUBOID_X_MAX, size=NUM_CUBOIDS)
+        cuboid_y_lengths = np.random.uniform(CUBOID_Y_MIN, CUBOID_Y_MAX, size=NUM_CUBOIDS)
+        cuboid_z_lengths = np.random.uniform(CUBOID_Z_MIN, CUBOID_Z_MAX, size=NUM_CUBOIDS)
+        cuboid_scales = np.stack([cuboid_x_lengths, cuboid_y_lengths, cuboid_z_lengths], axis=1).tolist()
+
+        cuboid_files = [
+            self.generate_cuboid_urdf(
+                filepath=join(generated_assets_dir, f"{idx:03d}_cuboid_{x_scale}_{y_scale}_{z_scale}".replace(".", "-") + ".urdf"),
+                x_scale=x_scale,
+                y_scale=y_scale,
+                z_scale=z_scale,
+            )
+            for idx, (x_scale, y_scale, z_scale) in enumerate(cuboid_scales)
+        ]
+
+        NUM_CYLINDERS = 50
+        CYLINDER_DIAMETER_MIN, CYLINDER_DIAMETER_MAX = 0.02, 0.1
+        CYLINDER_HEIGHT_MIN, CYLINDER_HEIGHT_MAX = 0.1, 0.4
+        cylinder_diameters = np.random.uniform(CYLINDER_DIAMETER_MIN, CYLINDER_DIAMETER_MAX, size=NUM_CYLINDERS)
+        cylinder_heights = np.random.uniform(CYLINDER_HEIGHT_MIN, CYLINDER_HEIGHT_MAX, size=NUM_CYLINDERS)
+        cylinder_scales = np.stack([cylinder_heights, cylinder_diameters, cylinder_diameters], axis=1).tolist()
+        cylinder_files = [
+            self.generate_cylinder_urdf(
+                filepath=join(generated_assets_dir, f"{idx:03d}_cylinder_{height}_{diameter}_{diameter}".replace(".", "-") + ".urdf"),
+                height=height,
+                radius=diameter / 2,
+            )
+            for idx, (height, diameter, _) in enumerate(cylinder_scales)
+        ]
+
+        RESCALE_FACTOR = 10  # Rescale to try to stay close to 1.0 in magnitude so roughly 0.1 to 4.0
+        files = cuboid_files + cylinder_files
+        scales = (
+            [(x * RESCALE_FACTOR, y * RESCALE_FACTOR, z * RESCALE_FACTOR) for (x, y, z) in cuboid_scales]
+            + [(x * RESCALE_FACTOR, y * RESCALE_FACTOR, z * RESCALE_FACTOR) for (x, y, z) in cylinder_scales]
+        )
+        need_vhacds = [False] * len(files)
+        return files, scales, need_vhacds
+
+    @staticmethod
+    def generate_cuboid_urdf(filepath, x_scale, y_scale, z_scale):
+        urdf = f"""<?xml version="1.0"?>
+<robot name="cuboid">
+
+  <link name="cuboid">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="{x_scale} {y_scale} {z_scale}"/>
+      </geometry>
+      <material name="brown">
+        <color rgba="0.55 0.27 0.07 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="{x_scale} {y_scale} {z_scale}"/>
+      </geometry>
+    </collision>
+
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.1"/>
+      <inertia ixx="0.0001" iyy="0.0001" izz="0.0001" ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </link>
+
+</robot>
+"""
+        with open(filepath, "w") as f:
+            f.write(urdf)
+        print(f"✅ URDF written to {filepath}")
+        return filepath
+
+    @staticmethod
+    def generate_cylinder_urdf(filepath, height, radius):
+        urdf = f"""<?xml version="1.0"?>
+<robot name="cylinder">
+
+  <link name="cylinder">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 -1.5707963267948966 0"/>
+      <geometry>
+        <cylinder radius="{radius}" length="{height}"/>
+      </geometry>
+      <material name="brown">
+        <color rgba="0.55 0.27 0.07 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 -1.5707963267948966 0"/>
+      <geometry>
+        <cylinder radius="{radius}" length="{height}"/>
+      </geometry>
+    </collision>
+
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.1"/>
+      <inertia ixx="0.0001" iyy="0.0001" izz="0.0001" ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </link>
+
+</robot>
+"""
+        with open(filepath, "w") as f:
+            f.write(urdf)
+        print(f"✅ URDF written to {filepath}")
+        return filepath
 
     def _create_envs(self, num_envs, spacing, num_per_row):
         if self.should_load_initial_states:
