@@ -1,4 +1,168 @@
 # SAPG: Split and Aggregate Policy Gradients (ICML 2024 Oral) 
+
+# TYLER README (Last Updated: October 15, 2025)
+
+From:
+
+```
+commit f0496ee69a4fa63de4ba4d96874e764f8f3bc302 (HEAD -> 2025-10-15_NewObjects, tyler_origin/2025-10-15_NewObjects)
+```
+
+## Pretrain (Standard Cuboid)
+
+```
+python -m isaacgymenvs.train \
+task=AllegroKukaLSTM \
+task/env=reorientation \
+++task.env.useSparseReward=False \
+headless=True \
+task.env.numEnvs=24576 \
+train.params.config.minibatch_size=98304 \
+multi_gpu=False \
+train.params.config.good_reset_boundary=0 \
+task.env.goodResetBoundary=0 \
+train.params.config.use_others_experience=lf \
+train.params.config.off_policy_ratio=1.0 \
+train.params.config.expl_type=mixed_expl_learn_param \
+train.params.config.expl_reward_type=entropy \
+train.params.config.expl_coef_block_size=4096 \
+train.params.config.expl_reward_coef_scale=0.005 \
+train.params.network.space.continuous.fixed_sigma=coef_cond \
+wandb_project=sapg_allegro_kuka_reorientation \
+wandb_entity=<ENTITY_NAME> \
+wandb_activate=True \
+wandb_group=<GROUP_NAME> \
+wandb_tags='[]' \
+++wandb_notes='' \
+seed=0 \
+experiment=00_<EXPERIMENT_NAME> \
+hydra.run.dir=./train_dir/allegro_kuka_reorientation/<EXPERIMENT_NAME> \
+task.env.object_type='cuboid'
+```
+
+
+## Finetune (Marker)
+
+```
+python -m \
+isaacgymenvs.train \
+task=AllegroKukaLSTM \
+task/env=reorientation \
+++task.env.useSparseReward=False \
+headless=True \
+task.env.numEnvs=24576 \
+train.params.config.minibatch_size=98304 \
+multi_gpu=False \
+train.params.config.good_reset_boundary=0 \
+task.env.goodResetBoundary=0 \
+train.params.config.use_others_experience=lf \
+train.params.config.off_policy_ratio=1.0 \
+train.params.config.expl_type=mixed_expl_learn_param \
+train.params.config.expl_reward_type=entropy \
+train.params.config.expl_coef_block_size=4096 \
+train.params.config.expl_reward_coef_scale=0.005 \
+train.params.network.space.continuous.fixed_sigma=coef_cond \
+wandb_project=sapg_allegro_kuka_reorientation \
+wandb_entity=<ENTITY_NAME> \
+wandb_activate=True \
+wandb_group=<GROUP_NAME> \
+wandb_tags='[]' \
+++wandb_notes='' \
+seed=0 \
+experiment=00_<EXPERIMENT_NAME> \
+hydra.run.dir=./train_dir/allegro_kuka_reorientation/<EXPERIMENT_NAME> \
+checkpoint=/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/test_24576envs_mixed_expl_learn_param_lf_1p_09_10_00h10m32s/runs/00_test_24576envs_mixed_expl_learn_param_lf_1p_09_10_00h10m32s/nn/00_test_24576envs_mixed_expl_learn_param_lf_1p_09_10_00h10m32s.pth \
+task.env.object_type='040_large_marker' \
+task.env.use_fixed_set_of_goal_states=False \
+task.env.use_fixed_init_object_pose=False
+```
+
+## Play Pretrained Policy
+
+```
+python -m isaacgymenvs.train \
+task=AllegroKukaLSTM \
+task/env=reorientation \
+++task.env.useSparseReward=False \
+headless=True \
+task.env.numEnvs=24576 \
+train.params.config.minibatch_size=98304 \
+multi_gpu=False \
+train.params.config.good_reset_boundary=0 \
+task.env.goodResetBoundary=0 \
+train.params.config.use_others_experience=lf \
+train.params.config.off_policy_ratio=1.0 \
+train.params.config.expl_type=mixed_expl_learn_param \
+train.params.config.expl_reward_type=entropy \
+train.params.config.expl_coef_block_size=4096 \
+train.params.config.expl_reward_coef_scale=0.005 \
+train.params.network.space.continuous.fixed_sigma=coef_cond \
+wandb_project=sapg_allegro_kuka_reorientation \
+wandb_entity=<ENTITY_NAME> \
+wandb_activate=True \
+wandb_group=<GROUP_NAME> \
+wandb_tags='[]' \
+++wandb_notes='' \
+seed=0 \
+experiment=00_<EXPERIMENT_NAME> \
+hydra.run.dir=./train_dir/allegro_kuka_reorientation/<EXPERIMENT_NAME> \
+checkpoint=/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/test_24576envs_mixed_expl_learn_param_lf_1p_09_10_00h10m32s/runs/00_test_24576envs_mixed_expl_learn_param_lf_1p_09_10_00h10m32s/nn/00_test_24576envs_mixed_expl_learn_param_lf_1p_09_10_00h10m32s.pth \
+task.env.object_type='cuboid' \
+task.env.use_fixed_set_of_goal_states=False \
+task.env.use_fixed_init_object_pose=False \
+test=True \
+task.env.numEnvs=100 \
+headless=False \
+task.env.envSpacing=1.0 \
+task.env.maxConsecutiveSuccesses=10 \
+task.env.enableDebugVis=True
+```
+
+
+## Play Finetuned Policy (Screwdriver) With Fixed Goal: `task.env.use_fixed_set_of_goal_states=True`
+
+```
+python -m isaacgymenvs.train \
+task=AllegroKukaLSTM \
+task/env=reorientation \
+++task.env.useSparseReward=False \
+headless=True \
+task.env.numEnvs=24576 \
+train.params.config.minibatch_size=98304 \
+multi_gpu=False \
+train.params.config.good_reset_boundary=0 \
+task.env.goodResetBoundary=0 \
+train.params.config.use_others_experience=lf \
+train.params.config.off_policy_ratio=1.0 \
+train.params.config.expl_type=mixed_expl_learn_param \
+train.params.config.expl_reward_type=entropy \
+train.params.config.expl_coef_block_size=4096 \
+train.params.config.expl_reward_coef_scale=0.005 \
+train.params.network.space.continuous.fixed_sigma=coef_cond \
+wandb_project=sapg_allegro_kuka_reorientation \
+wandb_entity=<ENTITY_NAME> \
+wandb_activate=True \
+wandb_group=<GROUP_NAME> \
+wandb_tags='[]' \
+++wandb_notes='' \
+seed=0 \
+experiment=00_<EXPERIMENT_NAME> \
+hydra.run.dir=./train_dir/allegro_kuka_reorientation/<EXPERIMENT_NAME> \
+checkpoint=/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/test_24576envs_mixed_expl_learn_param_lf_1p_09_10_00h10m32s/runs/00_test_24576envs_mixed_expl_learn_param_lf_1p_09_10_00h10m32s/nn/00_test_24576envs_mixed_expl_learn_param_lf_1p_09_10_00h10m32s.pth \
+task.env.object_type='044_flat_screwdriver' \
+task.env.use_fixed_set_of_goal_states=True \
+task.env.use_fixed_init_object_pose=False \
+test=True \
+task.env.numEnvs=100 \
+headless=False \
+checkpoint=/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/finetune_screwdriver_notfixedinit_notfixedgoal/runs/00_finetune_screwdriver_notfixedinit_notfixedgoal/best/model.pth \
+task.env.envSpacing=1.0 \
+task.env.maxConsecutiveSuccesses=10 \
+task.env.enableDebugVis=True
+```
+
+
+# ORIGINAL README
 [![arXiv](https://img.shields.io/badge/arXiv-2407.20230-df2a2a.svg)](https://arxiv.org/abs/2407.20230)
 [![Static Badge](https://img.shields.io/badge/Project-sapg-a)](https://sapg-rl.github.io)
 [![Python](https://img.shields.io/badge/python-3.8-blue)](https://www.python.org)
