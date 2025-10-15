@@ -868,7 +868,7 @@ class AllegroKukaBase(VecTask):
         except Exception as exc:
             print(f"Exception {exc} while removing older procedurally-generated urdf assets")
 
-        NUM_CUBOIDS = self.cfg["task"]["tyler_num_cuboids"]
+        NUM_CUBOIDS = self.cfg["env"]["tyler_num_cuboids"]
         CUBOID_X_MIN, CUBOID_X_MAX = 0.1, 0.4  # Length
         CUBOID_Y_MIN, CUBOID_Y_MAX = 0.02, 0.1  # Width
         CUBOID_Z_MIN, CUBOID_Z_MAX = 0.02, 0.1  # Thickness
@@ -876,7 +876,7 @@ class AllegroKukaBase(VecTask):
         cuboid_y_lengths = np.random.uniform(CUBOID_Y_MIN, CUBOID_Y_MAX, size=NUM_CUBOIDS)
         cuboid_z_lengths = np.random.uniform(CUBOID_Z_MIN, CUBOID_Z_MAX, size=NUM_CUBOIDS)
         cuboid_scales = np.stack([cuboid_x_lengths, cuboid_y_lengths, cuboid_z_lengths], axis=1).tolist()
-        if self.cfg["task"]["tyler_randomize_com"]:
+        if self.cfg["env"]["tyler_randomize_com"]:
             CUBOID_COM_X_RANGE = 0.1
             CUBOID_COM_Y_RANGE = 0.02
             CUBOID_COM_Z_RANGE = 0.02
@@ -903,13 +903,13 @@ class AllegroKukaBase(VecTask):
             for idx, (x_scale, y_scale, z_scale) in enumerate(cuboid_scales)
         ]
 
-        NUM_CYLINDERS = self.cfg["task"]["tyler_num_cylinders"]
+        NUM_CYLINDERS = self.cfg["env"]["tyler_num_cylinders"]
         CYLINDER_HEIGHT_MIN, CYLINDER_HEIGHT_MAX = 0.1, 0.4  # Length
         CYLINDER_DIAMETER_MIN, CYLINDER_DIAMETER_MAX = 0.02, 0.1  # Diameter
         cylinder_diameters = np.random.uniform(CYLINDER_DIAMETER_MIN, CYLINDER_DIAMETER_MAX, size=NUM_CYLINDERS)
         cylinder_heights = np.random.uniform(CYLINDER_HEIGHT_MIN, CYLINDER_HEIGHT_MAX, size=NUM_CYLINDERS)
         cylinder_scales = np.stack([cylinder_heights, cylinder_diameters, cylinder_diameters], axis=1).tolist()
-        if self.cfg["task"]["tyler_randomize_com"]:
+        if self.cfg["env"]["tyler_randomize_com"]:
             CYLINDER_COM_X_RANGE = 0.1
             CYLINDER_COM_Y_RANGE = 0.02
             CYLINDER_COM_Z_RANGE = 0.02
