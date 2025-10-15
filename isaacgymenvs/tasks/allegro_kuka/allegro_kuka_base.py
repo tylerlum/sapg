@@ -613,6 +613,31 @@ class AllegroKukaBase(VecTask):
             #     scale=[3.0, 0.5, 0.5],
             #     need_vhacd=False,
             # ),
+            "040_large_marker": Hammer(
+                file=str(root_dir / "assets/urdf/tyler_objects/040_large_marker/040_large_marker.urdf"),
+                scale=[3.0, 0.5, 0.5],
+                need_vhacd=True,
+            ),
+            "whiteboard_eraser": Hammer(
+                file=str(root_dir / "assets/urdf/tyler_objects/whiteboard_eraser/source/model.urdf"),
+                scale=[3.0, 0.5, 0.5],
+                need_vhacd=True,
+            ),
+            "phone": Hammer(
+                file=str(root_dir / "assets/urdf/tyler_objects/phone/model.urdf"),
+                scale=[3.0, 0.5, 0.5],
+                need_vhacd=True,
+            ),
+            "screwdriver": Hammer(
+                file=str(root_dir / "assets/urdf/tyler_objects/screwdriver/model.urdf"),
+                scale=[3.0, 0.5, 0.5],
+                need_vhacd=True,
+            ),
+            "044_flat_screwdriver": Hammer(
+                file=str(root_dir / "assets/urdf/tyler_objects/044_flat_screwdriver/044_flat_screwdriver.urdf"),
+                scale=[3.0, 0.5, 0.5],
+                need_vhacd=True,
+            ),
         }
         for hammer in name_to_hammer_dict.values():
             assert Path(hammer.file).exists(), f"Hammer file {hammer.file} does not exist"
@@ -654,6 +679,26 @@ class AllegroKukaBase(VecTask):
             object_asset_files = [name_to_hammer_dict["cylindrical_hammer_4x"].file]
             object_asset_scales = [name_to_hammer_dict["cylindrical_hammer_4x"].scale]
             need_vhacds = [name_to_hammer_dict["cylindrical_hammer_4x"].need_vhacd]
+        elif object_type == "040_large_marker":
+            object_asset_files = [name_to_hammer_dict["040_large_marker"].file]
+            object_asset_scales = [name_to_hammer_dict["040_large_marker"].scale]
+            need_vhacds = [name_to_hammer_dict["040_large_marker"].need_vhacd]
+        elif object_type == "whiteboard_eraser":
+            object_asset_files = [name_to_hammer_dict["whiteboard_eraser"].file]
+            object_asset_scales = [name_to_hammer_dict["whiteboard_eraser"].scale]
+            need_vhacds = [name_to_hammer_dict["whiteboard_eraser"].need_vhacd]
+        elif object_type == "phone":
+            object_asset_files = [name_to_hammer_dict["phone"].file]
+            object_asset_scales = [name_to_hammer_dict["phone"].scale]
+            need_vhacds = [name_to_hammer_dict["phone"].need_vhacd]
+        elif object_type == "screwdriver":
+            object_asset_files = [name_to_hammer_dict["screwdriver"].file]
+            object_asset_scales = [name_to_hammer_dict["screwdriver"].scale]
+            need_vhacds = [name_to_hammer_dict["screwdriver"].need_vhacd]
+        elif object_type == "044_flat_screwdriver":
+            object_asset_files = [name_to_hammer_dict["044_flat_screwdriver"].file]
+            object_asset_scales = [name_to_hammer_dict["044_flat_screwdriver"].scale]
+            need_vhacds = [name_to_hammer_dict["044_flat_screwdriver"].need_vhacd]
         elif object_type == "all_hammers":
             object_asset_files = [hammer.file for hammer in name_to_hammer_dict.values()]
             object_asset_scales = [hammer.scale for hammer in name_to_hammer_dict.values()]
