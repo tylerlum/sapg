@@ -2118,6 +2118,49 @@ class AllegroKukaBase(VecTask):
                     # goal_keypoint_transform.p = gymapi.Vec3(*goal_keypoint_pos_cpu[i])
                     # gymutil.draw_lines(sphere_geom, self.gym, self.viewer, self.envs[i], goal_keypoint_transform)
 
+            # Visualize object and goal pose
+            for i in range(self.num_envs):
+                object_transform = gymapi.Transform(
+                    p=gymapi.Vec3(*self.object_pos[i]),
+                    r=gymapi.Quat(*self.object_rot[i]),
+                )
+                goal_transform = gymapi.Transform(
+                    p=gymapi.Vec3(*self.goal_pos[i]),
+                    r=gymapi.Quat(*self.goal_rot[i]),
+                )
+                self._draw_transform(transform=object_transform, env_idx=i)
+                self._draw_transform(transform=goal_transform, env_idx=i)
+
+    def _draw_transform(
+        self, transform: gymapi.Transform, line_length: float = 0.2, env_idx: int = 0
+    ) -> None:
+        env = self.envs[env_idx]
+
+        origin = transform.transform_point(gymapi.Vec3(0, 0, 0))
+        x_dir = transform.transform_point(gymapi.Vec3(line_length, 0, 0))
+        y_dir = transform.transform_point(gymapi.Vec3(0, line_length, 0))
+        z_dir = transform.transform_point(gymapi.Vec3(0, 0, line_length))
+
+        RED = (1, 0, 0)
+        GREEN = (0, 1, 0)
+        BLUE = (0, 0, 1)
+
+        for color, dir in zip([RED, GREEN, BLUE], [x_dir, y_dir, z_dir]):
+            gymutil.draw_line(
+                p1=origin,
+                p2=dir,
+                color=gymapi.Vec3(*color),  # type: ignore
+                gym=self.gym,
+                viewer=self.viewer,
+                env=env,
+            )
+            # self._draw_debug_line_of_spheres(
+            #     env=env,
+            #     start_pos=origin,
+            #     end_pos=dir,
+            #     color=color,
+            # )
+
     def accumulate_env_states(self):
         root_state_tensor = self.root_state_tensor.reshape(
             [self.num_envs, -1, *self.root_state_tensor.shape[1:]]
