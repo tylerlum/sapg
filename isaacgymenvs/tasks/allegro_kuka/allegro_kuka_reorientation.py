@@ -109,16 +109,6 @@ class AllegroKukaReorientation(AllegroKukaBase):
     def _reset_target(self, env_ids: Tensor, reset_buf_idxs=None, tensor_reset=True) -> None:
         
         if len(env_ids) > 0 and reset_buf_idxs is None and tensor_reset:
-            target_volume_origin = self.target_volume_origin
-            target_volume_extent = self.target_volume_extent
-
-            target_volume_min_coord = target_volume_origin + target_volume_extent[:, 0]
-            target_volume_max_coord = target_volume_origin + target_volume_extent[:, 1]
-            target_volume_size = target_volume_max_coord - target_volume_min_coord
-
-            rand_pos_floats = torch_rand_float(0.0, 1.0, (len(env_ids), 3), device=self.device)
-            target_coords = target_volume_min_coord + rand_pos_floats * target_volume_size
-
             #HACK:
             USE_FIXED_SET_OF_GOAL_STATES = self.cfg["env"]["use_fixed_set_of_goal_states"]
             if USE_FIXED_SET_OF_GOAL_STATES:
@@ -131,14 +121,9 @@ class AllegroKukaReorientation(AllegroKukaBase):
 
                 # Resample goal_type for given env_ids, ensuring it changes
                 new_goal_type = self.successes[env_ids].long()
-                # If the new sample is the same as current, shift by 1 modulo 3
-                # new_goal_type = torch.where(
-                #     new_goal_type == self.goal_type[env_ids],
-                #     (self.goal_type[env_ids] + 1) % 3,
-                #     new_goal_type
-                # )
-                # new_goal_type = torch.clamp(new_goal_type, 0, 2)
                 new_goal_type = new_goal_type % self.max_consecutive_successes
+
+                # Start with goal 0, then repeat goals 1 and 2 over and over again
                 new_goal_type = torch.where(
                     new_goal_type % 2 == 1,
                     1,
@@ -203,6 +188,17 @@ class AllegroKukaReorientation(AllegroKukaBase):
                 self.goal_states[env_ids[lift_and_rotate_and_upright_state], 5] = lift_and_rotate_and_upright_quat_xyzw[2]
                 self.goal_states[env_ids[lift_and_rotate_and_upright_state], 6] = lift_and_rotate_and_upright_quat_xyzw[3]
             else:
+                # Randomly sample a target pose
+                target_volume_origin = self.target_volume_origin
+                target_volume_extent = self.target_volume_extent
+
+                target_volume_min_coord = target_volume_origin + target_volume_extent[:, 0]
+                target_volume_max_coord = target_volume_origin + target_volume_extent[:, 1]
+                target_volume_size = target_volume_max_coord - target_volume_min_coord
+
+                rand_pos_floats = torch_rand_float(0.0, 1.0, (len(env_ids), 3), device=self.device)
+                target_coords = target_volume_min_coord + rand_pos_floats * target_volume_size
+
                 self.goal_states[env_ids, 0:3] = target_coords
                 new_rot = self.get_random_quat(env_ids)
                 self.goal_states[env_ids, 3:7] = new_rot
