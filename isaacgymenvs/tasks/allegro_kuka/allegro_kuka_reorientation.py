@@ -162,13 +162,14 @@ class AllegroKukaReorientation(AllegroKukaBase):
                 lift_and_rotate_and_upright_state = self.goal_type[env_ids] == 2
 
                 # Set goal_states explicitly
-                self.goal_states[env_ids[lift_only_state], 2] += 0.2  # Above table
+                OFFSET = 0.05
+                self.goal_states[env_ids[lift_only_state], 2] += 0.2 + OFFSET  # Above table
                 self.goal_states[env_ids[lift_only_state], 3] = 0.0
                 self.goal_states[env_ids[lift_only_state], 4] = 0.0
                 self.goal_states[env_ids[lift_only_state], 5] = 0.0
                 self.goal_states[env_ids[lift_only_state], 6] = 1.0
 
-                self.goal_states[env_ids[lift_and_rotate_state], 2] += 0.2  # Above table
+                self.goal_states[env_ids[lift_and_rotate_state], 2] += 0.2 + OFFSET  # Above table
                 self.goal_states[env_ids[lift_and_rotate_state], 3] = -0.707
                 self.goal_states[env_ids[lift_and_rotate_state], 4] = 0.0
                 self.goal_states[env_ids[lift_and_rotate_state], 5] = 0.0
@@ -182,7 +183,7 @@ class AllegroKukaReorientation(AllegroKukaBase):
                 # self.goal_states[env_ids[lift_and_rotate_and_upright_state], 6] = 0.707
 
                 # 25 degrees downwards
-                self.goal_states[env_ids[lift_and_rotate_and_upright_state], 2] += -0.01  # Above table
+                self.goal_states[env_ids[lift_and_rotate_and_upright_state], 2] += -0.01 + OFFSET  # Above table
                 # self.goal_states[env_ids[lift_and_rotate_and_upright_state], 3] = -0.653
                 # self.goal_states[env_ids[lift_and_rotate_and_upright_state], 4] = 0.271
                 # self.goal_states[env_ids[lift_and_rotate_and_upright_state], 5] = 0.271
