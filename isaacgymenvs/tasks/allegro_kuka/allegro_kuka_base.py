@@ -869,13 +869,21 @@ class AllegroKukaBase(VecTask):
             print(f"Exception {exc} while removing older procedurally-generated urdf assets")
 
         NUM_CUBOIDS = 50
-        CUBOID_X_MIN, CUBOID_X_MAX = 0.1, 0.4
-        CUBOID_Y_MIN, CUBOID_Y_MAX = 0.02, 0.1
-        CUBOID_Z_MIN, CUBOID_Z_MAX = 0.02, 0.1
+        CUBOID_X_MIN, CUBOID_X_MAX = 0.1, 0.4  # Length
+        CUBOID_Y_MIN, CUBOID_Y_MAX = 0.02, 0.1  # Width
+        CUBOID_Z_MIN, CUBOID_Z_MAX = 0.02, 0.1  # Thickness
         cuboid_x_lengths = np.random.uniform(CUBOID_X_MIN, CUBOID_X_MAX, size=NUM_CUBOIDS)
         cuboid_y_lengths = np.random.uniform(CUBOID_Y_MIN, CUBOID_Y_MAX, size=NUM_CUBOIDS)
         cuboid_z_lengths = np.random.uniform(CUBOID_Z_MIN, CUBOID_Z_MAX, size=NUM_CUBOIDS)
         cuboid_scales = np.stack([cuboid_x_lengths, cuboid_y_lengths, cuboid_z_lengths], axis=1).tolist()
+        CUBOID_COM_X_RANGE = 0.05
+        CUBOID_COM_Y_RANGE = 0.02
+        CUBOID_COM_Z_RANGE = 0.02
+        cuboid_coms = np.stack([
+            np.random.uniform(-CUBOID_COM_X_RANGE, CUBOID_COM_X_RANGE, size=NUM_CUBOIDS),
+            np.random.uniform(-CUBOID_COM_Y_RANGE, CUBOID_COM_Y_RANGE, size=NUM_CUBOIDS),
+            np.random.uniform(-CUBOID_COM_Z_RANGE, CUBOID_COM_Z_RANGE, size=NUM_CUBOIDS),
+        ], axis=1).tolist()
 
         cuboid_files = [
             self.generate_cuboid_urdf(
@@ -883,21 +891,35 @@ class AllegroKukaBase(VecTask):
                 x_scale=x_scale,
                 y_scale=y_scale,
                 z_scale=z_scale,
+                com_x=cuboid_coms[idx][0],
+                com_y=cuboid_coms[idx][1],
+                com_z=cuboid_coms[idx][2],
             )
             for idx, (x_scale, y_scale, z_scale) in enumerate(cuboid_scales)
         ]
 
         NUM_CYLINDERS = 50
-        CYLINDER_DIAMETER_MIN, CYLINDER_DIAMETER_MAX = 0.02, 0.1
-        CYLINDER_HEIGHT_MIN, CYLINDER_HEIGHT_MAX = 0.1, 0.4
+        CYLINDER_HEIGHT_MIN, CYLINDER_HEIGHT_MAX = 0.1, 0.4  # Length
+        CYLINDER_DIAMETER_MIN, CYLINDER_DIAMETER_MAX = 0.02, 0.1  # Diameter
         cylinder_diameters = np.random.uniform(CYLINDER_DIAMETER_MIN, CYLINDER_DIAMETER_MAX, size=NUM_CYLINDERS)
         cylinder_heights = np.random.uniform(CYLINDER_HEIGHT_MIN, CYLINDER_HEIGHT_MAX, size=NUM_CYLINDERS)
         cylinder_scales = np.stack([cylinder_heights, cylinder_diameters, cylinder_diameters], axis=1).tolist()
+        CYLINDER_COM_X_RANGE = 0.05
+        CYLINDER_COM_Y_RANGE = 0.02
+        CYLINDER_COM_Z_RANGE = 0.02
+        cylinder_coms = np.stack([
+            np.random.uniform(-CYLINDER_COM_X_RANGE, CYLINDER_COM_X_RANGE, size=NUM_CYLINDERS),
+            np.random.uniform(-CYLINDER_COM_Y_RANGE, CYLINDER_COM_Y_RANGE, size=NUM_CYLINDERS),
+            np.random.uniform(-CYLINDER_COM_Z_RANGE, CYLINDER_COM_Z_RANGE, size=NUM_CYLINDERS),
+        ], axis=1).tolist()
         cylinder_files = [
             self.generate_cylinder_urdf(
                 filepath=join(generated_assets_dir, f"{idx:03d}_cylinder_{height}_{diameter}_{diameter}".replace(".", "-") + ".urdf"),
                 height=height,
                 radius=diameter / 2,
+                com_x=cylinder_coms[idx][0],
+                com_y=cylinder_coms[idx][1],
+                com_z=cylinder_coms[idx][2],
             )
             for idx, (height, diameter, _) in enumerate(cylinder_scales)
         ]
@@ -912,7 +934,7 @@ class AllegroKukaBase(VecTask):
         return files, scales, need_vhacds
 
     @staticmethod
-    def generate_cuboid_urdf(filepath, x_scale, y_scale, z_scale):
+    def generate_cuboid_urdf(filepath, x_scale, y_scale, z_scale, com_x, com_y, com_z):
         urdf = f"""<?xml version="1.0"?>
 <robot name="cuboid">
 
@@ -934,7 +956,7 @@ class AllegroKukaBase(VecTask):
     </collision>
 
     <inertial>
-      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <origin xyz="{com_x} {com_y} {com_z}" rpy="0 0 0"/>
       <mass value="0.1"/>
       <inertia ixx="0.0001" iyy="0.0001" izz="0.0001" ixy="0" ixz="0" iyz="0"/>
     </inertial>
@@ -948,7 +970,7 @@ class AllegroKukaBase(VecTask):
         return filepath
 
     @staticmethod
-    def generate_cylinder_urdf(filepath, height, radius):
+    def generate_cylinder_urdf(filepath, height, radius, com_x, com_y, com_z):
         urdf = f"""<?xml version="1.0"?>
 <robot name="cylinder">
 
@@ -970,7 +992,7 @@ class AllegroKukaBase(VecTask):
     </collision>
 
     <inertial>
-      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <origin xyz="{com_x} {com_y} {com_z}" rpy="0 0 0"/>
       <mass value="0.1"/>
       <inertia ixx="0.0001" iyy="0.0001" izz="0.0001" ixy="0" ixz="0" iyz="0"/>
     </inertial>
