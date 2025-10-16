@@ -118,6 +118,7 @@ def main():
     assert ALLEGRO_URDF_PATH.exists(), f"ALLEGRO_URDF_PATH not found: {ALLEGRO_URDF_PATH}"
 
     kuka_allegro_urdf = yourdfpy.URDF.load(KUKA_ALLEGRO_URDF_PATH)
+    allegro_urdf = yourdfpy.URDF.load(ALLEGRO_URDF_PATH)
     rr.log_file_from_path(
         KUKA_ALLEGRO_URDF_PATH,
         entity_path_prefix="/kuka_allegro",
@@ -144,7 +145,8 @@ def main():
 
     # BRITTLE: This is the most brittle part of the code, since it relies on the urdf structure
     # Need to check that the joint paths created here match what is created in the rerun viewer
-    joint_paths = build_joint_paths(kuka_allegro_urdf, prefix="/kuka_allegro/kuka_allegro")
+    kuka_allegro_joint_paths = build_joint_paths(kuka_allegro_urdf, prefix="/kuka_allegro/kuka_allegro")
+    allegro_joint_paths = build_joint_paths(allegro_urdf, prefix="/allegro/kuka_allegro")
 
     # Columns is batched and fast
     # Log is easier to use but slow
@@ -189,13 +191,13 @@ def main():
                 ],
             ),
         )
-        joint_name_to_pos_array = {
+        kuka_allegro_joint_name_to_pos_array = {
             name: recorded_data.robot_joint_positions_array[:, i]
             for i, name in enumerate(recorded_data.robot_joint_names)
         }
         update_joints_array(
-            joint_name_to_pos_array=joint_name_to_pos_array,
-            joint_paths=joint_paths,
+            joint_name_to_pos_array=kuka_allegro_joint_name_to_pos_array,
+            joint_paths=kuka_allegro_joint_paths,
             urdf=kuka_allegro_urdf,
             time_array=recorded_data.time_array,
         )
@@ -215,6 +217,17 @@ def main():
                     for t in range(len(recorded_data.time_array))
                 ],
             ),
+        )
+        allegro_joint_name_to_pos_array = {
+            name: recorded_data.robot_joint_positions_array[:, i]
+            for i, name in enumerate(recorded_data.robot_joint_names)
+            if name in allegro_urdf.actuated_joint_names
+        }
+        update_joints_array(
+            joint_name_to_pos_array=allegro_joint_name_to_pos_array,
+            joint_paths=allegro_joint_paths,
+            urdf=allegro_urdf,
+            time_array=recorded_data.time_array,
         )
     elif MODE == "log":
         pass
