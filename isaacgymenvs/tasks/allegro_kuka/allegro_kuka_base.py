@@ -262,6 +262,7 @@ class AllegroKukaBase(VecTask):
 
         # Init camera for wandb logging
         self._initialize_camera_sensor(cam_pos=cam_pos, cam_target=cam_target)
+        self._modify_render_settings_if_headless()
 
         # volume to sample target position from
         target_volume_origin = np.array([0, 0.05, 0.8], dtype=np.float32)
@@ -2325,9 +2326,21 @@ class AllegroKukaBase(VecTask):
             self.camera_handle, self.envs[self.index_to_view], cam_pos, cam_target
         )
 
+    def _modify_render_settings_if_headless(self) -> None:
+        # If not headless, leave things as they are
+        if self.viewer is not None:
+            return
+
+        # If headless, we should default to having self.enable_viewer_sync=False to speed up env stepping
+        self.enable_viewer_sync = False
+
     def _capture_video_if_needed(self) -> None:
+        # If capture_video is False, we don't need to capture video
         if not self.cfg["env"]["capture_video"]:
             return
+
+        # If enableCameraSensors is False, we can't capture video
+        assert self.cfg["env"]["enableCameraSensors"], "capture_video is only supported if enableCameraSensors is True"
 
         should_start_video_capture_at_start_of_next_episode = (
             self.video_frames is None
@@ -2360,7 +2373,13 @@ class AllegroKukaBase(VecTask):
             print("-" * 80)
             print("Starting to capture video frames...")
             print("-" * 80)
-            self.enable_viewer_sync_before = self.enable_viewer_sync
+            # Video capture requires that self.enable_viewer_sync=True
+            # If there is a viewer, we need to save the previous value of self.enable_viewer_sync so we can restore it later
+            if self.viewer is not None:
+                self.enable_viewer_sync_before = self.enable_viewer_sync
+            # If there is no viewer, we always want self.enable_viewer_sync=False to speed up env stepping
+            else:
+                self.enable_viewer_sync_before = False
 
         # Store image
         self.enable_viewer_sync = True
