@@ -47,7 +47,8 @@ from isaacgymenvs.tasks.allegro_kuka.generate_cuboids import (
     generate_sticks,
 )
 from isaacgymenvs.utils.torch_jit_utils import *
-from isaacgymenvs.tasks.allegro_kuka.object_trajectories import get_hammer_trajectory, get_screwdriver_trajectory
+from isaacgymenvs.tasks.allegro_kuka.object_trajectories import (
+    get_hammer_trajectory, get_screwdriver_trajectory, get_marker_trajectory, get_eraser_trajectory, get_phone_trajectory)
 
 
 class AllegroKukaBase(VecTask):
@@ -633,19 +634,19 @@ class AllegroKukaBase(VecTask):
                 file=str(root_dir / "assets/urdf/tyler_objects/040_large_marker/040_large_marker.urdf"),
                 scale=[3.0, 0.5, 0.5],
                 need_vhacd=True,
-                fixed_trajectory=get_hammer_trajectory(init_state),
+                fixed_trajectory=get_marker_trajectory(init_state),
             ),
             "whiteboard_eraser": Hammer(
                 file=str(root_dir / "assets/urdf/tyler_objects/whiteboard_eraser/source/model.urdf"),
                 scale=[3.0, 0.5, 0.5],
                 need_vhacd=True,
-                fixed_trajectory=get_hammer_trajectory(init_state),
+                fixed_trajectory=get_eraser_trajectory(init_state),
             ),
             "phone": Hammer(
                 file=str(root_dir / "assets/urdf/tyler_objects/phone/model.urdf"),
                 scale=[3.0, 0.5, 0.5],
                 need_vhacd=True,
-                fixed_trajectory=get_hammer_trajectory(init_state),
+                fixed_trajectory=get_phone_trajectory(init_state),
             ),
             "044_flat_screwdriver": Hammer(
                 file=str(root_dir / "assets/urdf/tyler_objects/044_flat_screwdriver/044_flat_screwdriver.urdf"),

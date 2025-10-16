@@ -78,6 +78,119 @@
 # task.env.enableDebugVis=True
 
 #EVALUATE HAMMER FINETUNED MODEL
+# python -m isaacgymenvs.train \
+# task=AllegroKukaLSTM \
+# task/env=reorientation \
+# ++task.env.useSparseReward=False \
+# task.env.numEnvs=24576 \
+# train.params.config.minibatch_size=98304 \
+# multi_gpu=False \
+# train.params.config.good_reset_boundary=0 \
+# task.env.goodResetBoundary=0 \
+# train.params.config.use_others_experience=lf \
+# train.params.config.off_policy_ratio=1.0 \
+# train.params.config.expl_type=mixed_expl_learn_param \
+# train.params.config.expl_reward_type=entropy \
+# train.params.config.expl_coef_block_size=4096 \
+# train.params.config.expl_reward_coef_scale=0.005 \
+# train.params.network.space.continuous.fixed_sigma=coef_cond \
+# wandb_project=sapg_allegro_kuka_reorientation \
+# wandb_entity=kk837 \
+# wandb_activate=True \
+# wandb_group=test \
+# wandb_tags='[]' \
+# ++wandb_notes='' \
+# seed=0 \
+# experiment=00_fixedgoal \
+# hydra.run.dir=./train_dir/allegro_kuka_reorientation/fixedgoal \
+# checkpoint=/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/test_24576envs_mixed_expl_learn_param_lf_1p_09_10_00h10m32s/runs/00_test_24576envs_mixed_expl_learn_param_lf_1p_09_10_00h10m32s/nn/00_test_24576envs_mixed_expl_learn_param_lf_1p_09_10_00h10m32s.pth \
+# task.env.object_type='scanned_hammer_1' \
+# task.env.use_fixed_set_of_goal_states=True \
+# task.env.use_fixed_init_object_pose=True \
+# test=True \
+# task.env.numEnvs=100 \
+# headless=False \
+# checkpoint=/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/finetune_YcbHammer_notfixedinit_notfixedgoal/runs/00_finetune_YcbHammer_notfixedinit_notfixedgoal/last/model.pth \
+# task.env.envSpacing=1.0 \
+# task.env.maxConsecutiveSuccesses=50 \
+# task.env.enableDebugVis=True
+
+# EVALUATE MARKER FINETUNED MODEL
+# python -m isaacgymenvs.train \
+# task=AllegroKukaLSTM \
+# task/env=reorientation \
+# ++task.env.useSparseReward=False \
+# task.env.numEnvs=24576 \
+# train.params.config.minibatch_size=98304 \
+# multi_gpu=False \
+# train.params.config.good_reset_boundary=0 \
+# task.env.goodResetBoundary=0 \
+# train.params.config.use_others_experience=lf \
+# train.params.config.off_policy_ratio=1.0 \
+# train.params.config.expl_type=mixed_expl_learn_param \
+# train.params.config.expl_reward_type=entropy \
+# train.params.config.expl_coef_block_size=4096 \
+# train.params.config.expl_reward_coef_scale=0.005 \
+# train.params.network.space.continuous.fixed_sigma=coef_cond \
+# wandb_project=sapg_allegro_kuka_reorientation \
+# wandb_entity=kk837 \
+# wandb_activate=True \
+# wandb_group=test \
+# wandb_tags='[]' \
+# ++wandb_notes='' \
+# seed=0 \
+# experiment=00_fixedgoal \
+# hydra.run.dir=./train_dir/allegro_kuka_reorientation/fixedgoal \
+# checkpoint=/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/test_24576envs_mixed_expl_learn_param_lf_1p_09_10_00h10m32s/runs/00_test_24576envs_mixed_expl_learn_param_lf_1p_09_10_00h10m32s/nn/00_test_24576envs_mixed_expl_learn_param_lf_1p_09_10_00h10m32s.pth \
+# task.env.object_type='040_large_marker' \
+# task.env.use_fixed_set_of_goal_states=True \
+# task.env.use_fixed_init_object_pose=True \
+# test=True \
+# task.env.numEnvs=100 \
+# headless=False \
+# checkpoint=/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/finetune_marker_notfixedinit_notfixedgoal/runs/00_finetune_marker_notfixedinit_notfixedgoal/best/model.pth \
+# task.env.envSpacing=1.0 \
+# task.env.maxConsecutiveSuccesses=50 \
+# task.env.enableDebugVis=True
+
+# EVALUATE ERASER FINETUNED MODEL
+# python -m isaacgymenvs.train \
+# task=AllegroKukaLSTM \
+# task/env=reorientation \
+# ++task.env.useSparseReward=False \
+# task.env.numEnvs=24576 \
+# train.params.config.minibatch_size=98304 \
+# multi_gpu=False \
+# train.params.config.good_reset_boundary=0 \
+# task.env.goodResetBoundary=0 \
+# train.params.config.use_others_experience=lf \
+# train.params.config.off_policy_ratio=1.0 \
+# train.params.config.expl_type=mixed_expl_learn_param \
+# train.params.config.expl_reward_type=entropy \
+# train.params.config.expl_coef_block_size=4096 \
+# train.params.config.expl_reward_coef_scale=0.005 \
+# train.params.network.space.continuous.fixed_sigma=coef_cond \
+# wandb_project=sapg_allegro_kuka_reorientation \
+# wandb_entity=kk837 \
+# wandb_activate=True \
+# wandb_group=test \
+# wandb_tags='[]' \
+# ++wandb_notes='' \
+# seed=0 \
+# experiment=00_fixedgoal \
+# hydra.run.dir=./train_dir/allegro_kuka_reorientation/fixedgoal \
+# checkpoint=/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/test_24576envs_mixed_expl_learn_param_lf_1p_09_10_00h10m32s/runs/00_test_24576envs_mixed_expl_learn_param_lf_1p_09_10_00h10m32s/nn/00_test_24576envs_mixed_expl_learn_param_lf_1p_09_10_00h10m32s.pth \
+# task.env.object_type='whiteboard_eraser' \
+# task.env.use_fixed_set_of_goal_states=True \
+# task.env.use_fixed_init_object_pose=True \
+# test=True \
+# task.env.numEnvs=100 \
+# headless=False \
+# checkpoint=/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/finetune_whiteboard-eraser_notfixedinit_notfixedgoal/runs/00_finetune_whiteboard-eraser_notfixedinit_notfixedgoal/best/model.pth \
+# task.env.maxConsecutiveSuccesses=50 \
+# task.env.enableDebugVis=True
+
+#EVALUATE PHONE FINETUNED MODEL
 python -m isaacgymenvs.train \
 task=AllegroKukaLSTM \
 task/env=reorientation \
@@ -104,13 +217,12 @@ seed=0 \
 experiment=00_fixedgoal \
 hydra.run.dir=./train_dir/allegro_kuka_reorientation/fixedgoal \
 checkpoint=/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/test_24576envs_mixed_expl_learn_param_lf_1p_09_10_00h10m32s/runs/00_test_24576envs_mixed_expl_learn_param_lf_1p_09_10_00h10m32s/nn/00_test_24576envs_mixed_expl_learn_param_lf_1p_09_10_00h10m32s.pth \
-task.env.object_type='scanned_hammer_1' \
+task.env.object_type='phone' \
 task.env.use_fixed_set_of_goal_states=True \
 task.env.use_fixed_init_object_pose=True \
 test=True \
 task.env.numEnvs=100 \
 headless=False \
-checkpoint=/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/finetune_YcbHammer_notfixedinit_notfixedgoal/runs/00_finetune_YcbHammer_notfixedinit_notfixedgoal/last/model.pth \
-task.env.envSpacing=1.0 \
+checkpoint=/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/finetune_phone_notfixedinit_notfixedgoal/runs/00_finetune_phone_notfixedinit_notfixedgoal/best/model.pth \
 task.env.maxConsecutiveSuccesses=50 \
 task.env.enableDebugVis=True
