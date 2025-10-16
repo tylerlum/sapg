@@ -130,6 +130,7 @@ def main():
     )
 
     rr.log("palm", rr.Transform3D(clear=False, axis_length=AXES_LENGTH))
+    rr.log("object_frame", rr.Transform3D(clear=False, axis_length=AXES_LENGTH))
 
     # Keep floating allegro hand in place on the right
     rr.log_file_from_path(
@@ -192,7 +193,7 @@ def main():
     # Columns is batched and fast
     # Log is easier to use but slow
     from typing import Literal
-    MODE: Literal["columns", "log"] = "columns"
+    MODE: Literal["columns", "log"] = "log"
     if MODE == "columns":
         time_indexes = [
             rr.TimeColumn(
@@ -241,6 +242,38 @@ def main():
             joint_paths=kuka_allegro_joint_paths,
             urdf=kuka_allegro_urdf,
             time_array=recorded_data.time_array,
+        )
+        rr.send_columns(
+            "palm",
+            indexes=time_indexes,
+            columns=rr.Transform3D.columns(
+                translation=[
+                    palm_xyz_xyzw_W[t, :3]
+                    for t in range(len(recorded_data.time_array))
+                ],
+                quaternion=[
+                    rr.Quaternion(
+                        xyzw=palm_xyz_xyzw_W[t, 3:7],
+                    )
+                    for t in range(len(recorded_data.time_array))
+                ],
+            ),
+        )
+        rr.send_columns(
+            "object_frame",
+            indexes=time_indexes,
+            columns=rr.Transform3D.columns(
+                translation=[
+                    recorded_data.object_root_states_array[t, :3]
+                    for t in range(len(recorded_data.time_array))
+                ],
+                quaternion=[
+                    rr.Quaternion(
+                        xyzw=recorded_data.object_root_states_array[t, 3:7]
+                    )
+                    for t in range(len(recorded_data.time_array))
+                ],
+            ),
         )
 
         rr.send_columns(
@@ -321,6 +354,29 @@ def main():
                     quaternion=rr.Quaternion(
                         xyzw=recorded_data.robot_root_states_array[t, 3:7],
                     ),
+                    axis_length=AXES_LENGTH,
+                ),
+            )
+            rr.log(
+                "palm",
+                rr.Transform3D(
+                    clear=False,
+                    translation=palm_xyz_xyzw_W[t, :3],
+                    quaternion=rr.Quaternion(
+                        xyzw=palm_xyz_xyzw_W[t, 3:7],
+                    ),
+                    axis_length=AXES_LENGTH,
+                ),
+            )
+            rr.log(
+                "object_frame",
+                rr.Transform3D(
+                    clear=False,
+                    translation=recorded_data.object_root_states_array[t, :3],
+                    quaternion=rr.Quaternion(
+                        xyzw=recorded_data.object_root_states_array[t, 3:7],
+                    ),
+                    axis_length=AXES_LENGTH,
                 ),
             )
 
@@ -329,6 +385,10 @@ def main():
                 rr.Transform3D(
                     clear=False,
                     translation=recorded_data.object_root_states_array[t, :3],
+                    quaternion=rr.Quaternion(
+                        xyzw=recorded_data.object_root_states_array[t, 3:7],
+                    ),
+                    axis_length=AXES_LENGTH,
                 ),
             )
             rr.log(
@@ -339,6 +399,7 @@ def main():
                     quaternion=rr.Quaternion(
                         xyzw=floating_allegro_hand_quat_xyzw[t, :],
                     ),
+                    axis_length=AXES_LENGTH,
                 ),
             )
             rr.log(
@@ -349,6 +410,7 @@ def main():
                     quaternion=rr.Quaternion(
                         xyzw=object_xyz_xyzw_P[t, 3:7],
                     ),
+                    axis_length=AXES_LENGTH,
                 ),
             )
     else:
