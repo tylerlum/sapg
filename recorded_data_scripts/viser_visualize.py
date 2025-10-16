@@ -61,6 +61,7 @@ def main():
     # Main loop
     T_IDX = 0
 
+    # Initialize allegro frame position
     allegro_frame.position = recorded_data.robot_root_states_array[T_IDX, :3] + np.array([0.5, 0, 0])
     allegro_frame.wxyz = np.array([1.0, 0.0, 0.0, 0.0])
 
@@ -73,9 +74,6 @@ def main():
         robot_root_state = recorded_data.robot_root_states_array[T_IDX]
         object_root_state = recorded_data.object_root_states_array[T_IDX]
         robot_joint_position = recorded_data.robot_joint_positions_array[T_IDX]
-        robot_joint_position_dict = {
-            name: pos for name, pos in zip(recorded_data.robot_joint_names, robot_joint_position)
-        }
 
         # Update state
         kuka_allegro_frame.position = robot_root_state[:3]
@@ -102,21 +100,19 @@ def main():
             4,
             4,
         ), f"palm_pose_R.shape: {palm_pose_R.shape}"
-        palm_xyz_R = palm_pose_R[:3, 3]
-        palm_quat_xyzw_R = R.from_matrix(palm_pose_R[:3, :3]).as_quat()
-        T_R_P = RecordedData.pose_to_T(np.concatenate([palm_xyz_R, palm_quat_xyzw_R]))
+        T_R_P = palm_pose_R
         T_W_R = RecordedData.pose_to_T(robot_root_state[:7])
         T_W_P = T_W_R @ T_R_P
         palm_xyz_xyzw_W = RecordedData.T_to_pose(T_W_P)
         palm_frame.position = palm_xyz_xyzw_W[:3]
-        palm_frame.wxyz = palm_xyz_xyzw_W[3:7]
+        palm_frame.wxyz = palm_xyz_xyzw_W[3:7][[3, 0, 1, 2]]
 
         # By default MOVE_FLOATING_ALLEGRO_HAND = False so we can see how the object is moving wrt a fixed allegro hand
         # Can set to True to debug and make sure that everything aligns
         MOVE_FLOATING_ALLEGRO_HAND = False
         if MOVE_FLOATING_ALLEGRO_HAND:
             allegro_frame.position = palm_xyz_xyzw_W[:3]
-            allegro_frame.wxyz = palm_xyz_xyzw_W[3:7]
+            allegro_frame.wxyz = palm_xyz_xyzw_W[3:7][[3, 0, 1, 2]]
 
         # # Get object pose wrt palm pose
         T_W_O = RecordedData.pose_to_T(object_root_state[:7])
@@ -124,7 +120,7 @@ def main():
         T_P_O = T_P_W @ T_W_O
         object_xyz_xyzw_P = RecordedData.T_to_pose(T_P_O)
         object_in_allegro_frame.position = object_xyz_xyzw_P[:3]
-        object_in_allegro_frame.wxyz = object_xyz_xyzw_P[3:7]
+        object_in_allegro_frame.wxyz = object_xyz_xyzw_P[3:7][[3, 0, 1, 2]]
 
         time.sleep(recorded_data.dt)
         T_IDX += 1
