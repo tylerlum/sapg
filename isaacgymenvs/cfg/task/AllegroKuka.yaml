@@ -14,7 +14,10 @@ env:
 
   envSpacing: 1.2
   episodeLength: 600
-  enableCameraSensors: False  # Setting to True will significantly slow down the environment (about 50% FPS)
+  # enableCameraSensors: False  # Setting to True will significantly slow down the environment (about 50% FPS)
+  enableCameraSensors: True  # Updated vec_task.py code to allow this to be True and still be fast, as long as enable_viewer_sync=False
+                             # Thus, we can leave this on by default without sacrificing speed, just need to make sure that enable_viewer_sync=False
+                             # And if we need to capture images, then we can set enable_viewer_sync=True
   enableDebugVis: False
   evalStats: False  # extra evaluation-time statistics
 
