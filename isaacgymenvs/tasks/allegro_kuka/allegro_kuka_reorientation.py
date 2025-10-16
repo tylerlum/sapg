@@ -107,91 +107,18 @@ class AllegroKukaReorientation(AllegroKukaBase):
         return resets
 
     def _reset_target(self, env_ids: Tensor, reset_buf_idxs=None, tensor_reset=True) -> None:
-        
         if len(env_ids) > 0 and reset_buf_idxs is None and tensor_reset:
-            #HACK:
             USE_FIXED_SET_OF_GOAL_STATES = self.cfg["env"]["use_fixed_set_of_goal_states"]
             if USE_FIXED_SET_OF_GOAL_STATES:
-                # Initialize goal_type if not already present
-                if not hasattr(self, "goal_type"):
-                    # Random ints in [0, 2] for each environment
-                    self.goal_type = torch.randint(0, 3, (self.goal_states.shape[0],), device=self.goal_states.device)
-
-                self.goal_states[env_ids] = self.object_init_state[env_ids].clone()
-
-                # Resample goal_type for given env_ids, ensuring it changes
-                new_goal_type = self.successes[env_ids].long()
-                new_goal_type = new_goal_type % self.max_consecutive_successes
-
-                # Start with goal 0, then repeat goals 1 and 2 over and over again
-                new_goal_type = torch.where(
-                    new_goal_type % 2 == 1,
-                    1,
-                    new_goal_type
-                )
-                new_goal_type = torch.where(
-                    (new_goal_type % 2 == 0) & (new_goal_type != 0),
-                    2,
-                    new_goal_type
-                )
-                new_goal_type = torch.where(
-                    new_goal_type == 0,
-                    0,
-                    new_goal_type
-                )
-                self.goal_type[env_ids] = new_goal_type
-
-                # Create masks based on goal_type
-                lift_only_state = self.goal_type[env_ids] == 0
-                lift_and_rotate_state = self.goal_type[env_ids] == 1
-                lift_and_rotate_and_upright_state = self.goal_type[env_ids] == 2
-
-                from scipy.spatial.transform import Rotation as R
-
-                # Set goal_states explicitly
-                OFFSET = 0.2
-                self.goal_states[env_ids[lift_only_state], 2] += -0.01 + OFFSET  # Above table
-                lift_only_quat_xyzw = R.from_euler('xyz', [0, 90, 0], degrees=True).as_quat()
-                self.goal_states[env_ids[lift_only_state], 3] = lift_only_quat_xyzw[0]
-                self.goal_states[env_ids[lift_only_state], 4] = lift_only_quat_xyzw[1]
-                self.goal_states[env_ids[lift_only_state], 5] = lift_only_quat_xyzw[2]
-                self.goal_states[env_ids[lift_only_state], 6] = lift_only_quat_xyzw[3]
-
-                self.goal_states[env_ids[lift_and_rotate_state], 2] += -0.01 + OFFSET  # Above table
-                lift_and_rotate_quat_xyzw = R.from_euler('xyz', [-90, 90, 0], degrees=True).as_quat()
-                self.goal_states[env_ids[lift_and_rotate_state], 3] = lift_and_rotate_quat_xyzw[0]
-                self.goal_states[env_ids[lift_and_rotate_state], 4] = lift_and_rotate_quat_xyzw[1]
-                self.goal_states[env_ids[lift_and_rotate_state], 5] = lift_and_rotate_quat_xyzw[2]
-                self.goal_states[env_ids[lift_and_rotate_state], 6] = lift_and_rotate_quat_xyzw[3]
-
-                # # 25 degrees downwards
-                # self.goal_states[env_ids[lift_and_rotate_and_upright_state], 2] += -0.01 + OFFSET  # Above table
-                # lift_and_rotate_and_upright_quat_xyzw = R.from_euler('xyz', [-90, 22.5, 0], degrees=True).as_quat()
-                # self.goal_states[env_ids[lift_and_rotate_and_upright_state], 3] = lift_and_rotate_and_upright_quat_xyzw[0]
-                # self.goal_states[env_ids[lift_and_rotate_and_upright_state], 4] = lift_and_rotate_and_upright_quat_xyzw[1]
-                # self.goal_states[env_ids[lift_and_rotate_and_upright_state], 5] = lift_and_rotate_and_upright_quat_xyzw[2]
-                # self.goal_states[env_ids[lift_and_rotate_and_upright_state], 6] = lift_and_rotate_and_upright_quat_xyzw[3]
-
-                # # upright
-                # self.goal_states[env_ids[lift_and_rotate_and_upright_state], 2] += -0.01 + OFFSET  # Above table
-                # lift_and_rotate_and_upright_quat_xyzw = R.from_euler('xyz', [-90, -90, 0], degrees=True).as_quat()
-                # self.goal_states[env_ids[lift_and_rotate_and_upright_state], 3] = lift_and_rotate_and_upright_quat_xyzw[0]
-                # self.goal_states[env_ids[lift_and_rotate_and_upright_state], 4] = lift_and_rotate_and_upright_quat_xyzw[1]
-                # self.goal_states[env_ids[lift_and_rotate_and_upright_state], 5] = lift_and_rotate_and_upright_quat_xyzw[2]
-                # self.goal_states[env_ids[lift_and_rotate_and_upright_state], 6] = lift_and_rotate_and_upright_quat_xyzw[3]
-
-                # upside-down
-                self.goal_states[env_ids[lift_and_rotate_and_upright_state], 2] += -0.01 + OFFSET  # Above table
-                lift_and_rotate_and_upright_quat_xyzw = R.from_euler('xyz', [-180, 90, 0], degrees=True).as_quat()
-                self.goal_states[env_ids[lift_and_rotate_and_upright_state], 3] = lift_and_rotate_and_upright_quat_xyzw[0]
-                self.goal_states[env_ids[lift_and_rotate_and_upright_state], 4] = lift_and_rotate_and_upright_quat_xyzw[1]
-                self.goal_states[env_ids[lift_and_rotate_and_upright_state], 5] = lift_and_rotate_and_upright_quat_xyzw[2]
-                self.goal_states[env_ids[lift_and_rotate_and_upright_state], 6] = lift_and_rotate_and_upright_quat_xyzw[3]
+                trajectory_state = self.trajectory_states.repeat(len(env_ids), 1, 1)
+                current_subgoal_idx = (self.successes[env_ids] % len(self.trajectory_states)).long()
+                batch_indices = torch.arange(len(env_ids), device=self.device)
+                self.goal_states[env_ids, 0:7] = trajectory_state[batch_indices, current_subgoal_idx, 0:7]
             else:
                 # Randomly sample a target pose
                 target_volume_origin = self.target_volume_origin
                 target_volume_extent = self.target_volume_extent
-
+                
                 target_volume_min_coord = target_volume_origin + target_volume_extent[:, 0]
                 target_volume_max_coord = target_volume_origin + target_volume_extent[:, 1]
                 target_volume_size = target_volume_max_coord - target_volume_min_coord
@@ -202,13 +129,10 @@ class AllegroKukaReorientation(AllegroKukaBase):
                 self.goal_states[env_ids, 0:3] = target_coords
                 new_rot = self.get_random_quat(env_ids)
                 self.goal_states[env_ids, 3:7] = new_rot
-
-            self.root_state_tensor[self.goal_object_indices[env_ids], 0:3] = self.goal_states[env_ids, 0:3]
-            self.root_state_tensor[self.goal_object_indices[env_ids], 3:7] = self.goal_states[env_ids, 3:7]
+            self.root_state_tensor[self.goal_object_indices[env_ids], 0:7] = self.goal_states[env_ids, 0:7]
             self.root_state_tensor[self.goal_object_indices[env_ids], 7:13] = torch.zeros_like(
                 self.root_state_tensor[self.goal_object_indices[env_ids], 7:13]
-            )
-        
+                )
         if len(env_ids) > 0 and reset_buf_idxs is not None and tensor_reset:
             # TODO: Check if last 6 indices are 0 
             rs_ofs = self.root_state_resets.shape[1]
