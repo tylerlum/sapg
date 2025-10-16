@@ -1,5 +1,5 @@
 from __future__ import annotations
-import time
+from tqdm import tqdm
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 from pathlib import Path
@@ -287,7 +287,7 @@ def main():
             ),
         )
     elif MODE == "log":
-        for t in range(len(recorded_data.time_array)):
+        for t in tqdm(range(len(recorded_data.time_array)), desc="Logging data"):
             time_seconds = float(
                 recorded_data.time_array[t] - recorded_data.time_array[0]
             )
@@ -354,6 +354,7 @@ def main():
     else:
         raise ValueError(f"Invalid mode: {MODE}")
 
+    print("Done logging data: View the rerun viewer now.")
     breakpoint()
 
 
