@@ -26,6 +26,8 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import datetime
+from pathlib import Path
 import io
 import math
 import os
@@ -33,7 +35,7 @@ import random
 import tempfile
 from copy import copy, deepcopy
 from os.path import join
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 from isaacgym import gymapi, gymtorch, gymutil
 from torch import Tensor
@@ -49,6 +51,8 @@ from isaacgymenvs.tasks.allegro_kuka.generate_cuboids import (
 from isaacgymenvs.utils.torch_jit_utils import *
 from isaacgymenvs.tasks.allegro_kuka.object_trajectories import (
     get_hammer_trajectory, get_screwdriver_trajectory, get_marker_trajectory, get_eraser_trajectory, get_phone_trajectory)
+
+DATETIME_STR = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
 
 class AllegroKukaBase(VecTask):
@@ -247,11 +251,17 @@ class AllegroKukaBase(VecTask):
             headless=headless, virtual_screen_capture=virtual_screen_capture, force_render=force_render,
         )
 
+        # Index of environment to view in viewer and camera
+        self.index_to_view = 0
+
+        # Camera position and target for viewer
+        cam_target = gymapi.Vec3(0.0, 0.0, 0.53)
+        cam_pos = cam_target + gymapi.Vec3(0.0, -1.0, 0.5)
         if self.viewer is not None:
-            cam_target = gymapi.Vec3(0.0, 0.0, 0.53)
-            cam_pos = cam_target + gymapi.Vec3(0.0, -1.0, 0.5)
-            self.index_to_view = 0
             self.gym.viewer_camera_look_at(self.viewer, self.envs[self.index_to_view], cam_pos, cam_target)
+
+        # Init camera for wandb logging
+        self._initialize_camera_sensor(cam_pos=cam_pos, cam_target=cam_target)
 
         # volume to sample target position from
         target_volume_origin = np.array([0, 0.05, 0.8], dtype=np.float32)
@@ -537,8 +547,6 @@ class AllegroKukaBase(VecTask):
             need_vhacd: bool
             fixed_trajectory: torch.Tensor
 
-        from pathlib import Path
-
         this_dir = Path(__file__).parent
         root_dir = this_dir.parent.parent.parent
         init_state = [0.0, 0, 0.65, 1, 0, 0, 0]
@@ -776,7 +784,6 @@ class AllegroKukaBase(VecTask):
             # Use what was already used before
             pass
         elif object_type == "tyler_cuboid_cylinder":
-            from pathlib import Path
             object_asset_files, object_asset_scales, need_vhacds = self._tyler_cuboid_cylinder(
                 str(Path(tmp_assets_dir) / "tyler_cuboid_cylinder"),
             )
@@ -910,6 +917,7 @@ class AllegroKukaBase(VecTask):
 
     def create_sim(self):
         self.dt = self.sim_params.dt
+        self.control_dt = self.dt * self.control_freq_inv
         self.up_axis_idx = 2  # index of up axis: Y=1, Z=2 (same as in allegro_hand.py)
 
         self.sim = super().create_sim(self.device_id, self.graphics_device_id, self.physics_engine, self.sim_params)
@@ -2144,9 +2152,7 @@ class AllegroKukaBase(VecTask):
                 self.goal_root_states_array.append(goal_root_state)
             print(f"Recorded {len(self.robot_root_states_array)} / {N_TIMESTEPS} steps")
             if len(self.robot_root_states_array) >= N_TIMESTEPS:
-                import datetime
                 datetime_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-                from pathlib import Path
                 this_dir = Path(__file__).parent
                 root_dir = this_dir.parent.parent.parent
                 recorded_data_path = root_dir / "recorded_data" / f"{datetime_str}.npz"
@@ -2231,6 +2237,8 @@ class AllegroKukaBase(VecTask):
         if self.save_states:
             self.accumulate_env_states()
 
+        self._capture_video_if_needed()
+
         if self.viewer and self.debug_viz:
             # draw axes on target object
             self.gym.clear_lines(self.viewer)
@@ -2288,6 +2296,117 @@ class AllegroKukaBase(VecTask):
                 )
                 self._draw_transform(transform=object_transform, env_idx=i)
                 # self._draw_transform(transform=goal_transform, env_idx=i)
+
+    def _initialize_camera_sensor(self, cam_pos, cam_target) -> None:
+        self.camera_properties = gymapi.CameraProperties()
+        RESOLUTION_REDUCTION_FACTOR_TO_SAVE_SPACE = 4
+        self.camera_properties.width = int(
+            self.camera_properties.width / RESOLUTION_REDUCTION_FACTOR_TO_SAVE_SPACE
+        )
+        self.camera_properties.height = int(
+            self.camera_properties.height / RESOLUTION_REDUCTION_FACTOR_TO_SAVE_SPACE
+        )
+        self.camera_handle = self.gym.create_camera_sensor(
+            self.envs[self.index_to_view],
+            self.camera_properties,
+        )
+
+        # self.video_frames is important for understanding the state of video recording
+        #   Case 1: self.video_frames is None:
+        #     * This means that we are not recording video
+        #   Case 2: self.video_frames = []
+        #     * This means that we should start recording video
+        #     * BUT, we want our videos to start at the first frame of an episode
+        #     * So, we are waiting for this
+        #   Case 3: self.video_frames = [np.array(frame) for frame in ...]
+        #     * These are image frames that will be assembled into a video when enough frames are capture
+        self.video_frames: Optional[List[np.ndarray]] = None
+        self.gym.set_camera_location(
+            self.camera_handle, self.envs[self.index_to_view], cam_pos, cam_target
+        )
+
+    def _capture_video_if_needed(self) -> None:
+        if not self.cfg["env"]["capture_video"]:
+            return
+
+        should_start_video_capture_at_start_of_next_episode = (
+            self.video_frames is None
+            and self.control_steps % self.cfg["env"]["capture_video_freq"] == 0
+            and (self.control_steps // self.cfg["env"]["capture_video_freq"] > 0)
+        )
+        if should_start_video_capture_at_start_of_next_episode:
+            print("-" * 80)
+            print(
+                f"At self.control_steps = {self.control_steps}, should start video capture at start of next episode"
+            )
+            print("-" * 80)
+            self.video_frames = []
+            return
+
+        should_start_video_capture_now = (
+            self.video_frames is not None
+            and len(self.video_frames) == 0
+            and self.progress_buf[self.index_to_view].item() <= 1
+        )
+        video_capture_in_progress = (
+            self.video_frames is not None and len(self.video_frames) > 0
+        )
+        if should_start_video_capture_now or video_capture_in_progress:
+            self._capture_video(video_capture_in_progress)
+
+    def _capture_video(self, video_capture_in_progress: bool) -> None:
+        assert self.video_frames is not None
+        if not video_capture_in_progress:
+            print("-" * 80)
+            print("Starting to capture video frames...")
+            print("-" * 80)
+            self.enable_viewer_sync_before = self.enable_viewer_sync
+
+        # Store image
+        self.enable_viewer_sync = True
+        self.gym.render_all_camera_sensors(self.sim)
+        color_image = self.gym.get_camera_image(
+            self.sim,
+            self.envs[self.index_to_view],
+            self.camera_handle,
+            gymapi.IMAGE_COLOR,
+        )
+        NUM_RGBA = 4
+        color_image = color_image.reshape(
+            self.camera_properties.height, self.camera_properties.width, NUM_RGBA
+        )
+        self.video_frames.append(color_image)
+
+        if len(self.video_frames) == self.cfg["env"]["capture_video_len"]:
+            video_filename = f"{DATETIME_STR}_video_{self.control_steps}.mp4"
+            videos_dir = Path("videos")
+            videos_dir.mkdir(parents=True, exist_ok=True)
+            video_path = videos_dir / video_filename
+            print("-" * 80)
+            print(f"Saving video to {video_path} ...")
+
+            if not self.enable_viewer_sync_before:
+                self.video_frames.pop(0)  # Remove first frame because it was not synced
+
+            import imageio
+            import wandb
+
+            imageio.mimsave(video_path, self.video_frames, fps=int(1.0 / self.control_dt))
+            if wandb.run is not None:
+                wandb_video = wandb.Video(
+                    str(video_path), fps=int(1.0 / self.control_dt)
+                )
+                wandb.log({f"video_{self.control_steps}": wandb_video})
+                # self.wandb_dict["video"] = wandb.Video(
+                #     str(video_path), fps=int(1.0 / self.control_dt)
+                # )
+            print("DONE")
+            print("-" * 80)
+
+            # Reset variables
+            self.video_frames = None
+            self.enable_viewer_sync = self.enable_viewer_sync_before
+
 
     def _draw_transform(
         self, transform: gymapi.Transform, line_length: float = 0.2, env_idx: int = 0
