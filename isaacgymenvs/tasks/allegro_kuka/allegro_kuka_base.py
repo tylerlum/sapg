@@ -248,9 +248,10 @@ class AllegroKukaBase(VecTask):
         )
 
         if self.viewer is not None:
-            cam_pos = gymapi.Vec3(10.0, 5.0, 1.0)
-            cam_target = gymapi.Vec3(6.0, 5.0, 0.0)
-            self.gym.viewer_camera_look_at(self.viewer, None, cam_pos, cam_target)
+            cam_target = gymapi.Vec3(0.0, 0.0, 0.53)
+            cam_pos = cam_target + gymapi.Vec3(0.0, -1.0, 0.5)
+            self.index_to_view = 0
+            self.gym.viewer_camera_look_at(self.viewer, self.envs[self.index_to_view], cam_pos, cam_target)
 
         # volume to sample target position from
         target_volume_origin = np.array([0, 0.05, 0.8], dtype=np.float32)
