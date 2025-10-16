@@ -15,9 +15,11 @@ from recorded_data_scripts.recorded_data import RecordedData
 AXES_LENGTH = 0.2
 AXES_RADIUS = 0.01
 
+
 def xyzw_to_wxyz(xyzw: np.ndarray) -> np.ndarray:
     assert xyzw.shape[-1] == 4, f"Expected xyzw to be (..., 4), got {xyzw.shape}"
     return xyzw[..., [3, 0, 1, 2]]
+
 
 def main():
     # ###########
@@ -230,12 +232,16 @@ def main():
         # Table
         if recorded_data.table_root_states_array is not None:
             table_frame.position = recorded_data.table_root_states_array[FRAME_IDX, :3]
-            table_frame.wxyz = xyzw_to_wxyz(recorded_data.table_root_states_array[FRAME_IDX, 3:7])
+            table_frame.wxyz = xyzw_to_wxyz(
+                recorded_data.table_root_states_array[FRAME_IDX, 3:7]
+            )
 
         # Goal
         if recorded_data.goal_root_states_array is not None:
             goal_frame.position = recorded_data.goal_root_states_array[FRAME_IDX, :3]
-            goal_frame.wxyz = xyzw_to_wxyz(recorded_data.goal_root_states_array[FRAME_IDX, 3:7])
+            goal_frame.wxyz = xyzw_to_wxyz(
+                recorded_data.goal_root_states_array[FRAME_IDX, 3:7]
+            )
 
         # Floating allegro hand
         allegro_joint_pos_viser_order = RecordedData.change_joint_order(
@@ -271,9 +277,9 @@ def main():
             allegro_frame.wxyz = xyzw_to_wxyz(palm_xyz_xyzw_W[3:7])
         else:
             # Keep floating allegro hand in a fixed position
-            allegro_frame.position = recorded_data.robot_root_states_array[0, :3] + np.array(
-                [0.5, -0.8, 0.7]
-            )
+            allegro_frame.position = recorded_data.robot_root_states_array[
+                0, :3
+            ] + np.array([0.5, -0.8, 0.7])
             allegro_frame.wxyz = np.array([1.0, 0.0, 0.0, 0.0])
 
         # Object relative to floating allegro hand
