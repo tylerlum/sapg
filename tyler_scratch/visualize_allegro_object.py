@@ -30,7 +30,7 @@ DT = 1/60
 
 
 # Load data
-recorded_data_path = Path("/home/tylerlum/github_repos/sapg/recorded_data/2025-10-15_15-21-48.npy")
+recorded_data_path = Path("/home/tylerlum/github_repos/sapg/recorded_data/2025-10-15_18-38-08.npy")
 assert recorded_data_path.exists(), f"Recorded data file {recorded_data_path} does not exist"
 recorded_data = np.load(recorded_data_path, allow_pickle=True).item()
 
