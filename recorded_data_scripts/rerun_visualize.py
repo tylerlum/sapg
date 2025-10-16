@@ -231,7 +231,7 @@ def main():
 
         # By default MOVE_FLOATING_ALLEGRO_HAND = False so we can see how the object is moving wrt a fixed allegro hand
         # Can set to True to debug and make sure that everything aligns
-        MOVE_FLOATING_ALLEGRO_HAND = True
+        MOVE_FLOATING_ALLEGRO_HAND = False
         if MOVE_FLOATING_ALLEGRO_HAND:
             floating_allegro_hand_position = palm_xyz_xyzw_W[:, :3]
             floating_allegro_hand_quat_xyzw = palm_xyz_xyzw_W[:, 3:7]
@@ -249,7 +249,7 @@ def main():
                 ],
                 quaternion=[
                     rr.Quaternion(
-                        xyzw=floating_allegro_hand_quat_xyzw[t, :]
+                        xyzw=floating_allegro_hand_quat_xyzw[t, :],
                     )
                     for t in range(len(recorded_data.time_array))
                 ],
@@ -265,6 +265,22 @@ def main():
             joint_paths=allegro_joint_paths,
             urdf=allegro_urdf,
             time_array=recorded_data.time_array,
+        )
+        rr.send_columns(
+            "/allegro/object",
+            indexes=time_indexes,
+            columns=rr.Transform3D.columns(
+                translation=[
+                    object_xyz_xyzw_P[t, :3]
+                    for t in range(len(recorded_data.time_array))
+                ],
+                quaternion=[
+                    rr.Quaternion(
+                        xyzw=object_xyz_xyzw_P[t, 3:7],
+                    )
+                    for t in range(len(recorded_data.time_array))
+                ],
+            ),
         )
     elif MODE == "log":
         pass
