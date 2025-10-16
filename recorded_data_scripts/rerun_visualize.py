@@ -196,6 +196,12 @@ def main():
     # ###########
     # BRITTLE: This is the most brittle part of the code, since it relies on the urdf structure
     # Need to check that the joint paths created here match what is created in the rerun viewer
+    # Currently, prefix is /{entity_path_prefix}/{urdf_robot_name}
+    # Where entity_path_prefix is what we pass into rr.log_file_from_path
+    # and urdf_robot_name is the name of the robot urdf (defined in the urdf file)
+    # Debug this by breakpointing after creating the joint paths and then printing out the joint paths here
+    # Then in rerun viewer, click into the tree of links deeply, right click, and copy the path to the clipboard
+    # Compare the copied path with the joint paths here and modify as needed
     kuka_allegro_joint_paths = build_joint_paths(
         kuka_allegro_urdf, prefix="/kuka_allegro/kuka_allegro"
     )
