@@ -1,12 +1,15 @@
 from __future__ import annotations
-from tqdm import tqdm
-import numpy as np
-from scipy.spatial.transform import Rotation as R
+
+from datetime import timedelta
 from pathlib import Path
-from recorded_data_scripts.recorded_data import RecordedData
+
+import numpy as np
 import rerun as rr
 import yourdfpy
-from datetime import timedelta
+from tqdm import tqdm
+
+from recorded_data_scripts.recorded_data import RecordedData
+
 
 def build_joint_paths(urdf: yourdfpy.URDF, prefix: str) -> dict[str, str]:
     all_joints = urdf.joint_map  # include revolute + fixed + others
@@ -29,6 +32,7 @@ def build_joint_paths(urdf: yourdfpy.URDF, prefix: str) -> dict[str, str]:
     # Only return revolute joints, but paths include all intermediate links/joints
     return {name: f"{prefix}/{build(j.child)}" for name, j in rev.items()}
 
+
 def update_joints(
     joint_name_to_pos: dict[str, float],
     joint_paths: dict[str, str],
@@ -49,6 +53,7 @@ def update_joints(
                 ),
             ),
         )
+
 
 def update_joints_array(
     joint_name_to_pos_array: dict[str, np.ndarray],
@@ -73,21 +78,24 @@ def update_joints_array(
             path,
             indexes=time_indexes,
             columns=rr.Transform3D.columns(
-                    rotation_axis_angle=[
-                        rr.RotationAxisAngle(
-                            axis=axis,
-                            angle=pos_array[i],
-                        )
-                        for i in range(T)
-                    ]
-                ),
+                rotation_axis_angle=[
+                    rr.RotationAxisAngle(
+                        axis=axis,
+                        angle=pos_array[i],
+                    )
+                    for i in range(T)
+                ]
+            ),
         )
+
 
 def main():
     # ###########
     # Load recorded data
     # ###########
-    file_path = Path("/home/tylerlum/github_repos/sapg/recorded_data/2025-10-15_20-52-19.npz")
+    file_path = Path(
+        "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-15_20-52-19.npz"
+    )
     assert file_path.exists(), f"File {file_path} does not exist"
     recorded_data = RecordedData.from_file(file_path)
 
@@ -110,12 +118,22 @@ def main():
     # Load assets into viser
     # ###########
 
-    KUKA_ALLEGRO_URDF_PATH = Path("/home/tylerlum/github_repos/sapg/assets/urdf/kuka_allegro_description/kuka_allegro_touch_sensor.urdf")
-    assert KUKA_ALLEGRO_URDF_PATH.exists(), f"KUKA_ALLEGRO_URDF_PATH not found: {KUKA_ALLEGRO_URDF_PATH}"
-    OBJECT_URDF_PATH = Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/044_flat_screwdriver/044_flat_screwdriver.urdf")
+    KUKA_ALLEGRO_URDF_PATH = Path(
+        "/home/tylerlum/github_repos/sapg/assets/urdf/kuka_allegro_description/kuka_allegro_touch_sensor.urdf"
+    )
+    assert KUKA_ALLEGRO_URDF_PATH.exists(), (
+        f"KUKA_ALLEGRO_URDF_PATH not found: {KUKA_ALLEGRO_URDF_PATH}"
+    )
+    OBJECT_URDF_PATH = Path(
+        "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/044_flat_screwdriver/044_flat_screwdriver.urdf"
+    )
     assert OBJECT_URDF_PATH.exists(), f"OBJECT_URDF_PATH not found: {OBJECT_URDF_PATH}"
-    ALLEGRO_URDF_PATH = Path("/home/tylerlum/github_repos/sapg/assets/urdf/kuka_allegro_description/allegro_touch_sensor.urdf")
-    assert ALLEGRO_URDF_PATH.exists(), f"ALLEGRO_URDF_PATH not found: {ALLEGRO_URDF_PATH}"
+    ALLEGRO_URDF_PATH = Path(
+        "/home/tylerlum/github_repos/sapg/assets/urdf/kuka_allegro_description/allegro_touch_sensor.urdf"
+    )
+    assert ALLEGRO_URDF_PATH.exists(), (
+        f"ALLEGRO_URDF_PATH not found: {ALLEGRO_URDF_PATH}"
+    )
 
     kuka_allegro_urdf = yourdfpy.URDF.load(KUKA_ALLEGRO_URDF_PATH)
     allegro_urdf = yourdfpy.URDF.load(ALLEGRO_URDF_PATH)
@@ -146,15 +164,21 @@ def main():
 
     # BRITTLE: This is the most brittle part of the code, since it relies on the urdf structure
     # Need to check that the joint paths created here match what is created in the rerun viewer
-    kuka_allegro_joint_paths = build_joint_paths(kuka_allegro_urdf, prefix="/kuka_allegro/kuka_allegro")
-    allegro_joint_paths = build_joint_paths(allegro_urdf, prefix="/allegro/kuka_allegro")
+    kuka_allegro_joint_paths = build_joint_paths(
+        kuka_allegro_urdf, prefix="/kuka_allegro/kuka_allegro"
+    )
+    allegro_joint_paths = build_joint_paths(
+        allegro_urdf, prefix="/allegro/kuka_allegro"
+    )
 
     # Get joint names since the ordering of the urdf may not match the ordering of the robot_joint_names
     kuka_allegro_joint_names = kuka_allegro_urdf.actuated_joint_names
     allegro_joint_names = allegro_urdf.actuated_joint_names
 
     # Run forward kinematics to get palm poses over time
-    kuka_allegro_joint_positions_reordered = recorded_data.robot_joint_positions_reordered(to_order=kuka_allegro_joint_names)
+    kuka_allegro_joint_positions_reordered = (
+        recorded_data.robot_joint_positions_reordered(to_order=kuka_allegro_joint_names)
+    )
     T_R_P_list = []
     for t in range(len(recorded_data.time_array)):
         kuka_allegro_urdf.update_cfg(kuka_allegro_joint_positions_reordered[t, :])
@@ -177,8 +201,12 @@ def main():
         floating_allegro_hand_position = palm_xyz_xyzw_W[:, :3]
         floating_allegro_hand_quat_xyzw = palm_xyz_xyzw_W[:, 3:7]
     else:
-        floating_allegro_hand_position = recorded_data.robot_root_states_array[:, :3] + np.array([0.5, 0, 0])[None].repeat(len(recorded_data.time_array), axis=0)
-        floating_allegro_hand_quat_xyzw = np.array([0.0, 0.0, 0.0, 1.0])[None].repeat(len(recorded_data.time_array), axis=0)
+        floating_allegro_hand_position = recorded_data.robot_root_states_array[
+            :, :3
+        ] + np.array([0.5, 0, 0])[None].repeat(len(recorded_data.time_array), axis=0)
+        floating_allegro_hand_quat_xyzw = np.array([0.0, 0.0, 0.0, 1.0])[None].repeat(
+            len(recorded_data.time_array), axis=0
+        )
 
     # Compute object poses wrt palm frame
     T_W_Os = RecordedData.pose_to_T(recorded_data.object_root_states_array[:, :7])
@@ -193,12 +221,16 @@ def main():
     # Columns is batched and fast
     # Log is easier to use but slow
     from typing import Literal
+
     MODE: Literal["columns", "log"] = "columns"
     if MODE == "columns":
         time_indexes = [
             rr.TimeColumn(
                 "tick",
-                duration=[timedelta(seconds=float(s - recorded_data.time_array[0])) for s in recorded_data.time_array],
+                duration=[
+                    timedelta(seconds=float(s - recorded_data.time_array[0]))
+                    for s in recorded_data.time_array
+                ],
             )
         ]
         rr.send_columns(
@@ -250,8 +282,7 @@ def main():
             indexes=time_indexes,
             columns=rr.Transform3D.columns(
                 translation=[
-                    palm_xyz_xyzw_W[t, :3]
-                    for t in range(len(recorded_data.time_array))
+                    palm_xyz_xyzw_W[t, :3] for t in range(len(recorded_data.time_array))
                 ],
                 quaternion=[
                     rr.Quaternion(
@@ -271,9 +302,7 @@ def main():
                     for t in range(len(recorded_data.time_array))
                 ],
                 quaternion=[
-                    rr.Quaternion(
-                        xyzw=recorded_data.object_root_states_array[t, 3:7]
-                    )
+                    rr.Quaternion(xyzw=recorded_data.object_root_states_array[t, 3:7])
                     for t in range(len(recorded_data.time_array))
                 ],
                 axis_length=[AXES_LENGTH for _ in range(len(recorded_data.time_array))],

@@ -1,17 +1,22 @@
 from __future__ import annotations
+
 import time
-import numpy as np
-from scipy.spatial.transform import Rotation as R
 from pathlib import Path
-from recorded_data_scripts.recorded_data import RecordedData
+
+import numpy as np
 import viser
 from viser.extras import ViserUrdf
+
+from recorded_data_scripts.recorded_data import RecordedData
+
 
 def main():
     # ###########
     # Load recorded data
     # ###########
-    file_path = Path("/home/tylerlum/github_repos/sapg/recorded_data/2025-10-15_20-52-19.npz")
+    file_path = Path(
+        "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-15_20-52-19.npz"
+    )
     assert file_path.exists(), f"File {file_path} does not exist"
     recorded_data = RecordedData.from_file(file_path)
 
@@ -39,38 +44,59 @@ def main():
     # Load assets into viser
     # ###########
 
-    KUKA_ALLEGRO_URDF_PATH = Path("/home/tylerlum/github_repos/sapg/assets/urdf/kuka_allegro_description/kuka_allegro_touch_sensor.urdf")
-    assert KUKA_ALLEGRO_URDF_PATH.exists(), f"KUKA_ALLEGRO_URDF_PATH not found: {KUKA_ALLEGRO_URDF_PATH}"
-    OBJECT_URDF_PATH = Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/044_flat_screwdriver/044_flat_screwdriver.urdf")
+    KUKA_ALLEGRO_URDF_PATH = Path(
+        "/home/tylerlum/github_repos/sapg/assets/urdf/kuka_allegro_description/kuka_allegro_touch_sensor.urdf"
+    )
+    assert KUKA_ALLEGRO_URDF_PATH.exists(), (
+        f"KUKA_ALLEGRO_URDF_PATH not found: {KUKA_ALLEGRO_URDF_PATH}"
+    )
+    OBJECT_URDF_PATH = Path(
+        "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/044_flat_screwdriver/044_flat_screwdriver.urdf"
+    )
     assert OBJECT_URDF_PATH.exists(), f"OBJECT_URDF_PATH not found: {OBJECT_URDF_PATH}"
-    ALLEGRO_URDF_PATH = Path("/home/tylerlum/github_repos/sapg/assets/urdf/kuka_allegro_description/allegro_touch_sensor.urdf")
-    assert ALLEGRO_URDF_PATH.exists(), f"ALLEGRO_URDF_PATH not found: {ALLEGRO_URDF_PATH}"
+    ALLEGRO_URDF_PATH = Path(
+        "/home/tylerlum/github_repos/sapg/assets/urdf/kuka_allegro_description/allegro_touch_sensor.urdf"
+    )
+    assert ALLEGRO_URDF_PATH.exists(), (
+        f"ALLEGRO_URDF_PATH not found: {ALLEGRO_URDF_PATH}"
+    )
 
-    kuka_allegro_frame = SERVER.scene.add_frame("/robot/state", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS)
+    kuka_allegro_frame = SERVER.scene.add_frame(
+        "/robot/state", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS
+    )
     kuka_allegro_viser = ViserUrdf(
         SERVER, KUKA_ALLEGRO_URDF_PATH, root_node_name="/robot/state"
     )
-    object_frame = SERVER.scene.add_frame("/object", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS)
-    _object_viser = ViserUrdf(
-        SERVER, OBJECT_URDF_PATH, root_node_name="/object"
+    object_frame = SERVER.scene.add_frame(
+        "/object", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS
     )
+    _object_viser = ViserUrdf(SERVER, OBJECT_URDF_PATH, root_node_name="/object")
 
-    palm_frame = SERVER.scene.add_frame("/robot_palm", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS)
+    palm_frame = SERVER.scene.add_frame(
+        "/robot_palm", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS
+    )
 
     # Keep floating allegro hand in place on the right
-    allegro_frame = SERVER.scene.add_frame("/allegro", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS)
-    allegro_viser = ViserUrdf(
-        SERVER, ALLEGRO_URDF_PATH, root_node_name="/allegro"
+    allegro_frame = SERVER.scene.add_frame(
+        "/allegro", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS
     )
+    allegro_viser = ViserUrdf(SERVER, ALLEGRO_URDF_PATH, root_node_name="/allegro")
 
     # Place an object relative to the floating allegro hand
-    object_in_allegro_frame = SERVER.scene.add_frame("/allegro/object", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS)
+    object_in_allegro_frame = SERVER.scene.add_frame(
+        "/allegro/object",
+        show_axes=True,
+        axes_length=AXES_LENGTH,
+        axes_radius=AXES_RADIUS,
+    )
     _object_in_allegro_viser = ViserUrdf(
         SERVER, OBJECT_URDF_PATH, root_node_name="/allegro/object"
     )
 
     # Initialize allegro frame position
-    allegro_frame.position = recorded_data.robot_root_states_array[0, :3] + np.array([0.5, 0, 0])
+    allegro_frame.position = recorded_data.robot_root_states_array[0, :3] + np.array(
+        [0.5, 0, 0]
+    )
     allegro_frame.wxyz = np.array([1.0, 0.0, 0.0, 0.0])
 
     # Get joint names since the ordering of the urdf may not match the ordering of the robot_joint_names
@@ -117,8 +143,12 @@ def main():
     @frame_idx_slider.on_update
     def _(_) -> None:
         nonlocal FRAME_IDX, frame_idx_slider
-        FRAME_IDX = int(np.clip(frame_idx_slider.value, a_min=0, a_max=len(recorded_data) - 1))
-        frame_idx_slider.label = get_frame_idx_slider_text(recorded_data=recorded_data, idx=FRAME_IDX)
+        FRAME_IDX = int(
+            np.clip(frame_idx_slider.value, a_min=0, a_max=len(recorded_data) - 1)
+        )
+        frame_idx_slider.label = get_frame_idx_slider_text(
+            recorded_data=recorded_data, idx=FRAME_IDX
+        )
 
     @pause_toggle_button.on_click
     def _(_) -> None:
@@ -178,12 +208,17 @@ def main():
         allegro_joint_pos_viser_order = RecordedData.change_joint_order(
             robot_joint_position,
             from_order=recorded_data.robot_joint_names,
-            to_order=allegro_viser_joint_names + list(set(recorded_data.robot_joint_names) - set(allegro_viser_joint_names)),
-        )[:len(allegro_viser_joint_names)]
+            to_order=allegro_viser_joint_names
+            + list(
+                set(recorded_data.robot_joint_names) - set(allegro_viser_joint_names)
+            ),
+        )[: len(allegro_viser_joint_names)]
         allegro_viser.update_cfg(allegro_joint_pos_viser_order)
 
         # Visualize the palm of the robot
-        palm_pose_R = kuka_allegro_viser._urdf.get_transform(frame_to="allegro_mount").copy()
+        palm_pose_R = kuka_allegro_viser._urdf.get_transform(
+            frame_to="allegro_mount"
+        ).copy()
         assert palm_pose_R.shape == (
             4,
             4,
@@ -214,9 +249,10 @@ def main():
         time.sleep(recorded_data.dt)
         if not PAUSED:
             frame_idx_slider.value = int(
-                np.clip(frame_idx_slider.value + 1, a_min=0, a_max=len(recorded_data) - 1)
+                np.clip(
+                    frame_idx_slider.value + 1, a_min=0, a_max=len(recorded_data) - 1
+                )
             )
-
 
 
 if __name__ == "__main__":
