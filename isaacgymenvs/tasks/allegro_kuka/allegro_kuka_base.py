@@ -26,6 +26,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import time
 import datetime
 from pathlib import Path
 import io
@@ -1994,6 +1995,13 @@ class AllegroKukaBase(VecTask):
             self.extras["scalars"]["success_tolerance"] = self.success_tolerance
 
     def pre_physics_step(self, actions):
+        PRINT_TIME_SINCE_LAST_STEP = False
+        if PRINT_TIME_SINCE_LAST_STEP:
+            if not hasattr(self, "last_time"):
+                self.last_time = time.time()
+            print(f"Time since last step: {time.time() - self.last_time:.3f} s, {1.0 / (time.time() - self.last_time):.1f} Hz")
+            self.last_time = time.time()
+
         actions = actions.to(self.device)
 
         self.actions = actions.clone()
