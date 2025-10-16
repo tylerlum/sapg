@@ -10,7 +10,15 @@ from tqdm import tqdm
 
 from recorded_data_scripts.recorded_data import RecordedData
 
+# ###########
+# Constants
+# ###########
+AXES_LENGTH = 0.2
 
+
+# ###########
+# Rerun helper functions
+# ###########
 def build_joint_paths(urdf: yourdfpy.URDF, prefix: str) -> dict[str, str]:
     all_joints = urdf.joint_map  # include revolute + fixed + others
     rev = {n: j for n, j in all_joints.items() if j.type == "revolute"}  # final keys
@@ -74,17 +82,18 @@ def update_joints_array(
         j = urdf.joint_map[name]
         axis = j.axis.tolist()
         T = pos_array.shape[0]
+        rotation_axis_angle_list = [
+            rr.RotationAxisAngle(
+                axis=axis,
+                angle=pos_array[i],
+            )
+            for i in range(T)
+        ]
         rr.send_columns(
             path,
             indexes=time_indexes,
             columns=rr.Transform3D.columns(
-                rotation_axis_angle=[
-                    rr.RotationAxisAngle(
-                        axis=axis,
-                        angle=pos_array[i],
-                    )
-                    for i in range(T)
-                ]
+                rotation_axis_angle=rotation_axis_angle_list
             ),
         )
 
@@ -94,30 +103,25 @@ def main():
     # Load recorded data
     # ###########
     file_path = Path(
-        "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-15_20-52-19.npz"
+        "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-16_09-08-27.npz"
     )
     assert file_path.exists(), f"File {file_path} does not exist"
     recorded_data = RecordedData.from_file(file_path)
 
     # ###########
-    # Create server
+    # Setup rerun objects
     # ###########
     APPLICATION_ID = "rerun_visualize"
     rr.init(application_id=APPLICATION_ID, spawn=True)
     rr.set_time("tick", duration=timedelta(seconds=0))
 
     # Add world frame
-    AXES_LENGTH = 0.2
-
     rr.log(
         "world",
         rr.Transform3D(clear=False, axis_length=AXES_LENGTH),
     )
 
-    # ###########
-    # Load assets into viser
-    # ###########
-
+    # Load assets into rerun
     KUKA_ALLEGRO_URDF_PATH = Path(
         "/home/tylerlum/github_repos/sapg/assets/urdf/kuka_allegro_description/kuka_allegro_touch_sensor.urdf"
     )
@@ -126,6 +130,8 @@ def main():
     )
     OBJECT_URDF_PATH = Path(
         "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/044_flat_screwdriver/044_flat_screwdriver.urdf"
+        # "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/phone/model.urdf"
+        # "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/040_large_marker/040_large_marker.urdf"
     )
     assert OBJECT_URDF_PATH.exists(), f"OBJECT_URDF_PATH not found: {OBJECT_URDF_PATH}"
     ALLEGRO_URDF_PATH = Path(
@@ -134,53 +140,78 @@ def main():
     assert ALLEGRO_URDF_PATH.exists(), (
         f"ALLEGRO_URDF_PATH not found: {ALLEGRO_URDF_PATH}"
     )
+    TABLE_URDF_PATH = Path(
+        "/home/tylerlum/github_repos/sapg/assets/urdf/table_narrow.urdf"
+    )
+    assert TABLE_URDF_PATH.exists(), f"TABLE_URDF_PATH not found: {TABLE_URDF_PATH}"
 
+    # Load urdfs
     kuka_allegro_urdf = yourdfpy.URDF.load(KUKA_ALLEGRO_URDF_PATH)
     allegro_urdf = yourdfpy.URDF.load(ALLEGRO_URDF_PATH)
+
+    # Robot
     rr.log_file_from_path(
         KUKA_ALLEGRO_URDF_PATH,
         entity_path_prefix="/kuka_allegro",
     )
 
+    # Object
     rr.log_file_from_path(
         OBJECT_URDF_PATH,
         entity_path_prefix="/object",
     )
 
-    rr.log("palm", rr.Transform3D(clear=False, axis_length=AXES_LENGTH))
-    rr.log("object_frame", rr.Transform3D(clear=False, axis_length=AXES_LENGTH))
+    # Table
+    if recorded_data.table_root_states_array is not None:
+        rr.log_file_from_path(
+            TABLE_URDF_PATH,
+            entity_path_prefix="/table",
+        )
 
-    # Keep floating allegro hand in place on the right
+    # Goal
+    if recorded_data.goal_root_states_array is not None:
+        rr.log("goal", rr.Transform3D(clear=False, axis_length=AXES_LENGTH))
+
+    # Palm
+    rr.log("palm", rr.Transform3D(clear=False, axis_length=AXES_LENGTH))
+
+    # Floating allegro hand
     rr.log_file_from_path(
         ALLEGRO_URDF_PATH,
         entity_path_prefix="/allegro",
     )
 
-    # Place an object relative to the floating allegro hand
+    # Object relative to floating allegro hand
     rr.log_file_from_path(
         OBJECT_URDF_PATH,
         entity_path_prefix="/allegro/object",
-    )
-
-    # BRITTLE: This is the most brittle part of the code, since it relies on the urdf structure
-    # Need to check that the joint paths created here match what is created in the rerun viewer
-    kuka_allegro_joint_paths = build_joint_paths(
-        kuka_allegro_urdf, prefix="/kuka_allegro/kuka_allegro"
-    )
-    allegro_joint_paths = build_joint_paths(
-        allegro_urdf, prefix="/allegro/kuka_allegro"
     )
 
     # Get joint names since the ordering of the urdf may not match the ordering of the robot_joint_names
     kuka_allegro_joint_names = kuka_allegro_urdf.actuated_joint_names
     allegro_joint_names = allegro_urdf.actuated_joint_names
 
+    # ###########
+    # Build joint paths
+    # ###########
+    # BRITTLE: This is the most brittle part of the code, since it relies on the urdf structure
+    # Need to check that the joint paths created here match what is created in the rerun viewer
+    kuka_allegro_joint_paths = build_joint_paths(
+        kuka_allegro_urdf, prefix="/kuka_allegro/kuka_allegro"
+    )
+    allegro_joint_paths = build_joint_paths(allegro_urdf, prefix="/allegro/allegro")
+
+    # ###########
+    # Run forward kinematics and compute relative poses
+    # ###########
     # Run forward kinematics to get palm poses over time
     kuka_allegro_joint_positions_reordered = (
         recorded_data.robot_joint_positions_reordered(to_order=kuka_allegro_joint_names)
     )
     T_R_P_list = []
-    for t in range(len(recorded_data.time_array)):
+    for t in tqdm(
+        range(len(recorded_data.time_array)), desc="Running forward kinematics"
+    ):
         kuka_allegro_urdf.update_cfg(kuka_allegro_joint_positions_reordered[t, :])
         palm_pose_R = kuka_allegro_urdf.get_transform(frame_to="allegro_mount").copy()
         assert palm_pose_R.shape == (
@@ -192,18 +223,20 @@ def main():
     T_R_Ps = np.stack(T_R_P_list, axis=0)
     T_W_Rs = RecordedData.pose_to_T(recorded_data.robot_root_states_array[:, :7])
     T_W_Ps = T_W_Rs @ T_R_Ps
-    palm_xyz_xyzw_W = RecordedData.T_to_pose(T_W_Ps)
+    palm_xyz_xyzw = RecordedData.T_to_pose(T_W_Ps)
 
     # By default MOVE_FLOATING_ALLEGRO_HAND = False so we can see how the object is moving wrt a fixed allegro hand
     # Can set to True to debug and make sure that everything aligns
     MOVE_FLOATING_ALLEGRO_HAND = False
     if MOVE_FLOATING_ALLEGRO_HAND:
-        floating_allegro_hand_position = palm_xyz_xyzw_W[:, :3]
-        floating_allegro_hand_quat_xyzw = palm_xyz_xyzw_W[:, 3:7]
+        floating_allegro_hand_position = palm_xyz_xyzw[:, :3]
+        floating_allegro_hand_quat_xyzw = palm_xyz_xyzw[:, 3:7]
     else:
         floating_allegro_hand_position = recorded_data.robot_root_states_array[
             :, :3
-        ] + np.array([0.5, 0, 0])[None].repeat(len(recorded_data.time_array), axis=0)
+        ] + np.array([0.5, -0.8, 0.7])[None].repeat(
+            len(recorded_data.time_array), axis=0
+        )
         floating_allegro_hand_quat_xyzw = np.array([0.0, 0.0, 0.0, 1.0])[None].repeat(
             len(recorded_data.time_array), axis=0
         )
@@ -214,16 +247,17 @@ def main():
     T_P_Os = T_P_Ws @ T_W_Os
     object_xyz_xyzw_P = RecordedData.T_to_pose(T_P_Os)
 
-    rr_recording = rr.get_global_data_recording() or rr.RecordingStream(
-        application_id=APPLICATION_ID,
-    )
+    # ###########
+    # Log data
+    # ###########
 
     # Columns is batched and fast
     # Log is easier to use but slow
     from typing import Literal
 
-    MODE: Literal["columns", "log"] = "columns"
+    MODE: Literal["columns", "log"] = "log"
     if MODE == "columns":
+        # Time
         time_indexes = [
             rr.TimeColumn(
                 "tick",
@@ -233,6 +267,8 @@ def main():
                 ],
             )
         ]
+
+        # Robot
         rr.send_columns(
             "kuka_allegro",
             indexes=time_indexes,
@@ -250,6 +286,18 @@ def main():
                 axis_length=[AXES_LENGTH for _ in range(len(recorded_data.time_array))],
             ),
         )
+        kuka_allegro_joint_name_to_pos_array = {
+            name: recorded_data.robot_joint_positions_array[:, i]
+            for i, name in enumerate(recorded_data.robot_joint_names)
+        }
+        update_joints_array(
+            joint_name_to_pos_array=kuka_allegro_joint_name_to_pos_array,
+            joint_paths=kuka_allegro_joint_paths,
+            urdf=kuka_allegro_urdf,
+            time_array=recorded_data.time_array,
+        )
+
+        # Object
         rr.send_columns(
             "object",
             indexes=time_indexes,
@@ -267,48 +315,52 @@ def main():
                 axis_length=[AXES_LENGTH for _ in range(len(recorded_data.time_array))],
             ),
         )
-        kuka_allegro_joint_name_to_pos_array = {
-            name: recorded_data.robot_joint_positions_array[:, i]
-            for i, name in enumerate(recorded_data.robot_joint_names)
-        }
-        update_joints_array(
-            joint_name_to_pos_array=kuka_allegro_joint_name_to_pos_array,
-            joint_paths=kuka_allegro_joint_paths,
-            urdf=kuka_allegro_urdf,
-            time_array=recorded_data.time_array,
-        )
-        rr.send_columns(
-            "palm",
-            indexes=time_indexes,
-            columns=rr.Transform3D.columns(
-                translation=[
-                    palm_xyz_xyzw_W[t, :3] for t in range(len(recorded_data.time_array))
-                ],
-                quaternion=[
-                    rr.Quaternion(
-                        xyzw=palm_xyz_xyzw_W[t, 3:7],
-                    )
-                    for t in range(len(recorded_data.time_array))
-                ],
-                axis_length=[AXES_LENGTH for _ in range(len(recorded_data.time_array))],
-            ),
-        )
-        rr.send_columns(
-            "object_frame",
-            indexes=time_indexes,
-            columns=rr.Transform3D.columns(
-                translation=[
-                    recorded_data.object_root_states_array[t, :3]
-                    for t in range(len(recorded_data.time_array))
-                ],
-                quaternion=[
-                    rr.Quaternion(xyzw=recorded_data.object_root_states_array[t, 3:7])
-                    for t in range(len(recorded_data.time_array))
-                ],
-                axis_length=[AXES_LENGTH for _ in range(len(recorded_data.time_array))],
-            ),
-        )
 
+        # Table
+        if recorded_data.table_root_states_array is not None:
+            rr.send_columns(
+                "table",
+                indexes=time_indexes,
+                columns=rr.Transform3D.columns(
+                    translation=[
+                        recorded_data.table_root_states_array[t, :3]
+                        for t in range(len(recorded_data.time_array))
+                    ],
+                    quaternion=[
+                        rr.Quaternion(
+                            xyzw=recorded_data.table_root_states_array[t, 3:7],
+                        )
+                        for t in range(len(recorded_data.time_array))
+                    ],
+                    axis_length=[
+                        AXES_LENGTH for _ in range(len(recorded_data.time_array))
+                    ],
+                ),
+            )
+
+        # Goal
+        if recorded_data.goal_root_states_array is not None:
+            rr.send_columns(
+                "goal",
+                indexes=time_indexes,
+                columns=rr.Transform3D.columns(
+                    translation=[
+                        recorded_data.goal_root_states_array[t, :3]
+                        for t in range(len(recorded_data.time_array))
+                    ],
+                    quaternion=[
+                        rr.Quaternion(
+                            xyzw=recorded_data.goal_root_states_array[t, 3:7],
+                        )
+                        for t in range(len(recorded_data.time_array))
+                    ],
+                    axis_length=[
+                        AXES_LENGTH for _ in range(len(recorded_data.time_array))
+                    ],
+                ),
+            )
+
+        # Floating allegro hand
         rr.send_columns(
             "allegro",
             indexes=time_indexes,
@@ -337,6 +389,26 @@ def main():
             urdf=allegro_urdf,
             time_array=recorded_data.time_array,
         )
+
+        # Palm
+        rr.send_columns(
+            "palm",
+            indexes=time_indexes,
+            columns=rr.Transform3D.columns(
+                translation=[
+                    palm_xyz_xyzw[t, :3] for t in range(len(recorded_data.time_array))
+                ],
+                quaternion=[
+                    rr.Quaternion(
+                        xyzw=palm_xyz_xyzw[t, 3:7],
+                    )
+                    for t in range(len(recorded_data.time_array))
+                ],
+                axis_length=[AXES_LENGTH for _ in range(len(recorded_data.time_array))],
+            ),
+        )
+
+        # Object relative to floating allegro hand
         rr.send_columns(
             "/allegro/object",
             indexes=time_indexes,
@@ -354,13 +426,30 @@ def main():
                 axis_length=[AXES_LENGTH for _ in range(len(recorded_data.time_array))],
             ),
         )
+
     elif MODE == "log":
+        rr_recording = rr.get_global_data_recording() or rr.RecordingStream(
+            application_id=APPLICATION_ID,
+        )
         for t in tqdm(range(len(recorded_data.time_array)), desc="Logging data"):
+            # Time
             time_seconds = float(
                 recorded_data.time_array[t] - recorded_data.time_array[0]
             )
             rr_recording.set_time("tick", duration=timedelta(seconds=time_seconds))
 
+            # Robot
+            rr.log(
+                "kuka_allegro",
+                rr.Transform3D(
+                    clear=False,
+                    translation=recorded_data.robot_root_states_array[t, :3],
+                    quaternion=rr.Quaternion(
+                        xyzw=recorded_data.robot_root_states_array[t, 3:7],
+                    ),
+                    axis_length=AXES_LENGTH,
+                ),
+            )
             kuka_allegro_joint_name_to_pos = {
                 name: recorded_data.robot_joint_positions_array[t, i]
                 for i, name in enumerate(recorded_data.robot_joint_names)
@@ -369,6 +458,60 @@ def main():
                 joint_name_to_pos=kuka_allegro_joint_name_to_pos,
                 joint_paths=kuka_allegro_joint_paths,
                 urdf=kuka_allegro_urdf,
+            )
+
+            # Table
+            if recorded_data.table_root_states_array is not None:
+                rr.log(
+                    "table",
+                    rr.Transform3D(
+                        clear=False,
+                        translation=recorded_data.table_root_states_array[t, :3],
+                        quaternion=rr.Quaternion(
+                            xyzw=recorded_data.table_root_states_array[t, 3:7],
+                        ),
+                        axis_length=AXES_LENGTH,
+                    ),
+                )
+
+            # Goal
+            if recorded_data.goal_root_states_array is not None:
+                rr.log(
+                    "goal",
+                    rr.Transform3D(
+                        clear=False,
+                        translation=recorded_data.goal_root_states_array[t, :3],
+                        quaternion=rr.Quaternion(
+                            xyzw=recorded_data.goal_root_states_array[t, 3:7],
+                        ),
+                        axis_length=AXES_LENGTH,
+                    ),
+                )
+
+            # Object
+            rr.log(
+                "object",
+                rr.Transform3D(
+                    clear=False,
+                    translation=recorded_data.object_root_states_array[t, :3],
+                    quaternion=rr.Quaternion(
+                        xyzw=recorded_data.object_root_states_array[t, 3:7],
+                    ),
+                    axis_length=AXES_LENGTH,
+                ),
+            )
+
+            # Floating allegro hand
+            rr.log(
+                "allegro",
+                rr.Transform3D(
+                    clear=False,
+                    translation=floating_allegro_hand_position[t, :],
+                    quaternion=rr.Quaternion(
+                        xyzw=floating_allegro_hand_quat_xyzw[t, :],
+                    ),
+                    axis_length=AXES_LENGTH,
+                ),
             )
             allegro_joint_name_to_pos = {
                 name: recorded_data.robot_joint_positions_array[t, i]
@@ -381,62 +524,20 @@ def main():
                 urdf=allegro_urdf,
             )
 
-            rr.log(
-                "kuka_allegro",
-                rr.Transform3D(
-                    clear=False,
-                    translation=recorded_data.robot_root_states_array[t, :3],
-                    quaternion=rr.Quaternion(
-                        xyzw=recorded_data.robot_root_states_array[t, 3:7],
-                    ),
-                    axis_length=AXES_LENGTH,
-                ),
-            )
+            # Palm
             rr.log(
                 "palm",
                 rr.Transform3D(
                     clear=False,
-                    translation=palm_xyz_xyzw_W[t, :3],
+                    translation=palm_xyz_xyzw[t, :3],
                     quaternion=rr.Quaternion(
-                        xyzw=palm_xyz_xyzw_W[t, 3:7],
-                    ),
-                    axis_length=AXES_LENGTH,
-                ),
-            )
-            rr.log(
-                "object_frame",
-                rr.Transform3D(
-                    clear=False,
-                    translation=recorded_data.object_root_states_array[t, :3],
-                    quaternion=rr.Quaternion(
-                        xyzw=recorded_data.object_root_states_array[t, 3:7],
+                        xyzw=palm_xyz_xyzw[t, 3:7],
                     ),
                     axis_length=AXES_LENGTH,
                 ),
             )
 
-            rr.log(
-                "object",
-                rr.Transform3D(
-                    clear=False,
-                    translation=recorded_data.object_root_states_array[t, :3],
-                    quaternion=rr.Quaternion(
-                        xyzw=recorded_data.object_root_states_array[t, 3:7],
-                    ),
-                    axis_length=AXES_LENGTH,
-                ),
-            )
-            rr.log(
-                "allegro",
-                rr.Transform3D(
-                    clear=False,
-                    translation=floating_allegro_hand_position[t, :],
-                    quaternion=rr.Quaternion(
-                        xyzw=floating_allegro_hand_quat_xyzw[t, :],
-                    ),
-                    axis_length=AXES_LENGTH,
-                ),
-            )
+            # Object relative to floating allegro hand
             rr.log(
                 "/allegro/object",
                 rr.Transform3D(

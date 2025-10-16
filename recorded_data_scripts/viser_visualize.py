@@ -265,16 +265,16 @@ def main():
         T_R_P = palm_pose_R
         T_W_R = RecordedData.pose_to_T(robot_root_state[:7])
         T_W_P = T_W_R @ T_R_P
-        palm_xyz_xyzw_W = RecordedData.T_to_pose(T_W_P)
-        palm_frame.position = palm_xyz_xyzw_W[:3]
-        palm_frame.wxyz = xyzw_to_wxyz(palm_xyz_xyzw_W[3:7])
+        palm_xyz_xyzw = RecordedData.T_to_pose(T_W_P)
+        palm_frame.position = palm_xyz_xyzw[:3]
+        palm_frame.wxyz = xyzw_to_wxyz(palm_xyz_xyzw[3:7])
 
         # By default MOVE_FLOATING_ALLEGRO_HAND = False so we can see how the object is moving wrt a fixed allegro hand
         # Can set to True to debug and make sure that everything aligns
         MOVE_FLOATING_ALLEGRO_HAND = False
         if MOVE_FLOATING_ALLEGRO_HAND:
-            allegro_frame.position = palm_xyz_xyzw_W[:3]
-            allegro_frame.wxyz = xyzw_to_wxyz(palm_xyz_xyzw_W[3:7])
+            allegro_frame.position = palm_xyz_xyzw[:3]
+            allegro_frame.wxyz = xyzw_to_wxyz(palm_xyz_xyzw[3:7])
         else:
             # Keep floating allegro hand in a fixed position
             allegro_frame.position = recorded_data.robot_root_states_array[
