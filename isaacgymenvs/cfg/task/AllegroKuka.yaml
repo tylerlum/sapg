@@ -114,7 +114,11 @@ env:
   record_data_num_steps: 1000
 
   capture_video: False  # This will not work unless headless=False or enableCameraSensors=True, both make it slower
-  capture_video_freq: 2_000
+
+  # Assuming 60Hz, this takes a 10s video recording every 100s of simulation time
+  # When training many envs in parallel, it runs roughly 4-10Hz real-time, so this is 6-15x slower than real-time
+  # Thus, it records a video every 600-1500s (10-25 minutes) of real time
+  capture_video_freq: 6_000
   capture_video_len: 600
 
   asset:
