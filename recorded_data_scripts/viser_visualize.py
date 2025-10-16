@@ -15,7 +15,7 @@ def main():
     # Load recorded data
     # ###########
     file_path = Path(
-        "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-15_20-52-19.npz"
+        "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-16_09-08-27.npz"
     )
     assert file_path.exists(), f"File {file_path} does not exist"
     recorded_data = RecordedData.from_file(file_path)
@@ -52,6 +52,8 @@ def main():
     )
     OBJECT_URDF_PATH = Path(
         "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/044_flat_screwdriver/044_flat_screwdriver.urdf"
+        # "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/phone/model.urdf"
+        # "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/040_large_marker/040_large_marker.urdf"
     )
     assert OBJECT_URDF_PATH.exists(), f"OBJECT_URDF_PATH not found: {OBJECT_URDF_PATH}"
     ALLEGRO_URDF_PATH = Path(
@@ -60,6 +62,10 @@ def main():
     assert ALLEGRO_URDF_PATH.exists(), (
         f"ALLEGRO_URDF_PATH not found: {ALLEGRO_URDF_PATH}"
     )
+    TABLE_URDF_PATH = Path(
+        "/home/tylerlum/github_repos/sapg/assets/urdf/table_narrow.urdf"
+    )
+    assert TABLE_URDF_PATH.exists(), f"TABLE_URDF_PATH not found: {TABLE_URDF_PATH}"
 
     kuka_allegro_frame = SERVER.scene.add_frame(
         "/robot/state", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS
@@ -71,6 +77,15 @@ def main():
         "/object", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS
     )
     _object_viser = ViserUrdf(SERVER, OBJECT_URDF_PATH, root_node_name="/object")
+    if recorded_data.table_root_states_array is not None:
+        table_frame = SERVER.scene.add_frame(
+            "/table", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS
+        )
+        _table_viser = ViserUrdf(SERVER, TABLE_URDF_PATH, root_node_name="/table")
+    if recorded_data.goal_root_states_array is not None:
+        goal_frame = SERVER.scene.add_frame(
+            "/goal", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS
+        )
 
     palm_frame = SERVER.scene.add_frame(
         "/robot_palm", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS
@@ -204,6 +219,12 @@ def main():
             to_order=kuka_allegro_viser_joint_names,
         )
         kuka_allegro_viser.update_cfg(kuka_allegro_joint_pos_viser_order)
+        if recorded_data.table_root_states_array is not None:
+            table_frame.position = recorded_data.table_root_states_array[FRAME_IDX, :3]
+            table_frame.wxyz = recorded_data.table_root_states_array[FRAME_IDX, 3:7][[3, 0, 1, 2]]
+        if recorded_data.goal_root_states_array is not None:
+            goal_frame.position = recorded_data.goal_root_states_array[FRAME_IDX, :3]
+            goal_frame.wxyz = recorded_data.goal_root_states_array[FRAME_IDX, 3:7][[3, 0, 1, 2]]
 
         allegro_joint_pos_viser_order = RecordedData.change_joint_order(
             robot_joint_position,

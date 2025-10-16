@@ -2124,12 +2124,23 @@ class AllegroKukaBase(VecTask):
                 self.robot_joint_positions_array = []
                 self.robot_joint_names = self.joint_names
 
+                self.table_root_states_array = []
+                if hasattr(self, "goal_object_indices"):
+                    self.goal_root_states_array = []
+
             robot_root_state = self.root_state_tensor[self.allegro_hand_indices, :13].cpu().numpy()
             object_root_state = self.root_state_tensor[self.object_indices, :13].cpu().numpy()
             robot_joint_position = self.arm_hand_dof_pos.cpu().numpy()
+            table_root_state = self.root_state_tensor[self.table_indices, :13].cpu().numpy()
+            if hasattr(self, "goal_object_indices"):
+                goal_root_state = self.root_state_tensor[self.goal_object_indices, :13].cpu().numpy()
+
             self.robot_root_states_array.append(robot_root_state)
             self.object_root_states_array.append(object_root_state)
             self.robot_joint_positions_array.append(robot_joint_position)
+            self.table_root_states_array.append(table_root_state)
+            if hasattr(self, "goal_object_indices"):
+                self.goal_root_states_array.append(goal_root_state)
             print(f"Recorded {len(self.robot_root_states_array)} / {N_TIMESTEPS} steps")
             if len(self.robot_root_states_array) >= N_TIMESTEPS:
                 import datetime
@@ -2142,9 +2153,15 @@ class AllegroKukaBase(VecTask):
                 self.robot_root_states_array = np.stack(self.robot_root_states_array, axis=0)
                 self.object_root_states_array = np.stack(self.object_root_states_array, axis=0)
                 self.robot_joint_positions_array = np.stack(self.robot_joint_positions_array, axis=0)
+                self.table_root_states_array = np.stack(self.table_root_states_array, axis=0)
+                if hasattr(self, "goal_object_indices"):
+                    self.goal_root_states_array = np.stack(self.goal_root_states_array, axis=0)
                 assert self.robot_root_states_array.shape == (N_TIMESTEPS, self.num_envs, 13), f"{self.robot_root_states_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, 13)"
                 assert self.object_root_states_array.shape == (N_TIMESTEPS, self.num_envs, 13), f"{self.object_root_states_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, 13)"
                 assert self.robot_joint_positions_array.shape == (N_TIMESTEPS, self.num_envs, len(self.robot_joint_names)), f"{self.robot_joint_positions_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, {len(self.robot_joint_names)})"
+                assert self.table_root_states_array.shape == (N_TIMESTEPS, self.num_envs, 13), f"{self.table_root_states_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, 13)"
+                if hasattr(self, "goal_object_indices"):
+                    assert self.goal_root_states_array.shape == (N_TIMESTEPS, self.num_envs, 13), f"{self.goal_root_states_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, 13)"
                 time_array = np.arange(N_TIMESTEPS) * self.dt
                 ENV_IDX = 0
                 recorded_data = RecordedData(
@@ -2153,6 +2170,8 @@ class AllegroKukaBase(VecTask):
                     robot_joint_positions_array=self.robot_joint_positions_array[:, ENV_IDX],
                     robot_joint_names=self.robot_joint_names,
                     time_array=time_array,
+                    table_root_states_array=self.table_root_states_array[:, ENV_IDX],
+                    goal_root_states_array=self.goal_root_states_array[:, ENV_IDX] if hasattr(self, "goal_object_indices") else None,
                 )
                 recorded_data.to_file(recorded_data_path)
                 print(f"Saved recorded data to {recorded_data_path}")
