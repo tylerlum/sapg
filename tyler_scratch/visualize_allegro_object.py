@@ -126,6 +126,13 @@ while True:
     palm_frame.position = palm_xyz_W
     palm_frame.wxyz = palm_quat_xyzw_W[[3, 0, 1, 2]]
 
+    # By default MOVE_FLOATING_ALLEGRO_HAND = False so we can see how the object is moving wrt a fixed allegro hand
+    # Can set to True to debug and make sure that everything aligns
+    MOVE_FLOATING_ALLEGRO_HAND = False
+    if MOVE_FLOATING_ALLEGRO_HAND:
+        allegro_frame.position = palm_xyz_W
+        allegro_frame.wxyz = palm_quat_xyzw_W[[3, 0, 1, 2]]
+
     # # Get object pose wrt palm pose
     T_W_O = pose_to_T(object_root_state[:7])
     T_P_W = np.linalg.inv(T_W_P)
