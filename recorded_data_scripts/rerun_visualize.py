@@ -193,7 +193,7 @@ def main():
     # Columns is batched and fast
     # Log is easier to use but slow
     from typing import Literal
-    MODE: Literal["columns", "log"] = "log"
+    MODE: Literal["columns", "log"] = "columns"
     if MODE == "columns":
         time_indexes = [
             rr.TimeColumn(
@@ -215,6 +215,7 @@ def main():
                     )
                     for t in range(len(recorded_data.time_array))
                 ],
+                axis_length=[AXES_LENGTH for _ in range(len(recorded_data.time_array))],
             ),
         )
         rr.send_columns(
@@ -231,6 +232,7 @@ def main():
                     )
                     for t in range(len(recorded_data.time_array))
                 ],
+                axis_length=[AXES_LENGTH for _ in range(len(recorded_data.time_array))],
             ),
         )
         kuka_allegro_joint_name_to_pos_array = {
@@ -257,6 +259,7 @@ def main():
                     )
                     for t in range(len(recorded_data.time_array))
                 ],
+                axis_length=[AXES_LENGTH for _ in range(len(recorded_data.time_array))],
             ),
         )
         rr.send_columns(
@@ -273,6 +276,7 @@ def main():
                     )
                     for t in range(len(recorded_data.time_array))
                 ],
+                axis_length=[AXES_LENGTH for _ in range(len(recorded_data.time_array))],
             ),
         )
 
@@ -290,6 +294,7 @@ def main():
                     )
                     for t in range(len(recorded_data.time_array))
                 ],
+                axis_length=[AXES_LENGTH for _ in range(len(recorded_data.time_array))],
             ),
         )
         allegro_joint_name_to_pos_array = {
@@ -317,6 +322,7 @@ def main():
                     )
                     for t in range(len(recorded_data.time_array))
                 ],
+                axis_length=[AXES_LENGTH for _ in range(len(recorded_data.time_array))],
             ),
         )
     elif MODE == "log":
