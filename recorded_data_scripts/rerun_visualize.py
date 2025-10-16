@@ -142,20 +142,9 @@ def main():
         entity_path_prefix="/allegro/object",
     )
 
-
     # BRITTLE: This is the most brittle part of the code, since it relies on the urdf structure
     # Need to check that the joint paths created here match what is created in the rerun viewer
     joint_paths = build_joint_paths(kuka_allegro_urdf, prefix="/kuka_allegro/kuka_allegro")
-    joint_name_to_pos_array = {
-        name: recorded_data.robot_joint_positions_array[:, i]
-        for i, name in enumerate(recorded_data.robot_joint_names)
-    }
-    update_joints_array(
-        joint_name_to_pos_array=joint_name_to_pos_array,
-        joint_paths=joint_paths,
-        urdf=kuka_allegro_urdf,
-        time_array=recorded_data.time_array,
-    )
 
     # Columns is batched and fast
     # Log is easier to use but slow
@@ -209,6 +198,23 @@ def main():
             joint_paths=joint_paths,
             urdf=kuka_allegro_urdf,
             time_array=recorded_data.time_array,
+        )
+
+        rr.send_columns(
+            "allegro",
+            indexes=time_indexes,
+            columns=rr.Transform3D.columns(
+                translation=[
+                    recorded_data.robot_root_states_array[t, :3] + np.array([0.5, 0, 0])
+                    for t in range(len(recorded_data.time_array))
+                ],
+                quaternion=[
+                    rr.Quaternion(
+                        xyzw=np.array([0.0, 0.0, 0.0, 1.0]),
+                    )
+                    for t in range(len(recorded_data.time_array))
+                ],
+            ),
         )
     elif MODE == "log":
         pass
