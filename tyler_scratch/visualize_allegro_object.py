@@ -3,6 +3,31 @@ import time
 from viser.extras import ViserUrdf
 from pathlib import Path
 import numpy as np
+from scipy.spatial.transform import Rotation as R
+
+def pose_to_T(pose: np.ndarray) -> np.ndarray:
+    assert pose.shape == (7,), f"Expected pose to be (7,), got {pose.shape}"
+    xyz = pose[:3]
+    xyzw = pose[3:7]
+    T = np.eye(4)
+    T[:3, :3] = R.from_quat(xyzw).as_matrix()
+    T[:3, 3] = xyz
+    return T
+
+def T_to_pose(T: np.ndarray) -> np.ndarray:
+    assert T.shape == (4, 4), f"Expected T to be (4, 4), got {T.shape}"
+    xyz = T[:3, 3]
+    xyzw = R.from_matrix(T[:3, :3]).as_quat()
+    pose = np.concatenate([xyz, xyzw])
+    return pose
+
+# Constants
+# AXES_LENGTH = 0.1
+# AXES_RADIUS = 0.001
+AXES_LENGTH = 0.2
+AXES_RADIUS = 0.01
+DT = 1/60
+
 
 # Load data
 recorded_data_path = Path("/home/tylerlum/github_repos/sapg/recorded_data/2025-10-15_15-21-48.npy")
@@ -32,32 +57,30 @@ assert OBJECT_URDF_PATH.exists(), f"OBJECT_URDF_PATH not found: {OBJECT_URDF_PAT
 ALLEGRO_URDF_PATH = Path("/home/tylerlum/github_repos/sapg/assets/urdf/kuka_allegro_description/allegro_touch_sensor.urdf")
 assert ALLEGRO_URDF_PATH.exists(), f"ALLEGRO_URDF_PATH not found: {ALLEGRO_URDF_PATH}"
 
-kuka_allegro_frame = SERVER.scene.add_frame(
-    "/robot/state",
-    show_axes=False,
-)
+kuka_allegro_frame = SERVER.scene.add_frame("/robot/state", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS)
 kuka_allegro_viser = ViserUrdf(
     SERVER, KUKA_ALLEGRO_URDF_PATH, root_node_name="/robot/state"
 )
-object_frame = SERVER.scene.add_frame("/object", show_axes=False)
+object_frame = SERVER.scene.add_frame("/object", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS)
 object_viser = ViserUrdf(
     SERVER, OBJECT_URDF_PATH, root_node_name="/object"
 )
 
+palm_frame = SERVER.scene.add_frame("/robot_palm", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS)
+
 # Main loop
-DT = 1/60
 T_IDX = 0
 E_IDX = 0
 
 # Keep floating allegro hand in place on the right
-allegro_frame = SERVER.scene.add_frame("/allegro", show_axes=False)
+allegro_frame = SERVER.scene.add_frame("/allegro", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS)
 allegro_viser = ViserUrdf(
     SERVER, ALLEGRO_URDF_PATH, root_node_name="/allegro"
 )
 allegro_frame.position = robot_root_states[T_IDX, E_IDX, :3] + np.array([0.5, 0, 0])
 allegro_frame.wxyz = np.array([1.0, 0.0, 0.0, 0.0])
 
-object_in_allegro_frame = SERVER.scene.add_frame("/allegro/object", show_axes=False)
+object_in_allegro_frame = SERVER.scene.add_frame("/allegro/object", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS)
 object_in_allegro_viser = ViserUrdf(
     SERVER, OBJECT_URDF_PATH, root_node_name="/allegro/object"
 )
@@ -88,23 +111,29 @@ while True:
     )
 
     # Visualize the palm of the robot
-    palm_pose = self.robot_viser._urdf.get_transform(frame_to="palm_link").copy()
-    assert palm_pose.shape == (
+    palm_pose_R = kuka_allegro_viser._urdf.get_transform(frame_to="allegro_mount").copy()
+    assert palm_pose_R.shape == (
         4,
         4,
-    ), f"palm_pose.shape: {palm_pose.shape}"
-    palm_xyz = palm_pose[:3, 3]
-    palm_quat_xyzw = R.from_matrix(palm_pose[:3, :3]).as_quat()
-    self.palm_viser_frame.position = palm_xyz
-    self.palm_viser_frame.wxyz = palm_quat_xyzw[[3, 0, 1, 2]]
+    ), f"palm_pose_R.shape: {palm_pose_R.shape}"
+    palm_xyz_R = palm_pose_R[:3, 3]
+    palm_quat_xyzw_R = R.from_matrix(palm_pose_R[:3, :3]).as_quat()
+    T_R_P = pose_to_T(np.concatenate([palm_xyz_R, palm_quat_xyzw_R]))
+    T_W_R = pose_to_T(robot_root_state[:7])
+    T_W_P = T_W_R @ T_R_P
+    palm_xyz_W = T_W_P[:3, 3]
+    palm_quat_xyzw_W = R.from_matrix(T_W_P[:3, :3]).as_quat()
+    palm_frame.position = palm_xyz_W
+    palm_frame.wxyz = palm_quat_xyzw_W[[3, 0, 1, 2]]
 
-    # Get object pose wrt palm pose
-
-    object_in_allegro_frame.position = object_root_state[:3]
-    object_in_allegro_frame.wxyz = object_root_state[3:7][[3, 0, 1, 2]]
-    object_in_allegro_viser.update_cfg(
-        np.array([robot_joint_position_dict[name] for name in object_in_allegro_viser_joint_names])
-    )
+    # # Get object pose wrt palm pose
+    T_W_O = pose_to_T(object_root_state[:7])
+    T_P_W = np.linalg.inv(T_W_P)
+    T_P_O = T_P_W @ T_W_O
+    object_xyz_P = T_P_O[:3, 3]
+    object_quat_xyzw_P = R.from_matrix(T_P_O[:3, :3]).as_quat()
+    object_in_allegro_frame.position = object_xyz_P
+    object_in_allegro_frame.wxyz = object_quat_xyzw_P[[3, 0, 1, 2]]
 
     time.sleep(DT)
     T_IDX += 1
