@@ -223,13 +223,36 @@ class RLGPUAlgoObserver(AlgoObserver):
                 self.writer.add_scalar(f'episode_cumulative_max/{key}_max', np.max(self.episode_cumulative_avg[key]), frame)
             self.new_finished_episodes = False
         
-        print('Frame: ', frame, end=' ')
+        # Pretty print
+        DECIMALS = 4
+        print(f"\nFrame {frame}")
         for k, v in self.direct_info.items():
-            print(f'{k}/frame', v, end=' ')
+            # Convert torch tensors to float if scalar
+            if isinstance(v, torch.Tensor):
+                if v.numel() == 1:
+                    v = v.item()
+                else:
+                    v = v.detach().cpu().numpy()
+
+            # Round numeric values
+            if isinstance(v, float):
+                v_str = f"{v:.{DECIMALS}f}"
+            elif isinstance(v, int):
+                v_str = f"{v}"
+            elif isinstance(v, np.ndarray):
+                v_str = np.array2string(np.round(v, DECIMALS), precision=DECIMALS)
+            else:
+                v_str = str(v)
+
+            # Print nicely aligned
+            print(f"  {k:<50}: {v_str}")
+        print()
+
+        # Log
+        for k, v in self.direct_info.items():
             self.writer.add_scalar(f'{k}/frame', v, frame)
             self.writer.add_scalar(f'{k}/iter', v, frame)
             self.writer.add_scalar(f'{k}/time', v, frame)
-        print()
 
 
 class MultiObserver(AlgoObserver):
