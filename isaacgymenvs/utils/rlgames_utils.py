@@ -224,7 +224,7 @@ class RLGPUAlgoObserver(AlgoObserver):
             self.new_finished_episodes = False
         
         # Pretty print
-        DECIMALS = 4
+        DECIMALS = 3
         print(f"\nFrame {frame}")
         for k, v in self.direct_info.items():
             # Convert torch tensors to float if scalar

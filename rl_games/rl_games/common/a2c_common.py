@@ -42,14 +42,27 @@ def print_statistics(print_stats, curr_frames, step_time, step_inference_time, t
         fps_step_inference = curr_frames / step_inference_time
         fps_total = curr_frames / total_time
 
-        if max_epochs == -1 and max_frames == -1:
-            print(f'fps step: {fps_step:.0f} fps step and policy inference: {fps_step_inference:.0f} fps total: {fps_total:.0f} epoch: {epoch_num:.0f} frames: {frame:.0f}')
-        elif max_epochs == -1:
-            print(f'fps step: {fps_step:.0f} fps step and policy inference: {fps_step_inference:.0f} fps total: {fps_total:.0f} epoch: {epoch_num:.0f} frames: {frame:.0f}/{max_frames:.0f}')
-        elif max_frames == -1:
-            print(f'fps step: {fps_step:.0f} fps step and policy inference: {fps_step_inference:.0f} fps total: {fps_total:.0f} epoch: {epoch_num:.0f}/{max_epochs:.0f} frames: {frame:.0f}')
-        else:
-            print(f'fps step: {fps_step:.0f} fps step and policy inference: {fps_step_inference:.0f} fps total: {fps_total:.0f} epoch: {epoch_num:.0f}/{max_epochs:.0f} frames: {frame:.0f}/{max_frames:.0f}')
+        # Prepare formatted strings
+        fps_strs = [
+            f"fps step                    : {fps_step:,.0f}",
+            f"fps step + policy inference : {fps_step_inference:,.0f}",
+            f"fps total                   : {fps_total:,.0f}"
+        ]
+
+        epoch_str = f"{epoch_num:,.0f}"
+        if max_epochs != -1:
+            epoch_str += f" / {max_epochs:,.0f}"
+
+        frame_str = f"{frame:,.0f}"
+        if max_frames != -1:
+            frame_str += f" / {max_frames:,.0f}"
+
+        # Print neatly
+        print("\nStatistics:")
+        for s in fps_strs:
+            print(f"  {s}")
+        print(f"  epoch                       : {epoch_str}")
+        print(f"  frames                      : {frame_str}\n")
 
 
 class A2CBase(BaseAlgorithm):
@@ -1427,9 +1440,11 @@ class ContinuousA2CBase(A2CBase):
         play_time = play_time_end - play_time_start
         update_time = update_time_end - update_time_start
         total_time = update_time_end - play_time_start
-        print("Play time", play_time)
-        print("Update time", update_time)
-        print("Time to train epoch", total_time)
+        DECIMALS = 3
+        print("\nTiming:")
+        print(f"  Play time               : {play_time:.{DECIMALS}f} s")
+        print(f"  Update time             : {update_time:.{DECIMALS}f} s")
+        print(f"  Time to train epoch     : {total_time:.{DECIMALS}f} s\n")
 
         return batch_dict['step_time'], play_time, update_time, total_time, a_losses, c_losses, b_losses, entropies, kls, last_lr, lr_mul, extra_infos
 
