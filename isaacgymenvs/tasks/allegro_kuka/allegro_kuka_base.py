@@ -2332,7 +2332,7 @@ class AllegroKukaBase(VecTask):
         should_start_video_capture_at_start_of_next_episode = (
             self.video_frames is None
             and self.control_steps % self.cfg["env"]["capture_video_freq"] == 0
-            and (self.control_steps // self.cfg["env"]["capture_video_freq"] > 0)
+            # and (self.control_steps > 0)  # Don't record video on first step
         )
         if should_start_video_capture_at_start_of_next_episode:
             print("-" * 80)
@@ -2346,7 +2346,7 @@ class AllegroKukaBase(VecTask):
         should_start_video_capture_now = (
             self.video_frames is not None
             and len(self.video_frames) == 0
-            and self.progress_buf[self.index_to_view].item() <= 1
+            and self.progress_buf[self.index_to_view].item() <= 1  # Only start video capture on first step of episode so that videos don't start in the middle of an episode
         )
         video_capture_in_progress = (
             self.video_frames is not None and len(self.video_frames) > 0
