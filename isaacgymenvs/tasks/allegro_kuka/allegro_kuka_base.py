@@ -2400,7 +2400,7 @@ class AllegroKukaBase(VecTask):
                 wandb_video = wandb.Video(
                     str(video_path), fps=int(1.0 / self.control_dt)
                 )
-                wandb.log({f"video_{self.control_steps}": wandb_video})
+                wandb.log({"video": wandb_video})
                 # self.wandb_dict["video"] = wandb.Video(
                 #     str(video_path), fps=int(1.0 / self.control_dt)
                 # )

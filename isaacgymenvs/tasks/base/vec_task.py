@@ -93,9 +93,9 @@ class Env(ABC):
         # if training in a headless mode
         self.headless = headless
 
-        enable_camera_sensors = config["env"].get("enableCameraSensors", False)
+        self.enable_camera_sensors = config["env"].get("enableCameraSensors", False)
         self.graphics_device_id = graphics_device_id
-        if enable_camera_sensors == False and self.headless == True:
+        if self.enable_camera_sensors == False and self.headless == True:
             self.graphics_device_id = -1
 
         self.num_environments = config["env"]["numEnvs"]
@@ -531,7 +531,7 @@ class VecTask(Env):
                 img = self.virtual_display.grab()
                 return np.array(img)
         ### ADDITION RENDER WITHOUT VIEWER START ###
-        elif self.enable_viewer_sync:
+        elif self.enable_viewer_sync and self.enable_camera_sensors:
             if self.device != "cpu":
                 self.gym.fetch_results(self.sim, True)
             self.gym.step_graphics(self.sim)
