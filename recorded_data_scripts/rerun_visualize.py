@@ -72,8 +72,7 @@ def update_joints_array(
         rr.send_columns(
             path,
             indexes=time_indexes,
-            columns=[
-                rr.Transform3D.columns(
+            columns=rr.Transform3D.columns(
                     rotation_axis_angle=[
                         rr.RotationAxisAngle(
                             axis=axis,
@@ -82,7 +81,6 @@ def update_joints_array(
                         for i in range(T)
                     ]
                 ),
-            ],
         )
 
 def main():
@@ -148,6 +146,16 @@ def main():
     # BRITTLE: This is the most brittle part of the code, since it relies on the urdf structure
     # Need to check that the joint paths created here match what is created in the rerun viewer
     joint_paths = build_joint_paths(kuka_allegro_urdf, prefix="/kuka_allegro/kuka_allegro")
+    joint_name_to_pos_array = {
+        name: recorded_data.robot_joint_positions_array[:, i]
+        for i, name in enumerate(recorded_data.robot_joint_names)
+    }
+    update_joints_array(
+        joint_name_to_pos_array=joint_name_to_pos_array,
+        joint_paths=joint_paths,
+        urdf=kuka_allegro_urdf,
+        time_array=recorded_data.time_array,
+    )
 
     # Columns is batched and fast
     # Log is easier to use but slow
