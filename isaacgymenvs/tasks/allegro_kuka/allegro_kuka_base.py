@@ -780,6 +780,8 @@ class AllegroKukaBase(VecTask):
             )
         else:
             raise ValueError(f"Unknown object type: {object_type}")
+        if USE_FIXED_SET_OF_GOAL_STATES:
+            self.max_consecutive_successes = len(self.trajectory_states)
 
         return object_asset_files, object_asset_scales, need_vhacds
 
