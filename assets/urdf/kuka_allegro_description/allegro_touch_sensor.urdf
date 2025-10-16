@@ -21,14 +21,14 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="kuka_allegro_description/meshes/mounts/allegro_mount.obj"/>
+        <mesh filename="meshes/mounts/allegro_mount.obj"/>
       </geometry>
       <material name="color_j7"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="kuka_allegro_description/meshes/mounts/allegro_mount.obj"/>
+        <mesh filename="meshes/mounts/allegro_mount.obj"/>
       </geometry>
     </collision>
   </link>
@@ -45,7 +45,7 @@
     </inertial>
     <visual>
       <geometry>
-        <mesh filename="kuka_allegro_description/meshes/allegro/base_link.obj"/>
+        <mesh filename="meshes/allegro/base_link.obj"/>
       </geometry>
       <origin rpy="0 0 0" xyz="0 0 0 "/>
       <material name="Grey">
@@ -55,7 +55,7 @@
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="kuka_allegro_description/meshes/allegro/base_link.obj"/>
+        <mesh filename="meshes/allegro/base_link.obj"/>
       </geometry>
     </collision>
   </link>
@@ -66,7 +66,7 @@
   <link name="index_link_0">
     <collision>
       <geometry>
-        <mesh filename="kuka_allegro_description/meshes/allegro/primary_base.obj"/>
+        <mesh filename="meshes/allegro/primary_base.obj"/>
       </geometry>
     </collision>
     <inertial>
@@ -76,7 +76,7 @@
     </inertial>
     <visual>
       <geometry>
-        <mesh filename="kuka_allegro_description/meshes/allegro/primary_base.obj"/>
+        <mesh filename="meshes/allegro/primary_base.obj"/>
       </geometry>
       <material name="Grey">
         <color rgba="0.2 0.2 0.2 1"/>
@@ -86,7 +86,7 @@
   <link name="index_link_1">
     <collision>
       <geometry>
-        <mesh filename="kuka_allegro_description/meshes/allegro/primary_proximal.obj"/>
+        <mesh filename="meshes/allegro/primary_proximal.obj"/>
       </geometry>
     </collision>
     <inertial>
@@ -96,7 +96,7 @@
     </inertial>
     <visual>
       <geometry>
-        <mesh filename="kuka_allegro_description/meshes/allegro/primary_proximal.obj"/>
+        <mesh filename="meshes/allegro/primary_proximal.obj"/>
       </geometry>
       <material name="Grey">
         <color rgba="0.2 0.2 0.2 1"/>
@@ -106,7 +106,7 @@
   <link name="index_link_2">
     <collision>
       <geometry>
-        <mesh filename="kuka_allegro_description/meshes/allegro/primary_medial.obj"/>
+        <mesh filename="meshes/allegro/primary_medial.obj"/>
       </geometry>
     </collision>
         <inertial>
@@ -116,7 +116,7 @@
     </inertial>
     <visual>
       <geometry>
-        <mesh filename="kuka_allegro_description/meshes/allegro/primary_medial.obj"/>
+        <mesh filename="meshes/allegro/primary_medial.obj"/>
       </geometry>
       <material name="Grey">
         <color rgba="0.2 0.2 0.2 1"/>
@@ -166,7 +166,7 @@
   <link name="middle_link_0">
     <collision>
       <geometry>
-        <mesh filename="kuka_allegro_description/meshes/allegro/primary_base.obj"/>
+        <mesh filename="meshes/allegro/primary_base.obj"/>
       </geometry>
     </collision>
     <inertial>
@@ -176,7 +176,7 @@
     </inertial>
     <visual>
       <geometry>
-        <mesh filename="kuka_allegro_description/meshes/allegro/primary_base.obj"/>
+        <mesh filename="meshes/allegro/primary_base.obj"/>
       </geometry>
       <material name="Grey">
         <color rgba="0.2 0.2 0.2 1"/>
@@ -186,7 +186,7 @@
   <link name="middle_link_1">
     <collision>
       <geometry>
-        <mesh filename="kuka_allegro_description/meshes/allegro/primary_proximal.obj"/>
+        <mesh filename="meshes/allegro/primary_proximal.obj"/>
       </geometry>
     </collision>
     <inertial>
@@ -196,7 +196,7 @@
     </inertial>
     <visual>
       <geometry>
-        <mesh filename="kuka_allegro_description/meshes/allegro/primary_proximal.obj"/>
+        <mesh filename="meshes/allegro/primary_proximal.obj"/>
       </geometry>
       <material name="Grey">
         <color rgba="0.2 0.2 0.2 1"/>
@@ -206,7 +206,7 @@
   <link name="middle_link_2">
     <collision>
       <geometry>
-        <mesh filename="kuka_allegro_description/meshes/allegro/primary_medial.obj"/>
+        <mesh filename="meshes/allegro/primary_medial.obj"/>
       </geometry>
     </collision>
     <inertial>
@@ -216,7 +216,7 @@
     </inertial>
     <visual>
       <geometry>
-        <mesh filename="kuka_allegro_description/meshes/allegro/primary_medial.obj"/>
+        <mesh filename="meshes/allegro/primary_medial.obj"/>
       </geometry>
       <material name="Grey">
         <color rgba="0.2 0.2 0.2 1"/>
@@ -267,7 +267,7 @@
   <link name="ring_link_0">
     <collision>
       <geometry>
-        <mesh filename="kuka_allegro_description/meshes/allegro/primary_base.obj"/>
+        <mesh filename="meshes/allegro/primary_base.obj"/>
       </geometry>
     </collision>
     <inertial>
@@ -277,7 +277,7 @@
     </inertial>
     <visual>
       <geometry>
-        <mesh filename="kuka_allegro_description/meshes/allegro/primary_base.obj"/>
+        <mesh filename="meshes/allegro/primary_base.obj"/>
       </geometry>
       <material name="Grey">
         <color rgba="0.2 0.2 0.2 1"/>
@@ -287,7 +287,7 @@
   <link name="ring_link_1">
     <collision>
       <geometry>
-        <mesh filename="kuka_allegro_description/meshes/allegro/primary_proximal.obj"/>
+        <mesh filename="meshes/allegro/primary_proximal.obj"/>
       </geometry>
     </collision>
     <inertial>
@@ -297,7 +297,7 @@
     </inertial>
     <visual>
       <geometry>
-        <mesh filename="kuka_allegro_description/meshes/allegro/primary_proximal.obj"/>
+        <mesh filename="meshes/allegro/primary_proximal.obj"/>
       </geometry>
       <material name="Grey">
         <color rgba="0.2 0.2 0.2 1"/>
@@ -307,7 +307,7 @@
   <link name="ring_link_2">
     <collision>
       <geometry>
-        <mesh filename="kuka_allegro_description/meshes/allegro/primary_medial.obj"/>
+        <mesh filename="meshes/allegro/primary_medial.obj"/>
       </geometry>
     </collision>
     <inertial>
@@ -317,7 +317,7 @@
     </inertial>
     <visual>
       <geometry>
-        <mesh filename="kuka_allegro_description/meshes/allegro/primary_medial.obj"/>
+        <mesh filename="meshes/allegro/primary_medial.obj"/>
       </geometry>
       <material name="Grey">
         <color rgba="0.2 0.2 0.2 1"/>
@@ -368,7 +368,7 @@
   <link name="thumb_link_0">
     <collision>
       <geometry>
-        <mesh filename="kuka_allegro_description/meshes/allegro/thumb_base.obj"/>
+        <mesh filename="meshes/allegro/thumb_base.obj"/>
       </geometry>
     </collision>
     <inertial>
@@ -378,7 +378,7 @@
     </inertial>
     <visual>
       <geometry>
-        <mesh filename="kuka_allegro_description/meshes/allegro/thumb_base.obj"/>
+        <mesh filename="meshes/allegro/thumb_base.obj"/>
       </geometry>
       <material name="Grey">
         <color rgba="0.2 0.2 0.2 1"/>
@@ -388,7 +388,7 @@
   <link name="thumb_link_1">
     <collision>
       <geometry>
-        <mesh filename="kuka_allegro_description/meshes/allegro/thumb_proximal.obj"/>
+        <mesh filename="meshes/allegro/thumb_proximal.obj"/>
       </geometry>
     </collision>
     <inertial>
@@ -398,7 +398,7 @@
     </inertial>
     <visual>
       <geometry>
-        <mesh filename="kuka_allegro_description/meshes/allegro/thumb_proximal.obj"/>
+        <mesh filename="meshes/allegro/thumb_proximal.obj"/>
       </geometry>
       <material name="Grey">
         <color rgba="0.2 0.2 0.2 1"/>
@@ -408,7 +408,7 @@
   <link name="thumb_link_2">
     <collision>
       <geometry>
-        <mesh filename="kuka_allegro_description/meshes/allegro/thumb_medial.obj"/>
+        <mesh filename="meshes/allegro/thumb_medial.obj"/>
       </geometry>
     </collision>
     <inertial>
@@ -418,7 +418,7 @@
     </inertial>
     <visual>
       <geometry>
-        <mesh filename="kuka_allegro_description/meshes/allegro/thumb_medial.obj"/>
+        <mesh filename="meshes/allegro/thumb_medial.obj"/>
       </geometry>
       <material name="Grey">
         <color rgba="0.2 0.2 0.2 1"/>
