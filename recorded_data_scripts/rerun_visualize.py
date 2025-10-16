@@ -149,7 +149,66 @@ def main():
     # Need to check that the joint paths created here match what is created in the rerun viewer
     joint_paths = build_joint_paths(kuka_allegro_urdf, prefix="/kuka_allegro/kuka_allegro")
 
+    # Columns is batched and fast
+    # Log is easier to use but slow
+    from typing import Literal
+    MODE: Literal["columns", "log"] = "columns"
+    if MODE == "columns":
+        time_indexes = [
+            rr.TimeColumn(
+                "tick",
+                duration=[timedelta(seconds=float(s - recorded_data.time_array[0])) for s in recorded_data.time_array],
+            )
+        ]
+        rr.send_columns(
+            "kuka_allegro",
+            indexes=time_indexes,
+            columns=rr.Transform3D.columns(
+                translation=[
+                    recorded_data.robot_root_states_array[t, :3]
+                    for t in range(len(recorded_data.time_array))
+                ],
+                quaternion=[
+                    rr.Quaternion(
+                        xyzw=recorded_data.robot_root_states_array[t, 3:7],
+                    )
+                    for t in range(len(recorded_data.time_array))
+                ],
+            ),
+        )
+        rr.send_columns(
+            "object",
+            indexes=time_indexes,
+            columns=rr.Transform3D.columns(
+                translation=[
+                    recorded_data.object_root_states_array[t, :3]
+                    for t in range(len(recorded_data.time_array))
+                ],
+                quaternion=[
+                    rr.Quaternion(
+                        xyzw=recorded_data.object_root_states_array[t, 3:7],
+                    )
+                    for t in range(len(recorded_data.time_array))
+                ],
+            ),
+        )
+        joint_name_to_pos_array = {
+            name: recorded_data.robot_joint_positions_array[:, i]
+            for i, name in enumerate(recorded_data.robot_joint_names)
+        }
+        update_joints_array(
+            joint_name_to_pos_array=joint_name_to_pos_array,
+            joint_paths=joint_paths,
+            urdf=kuka_allegro_urdf,
+            time_array=recorded_data.time_array,
+        )
+    elif MODE == "log":
+        pass
+    else:
+        raise ValueError(f"Invalid mode: {MODE}")
+
     # Initialize allegro frame position
+    breakpoint()
     allegro_frame.position = recorded_data.robot_root_states_array[0, :3] + np.array([0.5, 0, 0])
     allegro_frame.wxyz = np.array([1.0, 0.0, 0.0, 0.0])
 
