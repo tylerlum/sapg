@@ -148,6 +148,33 @@ def main():
     kuka_allegro_joint_paths = build_joint_paths(kuka_allegro_urdf, prefix="/kuka_allegro/kuka_allegro")
     allegro_joint_paths = build_joint_paths(allegro_urdf, prefix="/allegro/kuka_allegro")
 
+    # Get joint names since the ordering of the urdf may not match the ordering of the robot_joint_names
+    kuka_allegro_joint_names = kuka_allegro_urdf.actuated_joint_names
+    allegro_joint_names = allegro_urdf.actuated_joint_names
+
+    # Run forward kinematics to get palm poses over time
+    kuka_allegro_joint_positions_reordered = recorded_data.robot_joint_positions_reordered(to_order=kuka_allegro_joint_names)
+    T_R_P_list = []
+    for t in range(len(recorded_data.time_array)):
+        kuka_allegro_urdf.update_cfg(kuka_allegro_joint_positions_reordered[t, :])
+        palm_pose_R = kuka_allegro_urdf.get_transform(frame_to="allegro_mount").copy()
+        assert palm_pose_R.shape == (
+            4,
+            4,
+        ), f"palm_pose_R.shape: {palm_pose_R.shape}"
+        T_R_P = palm_pose_R
+        T_R_P_list.append(T_R_P)
+    T_R_Ps = np.stack(T_R_P_list, axis=0)
+    T_W_Rs = RecordedData.pose_to_T(recorded_data.robot_root_states_array[:, :7])
+    T_W_Ps = T_W_Rs @ T_R_Ps
+    palm_xyz_xyzw_W = RecordedData.T_to_pose(T_W_Ps)
+
+    # Compute object poses wrt palm frame
+    T_W_Os = RecordedData.pose_to_T(recorded_data.object_root_states_array[:, :7])
+    T_P_Ws = np.linalg.inv(T_W_Ps)
+    T_P_Os = T_P_Ws @ T_W_Os
+    object_xyz_xyzw_P = RecordedData.T_to_pose(T_P_Os)
+
     # Columns is batched and fast
     # Log is easier to use but slow
     from typing import Literal
@@ -202,17 +229,27 @@ def main():
             time_array=recorded_data.time_array,
         )
 
+        # By default MOVE_FLOATING_ALLEGRO_HAND = False so we can see how the object is moving wrt a fixed allegro hand
+        # Can set to True to debug and make sure that everything aligns
+        MOVE_FLOATING_ALLEGRO_HAND = True
+        if MOVE_FLOATING_ALLEGRO_HAND:
+            floating_allegro_hand_position = palm_xyz_xyzw_W[:, :3]
+            floating_allegro_hand_quat_xyzw = palm_xyz_xyzw_W[:, 3:7]
+        else:
+            floating_allegro_hand_position = recorded_data.robot_root_states_array[:, :3] + np.array([0.5, 0, 0])[None].repeat(len(recorded_data.time_array), axis=0)
+            floating_allegro_hand_quat_xyzw = np.array([0.0, 0.0, 0.0, 1.0])[None].repeat(len(recorded_data.time_array), axis=0)
+
         rr.send_columns(
             "allegro",
             indexes=time_indexes,
             columns=rr.Transform3D.columns(
                 translation=[
-                    recorded_data.robot_root_states_array[t, :3] + np.array([0.5, 0, 0])
+                    floating_allegro_hand_position[t, :]
                     for t in range(len(recorded_data.time_array))
                 ],
                 quaternion=[
                     rr.Quaternion(
-                        xyzw=np.array([0.0, 0.0, 0.0, 1.0]),
+                        xyzw=floating_allegro_hand_quat_xyzw[t, :]
                     )
                     for t in range(len(recorded_data.time_array))
                 ],
@@ -221,7 +258,7 @@ def main():
         allegro_joint_name_to_pos_array = {
             name: recorded_data.robot_joint_positions_array[:, i]
             for i, name in enumerate(recorded_data.robot_joint_names)
-            if name in allegro_urdf.actuated_joint_names
+            if name in allegro_joint_names
         }
         update_joints_array(
             joint_name_to_pos_array=allegro_joint_name_to_pos_array,
@@ -239,38 +276,10 @@ def main():
     allegro_frame.position = recorded_data.robot_root_states_array[0, :3] + np.array([0.5, 0, 0])
     allegro_frame.wxyz = np.array([1.0, 0.0, 0.0, 0.0])
 
-    # Get joint names since the ordering of the urdf may not match the ordering of the robot_joint_names
-    kuka_allegro_viser_joint_names = kuka_allegro_viser._urdf.actuated_joint_names
-    allegro_viser_joint_names = allegro_viser._urdf.actuated_joint_names
-
     # ###########
     # Main loop
     # ###########
     while True:
-        # Get data
-        robot_root_state = recorded_data.robot_root_states_array[FRAME_IDX]
-        object_root_state = recorded_data.object_root_states_array[FRAME_IDX]
-        robot_joint_position = recorded_data.robot_joint_positions_array[FRAME_IDX]
-
-        # Update state
-        kuka_allegro_frame.position = robot_root_state[:3]
-        kuka_allegro_frame.wxyz = robot_root_state[3:7][[3, 0, 1, 2]]
-        object_frame.position = object_root_state[:3]
-        object_frame.wxyz = object_root_state[3:7][[3, 0, 1, 2]]
-        kuka_allegro_joint_pos_viser_order = RecordedData.change_joint_order(
-            robot_joint_position,
-            from_order=recorded_data.robot_joint_names,
-            to_order=kuka_allegro_viser_joint_names,
-        )
-        kuka_allegro_viser.update_cfg(kuka_allegro_joint_pos_viser_order)
-
-        allegro_joint_pos_viser_order = RecordedData.change_joint_order(
-            robot_joint_position,
-            from_order=recorded_data.robot_joint_names,
-            to_order=allegro_viser_joint_names + list(set(recorded_data.robot_joint_names) - set(allegro_viser_joint_names)),
-        )[:len(allegro_viser_joint_names)]
-        allegro_viser.update_cfg(allegro_joint_pos_viser_order)
-
         # Visualize the palm of the robot
         palm_pose_R = kuka_allegro_viser._urdf.get_transform(frame_to="allegro_mount").copy()
         assert palm_pose_R.shape == (
