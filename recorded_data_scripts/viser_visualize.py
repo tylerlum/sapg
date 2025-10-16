@@ -110,7 +110,7 @@ def main():
 
     # Initialize allegro frame position
     allegro_frame.position = recorded_data.robot_root_states_array[0, :3] + np.array(
-        [0.5, 0, 0]
+        [0.5, -0.8, 0.7]
     )
     allegro_frame.wxyz = np.array([1.0, 0.0, 0.0, 0.0])
 
