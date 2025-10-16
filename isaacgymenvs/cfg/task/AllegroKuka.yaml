@@ -110,7 +110,7 @@ env:
   record_data_num_steps: 1000
 
   capture_video: False
-  capture_video_freq: 600
+  capture_video_freq: 2_000
   capture_video_len: 600
 
   asset:
