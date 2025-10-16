@@ -8,10 +8,16 @@ import viser
 from viser.extras import ViserUrdf
 
 def main():
-    file_path = Path("/home/tylerlum/github_repos/sapg/recorded_data/2025-10-15_20-15-22.npz")
+    # ###########
+    # Load recorded data
+    # ###########
+    file_path = Path("/home/tylerlum/github_repos/sapg/recorded_data/2025-10-15_20-52-19.npz")
     assert file_path.exists(), f"File {file_path} does not exist"
     recorded_data = RecordedData.from_file(file_path)
 
+    # ###########
+    # Create server
+    # ###########
     # Create server
     SERVER = viser.ViserServer()
     SERVER.scene.add_grid("/ground", width=2, height=2, cell_size=0.1)
@@ -23,11 +29,16 @@ def main():
         # client.camera.wxyz = (0, 0, 0, 1)
         client.camera.look_at = (0, 0, 0)
 
+    # ###########
     # Constants
+    # ###########
     AXES_LENGTH = 0.2
     AXES_RADIUS = 0.01
 
-    # Load assets
+    # ###########
+    # Load assets into viser
+    # ###########
+
     KUKA_ALLEGRO_URDF_PATH = Path("/home/tylerlum/github_repos/sapg/assets/urdf/kuka_allegro_description/kuka_allegro_touch_sensor.urdf")
     assert KUKA_ALLEGRO_URDF_PATH.exists(), f"KUKA_ALLEGRO_URDF_PATH not found: {KUKA_ALLEGRO_URDF_PATH}"
     OBJECT_URDF_PATH = Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/044_flat_screwdriver/044_flat_screwdriver.urdf")
@@ -58,22 +69,99 @@ def main():
         SERVER, OBJECT_URDF_PATH, root_node_name="/allegro/object"
     )
 
-    # Main loop
-    T_IDX = 0
-
     # Initialize allegro frame position
-    allegro_frame.position = recorded_data.robot_root_states_array[T_IDX, :3] + np.array([0.5, 0, 0])
+    allegro_frame.position = recorded_data.robot_root_states_array[0, :3] + np.array([0.5, 0, 0])
     allegro_frame.wxyz = np.array([1.0, 0.0, 0.0, 0.0])
 
     # Get joint names since the ordering of the urdf may not match the ordering of the robot_joint_names
     kuka_allegro_viser_joint_names = kuka_allegro_viser._urdf.actuated_joint_names
     allegro_viser_joint_names = allegro_viser._urdf.actuated_joint_names
 
+    # ###########
+    # Add controls
+    # ###########
+    def get_frame_idx_slider_text(
+        recorded_data: RecordedData,
+        idx: int,
+    ) -> str:
+        fps = 1 / recorded_data.dt
+        current_time = recorded_data.time_array[idx] - recorded_data.time_array[0]
+        total_time = recorded_data.total_time
+        return f"{current_time:.2f}s/{total_time:.2f}s.Frame {idx}/{len(recorded_data)}. ({fps:.0f}fps)"
+
+    with SERVER.gui.add_folder("Frame Controls"):
+        frame_idx_slider = SERVER.gui.add_slider(
+            label=get_frame_idx_slider_text(recorded_data=recorded_data, idx=0),
+            min=0,
+            max=len(recorded_data) - 1,
+            step=1,
+            initial_value=0,
+        )
+        pause_toggle_button = SERVER.gui.add_button(
+            label="Pause",
+        )
+        increment_button = SERVER.gui.add_button(
+            label="Increment",
+        )
+        decrement_button = SERVER.gui.add_button(
+            label="Decrement",
+        )
+        reset_button = SERVER.gui.add_button(
+            label="Reset",
+        )
+
+    # Loop state
+    FRAME_IDX = frame_idx_slider.value
+    PAUSED = False
+
+    @frame_idx_slider.on_update
+    def _(_) -> None:
+        nonlocal FRAME_IDX, frame_idx_slider
+        FRAME_IDX = int(np.clip(frame_idx_slider.value, a_min=0, a_max=len(recorded_data) - 1))
+        frame_idx_slider.label = get_frame_idx_slider_text(recorded_data=recorded_data, idx=FRAME_IDX)
+
+    @pause_toggle_button.on_click
+    def _(_) -> None:
+        nonlocal PAUSED
+        PAUSED = not PAUSED
+        if PAUSED:
+            pause_toggle_button.label = "Play"
+        else:
+            pause_toggle_button.label = "Pause"
+
+    @increment_button.on_click
+    def _(_) -> None:
+        nonlocal PAUSED, frame_idx_slider, pause_toggle_button
+        if not PAUSED:
+            pause_toggle_button.value = True
+
+        frame_idx_slider.value = int(
+            np.clip(frame_idx_slider.value + 1, a_min=0, a_max=len(recorded_data) - 1)
+        )
+
+    @decrement_button.on_click
+    def _(_) -> None:
+        nonlocal PAUSED, frame_idx_slider, pause_toggle_button
+        if not PAUSED:
+            pause_toggle_button.value = True
+
+        frame_idx_slider.value = int(
+            np.clip(frame_idx_slider.value - 1, a_min=0, a_max=len(recorded_data) - 1)
+        )
+
+    @reset_button.on_click
+    def _(_) -> None:
+        nonlocal frame_idx_slider
+        frame_idx_slider.value = 0
+
+    # ###########
+    # Main loop
+    # ###########
     while True:
         # Get data
-        robot_root_state = recorded_data.robot_root_states_array[T_IDX]
-        object_root_state = recorded_data.object_root_states_array[T_IDX]
-        robot_joint_position = recorded_data.robot_joint_positions_array[T_IDX]
+        robot_root_state = recorded_data.robot_root_states_array[FRAME_IDX]
+        object_root_state = recorded_data.object_root_states_array[FRAME_IDX]
+        robot_joint_position = recorded_data.robot_joint_positions_array[FRAME_IDX]
 
         # Update state
         kuka_allegro_frame.position = robot_root_state[:3]
@@ -122,11 +210,12 @@ def main():
         object_in_allegro_frame.position = object_xyz_xyzw_P[:3]
         object_in_allegro_frame.wxyz = object_xyz_xyzw_P[3:7][[3, 0, 1, 2]]
 
+        # Sleep and update state
         time.sleep(recorded_data.dt)
-        T_IDX += 1
-        if T_IDX >= len(recorded_data):
-            # T_IDX = T - 1
-            T_IDX = 0
+        if not PAUSED:
+            frame_idx_slider.value = int(
+                np.clip(frame_idx_slider.value + 1, a_min=0, a_max=len(recorded_data) - 1)
+            )
 
 
 
