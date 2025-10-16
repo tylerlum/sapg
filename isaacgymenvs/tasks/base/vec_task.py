@@ -271,7 +271,6 @@ class VecTask(Env):
         """Create the viewer."""
 
         # todo: read from config
-        self.enable_viewer_sync = True
         self.viewer = None
 
         # if running with a viewer, set up keyboard shortcuts and camera
@@ -308,6 +307,14 @@ class VecTask(Env):
 
             self.gym.viewer_camera_look_at(
                 self.viewer, None, cam_pos, cam_target)
+
+        # If there is a viewer, we want viewer sync to be True by default so the viewer shows useful information
+        if self.viewer is not None:
+            self.enable_viewer_sync = True
+        # If there is not viewer, we want viewer sync to be False by default to speed up env stepping
+        # Anything that needs rendering can explicitly set self.enable_viewer_sync=True to enable viewer sync
+        else:
+            self.enable_viewer_sync = False
 
     def allocate_buffers(self):
         """Allocate the observation, states, etc. buffers.
