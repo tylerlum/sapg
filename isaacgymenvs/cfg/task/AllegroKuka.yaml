@@ -14,6 +14,7 @@ env:
 
   envSpacing: 1.2
   episodeLength: 600
+  enableCameraSensors: False
   enableDebugVis: False
   evalStats: False  # extra evaluation-time statistics
 

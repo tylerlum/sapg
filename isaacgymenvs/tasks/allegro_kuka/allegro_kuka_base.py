@@ -2371,6 +2371,10 @@ class AllegroKukaBase(VecTask):
             self.camera_handle,
             gymapi.IMAGE_COLOR,
         )
+        if color_image.size == 0:
+            print(f"Warning: color_image is empty on {self.control_steps}th step, make sure you have this change to vec_task.py")
+            print("https://github.com/tylerlum/human2sim2robot/blob/a5fd55baf83fbd04c585e2d596967ba08a38d540/human2sim2robot/sim_training/tasks/base/vec_task.py#L544")
+            return
         NUM_RGBA = 4
         color_image = color_image.reshape(
             self.camera_properties.height, self.camera_properties.width, NUM_RGBA

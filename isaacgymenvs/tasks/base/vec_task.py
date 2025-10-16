@@ -530,6 +530,12 @@ class VecTask(Env):
             if self.virtual_display and mode == "rgb_array":
                 img = self.virtual_display.grab()
                 return np.array(img)
+        ### ADDITION RENDER WITHOUT VIEWER START ###
+        elif self.enable_viewer_sync:
+            if self.device != "cpu":
+                self.gym.fetch_results(self.sim, True)
+            self.gym.step_graphics(self.sim)
+        ### ADDITION RENDER WITHOUT VIEWER END ###
 
     def __parse_sim_params(self, physics_engine: str, config_sim: Dict[str, Any]) -> gymapi.SimParams:
         """Parse the config dictionary for physics stepping settings.
