@@ -106,6 +106,9 @@ env:
   tyler_num_cylinders: 500
   tyler_randomize_com: False
 
+  record_data: False
+  record_data_num_steps: 1000
+
   asset:
     # Whis was the original kuka_allegro asset.
     # This URDF has some issues, i.e. weights of fingers are too high and the mass of the Allegro hand is too

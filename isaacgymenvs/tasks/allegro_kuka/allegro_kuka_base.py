@@ -2060,10 +2060,10 @@ class AllegroKukaBase(VecTask):
                 ]
             )
 
-        RECORD_DATA = True
+        RECORD_DATA = self.cfg["env"]["record_data"]
         if RECORD_DATA:
             from recorded_data_scripts.recorded_data import RecordedData
-            N_TIMESTEPS = 1000
+            N_TIMESTEPS = self.cfg["env"]["record_data_num_steps"]
             if not hasattr(self, "robot_root_states_array"):
                 self.robot_root_states_array = []
                 self.object_root_states_array = []
