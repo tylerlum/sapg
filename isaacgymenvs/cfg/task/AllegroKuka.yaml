@@ -14,7 +14,7 @@ env:
 
   envSpacing: 1.2
   episodeLength: 600
-  enableCameraSensors: False
+  enableCameraSensors: False  # Setting to True will significantly slow down the environment (about 50% FPS)
   enableDebugVis: False
   evalStats: False  # extra evaluation-time statistics
 
@@ -110,7 +110,7 @@ env:
   record_data: False
   record_data_num_steps: 1000
 
-  capture_video: False
+  capture_video: False  # This will not work unless headless=False or enableCameraSensors=True, both make it slower
   capture_video_freq: 2_000
   capture_video_len: 600
 
