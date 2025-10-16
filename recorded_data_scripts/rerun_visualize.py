@@ -169,16 +169,30 @@ def main():
     T_W_Ps = T_W_Rs @ T_R_Ps
     palm_xyz_xyzw_W = RecordedData.T_to_pose(T_W_Ps)
 
+    # By default MOVE_FLOATING_ALLEGRO_HAND = False so we can see how the object is moving wrt a fixed allegro hand
+    # Can set to True to debug and make sure that everything aligns
+    MOVE_FLOATING_ALLEGRO_HAND = False
+    if MOVE_FLOATING_ALLEGRO_HAND:
+        floating_allegro_hand_position = palm_xyz_xyzw_W[:, :3]
+        floating_allegro_hand_quat_xyzw = palm_xyz_xyzw_W[:, 3:7]
+    else:
+        floating_allegro_hand_position = recorded_data.robot_root_states_array[:, :3] + np.array([0.5, 0, 0])[None].repeat(len(recorded_data.time_array), axis=0)
+        floating_allegro_hand_quat_xyzw = np.array([0.0, 0.0, 0.0, 1.0])[None].repeat(len(recorded_data.time_array), axis=0)
+
     # Compute object poses wrt palm frame
     T_W_Os = RecordedData.pose_to_T(recorded_data.object_root_states_array[:, :7])
     T_P_Ws = np.linalg.inv(T_W_Ps)
     T_P_Os = T_P_Ws @ T_W_Os
     object_xyz_xyzw_P = RecordedData.T_to_pose(T_P_Os)
 
+    rr_recording = rr.get_global_data_recording() or rr.RecordingStream(
+        application_id=APPLICATION_ID,
+    )
+
     # Columns is batched and fast
     # Log is easier to use but slow
     from typing import Literal
-    MODE: Literal["columns", "log"] = "columns"
+    MODE: Literal["columns", "log"] = "log"
     if MODE == "columns":
         time_indexes = [
             rr.TimeColumn(
@@ -229,16 +243,6 @@ def main():
             time_array=recorded_data.time_array,
         )
 
-        # By default MOVE_FLOATING_ALLEGRO_HAND = False so we can see how the object is moving wrt a fixed allegro hand
-        # Can set to True to debug and make sure that everything aligns
-        MOVE_FLOATING_ALLEGRO_HAND = False
-        if MOVE_FLOATING_ALLEGRO_HAND:
-            floating_allegro_hand_position = palm_xyz_xyzw_W[:, :3]
-            floating_allegro_hand_quat_xyzw = palm_xyz_xyzw_W[:, 3:7]
-        else:
-            floating_allegro_hand_position = recorded_data.robot_root_states_array[:, :3] + np.array([0.5, 0, 0])[None].repeat(len(recorded_data.time_array), axis=0)
-            floating_allegro_hand_quat_xyzw = np.array([0.0, 0.0, 0.0, 1.0])[None].repeat(len(recorded_data.time_array), axis=0)
-
         rr.send_columns(
             "allegro",
             indexes=time_indexes,
@@ -283,53 +287,72 @@ def main():
             ),
         )
     elif MODE == "log":
-        pass
+        for t in range(len(recorded_data.time_array)):
+            time_seconds = float(
+                recorded_data.time_array[t] - recorded_data.time_array[0]
+            )
+            rr_recording.set_time("tick", duration=timedelta(seconds=time_seconds))
+
+            kuka_allegro_joint_name_to_pos = {
+                name: recorded_data.robot_joint_positions_array[t, i]
+                for i, name in enumerate(recorded_data.robot_joint_names)
+            }
+            update_joints(
+                joint_name_to_pos=kuka_allegro_joint_name_to_pos,
+                joint_paths=kuka_allegro_joint_paths,
+                urdf=kuka_allegro_urdf,
+            )
+            allegro_joint_name_to_pos = {
+                name: recorded_data.robot_joint_positions_array[t, i]
+                for i, name in enumerate(recorded_data.robot_joint_names)
+                if name in allegro_joint_names
+            }
+            update_joints(
+                joint_name_to_pos=allegro_joint_name_to_pos,
+                joint_paths=allegro_joint_paths,
+                urdf=allegro_urdf,
+            )
+
+            rr.log(
+                "kuka_allegro",
+                rr.Transform3D(
+                    clear=False,
+                    translation=recorded_data.robot_root_states_array[t, :3],
+                    quaternion=rr.Quaternion(
+                        xyzw=recorded_data.robot_root_states_array[t, 3:7],
+                    ),
+                ),
+            )
+
+            rr.log(
+                "object",
+                rr.Transform3D(
+                    clear=False,
+                    translation=recorded_data.object_root_states_array[t, :3],
+                ),
+            )
+            rr.log(
+                "allegro",
+                rr.Transform3D(
+                    clear=False,
+                    translation=floating_allegro_hand_position[t, :],
+                    quaternion=rr.Quaternion(
+                        xyzw=floating_allegro_hand_quat_xyzw[t, :],
+                    ),
+                ),
+            )
+            rr.log(
+                "/allegro/object",
+                rr.Transform3D(
+                    clear=False,
+                    translation=object_xyz_xyzw_P[t, :3],
+                    quaternion=rr.Quaternion(
+                        xyzw=object_xyz_xyzw_P[t, 3:7],
+                    ),
+                ),
+            )
     else:
         raise ValueError(f"Invalid mode: {MODE}")
-
-    # Initialize allegro frame position
-    breakpoint()
-    allegro_frame.position = recorded_data.robot_root_states_array[0, :3] + np.array([0.5, 0, 0])
-    allegro_frame.wxyz = np.array([1.0, 0.0, 0.0, 0.0])
-
-    # ###########
-    # Main loop
-    # ###########
-    while True:
-        # Visualize the palm of the robot
-        palm_pose_R = kuka_allegro_viser._urdf.get_transform(frame_to="allegro_mount").copy()
-        assert palm_pose_R.shape == (
-            4,
-            4,
-        ), f"palm_pose_R.shape: {palm_pose_R.shape}"
-        T_R_P = palm_pose_R
-        T_W_R = RecordedData.pose_to_T(robot_root_state[:7])
-        T_W_P = T_W_R @ T_R_P
-        palm_xyz_xyzw_W = RecordedData.T_to_pose(T_W_P)
-        palm_frame.position = palm_xyz_xyzw_W[:3]
-        palm_frame.wxyz = palm_xyz_xyzw_W[3:7][[3, 0, 1, 2]]
-
-        # By default MOVE_FLOATING_ALLEGRO_HAND = False so we can see how the object is moving wrt a fixed allegro hand
-        # Can set to True to debug and make sure that everything aligns
-        MOVE_FLOATING_ALLEGRO_HAND = False
-        if MOVE_FLOATING_ALLEGRO_HAND:
-            allegro_frame.position = palm_xyz_xyzw_W[:3]
-            allegro_frame.wxyz = palm_xyz_xyzw_W[3:7][[3, 0, 1, 2]]
-
-        # # Get object pose wrt palm pose
-        T_W_O = RecordedData.pose_to_T(object_root_state[:7])
-        T_P_W = np.linalg.inv(T_W_P)
-        T_P_O = T_P_W @ T_W_O
-        object_xyz_xyzw_P = RecordedData.T_to_pose(T_P_O)
-        object_in_allegro_frame.position = object_xyz_xyzw_P[:3]
-        object_in_allegro_frame.wxyz = object_xyz_xyzw_P[3:7][[3, 0, 1, 2]]
-
-        # Sleep and update state
-        time.sleep(recorded_data.dt)
-        if not PAUSED:
-            frame_idx_slider.value = int(
-                np.clip(frame_idx_slider.value + 1, a_min=0, a_max=len(recorded_data) - 1)
-            )
 
     breakpoint()
 
