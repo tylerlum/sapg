@@ -2062,41 +2062,45 @@ class AllegroKukaBase(VecTask):
 
         RECORD_DATA = True
         if RECORD_DATA:
-            N_TIMESTEPS = 1000
-            if not hasattr(self, "robot_root_states"):
-                self.robot_root_states = []
-                self.object_root_states = []
-                self.robot_joint_positions = []
+            from recorded_data_scripts.recorded_data import RecordedData
+            N_TIMESTEPS = 100
+            if not hasattr(self, "robot_root_states_array"):
+                self.robot_root_states_array = []
+                self.object_root_states_array = []
+                self.robot_joint_positions_array = []
                 self.robot_joint_names = self.joint_names
 
             robot_root_state = self.root_state_tensor[self.allegro_hand_indices, :13].cpu().numpy()
             object_root_state = self.root_state_tensor[self.object_indices, :13].cpu().numpy()
             robot_joint_position = self.arm_hand_dof_pos.cpu().numpy()
-            self.robot_root_states.append(robot_root_state)
-            self.object_root_states.append(object_root_state)
-            self.robot_joint_positions.append(robot_joint_position)
-            print(f"Recorded {len(self.robot_root_states)} / {N_TIMESTEPS} steps")
-            if len(self.robot_root_states) >= N_TIMESTEPS:
+            self.robot_root_states_array.append(robot_root_state)
+            self.object_root_states_array.append(object_root_state)
+            self.robot_joint_positions_array.append(robot_joint_position)
+            print(f"Recorded {len(self.robot_root_states_array)} / {N_TIMESTEPS} steps")
+            if len(self.robot_root_states_array) >= N_TIMESTEPS:
                 import datetime
                 datetime_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
                 from pathlib import Path
                 this_dir = Path(__file__).parent
                 root_dir = this_dir.parent.parent.parent
-                recorded_data_path = root_dir / "recorded_data" / f"{datetime_str}.npy"
+                recorded_data_path = root_dir / "recorded_data" / f"{datetime_str}.npz"
                 recorded_data_path.parent.mkdir(parents=True, exist_ok=True)
-                self.robot_root_states = np.stack(self.robot_root_states, axis=0)
-                self.object_root_states = np.stack(self.object_root_states, axis=0)
-                self.robot_joint_positions = np.stack(self.robot_joint_positions, axis=0)
-                assert self.robot_root_states.shape == (N_TIMESTEPS, self.num_envs, 13), f"{self.robot_root_states.shape} != ({N_TIMESTEPS}, {self.num_envs}, 13)"
-                assert self.object_root_states.shape == (N_TIMESTEPS, self.num_envs, 13), f"{self.object_root_states.shape} != ({N_TIMESTEPS}, {self.num_envs}, 13)"
-                assert self.robot_joint_positions.shape == (N_TIMESTEPS, self.num_envs, len(self.robot_joint_names)), f"{self.robot_joint_positions.shape} != ({N_TIMESTEPS}, {self.num_envs}, {len(self.robot_joint_names)})"
-                recorded_data = {
-                    "robot_root_states": self.robot_root_states,
-                    "object_root_states": self.object_root_states,
-                    "robot_joint_positions": self.robot_joint_positions,
-                    "robot_joint_names": self.robot_joint_names,
-                }
-                np.save(recorded_data_path, recorded_data)
+                self.robot_root_states_array = np.stack(self.robot_root_states_array, axis=0)
+                self.object_root_states_array = np.stack(self.object_root_states_array, axis=0)
+                self.robot_joint_positions_array = np.stack(self.robot_joint_positions_array, axis=0)
+                assert self.robot_root_states_array.shape == (N_TIMESTEPS, self.num_envs, 13), f"{self.robot_root_states_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, 13)"
+                assert self.object_root_states_array.shape == (N_TIMESTEPS, self.num_envs, 13), f"{self.object_root_states_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, 13)"
+                assert self.robot_joint_positions_array.shape == (N_TIMESTEPS, self.num_envs, len(self.robot_joint_names)), f"{self.robot_joint_positions_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, {len(self.robot_joint_names)})"
+                time_array = np.arange(N_TIMESTEPS) * self.dt
+                ENV_IDX = 0
+                recorded_data = RecordedData(
+                    robot_root_states_array=self.robot_root_states_array[:, ENV_IDX],
+                    object_root_states_array=self.object_root_states_array[:, ENV_IDX],
+                    robot_joint_positions_array=self.robot_joint_positions_array[:, ENV_IDX],
+                    robot_joint_names=self.robot_joint_names,
+                    time_array=time_array,
+                )
+                recorded_data.to_file(recorded_data_path)
                 print(f"Saved recorded data to {recorded_data_path}")
                 breakpoint()
 

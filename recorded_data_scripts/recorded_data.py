@@ -4,23 +4,23 @@ import numpy as np
 from pathlib import Path
 from functools import cached_property
 from scipy.spatial.transform import Rotation as R
+from typing import Optional
 
 @dataclass
 class RecordedData:
     robot_root_states_array: np.ndarray
     object_root_states_array: np.ndarray
-    table_root_states_array: np.ndarray
-    goal_root_states_array: np.ndarray
-
     robot_joint_positions_array: np.ndarray
-    robot_joint_velocities_array: np.ndarray
-    robot_joint_pos_targets_array: np.ndarray
+    time_array: np.ndarray
     robot_joint_names: list[str]
 
-    observations_array: np.ndarray
-    actions_array: np.ndarray
+    table_root_states_array: Optional[np.ndarray] = None
+    goal_root_states_array: Optional[np.ndarray] = None
+    robot_joint_velocities_array: Optional[np.ndarray] = None
+    robot_joint_pos_targets_array: Optional[np.ndarray] = None
 
-    time_array: np.ndarray
+    observations_array: Optional[np.ndarray] = None
+    actions_array: Optional[np.ndarray] = None
 
     def __post_init__(self):
         T = self.T
@@ -28,16 +28,24 @@ class RecordedData:
         ROOT_STATE_DIM = 13  # xyz, xyzw, linvel, angvel
         assert self.robot_root_states_array.shape == (T, ROOT_STATE_DIM), f"Expected robot root states array to be (T, {ROOT_STATE_DIM}), got {self.robot_root_states_array.shape}"
         assert self.object_root_states_array.shape == (T, ROOT_STATE_DIM), f"Expected object root states array to be (T, {ROOT_STATE_DIM}), got {self.object_root_states_array.shape}"
-        assert self.table_root_states_array.shape == (T, ROOT_STATE_DIM), f"Expected table root states array to be (T, {ROOT_STATE_DIM}), got {self.table_root_states_array.shape}"
-        assert self.goal_root_states_array.shape == (T, ROOT_STATE_DIM), f"Expected goal root states array to be (T, {ROOT_STATE_DIM}), got {self.goal_root_states_array.shape}"
         assert self.robot_joint_positions_array.shape == (T, J), f"Expected robot joint positions array to be (T, J), got {self.robot_joint_positions_array.shape}"
-        assert self.robot_joint_velocities_array.shape == (T, J), f"Expected robot joint velocities array to be (T, J), got {self.robot_joint_velocities_array.shape}"
-        assert self.robot_joint_pos_targets_array.shape == (T, J), f"Expected robot joint pos targets array to be (T, J), got {self.robot_joint_pos_targets_array.shape}"
+        assert self.time_array.shape == (T,), f"Expected time array to be (T,), got {self.time_array.shape}"
         assert len(self.robot_joint_names) == J, f"Expected robot joint names to have length J, got {len(self.robot_joint_names)} and {J}"
 
-        assert self.observations_array.shape == (T, self.observations_dim), f"Expected observations array to be (T, {self.observations_dim}), got {self.observations_array.shape}"
-        assert self.actions_array.shape == (T, self.actions_dim), f"Expected actions array to be (T, {self.actions_dim}), got {self.actions_array.shape}"
-        assert self.time_array.shape == (T,), f"Expected time array to be (T,), got {self.time_array.shape}"
+        if self.table_root_states_array is not None:
+            assert self.table_root_states_array.shape == (T, ROOT_STATE_DIM), f"Expected table root states array to be (T, {ROOT_STATE_DIM}), got {self.table_root_states_array.shape}"
+        if self.goal_root_states_array is not None:
+            assert self.goal_root_states_array.shape == (T, ROOT_STATE_DIM), f"Expected goal root states array to be (T, {ROOT_STATE_DIM}), got {self.goal_root_states_array.shape}"
+        if self.robot_joint_velocities_array is not None:
+            assert self.robot_joint_velocities_array.shape == (T, J), f"Expected robot joint velocities array to be (T, J), got {self.robot_joint_velocities_array.shape}"
+        if self.robot_joint_pos_targets_array is not None:
+            assert self.robot_joint_pos_targets_array.shape == (T, J), f"Expected robot joint pos targets array to be (T, J), got {self.robot_joint_pos_targets_array.shape}"
+
+        if self.observations_array is not None:
+            assert self.observations_array.shape == (T, self.observations_dim), f"Expected observations array to be (T, {self.observations_dim}), got {self.observations_array.shape}"
+        if self.actions_array is not None:
+            assert self.actions_array.shape == (T, self.actions_dim), f"Expected actions array to be (T, {self.actions_dim}), got {self.actions_array.shape}"
+
 
     def to_file(self, file_path: Path):
         file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -45,33 +53,39 @@ class RecordedData:
             file_path,
             robot_root_states_array=self.robot_root_states_array,
             object_root_states_array=self.object_root_states_array,
+            robot_joint_positions_array=self.robot_joint_positions_array,
+            time_array=self.time_array,
+            robot_joint_names=self.robot_joint_names,
             table_root_states_array=self.table_root_states_array,
             goal_root_states_array=self.goal_root_states_array,
-            robot_joint_positions_array=self.robot_joint_positions_array,
             robot_joint_velocities_array=self.robot_joint_velocities_array,
             robot_joint_pos_targets_array=self.robot_joint_pos_targets_array,
-            robot_joint_names=self.robot_joint_names,
             observations_array=self.observations_array,
             actions_array=self.actions_array,
-            time_array=self.time_array,
         )
 
     @classmethod
     def from_file(cls, file_path: Path) -> RecordedData:
         assert file_path.exists(), f"File {file_path} does not exist"
-        recorded_data = np.load(file_path)
+        recorded_data = np.load(file_path, allow_pickle=True)
+
+        def maybe_none(x):
+            if isinstance(x, np.ndarray) and x.shape == () and x.dtype == object and x.item() is None:
+                return None
+            return x
+
         return cls(
             robot_root_states_array=recorded_data["robot_root_states_array"],
             object_root_states_array=recorded_data["object_root_states_array"],
-            table_root_states_array=recorded_data["table_root_states_array"],
-            goal_root_states_array=recorded_data["goal_root_states_array"],
             robot_joint_positions_array=recorded_data["robot_joint_positions_array"],
-            robot_joint_velocities_array=recorded_data["robot_joint_velocities_array"],
-            robot_joint_pos_targets_array=recorded_data["robot_joint_pos_targets_array"],
-            robot_joint_names=recorded_data["robot_joint_names"],
-            observations_array=recorded_data["observations_array"],
-            actions_array=recorded_data["actions_array"],
             time_array=recorded_data["time_array"],
+            robot_joint_names=recorded_data["robot_joint_names"],
+            table_root_states_array=maybe_none(recorded_data["table_root_states_array"]),
+            goal_root_states_array=maybe_none(recorded_data["goal_root_states_array"]),
+            robot_joint_velocities_array=maybe_none(recorded_data["robot_joint_velocities_array"]),
+            robot_joint_pos_targets_array=maybe_none(recorded_data["robot_joint_pos_targets_array"]),
+            observations_array=maybe_none(recorded_data["observations_array"]),
+            actions_array=maybe_none(recorded_data["actions_array"]),
         )
 
     def slice(self, start: int | None = None, end: int | None = None, reset_time: bool = True) -> RecordedData:
@@ -86,19 +100,19 @@ class RecordedData:
         return RecordedData(
             robot_root_states_array=self.robot_root_states_array[start:end],
             object_root_states_array=self.object_root_states_array[start:end],
-            table_root_states_array=self.table_root_states_array[start:end],
-            goal_root_states_array=self.goal_root_states_array[start:end],
             robot_joint_positions_array=self.robot_joint_positions_array[start:end],
-            robot_joint_velocities_array=self.robot_joint_velocities_array[start:end],
-            robot_joint_pos_targets_array=self.robot_joint_pos_targets_array[start:end],
-            robot_joint_names=self.robot_joint_names,
-            observations_array=self.observations_array[start:end],
-            actions_array=self.actions_array[start:end],
             time_array=(
                 self.time_array[start:end] - self.time_array[start]
                 if reset_time
                 else self.time_array[start:end]
             ),
+            robot_joint_names=self.robot_joint_names,
+            table_root_states_array=self.table_root_states_array[start:end],
+            goal_root_states_array=self.goal_root_states_array[start:end],
+            robot_joint_velocities_array=self.robot_joint_velocities_array[start:end],
+            robot_joint_pos_targets_array=self.robot_joint_pos_targets_array[start:end],
+            observations_array=self.observations_array[start:end],
+            actions_array=self.actions_array[start:end],
         )
 
     def __len__(self) -> int:

@@ -3,17 +3,18 @@ import time
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 from pathlib import Path
-from recorded_data import RecordedData
+from recorded_data_scripts.recorded_data import RecordedData
 import viser
 from viser.extras import ViserUrdf
 
 def main():
-    file_path = Path("/home/tylerlum/github_repos/sapg/recorded_data/2025-10-15_18-38-08.npy")
+    file_path = Path("/home/tylerlum/github_repos/sapg/recorded_data/2025-10-15_20-15-22.npz")
     assert file_path.exists(), f"File {file_path} does not exist"
     recorded_data = RecordedData.from_file(file_path)
 
     # Create server
     SERVER = viser.ViserServer()
+    SERVER.scene.add_grid("/ground", width=2, height=2, cell_size=0.1)
 
     # Set initial camera pose
     @SERVER.on_client_connect
@@ -81,20 +82,19 @@ def main():
         kuka_allegro_frame.wxyz = robot_root_state[3:7][[3, 0, 1, 2]]
         object_frame.position = object_root_state[:3]
         object_frame.wxyz = object_root_state[3:7][[3, 0, 1, 2]]
-        kuka_allegro_viser.update_cfg(
-            RecordedData.change_joint_order(
-                robot_joint_position,
-                from_order=recorded_data.robot_joint_names,
-                to_order=kuka_allegro_viser_joint_names,
-            )
+        kuka_allegro_joint_pos_viser_order = RecordedData.change_joint_order(
+            robot_joint_position,
+            from_order=recorded_data.robot_joint_names,
+            to_order=kuka_allegro_viser_joint_names,
         )
-        allegro_viser.update_cfg(
-            RecordedData.change_joint_order(
-                robot_joint_position,
-                from_order=recorded_data.robot_joint_names,
-                to_order=allegro_viser_joint_names + list(set(recorded_data.robot_joint_names) - set(allegro_viser_joint_names)),
-            )[len(allegro_viser_joint_names):]
-        )
+        kuka_allegro_viser.update_cfg(kuka_allegro_joint_pos_viser_order)
+
+        allegro_joint_pos_viser_order = RecordedData.change_joint_order(
+            robot_joint_position,
+            from_order=recorded_data.robot_joint_names,
+            to_order=allegro_viser_joint_names + list(set(recorded_data.robot_joint_names) - set(allegro_viser_joint_names)),
+        )[:len(allegro_viser_joint_names)]
+        allegro_viser.update_cfg(allegro_joint_pos_viser_order)
 
         # Visualize the palm of the robot
         palm_pose_R = kuka_allegro_viser._urdf.get_transform(frame_to="allegro_mount").copy()
