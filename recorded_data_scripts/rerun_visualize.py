@@ -192,7 +192,7 @@ def main():
     # Columns is batched and fast
     # Log is easier to use but slow
     from typing import Literal
-    MODE: Literal["columns", "log"] = "log"
+    MODE: Literal["columns", "log"] = "columns"
     if MODE == "columns":
         time_indexes = [
             rr.TimeColumn(
