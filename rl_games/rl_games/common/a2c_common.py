@@ -423,7 +423,7 @@ class A2CBase(BaseAlgorithm):
         self.writer.add_scalar('info/e_clip', self.e_clip * lr_mul, frame)
         self.writer.add_scalar('info/kl', torch_ext.mean_list(kls).item(), frame)
         self.writer.add_scalar('info/epochs', epoch_num, frame)
-        print(f"Policy {self.policy_idx}:", end=' ')
+        print(f"\nPolicy {self.policy_idx}:", end=' ')
         self.algo_observer.after_print_stats(frame, epoch_num, total_time)
 
     def set_eval(self):
