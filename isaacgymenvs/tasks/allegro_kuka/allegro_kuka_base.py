@@ -1504,7 +1504,7 @@ class AllegroKukaBase(VecTask):
         self.reset_buf[:] = resets
 
         self.extras["successes"] = self.prev_episode_successes
-        self.extras["success_ratio"] = self.prev_episode_successes / self.max_consecutive_successes
+        self.extras["success_ratio"] = self.prev_episode_successes.mean().item() / self.max_consecutive_successes
         self.extras["closest_keypoint_max_dist"] = self.prev_episode_closest_keypoint_max_dist
         self.true_objective = self._true_objective()
         self.extras["true_objective"] = self.true_objective
@@ -1802,7 +1802,7 @@ class AllegroKukaBase(VecTask):
                 self._last_turn_off_extra_obs_update = time.time()
 
             # If gets at least 50% of max consecutive successes and been at least 5 minutes since last update, turn off extra obs more
-            mean_successes = self.prev_episode_successes.mean()
+            mean_successes = self.prev_episode_successes.mean().item()
             time_elapsed_since_last_update = time.time() - self._last_turn_off_extra_obs_update
             doing_well = mean_successes > self.max_consecutive_successes * 0.5
             enough_time_since_last_update = time_elapsed_since_last_update > 5 * 60
