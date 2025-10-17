@@ -1814,7 +1814,7 @@ class AllegroKukaBase(VecTask):
 
             self.extras["turn_off_extra_obs_scale"] = self._turn_off_extra_obs_scale
             self.extras["mean_successes"] = mean_successes
-            self.extras["time_elapsed_since_last_update"]
+            self.extras["time_elapsed_since_last_update"] = time_elapsed_since_last_update
 
             return self._last_turn_off_extra_obs_update
         else:
