@@ -1761,22 +1761,22 @@ class AllegroKukaBase(VecTask):
         ofs += 3
 
         # closest distance to the furthest keypoint, achieved so far in this episode
-        buf[:, ofs : ofs + 1] = self.closest_keypoint_max_dist.unsqueeze(-1)
+        buf[:, ofs : ofs + 1] = self.closest_keypoint_max_dist.unsqueeze(-1) * self.turn_off_extra_obs_scale
         ofs += 1
 
         # closest distance between a fingertip and an object achieved since last target reset
         # this should help the critic predict the anticipated fingertip reward
-        buf[:, ofs : ofs + self.num_allegro_fingertips] = self.closest_fingertip_dist
+        buf[:, ofs : ofs + self.num_allegro_fingertips] = self.closest_fingertip_dist * self.turn_off_extra_obs_scale
         ofs += self.num_allegro_fingertips
 
         # indicates whether we already lifted the object from the table or not, should help the critic be more accurate
-        buf[:, ofs : ofs + 1] = self.lifted_object.unsqueeze(-1)
+        buf[:, ofs : ofs + 1] = self.lifted_object.unsqueeze(-1) * self.turn_off_extra_obs_scale
         ofs += 1
 
         # this should help the critic predict the future rewards better and anticipate the episode termination
-        buf[:, ofs : ofs + 1] = torch.log(self.progress_buf / 10 + 1).unsqueeze(-1)
+        buf[:, ofs : ofs + 1] = torch.log(self.progress_buf / 10 + 1).unsqueeze(-1) * self.turn_off_extra_obs_scale
         ofs += 1
-        buf[:, ofs : ofs + 1] = torch.log(self.successes + 1).unsqueeze(-1)
+        buf[:, ofs : ofs + 1] = torch.log(self.successes + 1).unsqueeze(-1) * self.turn_off_extra_obs_scale
         ofs += 1
 
         # this is where we will add the reward observation
@@ -1785,6 +1785,41 @@ class AllegroKukaBase(VecTask):
 
         assert ofs == self.full_state_size
         return ofs, reward_obs_ofs
+
+    @property
+    def turn_off_extra_obs_scale(self) -> float:
+        # 1 means not turned off
+        # 0.5 means half turned off
+        # 0 means turned off
+        if self.cfg["env"]["turn_off_extra_obs"]:
+            scale = 0.0
+            self.extras["turn_off_extra_obs_scale"] = scale
+            return scale
+        elif self.cfg["env"]["turn_off_extra_obs_slowly"]:
+            if not hasattr(self, "_turn_off_extra_obs_scale"):
+                self._turn_off_extra_obs_scale = 1.0
+                self._last_turn_off_extra_obs_update = time.time()
+
+            # If gets at least 50% of max consecutive successes and been at least 5 minutes since last update, turn off extra obs more
+            mean_successes = self.prev_episode_successes.mean()
+            time_elapsed_since_last_update = time.time() - self._last_turn_off_extra_obs_update
+            doing_well = mean_successes > self.max_consecutive_successes * 0.5
+            enough_time_since_last_update = time_elapsed_since_last_update > 5 * 60
+            if doing_well and enough_time_since_last_update:
+                self._turn_off_extra_obs_scale -= 0.1
+                if self._turn_off_extra_obs_scale < 0.0:
+                    self._turn_off_extra_obs_scale = 0.0
+                self._last_turn_off_extra_obs_update = time.time()
+
+            self.extras["turn_off_extra_obs_scale"] = self._turn_off_extra_obs_scale
+            self.extras["mean_successes"] = mean_successes
+            self.extras["time_elapsed_since_last_update"]
+
+            return self._last_turn_off_extra_obs_update
+        else:
+            scale = 1.0
+            self.extras["turn_off_extra_obs_scale"] = scale
+            return scale
 
     def clamp_obs(self, obs_buf: Tensor) -> None:
         if self.clamp_abs_observations > 0:
@@ -2237,7 +2272,7 @@ class AllegroKukaBase(VecTask):
 
         # add rewards to observations
         reward_obs_scale = 0.01
-        obs_buf[:, reward_obs_ofs : reward_obs_ofs + 1] = rewards.unsqueeze(-1) * reward_obs_scale
+        obs_buf[:, reward_obs_ofs : reward_obs_ofs + 1] = rewards.unsqueeze(-1) * reward_obs_scale * self.turn_off_extra_obs_scale
 
         self.clamp_obs(obs_buf)
 

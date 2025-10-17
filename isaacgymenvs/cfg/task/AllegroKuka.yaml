@@ -121,6 +121,9 @@ env:
   capture_video_freq: 6_000
   capture_video_len: 600
 
+  turn_off_extra_obs: False
+  turn_off_extra_obs_slowly: False
+
   asset:
     # Whis was the original kuka_allegro asset.
     # This URDF has some issues, i.e. weights of fingers are too high and the mass of the Allegro hand is too
