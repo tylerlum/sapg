@@ -1852,7 +1852,7 @@ class AllegroKukaBase(VecTask):
             self.extras["mean_successes"] = mean_successes
             self.extras["time_elapsed_since_last_update"] = time_elapsed_since_last_update
 
-            return self._last_turn_off_extra_obs_update
+            return self._turn_off_extra_obs_scale
         else:
             scale = 1.0
             self.extras["turn_off_extra_obs_scale"] = scale
@@ -2115,6 +2115,8 @@ class AllegroKukaBase(VecTask):
             raise NotImplementedError("Use relative control False for now")
         else:
             # target position control for the hand DOFs
+
+            # hand
             self.cur_targets[:, 7 : self.num_hand_arm_dofs] = scale(
                 actions[:, 7 : self.num_hand_arm_dofs],
                 self.arm_hand_dof_lower_limits[7 : self.num_hand_arm_dofs],
@@ -2130,6 +2132,7 @@ class AllegroKukaBase(VecTask):
                 self.arm_hand_dof_upper_limits[7 : self.num_hand_arm_dofs],
             )
 
+            # Arm
             targets = self.prev_targets[:, :7] + self.hand_dof_speed_scale * self.dt * self.actions[:, :7]
             self.cur_targets[:, :7] = tensor_clamp(
                 targets, self.arm_hand_dof_lower_limits[:7], self.arm_hand_dof_upper_limits[:7]
