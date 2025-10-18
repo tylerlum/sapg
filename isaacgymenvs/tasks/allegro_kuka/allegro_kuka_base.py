@@ -1802,12 +1802,16 @@ class AllegroKukaBase(VecTask):
         # 0 means turned off
         if self.cfg["env"]["turn_off_palm_vel_obs"]:
             scale = 0.0
-            self.extras["turn_off_palm_vel_obs_scale"] = scale
-            return scale
+        elif self.cfg["env"]["turn_off_palm_vel_obs_slowly"]:
+            if self.cfg["env"]["use_obs_dropout"]:
+                prob_of_turn_off = self._tyler_curriculum_scale
+                scale = 0.0 if random.random() < prob_of_turn_off else 1.0
+            else:
+                scale = 1.0 - self._tyler_curriculum_scale
         else:
             scale = 1.0
-            self.extras["turn_off_palm_vel_obs_scale"] = scale
-            return scale
+        self.extras["turn_off_palm_vel_obs_scale"] = scale
+        return scale
 
     @property
     def turn_off_object_vel_obs_scale(self) -> float:
@@ -1816,12 +1820,16 @@ class AllegroKukaBase(VecTask):
         # 0 means turned off
         if self.cfg["env"]["turn_off_object_vel_obs"]:
             scale = 0.0
-            self.extras["turn_off_object_vel_obs_scale"] = scale
-            return scale
+        elif self.cfg["env"]["turn_off_object_vel_obs_slowly"]:
+            if self.cfg["env"]["use_obs_dropout"]:
+                prob_of_turn_off = self._tyler_curriculum_scale
+                scale = 0.0 if random.random() < prob_of_turn_off else 1.0
+            else:
+                scale = 1.0 - self._tyler_curriculum_scale
         else:
             scale = 1.0
-            self.extras["turn_off_object_vel_obs_scale"] = scale
-            return scale
+        self.extras["turn_off_object_vel_obs_scale"] = scale
+        return scale
 
     @property
     def turn_off_extra_obs_scale(self) -> float:
@@ -1830,33 +1838,23 @@ class AllegroKukaBase(VecTask):
         # 0 means turned off
         if self.cfg["env"]["turn_off_extra_obs"]:
             scale = 0.0
-            self.extras["turn_off_extra_obs_scale"] = scale
-            return scale
         elif self.cfg["env"]["turn_off_extra_obs_slowly"]:
-            if not hasattr(self, "_turn_off_extra_obs_scale"):
-                self._turn_off_extra_obs_scale = 1.0
-                self._last_turn_off_extra_obs_update = time.time()
-
-            # If gets at least 50% of max consecutive successes and been at least 5 minutes since last update, turn off extra obs more
-            mean_successes = self.prev_episode_successes.mean().item()
-            time_elapsed_since_last_update = time.time() - self._last_turn_off_extra_obs_update
-            doing_well = mean_successes > self.max_consecutive_successes * 0.5
-            enough_time_since_last_update = time_elapsed_since_last_update > 5 * 60
-            if doing_well and enough_time_since_last_update:
-                self._turn_off_extra_obs_scale -= 0.1
-                if self._turn_off_extra_obs_scale < 0.0:
-                    self._turn_off_extra_obs_scale = 0.0
-                self._last_turn_off_extra_obs_update = time.time()
-
-            self.extras["turn_off_extra_obs_scale"] = self._turn_off_extra_obs_scale
-            self.extras["mean_successes"] = mean_successes
-            self.extras["time_elapsed_since_last_update"] = time_elapsed_since_last_update
-
-            return self._turn_off_extra_obs_scale
+            if self.cfg["env"]["use_obs_dropout"]:
+                # When curriculum_scale is 0.0, turn_off_extra_obs_scale is 1.0, which means no extra obs are turned off
+                # When curriculum_scale is 1.0, turn_off_extra_obs_scale is 0.0, which means all extra obs are turned off
+                # Smoothly transition between 1.0 and 0.0
+                prob_of_turn_off = self._tyler_curriculum_scale
+                scale = 0.0 if random.random() < prob_of_turn_off else 1.0
+            else:
+                # When curriculum_scale is 0.0, turn_off_extra_obs_scale is 1.0, which means no extra obs are turned off
+                # When curriculum_scale is 1.0, turn_off_extra_obs_scale is 0.0, which means all extra obs are turned off
+                # Smoothly transition between 1.0 and 0.0
+                scale = 1.0 - self._tyler_curriculum_scale
         else:
             scale = 1.0
-            self.extras["turn_off_extra_obs_scale"] = scale
-            return scale
+
+        self.extras["turn_off_extra_obs_scale"] = scale
+        return scale
 
     def clamp_obs(self, obs_buf: Tensor) -> None:
         if self.clamp_abs_observations > 0:
@@ -2276,6 +2274,8 @@ class AllegroKukaBase(VecTask):
 
         self._extra_curriculum()
 
+        self._update_tyler_curriculum()
+
         obs_buf, reward_obs_ofs = self.compute_observations()
         rewards, is_success = self.compute_kuka_reward()
         
@@ -2380,6 +2380,29 @@ class AllegroKukaBase(VecTask):
                 )
                 self._draw_transform(transform=object_transform, env_idx=i)
                 # self._draw_transform(transform=goal_transform, env_idx=i)
+
+    def _update_tyler_curriculum(self):
+        # Vary _tyler_curriculum_scale from 0.0 to 1.0 over time
+        # 0.0 means easy and 1.0 means hard
+        if not hasattr(self, "_tyler_curriculum_scale"):
+            self._tyler_curriculum_scale = 0.0
+            self._last_tyler_curriculum_update = time.time()
+
+        # If gets at least 50% of max consecutive successes and been at least 5 minutes since last update, turn off extra obs more
+        mean_successes = self.prev_episode_successes.mean().item()
+        minutes_elapsed_since_last_update = (time.time() - self._last_tyler_curriculum_update) / 60
+        doing_well = mean_successes > self.max_consecutive_successes * 0.5
+        enough_time_since_last_update = minutes_elapsed_since_last_update > 5
+        if doing_well and enough_time_since_last_update:
+            self._tyler_curriculum_scale += 0.1
+            if self._tyler_curriculum_scale > 1.0:
+                self._tyler_curriculum_scale = 1.0
+            self._last_tyler_curriculum_update = time.time()
+
+        self.extras["tyler_curriculum_scale"] = self._tyler_curriculum_scale
+        self.extras["mean_successes"] = mean_successes
+        self.extras["mean_success_ratio"] = mean_successes / self.max_consecutive_successes
+        self.extras["minutes_elapsed_since_last_update"] = minutes_elapsed_since_last_update
 
     def _initialize_camera_sensor(self, cam_pos, cam_target) -> None:
         self.camera_properties = gymapi.CameraProperties()
