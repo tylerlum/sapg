@@ -1730,8 +1730,12 @@ class AllegroKukaBase(VecTask):
         ofs += 3
 
         # palm rot, linvel, ang vel
-        buf[:, ofs : ofs + 10] = self._palm_state[:, 3:13]
-        ofs += 10
+        buf[:, ofs : ofs + 4] = self._palm_state[:, 3:7]
+        ofs += 4
+        buf[:, ofs : ofs + 3] = self._palm_state[:, 7:10] * self.turn_off_palm_vel_obs_scale
+        ofs += 3
+        buf[:, ofs : ofs + 3] = self._palm_state[:, 10:13] * self.turn_off_palm_vel_obs_scale
+        ofs += 3
 
         # object rot, linvel, ang vel
         buf[:, ofs : ofs + 4] = self.object_state[:, 3:7]
@@ -1790,6 +1794,20 @@ class AllegroKukaBase(VecTask):
 
         assert ofs == self.full_state_size
         return ofs, reward_obs_ofs
+
+    @property
+    def turn_off_palm_vel_obs_scale(self) -> float:
+        # 1 means not turned off
+        # 0.5 means half turned off
+        # 0 means turned off
+        if self.cfg["env"]["turn_off_palm_vel_obs"]:
+            scale = 0.0
+            self.extras["turn_off_palm_vel_obs_scale"] = scale
+            return scale
+        else:
+            scale = 1.0
+            self.extras["turn_off_palm_vel_obs_scale"] = scale
+            return scale
 
     @property
     def turn_off_object_vel_obs_scale(self) -> float:

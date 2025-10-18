@@ -124,6 +124,7 @@ env:
   turn_off_extra_obs: False
   turn_off_extra_obs_slowly: False
 
+  turn_off_palm_vel_obs: False
   turn_off_object_vel_obs: False
 
   asset:
