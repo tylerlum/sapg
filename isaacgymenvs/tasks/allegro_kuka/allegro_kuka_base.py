@@ -124,9 +124,7 @@ class AllegroKukaBase(VecTask):
         self.force_decay = self.cfg["env"].get("forceDecay", 0.99)
         self.force_decay_interval = self.cfg["env"].get("forceDecayInterval", 0.08)
 
-        self.hand_dof_speed_scale = self.cfg["env"]["dofSpeedScale"]
         self.use_relative_control = self.cfg["env"]["useRelativeControl"]
-        self.act_moving_average = self.cfg["env"]["actionsMovingAverage"]
 
         self.debug_viz = self.cfg["env"]["enableDebugVis"]
 
@@ -2265,6 +2263,33 @@ class AllegroKukaBase(VecTask):
                 recorded_data.to_file(recorded_data_path)
                 print(f"Saved recorded data to {recorded_data_path}")
                 breakpoint()
+
+    @property
+    def act_moving_average(self) -> float:
+        if self.cfg["env"]["actionsMovingAverageFinal"] is None or not hasattr(self, "_tyler_curriculum_scale"):
+            return self.cfg["env"]["actionsMovingAverage"]
+        else:
+            return self.interpolate(
+                init=self.cfg["env"]["actionsMovingAverage"],
+                final=self.cfg["env"]["actionsMovingAverageFinal"],
+                alpha=self._tyler_curriculum_scale,
+            )
+
+    @property
+    def hand_dof_speed_scale(self) -> float:
+        if self.cfg["env"]["dofSpeedScaleFinal"] is None or not hasattr(self, "_tyler_curriculum_scale"):
+            return self.cfg["env"]["dofSpeedScale"]
+        else:
+            return self.interpolate(
+                init=self.cfg["env"]["dofSpeedScale"],
+                final=self.cfg["env"]["dofSpeedScaleFinal"],
+                alpha=self._tyler_curriculum_scale,
+            )
+
+    @staticmethod
+    def interpolate(init, final, alpha: float) -> float:
+        assert 0 <= alpha <= 1, f"alpha must be between 0 and 1, got {alpha}"
+        return init + (final - init) * alpha
 
     def post_physics_step(self):
         self.frame_since_restart += 1
