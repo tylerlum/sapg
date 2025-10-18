@@ -259,7 +259,7 @@ task:
 
 sim:
   substeps: 2
-  dt: 0.01667 # 1/60
+  dt: ${eval:"1/60"} # 1/60
   up_axis: "z"
   use_gpu_pipeline: ${eq:${...pipeline},"gpu"}
   num_client_threads: 8
@@ -271,7 +271,7 @@ sim:
     num_position_iterations: 8
     num_velocity_iterations: 0
 
-    max_gpu_contact_pairs: 8388608 # 8*1024*1024
+    max_gpu_contact_pairs: ${eval:"8*1024*1024"} # 8*1024*1024
     num_subscenes: ${....num_subscenes}
     contact_offset: 0.002
     rest_offset: 0.0
