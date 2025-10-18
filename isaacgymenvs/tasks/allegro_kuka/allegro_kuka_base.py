@@ -2207,6 +2207,20 @@ class AllegroKukaBase(VecTask):
         if RECORD_DATA:
             from recorded_data_scripts.recorded_data import RecordedData
             N_TIMESTEPS = self.cfg["env"]["record_data_num_steps"]
+
+            # Get data from sim
+            robot_root_state = self.root_state_tensor[self.allegro_hand_indices, :13].cpu().numpy()
+            object_root_state = self.root_state_tensor[self.object_indices, :13].cpu().numpy()
+            robot_joint_position = self.arm_hand_dof_pos.cpu().numpy()
+            table_root_state = self.root_state_tensor[self.table_indices, :13].cpu().numpy()
+            if hasattr(self, "goal_object_indices"):
+                goal_root_state = self.root_state_tensor[self.goal_object_indices, :13].cpu().numpy()
+            robot_joint_velocity = self.arm_hand_dof_vel.cpu().numpy()
+            robot_joint_pos_target = self.cur_targets.cpu().numpy()
+            observations = self.obs_buf.cpu().numpy()
+            actions = self.actions.cpu().numpy()
+
+            # Initialize arrays if not already initialized
             if not hasattr(self, "robot_root_states_array"):
                 self.robot_root_states_array = []
                 self.object_root_states_array = []
@@ -2216,53 +2230,90 @@ class AllegroKukaBase(VecTask):
                 self.table_root_states_array = []
                 if hasattr(self, "goal_object_indices"):
                     self.goal_root_states_array = []
+                self.robot_joint_velocities_array = []
+                self.robot_joint_pos_targets_array = []
 
-            robot_root_state = self.root_state_tensor[self.allegro_hand_indices, :13].cpu().numpy()
-            object_root_state = self.root_state_tensor[self.object_indices, :13].cpu().numpy()
-            robot_joint_position = self.arm_hand_dof_pos.cpu().numpy()
-            table_root_state = self.root_state_tensor[self.table_indices, :13].cpu().numpy()
-            if hasattr(self, "goal_object_indices"):
-                goal_root_state = self.root_state_tensor[self.goal_object_indices, :13].cpu().numpy()
+                self.observations_array = []
+                self.actions_array = []
 
+            # Append data to arrays
             self.robot_root_states_array.append(robot_root_state)
             self.object_root_states_array.append(object_root_state)
             self.robot_joint_positions_array.append(robot_joint_position)
             self.table_root_states_array.append(table_root_state)
             if hasattr(self, "goal_object_indices"):
                 self.goal_root_states_array.append(goal_root_state)
+            self.robot_joint_velocities_array.append(robot_joint_velocity)
+            self.robot_joint_pos_targets_array.append(robot_joint_pos_target)
+            self.observations_array.append(observations)
+            self.actions_array.append(actions)
             print(f"Recorded {len(self.robot_root_states_array)} / {N_TIMESTEPS} steps")
+
+            # Save data to file
             if len(self.robot_root_states_array) >= N_TIMESTEPS:
                 datetime_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
                 this_dir = Path(__file__).parent
                 root_dir = this_dir.parent.parent.parent
                 recorded_data_path = root_dir / "recorded_data" / f"{datetime_str}.npz"
                 recorded_data_path.parent.mkdir(parents=True, exist_ok=True)
+
                 self.robot_root_states_array = np.stack(self.robot_root_states_array, axis=0)
                 self.object_root_states_array = np.stack(self.object_root_states_array, axis=0)
                 self.robot_joint_positions_array = np.stack(self.robot_joint_positions_array, axis=0)
                 self.table_root_states_array = np.stack(self.table_root_states_array, axis=0)
                 if hasattr(self, "goal_object_indices"):
                     self.goal_root_states_array = np.stack(self.goal_root_states_array, axis=0)
+                self.robot_joint_velocities_array = np.stack(self.robot_joint_velocities_array, axis=0)
+                self.robot_joint_pos_targets_array = np.stack(self.robot_joint_pos_targets_array, axis=0)
+                self.observations_array = np.stack(self.observations_array, axis=0)
+                self.actions_array = np.stack(self.actions_array, axis=0)
+
                 assert self.robot_root_states_array.shape == (N_TIMESTEPS, self.num_envs, 13), f"{self.robot_root_states_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, 13)"
                 assert self.object_root_states_array.shape == (N_TIMESTEPS, self.num_envs, 13), f"{self.object_root_states_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, 13)"
                 assert self.robot_joint_positions_array.shape == (N_TIMESTEPS, self.num_envs, len(self.robot_joint_names)), f"{self.robot_joint_positions_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, {len(self.robot_joint_names)})"
                 assert self.table_root_states_array.shape == (N_TIMESTEPS, self.num_envs, 13), f"{self.table_root_states_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, 13)"
                 if hasattr(self, "goal_object_indices"):
                     assert self.goal_root_states_array.shape == (N_TIMESTEPS, self.num_envs, 13), f"{self.goal_root_states_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, 13)"
+                assert self.robot_joint_velocities_array.shape == (N_TIMESTEPS, self.num_envs, len(self.robot_joint_names)), f"{self.robot_joint_velocities_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, {len(self.robot_joint_names)})"
+                assert self.robot_joint_pos_targets_array.shape == (N_TIMESTEPS, self.num_envs, len(self.robot_joint_names)), f"{self.robot_joint_pos_targets_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, {len(self.robot_joint_names)})"
+                assert self.observations_array.shape == (N_TIMESTEPS, self.num_envs, self.obs_buf.shape[1]), f"{self.observations_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, {self.obs_buf.shape[1]})"
+                assert self.actions_array.shape == (N_TIMESTEPS, self.num_envs, self.actions.shape[1]), f"{self.actions_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, {self.actions.shape[1]})"
+
                 time_array = np.arange(N_TIMESTEPS) * self.dt
+
                 ENV_IDX = 0
                 recorded_data = RecordedData(
                     robot_root_states_array=self.robot_root_states_array[:, ENV_IDX],
                     object_root_states_array=self.object_root_states_array[:, ENV_IDX],
                     robot_joint_positions_array=self.robot_joint_positions_array[:, ENV_IDX],
-                    robot_joint_names=self.robot_joint_names,
                     time_array=time_array,
+                    robot_joint_names=self.robot_joint_names,
                     table_root_states_array=self.table_root_states_array[:, ENV_IDX],
                     goal_root_states_array=self.goal_root_states_array[:, ENV_IDX] if hasattr(self, "goal_object_indices") else None,
+                    robot_joint_velocities_array=self.robot_joint_velocities_array[:, ENV_IDX],
+                    robot_joint_pos_targets_array=self.robot_joint_pos_targets_array[:, ENV_IDX],
+                    observations_array=self.observations_array[:, ENV_IDX],
+                    actions_array=self.actions_array[:, ENV_IDX],
                 )
                 recorded_data.to_file(recorded_data_path)
                 print(f"Saved recorded data to {recorded_data_path}")
                 breakpoint()
+
+                # Reset arrays
+                self.robot_root_states_array = []
+                self.object_root_states_array = []
+                self.robot_joint_positions_array = []
+                self.robot_joint_names = self.joint_names
+
+                self.table_root_states_array = []
+                if hasattr(self, "goal_object_indices"):
+                    self.goal_root_states_array = []
+                self.robot_joint_velocities_array = []
+                self.robot_joint_pos_targets_array = []
+
+                self.observations_array = []
+                self.actions_array = []
+
 
     @property
     def act_moving_average(self) -> float:
