@@ -168,12 +168,12 @@ task:
       schedule_steps: 40000
 
     sim_params:
-    gravity:
-      range: [0, 0.4]
-      operation: "additive"
-      distribution: "gaussian"
-      schedule: "linear"  # "linear" will linearly interpolate between no rand and max rand
-      schedule_steps: 40000
+      gravity:
+        range: [0, 0.4]
+        operation: "additive"
+        distribution: "gaussian"
+        schedule: "linear"  # "linear" will linearly interpolate between no rand and max rand
+        schedule_steps: 40000
 
     actor_params:
       allegro:
