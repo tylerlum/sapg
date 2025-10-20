@@ -43,6 +43,17 @@ assert len(JOINT_NAMES_ISAACGYM) == 23, (
     f"len(JOINT_NAMES_ISAACGYM): {len(JOINT_NAMES_ISAACGYM)}, expected: 23"
 )
 
+Q_LOWER_LIMITS_np = np.array( [-2.9671, -2.0944, -2.9671, -2.0944, -2.9671, -2.0944, -3.0543, -0.5585,
+        -0.2792, -0.2792, -0.2792, -0.5585, -0.2792, -0.2792, -0.2792, -0.5585,
+        -0.2792, -0.2792, -0.2792,  0.2792, -0.3316, -0.2792, -0.2792],)
+
+Q_UPPER_LIMITS_np = np.array( [2.9671, 2.0944, 2.9671, 2.0944, 2.9671, 2.0944, 3.0543, 0.5585, 1.7278,
+        1.7278, 1.7278, 0.5585, 1.7278, 1.7278, 1.7278, 0.5585, 1.7278, 1.7278,
+        1.7278, 1.5707, 1.1519, 1.7278, 1.7627],)
+assert Q_LOWER_LIMITS_np.shape == (23,), f"Q_LOWER_LIMITS_np.shape: {Q_LOWER_LIMITS_np.shape}, expected: (23,)"
+assert Q_UPPER_LIMITS_np.shape == (23,), f"Q_UPPER_LIMITS_np.shape: {Q_UPPER_LIMITS_np.shape}, expected: (23,)"
+
+
 OBS_NAME_TO_NAMES = {
     "q": [f"{name}_q" for name in JOINT_NAMES_ISAACGYM],
     "qd": [f"{name}_qd" for name in JOINT_NAMES_ISAACGYM],
@@ -94,15 +105,13 @@ OBJECT_KEYPOINT_OFFSETS_np = np.array(
 def compute_observation(
     q: Tensor,
     qd: Tensor,
-    q_lower_limits: Tensor,
-    q_upper_limits: Tensor,
     object_pose: Tensor,
     goal_object_pose: Tensor,
     object_scales: Tensor,
     chain: pk.Chain,
     palm_serial_chain: pk.SerialChain,
 ) -> Tensor:
-    # Assume q, qd, q_lower_limits, q_upper_limits are in the order of JOINT_NAMES_ISAACGYM
+    # Assume q and qd are in the order of JOINT_NAMES_ISAACGYM
     # object_pose, goal_object_pose are the pose of the object and goal in world frame (xyz_xyzw)
     # object_scales is the scale of the object [x, y, z]
     # chain is to compute fk of robot across all links
@@ -112,6 +121,8 @@ def compute_observation(
     J = 23
     assert q.shape == (N, J), f"q.shape: {q.shape}, expected: (N, J)"
     assert qd.shape == (N, J), f"qd.shape: {qd.shape}, expected: (N, J)"
+    q_lower_limits = torch.from_numpy(Q_LOWER_LIMITS_np).float().to(q.device)
+    q_upper_limits = torch.from_numpy(Q_UPPER_LIMITS_np).float().to(q.device)
     assert q_lower_limits.shape == (J,), (
         f"q_lower_limits.shape: {q_lower_limits.shape}, expected: (J,)"
     )
@@ -255,8 +266,6 @@ def compute_observation(
 def compute_joint_pos_targets(
     actions: Tensor,
     prev_targets: Tensor,
-    q_lower_limits: Tensor,
-    q_upper_limits: Tensor,
     act_moving_average: float,
     hand_dof_speed_scale: float,
     dt: float,
@@ -267,6 +276,8 @@ def compute_joint_pos_targets(
     assert prev_targets.shape == (N, J), (
         f"prev_targets.shape: {prev_targets.shape}, expected: (N, J)"
     )
+    q_lower_limits = torch.from_numpy(Q_LOWER_LIMITS_np).float().to(actions.device)
+    q_upper_limits = torch.from_numpy(Q_UPPER_LIMITS_np).float().to(actions.device)
     assert q_lower_limits.shape == (J,), (
         f"q_lower_limits.shape: {q_lower_limits.shape}, expected: (J,)"
     )

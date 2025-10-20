@@ -1793,7 +1793,7 @@ class AllegroKukaBase(VecTask):
 
         # Default CHECK_WITH_COMPUTED_OBS = False
         # Set to True to check if the observations are computed correctly
-        CHECK_WITH_COMPUTED_OBS = False
+        CHECK_WITH_COMPUTED_OBS = True
         if CHECK_WITH_COMPUTED_OBS:
             import pytorch_kinematics as pk
             # Create chain and palm_serial_chain from URDF
@@ -1809,8 +1809,6 @@ class AllegroKukaBase(VecTask):
             computed_obs = compute_observation(
                 q=self.arm_hand_dof_pos,
                 qd=self.arm_hand_dof_vel,
-                q_lower_limits=self.arm_hand_dof_lower_limits,
-                q_upper_limits=self.arm_hand_dof_upper_limits,
                 object_pose=self.object_pose,
                 goal_object_pose=self.goal_pose,
                 object_scales=self.object_scales,
@@ -2185,14 +2183,11 @@ class AllegroKukaBase(VecTask):
 
         # Default CHECK_WITH_COMPUTED_JOINT_POS_TARGETS = False
         # Set to True to check if the computed joint pos targets are correct
-        CHECK_WITH_COMPUTED_JOINT_POS_TARGETS = False
+        CHECK_WITH_COMPUTED_JOINT_POS_TARGETS = True
         if CHECK_WITH_COMPUTED_JOINT_POS_TARGETS:
-            breakpoint()
             computed_joint_pos_targets = compute_joint_pos_targets(
                 actions=self.actions,
                 prev_targets=self.prev_targets,
-                q_lower_limits=self.arm_hand_dof_lower_limits,
-                q_upper_limits=self.arm_hand_dof_upper_limits,
                 act_moving_average=self.act_moving_average,
                 hand_dof_speed_scale=self.hand_dof_speed_scale,
                 dt=self.dt,
