@@ -1,3 +1,4 @@
+from __future__ import annotations
 import numpy as np
 import pytorch_kinematics as pk
 import torch
@@ -41,6 +42,32 @@ assert len(JOINT_NAMES_ISAACGYM) == 23, (
     f"len(JOINT_NAMES_ISAACGYM): {len(JOINT_NAMES_ISAACGYM)}, expected: 23"
 )
 
+OBS_NAME_TO_NAMES = {
+    "q": [f"{name}_q" for name in JOINT_NAMES_ISAACGYM],
+    "qd": [f"{name}_qd" for name in JOINT_NAMES_ISAACGYM],
+    "palm_center_pos": [f"palm_center_pos_{x}" for x in "xyz"],
+    "palm_rot": [f"palm_rot_{x}" for x in "xyzw"],
+    "palm_linvel": [f"palm_linvel_{x}" for x in "xyz"],
+    "palm_angvel": [f"palm_angvel_{x}" for x in "xyz"],
+    "object_rot": [f"object_rot_{x}" for x in "xyzw"],
+    "object_linvel": [f"object_linvel_{x}" for x in "xyz"],
+    "object_angvel": [f"object_angvel_{x}" for x in "xyz"],
+    "fingertip_rel_pos": [f"fingertip_rel_pos_{finger}_{x}" for finger in ["index", "middle", "ring", "thumb"] for x in "xyz"],
+    "keypoints_rel_palm": [f"keypoints_rel_palm_{i}_{x}" for i in range(4) for x in "xyz"],
+    "keypoints_rel_goal": [f"keypoints_rel_goal_{i}_{x}" for i in range(4) for x in "xyz"],
+    "object_scales": [f"object_scales_{x}" for x in "xyz"],
+    "closest_keypoint_max_dist": ["closest_keypoint_max_dist"],
+    "closest_fingertip_dist": [f"closest_fingertip_dist_{finger}" for finger in ["index", "middle", "ring", "thumb"]],
+    "lifted_object": ["lifted_object"],
+    "progress_obs": ["progress_obs"],
+    "successes": ["successes_obs"],
+    "reward_obs": ["reward_obs"],
+}
+N_OBS = 117
+assert sum(len(names) for names in OBS_NAME_TO_NAMES.values()) == N_OBS, (
+    f"sum(len(names) for names in OBS_NAME_TO_NAMES.values()): {sum(len(names) for names in OBS_NAME_TO_NAMES.values())}, expected: {N_OBS}"
+)
+
 T_W_R_np = np.eye(4)
 T_W_R_np[:3, 3] = np.array([0.0, 0.8, 0.0])
 
@@ -68,7 +95,7 @@ def compute_observation(
     # object_pose, goal_object_pose are the pose of the object and goal in world frame (xyz_xyzw)
     # object_scales is the scale of the object [x, y, z]
     # chain is to compute fk of robot across all links
-    # palm_serial_chain is to jacobian of the palm link
+    # palm_serial_chain is to compute the jacobian of the palm link
 
     N = q.shape[0]
     J = 23
@@ -120,6 +147,7 @@ def compute_observation(
             q=qd,
             from_order=JOINT_NAMES_ISAACGYM,
             to_order=palm_serial_chain.get_joint_parameter_names(),
+            require_all_joints=False,
         ),
         jacobian=jacobian,
     )
@@ -139,10 +167,10 @@ def compute_observation(
     # keypoint positions
     N_KEYPOINTS = 4
     object_keypoint_positions = _compute_keypoint_positions(
-        pose=object_pose, object_scales=object_scales
+        pose=object_pose, scales=object_scales
     )
     goal_keypoint_positions = _compute_keypoint_positions(
-        pose=goal_object_pose, object_scales=object_scales
+        pose=goal_object_pose, scales=object_scales
     )
     keypoints_rel_palm = object_keypoint_positions - palm_center_pos.unsqueeze(dim=1)
     keypoints_rel_goal = object_keypoint_positions - goal_keypoint_positions
@@ -165,41 +193,50 @@ def compute_observation(
 
     # Extra observations (0'd out)
     closest_keypoint_max_dist = torch.zeros((N, 1), dtype=torch.float, device=q.device)
-    closest_fingertip_dist = torch.zeros((N, 1), dtype=torch.float, device=q.device)
+    N_FINGERTIPS = 4
+    closest_fingertip_dist = torch.zeros((N, N_FINGERTIPS), dtype=torch.float, device=q.device)
     lifted_object = torch.zeros((N, 1), dtype=torch.float, device=q.device)
     progress_obs = torch.zeros((N, 1), dtype=torch.float, device=q.device)
     successes = torch.zeros((N, 1), dtype=torch.float, device=q.device)
     reward_obs = torch.zeros((N, 1), dtype=torch.float, device=q.device)
 
+    obs_dict = {
+        "q": q_unscaled,
+        "qd": qd,
+        "palm_center_pos": palm_center_pos,
+        "palm_rot": palm_rot,
+        "palm_linvel": palm_linvel,
+        "palm_angvel": palm_angvel,
+        "object_rot": object_rot,
+        "object_linvel": object_linvel,
+        "object_angvel": object_angvel,
+        "fingertip_rel_pos": fingertip_rel_pos.reshape(N, -1),
+        "keypoints_rel_palm": keypoints_rel_palm.reshape(N, -1),
+        "keypoints_rel_goal": keypoints_rel_goal.reshape(N, -1),
+        "object_scales": object_scales,
+        "closest_keypoint_max_dist": closest_keypoint_max_dist,
+        "closest_fingertip_dist": closest_fingertip_dist,
+        "lifted_object": lifted_object,
+        "progress_obs": progress_obs,
+        "successes": successes,
+        "reward_obs": reward_obs,
+    }
+    for k, v in obs_dict.items():
+        assert v.ndim == 2, f"v.ndim: {v.ndim}, expected: 2 for key: {k}: {v.shape}"
+        assert v.shape[0] == N, f"v.shape[0]: {v.shape[0]}, expected: {N} for key: {k}"
+    for name, names in OBS_NAME_TO_NAMES.items():
+        assert name in obs_dict, f"name: {name} not in obs_dict"
+        assert obs_dict[name].shape[1] == len(names), f"obs_dict[name].shape[1]: {obs_dict[name].shape[1]}, expected: {len(names)} for name: {name}"
+
     obs = torch.cat(
         [
-            q_unscaled,
-            qd,
-            palm_center_pos,
-            palm_rot,
-            palm_linvel,
-            palm_angvel,
-            object_rot,
-            object_linvel,
-            object_angvel,
-            fingertip_rel_pos,
-            keypoints_rel_palm,
-            keypoints_rel_goal,
-            object_scales,
-            closest_keypoint_max_dist,
-            closest_fingertip_dist,
-            lifted_object,
-            progress_obs,
-            successes,
-            reward_obs,
+            obs_dict[key] for key in obs_dict.keys()
         ],
         dim=-1,
     )
 
-    N_OBS = 100
     assert obs.shape == (N, N_OBS), f"obs.shape: {obs.shape}, expected: (N, {N_OBS})"
     return obs
-
 
 def compute_joint_pos_targets(
     actions: Tensor,
