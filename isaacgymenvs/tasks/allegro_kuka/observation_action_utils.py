@@ -523,8 +523,6 @@ Pseudocode for how real world code will look:
 
 @dataclass
 class Config:
-    q_lower_limits: Tensor
-    q_upper_limits: Tensor
     act_moving_average: float
     hand_dof_speed_scale: float
     dt: float
@@ -546,12 +544,20 @@ class PolicyState:
 
 # Load config
 cfg = Config(
-    q_lower_limits=[...],
-    q_upper_limits=[...],
     act_moving_average=0.1,
     hand_dof_speed_scale=1.0,
     dt=1/60,
 )
+
+# Load chain and palm_serial_chain
+KUKA_ALLEGRO_URDF_PATH = Path(
+    "/home/tylerlum/github_repos/sapg/assets/urdf/kuka_allegro_description/kuka_allegro_touch_sensor.urdf"
+)
+assert KUKA_ALLEGRO_URDF_PATH.exists(), (
+    f"KUKA_ALLEGRO_URDF_PATH not found: {KUKA_ALLEGRO_URDF_PATH}"
+)
+chain = pk.build_chain_from_urdf(open(KUKA_ALLEGRO_URDF_PATH).read()).to(device=DEVICE, dtype=torch.float32)
+palm_serial_chain = pk.SerialChain(chain, "iiwa7_link_7").to(device=DEVICE, dtype=torch.float32)
 
 # Load policy
 wandb_run_path = "tylerlum/sapg_allegro_kuka_reorientation/uid_00_default_marker_2025-10-18_01-43-44"
@@ -580,11 +586,11 @@ while True:
     obs = compute_observation(
         q=raw_obs.q,
         qd=raw_obs.qd,
-        q_lower_limits=cfg.q_lower_limits,
-        q_upper_limits=cfg.q_upper_limits,
         object_pose=raw_obs.object_pose,
         goal_object_pose=raw_obs.goal_object_pose,
         object_scales=fixed_raw_obs.object_scales,
+        chain=chain,
+        palm_serial_chain=palm_serial_chain,
     )
 
     # Get policy action
@@ -594,8 +600,6 @@ while True:
     joint_pos_targets = compute_joint_pos_targets(
         actions=actions,
         prev_targets=policy_state.prev_targets,
-        q_lower_limits=cfg.q_lower_limits,
-        q_upper_limits=cfg.q_upper_limits,
         act_moving_average=cfg.act_moving_average,
         hand_dof_speed_scale=cfg.hand_dof_speed_scale,
         dt=cfg.dt,
