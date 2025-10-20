@@ -42,7 +42,7 @@ from isaacgym import gymapi, gymtorch, gymutil
 from torch import Tensor
 
 from isaacgymenvs.tasks.allegro_kuka.allegro_kuka_utils import DofParameters, populate_dof_properties
-from isaacgymenvs.tasks.allegro_kuka.observation_action_utils import compute_observation, OBS_NAMES
+from isaacgymenvs.tasks.allegro_kuka.observation_action_utils import compute_observation, OBS_NAMES, compute_joint_pos_targets
 from isaacgymenvs.tasks.base.vec_task import VecTask
 from isaacgymenvs.tasks.allegro_kuka.generate_cuboids import (
     generate_big_cuboids,
@@ -1826,6 +1826,8 @@ class AllegroKukaBase(VecTask):
                 val_orig = buf[0, i].item()
                 val_computed = computed_obs[0, i].item()
                 print(f"{name}: original: {val_orig}, computed: {val_computed}, diff: {val_orig - val_computed}")
+                # Note that there are some reasonably large 2e-3 differences in the palm vel computation
+                # Maybe from Jacobian computation being different from the maximal sim computation
                 if abs(val_orig - val_computed) > 1e-2:
                     num_errors += 1
                     print("--------------------------------")
@@ -2179,6 +2181,39 @@ class AllegroKukaBase(VecTask):
             self.cur_targets[:, :7] = tensor_clamp(
                 targets, self.arm_hand_dof_lower_limits[:7], self.arm_hand_dof_upper_limits[:7]
             )
+
+
+        # Default CHECK_WITH_COMPUTED_JOINT_POS_TARGETS = False
+        # Set to True to check if the computed joint pos targets are correct
+        CHECK_WITH_COMPUTED_JOINT_POS_TARGETS = False
+        if CHECK_WITH_COMPUTED_JOINT_POS_TARGETS:
+            breakpoint()
+            computed_joint_pos_targets = compute_joint_pos_targets(
+                actions=self.actions,
+                prev_targets=self.prev_targets,
+                q_lower_limits=self.arm_hand_dof_lower_limits,
+                q_upper_limits=self.arm_hand_dof_upper_limits,
+                act_moving_average=self.act_moving_average,
+                hand_dof_speed_scale=self.hand_dof_speed_scale,
+                dt=self.dt,
+            )
+            assert computed_joint_pos_targets.shape == (self.num_envs, self.num_hand_arm_dofs), f"computed_joint_pos_targets.shape: {computed_joint_pos_targets.shape}, expected: ({self.num_envs}, {self.num_hand_arm_dofs})"
+            assert self.cur_targets.shape == computed_joint_pos_targets.shape, f"self.cur_targets.shape: {self.cur_targets.shape}, expected: {computed_joint_pos_targets.shape}"
+
+            num_errors = 0
+            for i, name in enumerate(self.joint_names):
+                val_orig = self.cur_targets[0, i].item()
+                val_computed = computed_joint_pos_targets[0, i].item()
+                print(f"{name} (idx {i}): original: {val_orig}, computed: {val_computed}, diff: {val_orig - val_computed}")
+                if abs(val_orig - val_computed) > 1e-2:
+                    num_errors += 1
+                    print("--------------------------------")
+                    print(f"Error: {name} (idx {i}): original: {val_orig}, computed: {val_computed}, diff: {val_orig - val_computed}")
+                    print("--------------------------------")
+            print("="*100)
+            print(f"num_errors: {num_errors}")
+            print("="*100)
+            breakpoint()
 
         if self._DO_NOT_MOVE:
             self.cur_targets[:, :] = self.prev_targets[:, :]
