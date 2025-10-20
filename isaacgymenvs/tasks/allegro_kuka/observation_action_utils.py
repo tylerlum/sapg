@@ -516,6 +516,7 @@ Considerations:
 * Likely need a stateful ObservationComputer class to store a fk function (yourdfpy or pytorch_kinematics)
 * Need to have some hardcoded values in observation computation like keypoint offsets and link pose offsets
 * Because of above, we may want a separate node to compute these so we can visualize them without publishing them from here so policy can run as fast as possible
+^ decided to keep them all in this file for now to simplify things
 """
 
 """
