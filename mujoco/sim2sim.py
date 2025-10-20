@@ -24,7 +24,7 @@ INTEGRATOR_MAP = {
     "Euler": mujoco.mjtIntegrator.mjINT_EULER,
     "RK4": mujoco.mjtIntegrator.mjINT_RK4,
     "Implicit": mujoco.mjtIntegrator.mjINT_IMPLICIT,
-    "Implicit Fast": mujoco.mjtIntegrator.mjINT_IMPLICIT_FAST,
+    "Implicit Fast": mujoco.mjtIntegrator.mjINT_IMPLICITFAST,
 }
 
 SOLVER_MAP = {
@@ -150,19 +150,22 @@ class BaseSimulator:
         object_pos, object_quat = get_body_pose(self, "object")
         object2_pos, object2_quat = get_body_pose(self, "object_2")
         robot_base_pos, robot_base_quat = get_body_pose(self, "base")  # replace with actual base body name
-        print(f"Table pos: {table_pos}, Table quat: {table_quat}")
-        print(f"Object pos: {object_pos}, Object quat: {object_quat}")
-        print(f"Object2 pos: {object2_pos}, Object2 quat: {object2_quat}")
-        print(f"Robot base pos: {robot_base_pos}, Robot base quat: {robot_base_quat}")
         joint_names = [self.mj_model.joint(i).name for i in range(self.mj_model.njnt)]
-        print(f"Joint names: {joint_names}")
         joint_ids = [self.mj_model.joint(name=name).id for name in joint_names]
         joint_positions = self.mj_data.qpos[joint_ids]
         joint_velocities = self.mj_data.qvel[joint_ids]
-        print(f"Joint positions: {joint_positions}")
-        print(f"Joint velocities: {joint_velocities}")
         actuator_names = [self.mj_model.actuator(i).name for i in range(self.mj_model.nu)]
-        print("Actuator names:", actuator_names)
+
+        PRINT = False
+        if PRINT:
+            print(f"Table pos: {table_pos}, Table quat: {table_quat}")
+            print(f"Object pos: {object_pos}, Object quat: {object_quat}")
+            print(f"Object2 pos: {object2_pos}, Object2 quat: {object2_quat}")
+            print(f"Robot base pos: {robot_base_pos}, Robot base quat: {robot_base_quat}")
+            print(f"Joint names: {joint_names}")
+            print(f"Joint positions: {joint_positions}")
+            print(f"Joint velocities: {joint_velocities}")
+            print("Actuator names:", actuator_names)
 
     def sim_step(self):
         # self.mj_data.ctrl = np.zeros(self.mj_model.nu)
