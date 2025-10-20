@@ -63,9 +63,10 @@ OBS_NAME_TO_NAMES = {
     "successes": ["successes_obs"],
     "reward_obs": ["reward_obs"],
 }
+OBS_NAMES = sum(OBS_NAME_TO_NAMES.values(), [])
 N_OBS = 117
-assert sum(len(names) for names in OBS_NAME_TO_NAMES.values()) == N_OBS, (
-    f"sum(len(names) for names in OBS_NAME_TO_NAMES.values()): {sum(len(names) for names in OBS_NAME_TO_NAMES.values())}, expected: {N_OBS}"
+assert len(OBS_NAMES) == N_OBS, (
+    f"len(OBS_NAMES): {len(OBS_NAMES)}, expected: {N_OBS}"
 )
 
 T_W_R_np = np.eye(4)
