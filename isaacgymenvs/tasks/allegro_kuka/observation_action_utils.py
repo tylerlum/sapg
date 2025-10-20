@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import numpy as np
 import pytorch_kinematics as pk
 import torch
@@ -52,12 +53,23 @@ OBS_NAME_TO_NAMES = {
     "object_rot": [f"object_rot_{x}" for x in "xyzw"],
     "object_linvel": [f"object_linvel_{x}" for x in "xyz"],
     "object_angvel": [f"object_angvel_{x}" for x in "xyz"],
-    "fingertip_rel_pos": [f"fingertip_rel_pos_{finger}_{x}" for finger in ["index", "middle", "ring", "thumb"] for x in "xyz"],
-    "keypoints_rel_palm": [f"keypoints_rel_palm_{i}_{x}" for i in range(4) for x in "xyz"],
-    "keypoints_rel_goal": [f"keypoints_rel_goal_{i}_{x}" for i in range(4) for x in "xyz"],
+    "fingertip_rel_pos": [
+        f"fingertip_rel_pos_{finger}_{x}"
+        for finger in ["index", "middle", "ring", "thumb"]
+        for x in "xyz"
+    ],
+    "keypoints_rel_palm": [
+        f"keypoints_rel_palm_{i}_{x}" for i in range(4) for x in "xyz"
+    ],
+    "keypoints_rel_goal": [
+        f"keypoints_rel_goal_{i}_{x}" for i in range(4) for x in "xyz"
+    ],
     "object_scales": [f"object_scales_{x}" for x in "xyz"],
     "closest_keypoint_max_dist": ["closest_keypoint_max_dist"],
-    "closest_fingertip_dist": [f"closest_fingertip_dist_{finger}" for finger in ["index", "middle", "ring", "thumb"]],
+    "closest_fingertip_dist": [
+        f"closest_fingertip_dist_{finger}"
+        for finger in ["index", "middle", "ring", "thumb"]
+    ],
     "lifted_object": ["lifted_object"],
     "progress_obs": ["progress_obs"],
     "successes": ["successes_obs"],
@@ -65,9 +77,7 @@ OBS_NAME_TO_NAMES = {
 }
 OBS_NAMES = sum(OBS_NAME_TO_NAMES.values(), [])
 N_OBS = 117
-assert len(OBS_NAMES) == N_OBS, (
-    f"len(OBS_NAMES): {len(OBS_NAMES)}, expected: {N_OBS}"
-)
+assert len(OBS_NAMES) == N_OBS, f"len(OBS_NAMES): {len(OBS_NAMES)}, expected: {N_OBS}"
 
 T_W_R_np = np.eye(4)
 T_W_R_np[:3, 3] = np.array([0.0, 0.8, 0.0])
@@ -195,7 +205,9 @@ def compute_observation(
     # Extra observations (0'd out)
     closest_keypoint_max_dist = torch.zeros((N, 1), dtype=torch.float, device=q.device)
     N_FINGERTIPS = 4
-    closest_fingertip_dist = torch.zeros((N, N_FINGERTIPS), dtype=torch.float, device=q.device)
+    closest_fingertip_dist = torch.zeros(
+        (N, N_FINGERTIPS), dtype=torch.float, device=q.device
+    )
     lifted_object = torch.zeros((N, 1), dtype=torch.float, device=q.device)
     progress_obs = torch.zeros((N, 1), dtype=torch.float, device=q.device)
     successes = torch.zeros((N, 1), dtype=torch.float, device=q.device)
@@ -227,17 +239,18 @@ def compute_observation(
         assert v.shape[0] == N, f"v.shape[0]: {v.shape[0]}, expected: {N} for key: {k}"
     for name, names in OBS_NAME_TO_NAMES.items():
         assert name in obs_dict, f"name: {name} not in obs_dict"
-        assert obs_dict[name].shape[1] == len(names), f"obs_dict[name].shape[1]: {obs_dict[name].shape[1]}, expected: {len(names)} for name: {name}"
+        assert obs_dict[name].shape[1] == len(names), (
+            f"obs_dict[name].shape[1]: {obs_dict[name].shape[1]}, expected: {len(names)} for name: {name}"
+        )
 
     obs = torch.cat(
-        [
-            obs_dict[key] for key in obs_dict.keys()
-        ],
+        [obs_dict[key] for key in obs_dict.keys()],
         dim=-1,
     )
 
     assert obs.shape == (N, N_OBS), f"obs.shape: {obs.shape}, expected: (N, {N_OBS})"
     return obs
+
 
 def compute_joint_pos_targets(
     actions: Tensor,
