@@ -42,6 +42,7 @@ from isaacgym import gymapi, gymtorch, gymutil
 from torch import Tensor
 
 from isaacgymenvs.tasks.allegro_kuka.allegro_kuka_utils import DofParameters, populate_dof_properties
+from isaacgymenvs.tasks.allegro_kuka.observation_action_utils import compute_observation, OBS_NAMES
 from isaacgymenvs.tasks.base.vec_task import VecTask
 from isaacgymenvs.tasks.allegro_kuka.generate_cuboids import (
     generate_big_cuboids,
@@ -1789,6 +1790,51 @@ class AllegroKukaBase(VecTask):
         # this is where we will add the reward observation
         reward_obs_ofs = ofs
         ofs += 1
+
+        # Default CHECK_WITH_COMPUTED_OBS = False
+        # Set to True to check if the observations are computed correctly
+        CHECK_WITH_COMPUTED_OBS = False
+        if CHECK_WITH_COMPUTED_OBS:
+            import pytorch_kinematics as pk
+            # Create chain and palm_serial_chain from URDF
+            if not hasattr(self, "chain") or not hasattr(self, "palm_serial_chain"):
+                asset_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../assets")
+                urdf_path = Path(asset_root) / self.hand_arm_asset_file
+                assert urdf_path.exists(), f"URDF file {urdf_path} does not exist"
+                self.chain = pk.build_chain_from_urdf(
+                    open(urdf_path).read(),
+                ).to(device=self.device)
+                self.palm_serial_chain = pk.SerialChain(self.chain, "iiwa7_link_7").to(device=self.device)
+
+            computed_obs = compute_observation(
+                q=self.arm_hand_dof_pos,
+                qd=self.arm_hand_dof_vel,
+                q_lower_limits=self.arm_hand_dof_lower_limits,
+                q_upper_limits=self.arm_hand_dof_upper_limits,
+                object_pose=self.object_pose,
+                goal_object_pose=self.goal_pose,
+                object_scales=self.object_scales,
+                chain=self.chain,
+                palm_serial_chain=self.palm_serial_chain,
+            )
+
+            # Validate
+            assert computed_obs.shape == (self.num_envs, len(OBS_NAMES)), f"computed_obs.shape: {computed_obs.shape}, expected: ({self.num_envs}, {len(OBS_NAMES)})"
+            assert buf.shape == computed_obs.shape, f"buf.shape: {buf.shape}, expected: {computed_obs.shape}"
+            num_errors = 0
+            for i, name in enumerate(OBS_NAMES):
+                val_orig = buf[0, i].item()
+                val_computed = computed_obs[0, i].item()
+                print(f"{name}: original: {val_orig}, computed: {val_computed}, diff: {val_orig - val_computed}")
+                if abs(val_orig - val_computed) > 1e-2:
+                    num_errors += 1
+                    print("--------------------------------")
+                    print(f"Error: {name}: original: {val_orig}, computed: {val_computed}, diff: {val_orig - val_computed}")
+                    print("--------------------------------")
+            print("="*100)
+            print(f"num_errors: {num_errors}")
+            print("="*100)
+            breakpoint()
 
         assert ofs == self.full_state_size
         return ofs, reward_obs_ofs
