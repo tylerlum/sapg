@@ -252,11 +252,9 @@ class RecordedData:
         q: np.ndarray,
         from_order: list[str],
         to_order: list[str],
+        require_all_joints: bool = True,
     ) -> np.ndarray:
         J = len(from_order)
-        assert len(to_order) == J, (
-            f"Expected to_order to have the same length as from_order, got {len(to_order)} and {len(from_order)}"
-        )
         assert q.ndim in [1, 2], (
             f"Expected q to be either (N,) or (N, J), got {q.shape}"
         )
@@ -264,12 +262,22 @@ class RecordedData:
             f"Expected q to have the same length as from_order, got {q.shape[-1]} and {J}"
         )
 
+        if require_all_joints:
+            assert len(to_order) == J, (
+                f"Expected to_order to have the same length as from_order, got {len(to_order)} and {len(from_order)}. If you don't want to require all joints, set require_all_joints to False."
+            )
+
         # q is given in the from_order
         joint_name_to_value = {from_order[i]: q[..., i] for i in range(J)}
-        new_q = np.stack([joint_name_to_value[to_order[i]] for i in range(J)], axis=-1)
-        assert new_q.shape == q.shape, (
-            f"Expected new_q to be {q.shape}, got {new_q.shape}"
+        new_q = np.stack([joint_name_to_value[name] for name in to_order], axis=-1)
+
+        assert new_q.shape == (q.shape[:-1] + (len(to_order),)), (
+            f"Expected new_q to be {q.shape[:-1] + (len(to_order),)}, got {new_q.shape}"
         )
+        if require_all_joints:
+            assert new_q.shape == q.shape, (
+                f"Expected new_q to be {q.shape}, got {new_q.shape}"
+            )
         return new_q
 
     @staticmethod

@@ -26,7 +26,8 @@ def main():
     # Load recorded data
     # ###########
     file_path = Path(
-        "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-16_09-08-27.npz"
+        # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-19_19-43-04.npz"
+        "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-19_19-42-41.npz"
     )
     assert file_path.exists(), f"File {file_path} does not exist"
     recorded_data = RecordedData.from_file(file_path)
@@ -53,9 +54,9 @@ def main():
         f"KUKA_ALLEGRO_URDF_PATH not found: {KUKA_ALLEGRO_URDF_PATH}"
     )
     OBJECT_URDF_PATH = Path(
-        "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/044_flat_screwdriver/044_flat_screwdriver.urdf"
+        # "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/044_flat_screwdriver/044_flat_screwdriver.urdf"
         # "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/phone/model.urdf"
-        # "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/040_large_marker/040_large_marker.urdf"
+        "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/040_large_marker/040_large_marker.urdf"
     )
     assert OBJECT_URDF_PATH.exists(), f"OBJECT_URDF_PATH not found: {OBJECT_URDF_PATH}"
     ALLEGRO_URDF_PATH = Path(
@@ -247,11 +248,9 @@ def main():
         allegro_joint_pos_viser_order = RecordedData.change_joint_order(
             robot_joint_position,
             from_order=recorded_data.robot_joint_names,
-            to_order=allegro_viser_joint_names
-            + list(
-                set(recorded_data.robot_joint_names) - set(allegro_viser_joint_names)
-            ),
-        )[: len(allegro_viser_joint_names)]
+            to_order=allegro_viser_joint_names,
+            require_all_joints=False,
+        )
         allegro_viser.update_cfg(allegro_joint_pos_viser_order)
 
         # Palm
