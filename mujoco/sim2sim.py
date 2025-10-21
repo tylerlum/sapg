@@ -65,6 +65,7 @@ class BaseSimulator:
         table_geom.friction = np.array([SLIDING_FRICTION, TORSIONAL_FRICTION, ROLLING_FRICTION])
 
         # Object
+        BLACK_RGBA = np.array([0.0, 0.0, 0.0, 1.0])
         OBJECT_POS_X, OBJECT_POS_Y, OBJECT_POS_Z = 0.0, -0.8, 0.38 + 0.3
         mesh = spec.add_mesh()
         mesh.name = "object_mesh"
@@ -79,7 +80,7 @@ class BaseSimulator:
         object_geom.name = "object_geom"
         object_geom.type = mujoco.mjtGeom.mjGEOM_MESH
         object_geom.meshname = mesh.name
-        object_geom.rgba = np.array([0.0, 0.0, 0.0, 1.0])
+        # object_geom.rgba = BLACK_RGBA
         object_geom.friction = np.array([SLIDING_FRICTION, TORSIONAL_FRICTION, ROLLING_FRICTION])
         object_free_joint = object_body.add_joint()
         object_free_joint.name = "object_free_joint"
