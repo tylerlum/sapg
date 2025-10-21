@@ -8,17 +8,30 @@ from pathlib import Path
 ENABLE_VIEWER = True
 
 SLIDING_FRICTION, TORSIONAL_FRICTION, ROLLING_FRICTION = 1.0, 0.005, 0.0001
-INIT_JOINT_POS_IIWA = np.array([-1.571, 1.571, -0.000, 1.376, -0.000, 1.485, 2.358])
+
+IIWA_INIT_JOINT_POS = np.array([-1.571, 1.571, -0.000, 1.376, -0.000, 1.485, 2.358])
 IIWA_JOINT_NAMES = ['joint1', 'joint2', 'joint3', 'joint4', 'joint5', 'joint6', 'joint7',]
 IIWA_ACTUATOR_NAMES = ['actuator1', 'actuator2', 'actuator3', 'actuator4', 'actuator5', 'actuator6', 'actuator7',]
+assert len(IIWA_INIT_JOINT_POS) == len(IIWA_JOINT_NAMES) == len(IIWA_ACTUATOR_NAMES) == 7, f"len(IIWA_INIT_JOINT_POS): {len(IIWA_INIT_JOINT_POS)}, len(IIWA_JOINT_NAMES): {len(IIWA_JOINT_NAMES)}, len(IIWA_ACTUATOR_NAMES): {len(IIWA_ACTUATOR_NAMES)}, expected: 7"
+
+ALLEGRO_INIT_JOINT_POS = np.zeros(16)
+ALLEGRO_INIT_JOINT_POS[12] = 0.3
+ALLEGRO_JOINT_NAMES = ['palmffj0', 'palmffj1', 'palmffj2', 'palmffj3', 'palmmfj0', 'palmmfj1', 'palmmfj2', 'palmmfj3', 'palmrfj0', 'palmrfj1', 'palmrfj2', 'palmrfj3', 'palmthj0', 'palmthj1', 'palmthj2', 'palmthj3']
+ALLEGRO_ACTUATOR_NAMES = ['palmffa0', 'palmffa1', 'palmffa2', 'palmffa3', 'palmmfa0', 'palmmfa1', 'palmmfa2', 'palmmfa3', 'palmrfa0', 'palmrfa1', 'palmrfa2', 'palmrfa3', 'palmtha0', 'palmtha1', 'palmtha2', 'palmtha3']
+assert len(ALLEGRO_INIT_JOINT_POS) == len(ALLEGRO_JOINT_NAMES) == len(ALLEGRO_ACTUATOR_NAMES) == 16, f"len(ALLEGRO_INIT_JOINT_POS): {len(ALLEGRO_INIT_JOINT_POS)}, len(ALLEGRO_JOINT_NAMES): {len(ALLEGRO_JOINT_NAMES)}, len(ALLEGRO_ACTUATOR_NAMES): {len(ALLEGRO_ACTUATOR_NAMES)}, expected: 16"
+
+INIT_JOINT_POS = np.concatenate([IIWA_INIT_JOINT_POS, ALLEGRO_INIT_JOINT_POS])
+JOINT_NAMES = IIWA_JOINT_NAMES + ALLEGRO_JOINT_NAMES
+ACTUATOR_NAMES = IIWA_ACTUATOR_NAMES + ALLEGRO_ACTUATOR_NAMES
+assert len(INIT_JOINT_POS) == len(JOINT_NAMES) == len(ACTUATOR_NAMES) == 23, f"len(INIT_JOINT_POS): {len(INIT_JOINT_POS)}, len(JOINT_NAMES): {len(JOINT_NAMES)}, len(ACTUATOR_NAMES): {len(ACTUATOR_NAMES)}, expected: 23"
 
 class BaseSimulator:
     def __init__(self):
         self.sim_hz = 1000  # Need a high enough frequency to get stable physics
         self.sim_dt = 1 / self.sim_hz
         self.init_scene()
-        self.set_robot_joint_pos_targets(INIT_JOINT_POS_IIWA)
-        self.set_robot_joint_positions(INIT_JOINT_POS_IIWA)
+        self.set_robot_joint_pos_targets(INIT_JOINT_POS)
+        self.set_robot_joint_positions(INIT_JOINT_POS)
 
     def init_scene(self):
         iiwa_xml_path = Path("/home/tylerlum/github_repos/mujoco_menagerie/kuka_iiwa_14/scene.xml")
@@ -79,11 +92,13 @@ class BaseSimulator:
             self.viewer = mujoco.viewer.launch_passive(self.mj_model, self.mj_data)
 
     def set_robot_joint_positions(self, q: np.ndarray):
-        iiwa_joint_ids = [self.mj_model.joint(name=name).id for name in IIWA_JOINT_NAMES]
-        for i, iiwa_joint_id in enumerate(iiwa_joint_ids):
-            self.mj_data.qpos[iiwa_joint_id] = q[i]
+        assert q.shape == (23,), f"q.shape: {q.shape}, expected: (23,)"
+        for i, joint_name in enumerate(JOINT_NAMES):
+            joint_id = self.mj_model.joint(name=joint_name).id
+            self.mj_data.qpos[joint_id] = q[i]
 
     def set_robot_joint_pos_targets(self, q_targets: np.ndarray):
+        assert q_targets.shape == (23,), f"q_targets.shape: {q_targets.shape}, expected: (23,)"
         self.robot_joint_pos_targets = q_targets.copy()
 
     def get_body_pose(self, body_name: str):
