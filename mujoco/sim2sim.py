@@ -28,7 +28,7 @@ class BaseSimulator:
         spec = mujoco.MjSpec.from_file(str(iiwa_xml_path))
         spec.option.timestep = self.sim_dt
 
-        allegro_xml_path = Path("/home/tylerlum/github_repos/mujoco_menagerie/wonik_allegro/right_hand.xml")
+        allegro_xml_path = Path("/home/tylerlum/github_repos/mujoco_menagerie/wonik_allegro/right_hand_offset.xml")
         assert allegro_xml_path.exists(), f"Allegro XML path does not exist: {allegro_xml_path}"
         allegro_spec = mujoco.MjSpec.from_file(str(allegro_xml_path))
         attachment_site = next(s for s in spec.sites if s.name == "attachment_site")
