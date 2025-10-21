@@ -15,6 +15,11 @@ from recorded_data_scripts.recorded_data import RecordedData
 AXES_LENGTH = 0.2
 AXES_RADIUS = 0.01
 
+DISABLE_AXES = False
+if DISABLE_AXES:
+    AXES_LENGTH = 0.00001
+    AXES_RADIUS = 0.00001
+
 
 def xyzw_to_wxyz(xyzw: np.ndarray) -> np.ndarray:
     assert xyzw.shape[-1] == 4, f"Expected xyzw to be (..., 4), got {xyzw.shape}"
@@ -27,7 +32,9 @@ def main():
     # ###########
     file_path = Path(
         # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-19_19-43-04.npz"
-        "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-19_19-42-41.npz"
+        # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-19_19-42-41.npz"
+        # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-20_14-30-37.npz"
+        "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-20_14-32-39.npz"
     )
     assert file_path.exists(), f"File {file_path} does not exist"
     recorded_data = RecordedData.from_file(file_path)
