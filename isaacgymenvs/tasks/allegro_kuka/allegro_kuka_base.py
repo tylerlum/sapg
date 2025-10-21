@@ -1793,7 +1793,7 @@ class AllegroKukaBase(VecTask):
 
         # Default CHECK_WITH_COMPUTED_OBS = False
         # Set to True to check if the observations are computed correctly
-        CHECK_WITH_COMPUTED_OBS = True
+        CHECK_WITH_COMPUTED_OBS = False
         if CHECK_WITH_COMPUTED_OBS:
             import pytorch_kinematics as pk
             # Create chain and palm_serial_chain from URDF
@@ -2183,7 +2183,7 @@ class AllegroKukaBase(VecTask):
 
         # Default CHECK_WITH_COMPUTED_JOINT_POS_TARGETS = False
         # Set to True to check if the computed joint pos targets are correct
-        CHECK_WITH_COMPUTED_JOINT_POS_TARGETS = True
+        CHECK_WITH_COMPUTED_JOINT_POS_TARGETS = False
         if CHECK_WITH_COMPUTED_JOINT_POS_TARGETS:
             computed_joint_pos_targets = compute_joint_pos_targets(
                 actions=self.actions,
