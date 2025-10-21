@@ -162,15 +162,15 @@ if __name__ == "__main__":
         print("Moving to initial pose")
         # breakpoint()
         move_to_pose(joint_positions_array[0], pub_iiwa=pub_iiwa, pub_allegro=pub_allegro, move_time=10.0)
-        # for timestep in range(300):
-        #     print(f"timestep: {timestep}")
-        #     # print(f"joint_positions_array[timestep]: {joint_positions_array[timestep]}")
-        #     # print(f"joint_positions_array[timestep, :7]: {joint_positions_array[timestep, :7]}")
-        #     # print(f"joint_positions_array[timestep, 7:]: {joint_positions_array[timestep, 7:]}")
-        #     # print(f"CURRENT_JOINT_POS_IIWA: {CURRENT_JOINT_POS_IIWA}")
-        #     # print(f"CURRENT_JOINT_POS_ALLEGRO: {CURRENT_JOINT_POS_ALLEGRO}")
-        #     # move_to_pose(joint_positions_array[timestep], pub_iiwa=pub_iiwa, pub_allegro=pub_allegro, move_time=1.0)
-        #     move_to_pose(joint_positions_array[timestep], pub_iiwa=pub_iiwa, pub_allegro=pub_allegro, move_time=0.2)
+        for timestep in range(300):
+            print(f"timestep: {timestep}")
+            # print(f"joint_positions_array[timestep]: {joint_positions_array[timestep]}")
+            # print(f"joint_positions_array[timestep, :7]: {joint_positions_array[timestep, :7]}")
+            # print(f"joint_positions_array[timestep, 7:]: {joint_positions_array[timestep, 7:]}")
+            # print(f"CURRENT_JOINT_POS_IIWA: {CURRENT_JOINT_POS_IIWA}")
+            # print(f"CURRENT_JOINT_POS_ALLEGRO: {CURRENT_JOINT_POS_ALLEGRO}")
+            # move_to_pose(joint_positions_array[timestep], pub_iiwa=pub_iiwa, pub_allegro=pub_allegro, move_time=1.0)
+            move_to_pose(joint_positions_array[timestep], pub_iiwa=pub_iiwa, pub_allegro=pub_allegro, move_time=0.2)
 
         # publish_joint_cmds(iiwa_init_joint_pos=iiwa_init, allegro_init_joint_pos=allegro_init, joint_pos_history=interpolated_joint_pos_history)
     except rospy.ROSInterruptException:
