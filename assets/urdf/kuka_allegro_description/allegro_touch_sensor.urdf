@@ -33,7 +33,8 @@
     </collision>
   </link>
   <joint name="allegro_mount_joint" type="fixed">
-    <origin rpy="0 -1.5708 0.785398" xyz="-0.008219 -0.02063 0.08086"/>
+    <!-- <origin rpy="0 -1.5708 0.785398" xyz="-0.008219 -0.02063 0.08086"/> -->
+    <origin rpy="0 -1.5708 0.785398" xyz="0.008219 -0.02063 0.08086"/>
     <parent link="allegro_mount"/>
     <child link="palm_link"/>
   </joint>
@@ -143,7 +144,7 @@
       </material>
     </visual>
   </link>
-  <link name="index_biotac_tip">
+  <!-- <link name="index_biotac_tip">
     <collision>
       <geometry>
         <mesh filename="meshes/touchsensor/collision/touch_sensor_tip.obj"/>
@@ -162,7 +163,7 @@
         <color rgba="0. 0.5 0. 1"/>
       </material>
     </visual>
-  </link>
+  </link> -->
   <link name="middle_link_0">
     <collision>
       <geometry>
@@ -243,7 +244,7 @@
       </material>
     </visual>
   </link>
-  <link name="middle_biotac_tip">
+  <!-- <link name="middle_biotac_tip">
     <collision>
       <geometry>
         <mesh filename="meshes/touchsensor/collision/touch_sensor_tip.obj"/>
@@ -262,7 +263,7 @@
         <color rgba="0. 0.5 0. 1"/>
       </material>
     </visual>
-  </link>
+  </link> -->
 
   <link name="ring_link_0">
     <collision>
@@ -344,7 +345,7 @@
       </material>
     </visual>
   </link>
-  <link name="ring_biotac_tip">
+  <!-- <link name="ring_biotac_tip">
     <collision>
       <geometry>
         <mesh filename="meshes/touchsensor/collision/touch_sensor_tip.obj"/>
@@ -363,7 +364,7 @@
         <color rgba="0. 0.5 0. 1"/>
       </material>
     </visual>
-  </link>
+  </link> -->
 
   <link name="thumb_link_0">
     <collision>
@@ -445,7 +446,7 @@
       </material>
     </visual>
   </link>
-  <link name="thumb_biotac_tip">
+  <!-- <link name="thumb_biotac_tip">
     <collision>
       <geometry>
         <mesh filename="meshes/touchsensor/collision/touch_sensor_thumb_tip.obj"/>
@@ -464,7 +465,7 @@
         <color rgba="0. 0.5 0. 1"/>
       </material>
     </visual>
-  </link>
+  </link> -->
 
   <joint name="index_joint_0" type="revolute">
     <axis xyz="0 0 1"/>
@@ -498,12 +499,12 @@
     <child link="index_link_3"/>
     <dynamics damping="0.0226948" friction="0.0227036"/>
   </joint>
-  <joint name="index_biotac_tip_joint" type="fixed">
+  <!-- <joint name="index_biotac_tip_joint" type="fixed">
     <origin rpy="0 0 0 " xyz="0.0 0 0"/>
     <parent link="index_link_3"/>
     <child link="index_biotac_tip"/>
   </joint>
-
+ -->
   <joint name="middle_joint_0" type="revolute">
     <axis xyz="0 0 1"/>
     <limit effort="0.35" lower="-0.558488888889" upper="0.558488888889" velocity="6.283"/>
@@ -536,11 +537,11 @@
     <child link="middle_link_3"/>
     <dynamics damping="0.0226948" friction="0.0227036"/>
   </joint>
-  <joint name="middle_biotac_tip_joint" type="fixed">
+  <!-- <joint name="middle_biotac_tip_joint" type="fixed">
     <origin rpy="0 0 0 " xyz="0 0 0"/>
     <parent link="middle_link_3"/>
     <child link="middle_biotac_tip"/>
-  </joint>
+  </joint> -->
 
   <joint name="ring_joint_0" type="revolute">
     <axis xyz="0 0 1"/>
@@ -574,11 +575,11 @@
     <child link="ring_link_3"/>
     <dynamics damping="0.0226948" friction="0.0227036"/>
   </joint>
-  <joint name="ring_biotac_tip_joint" type="fixed">
+  <!-- <joint name="ring_biotac_tip_joint" type="fixed">
     <origin rpy="0 0 0" xyz="0 0 0"/>
     <parent link="ring_link_3"/>
     <child link="ring_biotac_tip"/>
-  </joint>
+  </joint> -->
 
   <joint name="thumb_joint_0" type="revolute">
     <axis xyz="0 0 1"/>
@@ -612,10 +613,10 @@
     <child link="thumb_link_3"/>
     <dynamics friction="0.035"/>
   </joint>
-  <joint name="thumb_biotac_tip_joint" type="fixed">
+  <!-- <joint name="thumb_biotac_tip_joint" type="fixed">
     <origin rpy="0 0 0 " xyz="0 0 0"/>
     <parent link="thumb_link_3"/>
     <child link="thumb_biotac_tip"/>
-  </joint>
+  </joint> -->
 
 </robot>
