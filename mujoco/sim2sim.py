@@ -17,15 +17,24 @@ class BaseSimulator:
         self.sim_hz = 1000  # Need a high enough frequency to get stable physics
         self.sim_dt = 1 / self.sim_hz
         self.init_scene()
-        self.set_init_robot_joint_positions()
+        self.set_robot_joint_pos_targets(INIT_JOINT_POS_IIWA)
+        self.set_robot_joint_positions(INIT_JOINT_POS_IIWA)
 
     def init_scene(self):
-        robot_path = Path("/home/tylerlum/github_repos/mujoco_menagerie/kuka_iiwa_14/scene.xml")
-        assert robot_path.exists(), f"Robot path does not exist: {robot_path}"
+        iiwa_xml_path = Path("/home/tylerlum/github_repos/mujoco_menagerie/kuka_iiwa_14/scene.xml")
+        assert iiwa_xml_path.exists(), f"Robot path does not exist: {iiwa_xml_path}"
 
         # Load mjspec from robot path
-        spec = mujoco.MjSpec.from_file(str(robot_path))
+        spec = mujoco.MjSpec.from_file(str(iiwa_xml_path))
         spec.option.timestep = self.sim_dt
+
+        allegro_xml_path = Path("/home/tylerlum/github_repos/mujoco_menagerie/wonik_allegro/right_hand.xml")
+        assert allegro_xml_path.exists(), f"Allegro XML path does not exist: {allegro_xml_path}"
+        allegro_spec = mujoco.MjSpec.from_file(str(allegro_xml_path))
+        attachment_site = next(s for s in spec.sites if s.name == "attachment_site")
+        attachment_site.attach_body(allegro_spec.worldbody, "palm", "")
+
+    # <origin rpy="0 -1.5708 0.785398" xyz="0.008219 -0.02063 0.08086"/>
 
         # Table
         WHITE_RGBA = np.array([1.0, 1.0, 1.0, 1.0])
@@ -43,7 +52,7 @@ class BaseSimulator:
         table_geom.friction = np.array([SLIDING_FRICTION, TORSIONAL_FRICTION, ROLLING_FRICTION])
 
         # Object
-        OBJECT_POS_X, OBJECT_POS_Y, OBJECT_POS_Z = 0.0, -0.8, 0.38 + 0.8
+        OBJECT_POS_X, OBJECT_POS_Y, OBJECT_POS_Z = 0.0, -0.8, 0.38 + 0.3
         mesh = spec.add_mesh()
         mesh.name = "object_mesh"
         # mesh.file = "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/044_flat_screwdriver/044_flat_screwdriver/google_16k/textured_vhacd.obj"
@@ -69,10 +78,13 @@ class BaseSimulator:
         if ENABLE_VIEWER:
             self.viewer = mujoco.viewer.launch_passive(self.mj_model, self.mj_data)
 
-    def set_init_robot_joint_positions(self):
+    def set_robot_joint_positions(self, q: np.ndarray):
         iiwa_joint_ids = [self.mj_model.joint(name=name).id for name in IIWA_JOINT_NAMES]
         for i, iiwa_joint_id in enumerate(iiwa_joint_ids):
-            self.mj_data.qpos[iiwa_joint_id] = INIT_JOINT_POS_IIWA[i]
+            self.mj_data.qpos[iiwa_joint_id] = q[i]
+
+    def set_robot_joint_pos_targets(self, q_targets: np.ndarray):
+        self.robot_joint_pos_targets = q_targets.copy()
 
     def get_body_pose(self, body_name: str):
         body_id = self.mj_model.body(name=body_name).id
@@ -104,7 +116,7 @@ class BaseSimulator:
     def sim_step(self):
         iiwa_actuator_ids = [self.mj_model.actuator(name=name).id for name in IIWA_ACTUATOR_NAMES]
         for i, iiwa_actuator_id in enumerate(iiwa_actuator_ids):
-            self.mj_data.ctrl[iiwa_actuator_id] = INIT_JOINT_POS_IIWA[i]
+            self.mj_data.ctrl[iiwa_actuator_id] = self.robot_joint_pos_targets[i]
         mujoco.mj_step(self.mj_model, self.mj_data)
 
     def continue_running(self) -> bool:
