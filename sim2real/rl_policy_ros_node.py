@@ -258,6 +258,7 @@ class RLPolicyNode:
 
                 # Publish the targets
                 self.publish_targets(joint_pos_targets)
+                self.prev_targets = joint_pos_targets.clone()
 
             # Sleep to maintain 15 loop rate
             before_sleep_time = rospy.Time.now()
