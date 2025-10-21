@@ -129,9 +129,9 @@ class BaseSimulator:
             print("Actuator names:", actuator_names)
 
     def sim_step(self):
-        iiwa_actuator_ids = [self.mj_model.actuator(name=name).id for name in IIWA_ACTUATOR_NAMES]
-        for i, iiwa_actuator_id in enumerate(iiwa_actuator_ids):
-            self.mj_data.ctrl[iiwa_actuator_id] = self.robot_joint_pos_targets[i]
+        actuator_ids = [self.mj_model.actuator(name=name).id for name in ACTUATOR_NAMES]
+        for i, actuator_id in enumerate(actuator_ids):
+            self.mj_data.ctrl[actuator_id] = self.robot_joint_pos_targets[i]
         mujoco.mj_step(self.mj_model, self.mj_data)
 
     def continue_running(self) -> bool:
