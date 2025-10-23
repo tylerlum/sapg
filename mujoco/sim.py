@@ -368,17 +368,28 @@ class Simulator:
             loop_dts.append(loop_dt)
 
             # Get FPS
-            PRINT_FPS_EVERY_N_SECONDS = 1.0
+            PRINT_FPS_EVERY_N_SECONDS = 5.0
             PRINT_FPS_EVERY_N_STEPS = int(
                 PRINT_FPS_EVERY_N_SECONDS / self.config.sim_dt
             )
             if len(loop_dts) == PRINT_FPS_EVERY_N_STEPS:
-                total_loop_no_sleep_dt = np.sum(loop_no_sleep_dts)
-                total_loop_dt = np.sum(loop_dts)
-                print(
-                    f"Max FPS: {PRINT_FPS_EVERY_N_STEPS / total_loop_no_sleep_dt:.1f}"
-                )
-                print(f"FPS: {PRINT_FPS_EVERY_N_STEPS / total_loop_dt:.1f}")
+                loop_dt_array = np.array(loop_dts)
+                loop_no_sleep_dt_array = np.array(loop_no_sleep_dts)
+                fps_array = 1.0 / loop_dt_array
+                fps_no_sleep_array = 1.0 / loop_no_sleep_dt_array
+                print(f"FPS with sleep:")
+                print(f"  Mean: {np.mean(fps_array):.1f}")
+                print(f"  Median: {np.median(fps_array):.1f}")
+                print(f"  Max: {np.max(fps_array):.1f}")
+                print(f"  Min: {np.min(fps_array):.1f}")
+                print(f"  Std: {np.std(fps_array):.1f}")
+                print(f"FPS without sleep:")
+                print(f"  Mean: {np.mean(fps_no_sleep_array):.1f}")
+                print(f"  Median: {np.median(fps_no_sleep_array):.1f}")
+                print(f"  Max: {np.max(fps_no_sleep_array):.1f}")
+                print(f"  Min: {np.min(fps_no_sleep_array):.1f}")
+                print(f"  Std: {np.std(fps_no_sleep_array):.1f}")
+                print()
                 loop_no_sleep_dts, loop_dts = [], []
 
     # ############################################################
