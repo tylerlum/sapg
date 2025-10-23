@@ -118,8 +118,10 @@ class BaseSimulator:
         joint_positions = self.mj_data.qpos[joint_ids]
         joint_velocities = self.mj_data.qvel[joint_ids]
         actuator_names = [self.mj_model.actuator(i).name for i in range(self.mj_model.nu)]
+        body_names = [self.mj_model.body(i).name for i in range(self.mj_model.nbody)]
 
-        PRINT = False
+
+        PRINT = True
         if PRINT:
             print(f"Table pos: {table_pos}, Table quat: {table_quat}")
             print(f"Object pos: {object_pos}, Object quat: {object_quat}")
@@ -128,6 +130,7 @@ class BaseSimulator:
             print(f"Joint positions: {joint_positions}")
             print(f"Joint velocities: {joint_velocities}")
             print("Actuator names:", actuator_names)
+            print("Body names:", body_names)
 
     def sim_step(self):
         actuator_ids = [self.mj_model.actuator(name=name).id for name in ACTUATOR_NAMES]

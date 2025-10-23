@@ -1290,7 +1290,7 @@ def main(
         time.sleep(10.0)
 
 
-def load_mj_model() -> mujoco.MjModel:
+def load_mj_model() -> tuple[mujoco.MjModel, mujoco.MjData]:
     SLIDING_FRICTION, TORSIONAL_FRICTION, ROLLING_FRICTION = 1.0, 0.005, 0.0001
     iiwa_xml_path = Path("/home/tylerlum/github_repos/mujoco_menagerie/kuka_iiwa_14/scene.xml")
     assert iiwa_xml_path.exists(), f"Robot path does not exist: {iiwa_xml_path}"
@@ -1347,13 +1347,13 @@ def load_mj_model() -> mujoco.MjModel:
     mj_model = spec.compile()
     mj_data = mujoco.MjData(mj_model)
     mj_model.opt.timestep = 1.0 / 1000.0
-    return mj_model
+    return mj_model, mj_data
 
 
 
 def main2():
     server = viser.ViserServer()
-    mj_model = load_mj_model()
+    mj_model, _ = load_mj_model()
 
     visualizer = ViserDebugVisualizer(
         server=server,
