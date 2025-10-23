@@ -2543,10 +2543,10 @@ class AllegroKukaBase(VecTask):
         # If gets at least 50% of max consecutive successes and been at least 5 minutes since last update, turn off extra obs more
         mean_successes = self.prev_episode_successes.mean().item()
         minutes_elapsed_since_last_update = (time.time() - self._last_tyler_curriculum_update) / 60
-        doing_well = mean_successes > self.max_consecutive_successes * 0.5
+        doing_well = mean_successes > self.max_consecutive_successes * 0.6
         enough_time_since_last_update = minutes_elapsed_since_last_update > 5
         if doing_well and enough_time_since_last_update:
-            self._tyler_curriculum_scale += 0.1
+            self._tyler_curriculum_scale += 0.01
             if self._tyler_curriculum_scale > 1.0:
                 self._tyler_curriculum_scale = 1.0
             self._last_tyler_curriculum_update = time.time()
