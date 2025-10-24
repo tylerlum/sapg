@@ -44,6 +44,7 @@ class ViserMJModel:
         print(f"  Joint names: {self.joint_names}")
         print(f"  Actuator names: {self.actuator_names}")
         print(f"  Body names: {self.body_names}")
+        print(f"  Joint limits: {self.joint_limits}")
         print()
 
     def _create_mesh_handles(
@@ -245,6 +246,13 @@ class ViserMJModel:
     @property
     def body_ids(self) -> list[int]:
         return [self.mj_model.body(name=name).id for name in self.body_names]
+
+    @property
+    def joint_limits(self) -> dict[str, tuple[float, float]]:
+        return {
+            name: (self.mj_model.jnt_range[joint_id][0], self.mj_model.jnt_range[joint_id][1])
+            for name, joint_id in zip(self.joint_names, self.joint_ids)
+        }
 
 
 def main():
