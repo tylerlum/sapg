@@ -145,6 +145,9 @@ class SimRos:
             # Step simulation
             self.sim.sim_step()
 
+            if self.sim.config.enable_viewer:
+                self.sim.viewer.sync()
+
             # Get simulation state
             if update_and_publish:
                 sim_state_dict = self.sim.get_sim_state()
