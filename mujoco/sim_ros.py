@@ -6,10 +6,10 @@ from sensor_msgs.msg import JointState
 from geometry_msgs.msg import Pose
 
 class SimRos:
-    def __init__(self, sim: Simulator, publish_dt: float = 1.0 / 60):
+    def __init__(self, sim: Simulator, update_and_publish_dt: float = 1.0 / 60):
         self.sim = sim
-        self._publish_dt = publish_dt
-        self._last_publish_time = time.time()
+        self._update_and_publish_dt = update_and_publish_dt
+        self._last_update_and_publish_time = time.time()
         self._init_ros()
 
     def _init_ros(self):
@@ -69,14 +69,20 @@ class SimRos:
         loop_no_sleep_dts, loop_dts = [], []
 
         # Loop will try to run at self.sim.config.sim_dt
-        # But will only publish at self.publish_dt
+        # But will only update joint PD targets and publish sim state at self._update_and_publish_dt
         while self._continue_running():
             start_loop_no_sleep_time = time.time()
 
+            update_and_publish = False
+            if time.time() - self._last_update_and_publish_time > self._update_and_publish_dt:
+                update_and_publish = True
+                self._last_update_and_publish_time = time.time()
+
             if self.latest_iiwa_joint_cmd is None or self.latest_allegro_joint_cmd is None:
+                # Print waiting message every 1000 loops
                 if len(loop_no_sleep_dts) % 1000 == 0:
-                    print("Waiting for latest iiwa and allegro joint commands")
-            else:
+                    print(f"Waiting: latest_iiwa_joint_cmd = {self.latest_iiwa_joint_cmd}, latest_allegro_joint_cmd = {self.latest_allegro_joint_cmd}")
+            elif update_and_publish:
                 # Get latest joint commands
                 iiwa_joint_cmd = self.latest_iiwa_joint_cmd.copy()
                 allegro_joint_cmd = self.latest_allegro_joint_cmd.copy()
@@ -87,10 +93,9 @@ class SimRos:
             self.sim.sim_step()
 
             # Get simulation state
-            if time.time() - self._last_publish_time > self._publish_dt:
+            if update_and_publish:
                 sim_state_dict = self.sim.get_sim_state()
                 self._publish(sim_state_dict)
-                self._last_publish_time = time.time()
 
             # End of loop timekeeping
             end_loop_no_sleep_time = time.time()
