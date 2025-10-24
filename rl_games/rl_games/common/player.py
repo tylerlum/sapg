@@ -355,6 +355,14 @@ class BasePlayer(object):
                 else:
                     action = self.get_action(obses, is_deterministic)
 
+                # For debugging purposes, use this to check actions with deterministic behavior
+                DEBUGGING = False
+                if DEBUGGING:
+                    zero_obses = torch.zeros_like(obses)
+                    zero_action = self.get_action(zero_obses, is_deterministic=True, use_default_rnn_states=True)
+                    print(f"zero_action: {zero_action}")
+                    breakpoint()
+
                 obses, r, done, info = self.env_step(self.env, action)
                 UPDATE_RIGID_BODY_STATE_DICT = False
                 if UPDATE_RIGID_BODY_STATE_DICT:
