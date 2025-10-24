@@ -217,11 +217,7 @@ class ViserMJModel:
             name: self.mj_data.ctrl[actuator_id]
             for name, actuator_id in zip(self.actuator_names, self.actuator_ids)
         }
-        return {
-            "body_dict": body_dict,
-            "joint_dict": joint_dict,
-            "actuator_dict": actuator_dict,
-        }
+        return body_dict, joint_dict, actuator_dict
 
     # ############################################################
     # Properties
@@ -264,13 +260,19 @@ def main():
         mj_model=mj_model,
         mj_data=mj_data,
     )
+
     joint_names = viser_mj_model.joint_names
+    body_names = viser_mj_model.body_names
+
     viser_mj_model.update_cfg(q_dict={
         name: 0.0 for name in joint_names
     })
 
     # Sleep forever.
     while True:
+        body_dict, joint_dict, actuator_dict = viser_mj_model.get_sim_state()
+        link_pose = body_dict["link7"]
+        print(f"link_pose: {link_pose}")
         time.sleep(1.0)
 
 
