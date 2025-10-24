@@ -124,6 +124,10 @@ def move_to_pose(
         num_steps=int(CONTROL_HZ * SECONDS_TO_MOVE),
     )
     for target_pos in interpolated_targets:
+        if rospy.is_shutdown():
+            print("ROS shutdown, exiting")
+            sys.exit(0)
+
         start_time = rospy.Time.now()
         publish_joint_pos_targets(
             target_pos, pub_iiwa=pub_iiwa, pub_allegro=pub_allegro
@@ -158,47 +162,48 @@ def main():
         joint_pos_targets_array.shape == (T, J)
     ), f"joint_pos_targets_array.shape: {joint_pos_targets_array.shape}, expected: ({T}, {J})"
 
-    try:
-        rospy.init_node("iiwa_allegro_joint_publisher", anonymous=True)
+    rospy.init_node("iiwa_allegro_joint_publisher", anonymous=True)
 
-        _sub_iiwa = rospy.Subscriber(
-            "/iiwa/joint_states", JointState, current_joint_pos_iiwa_callback
-        )
-        _sub_allegro = rospy.Subscriber(
-            "/allegroHand_0/joint_states",
-            JointState,
-            current_joint_pos_allegro_callback,
-        )
-        pub_iiwa = rospy.Publisher("/iiwa/joint_cmd", JointState, queue_size=10)
-        pub_allegro = rospy.Publisher(
-            "/allegroHand_0/joint_cmd", JointState, queue_size=10
-        )
+    _sub_iiwa = rospy.Subscriber(
+        "/iiwa/joint_states", JointState, current_joint_pos_iiwa_callback
+    )
+    _sub_allegro = rospy.Subscriber(
+        "/allegroHand_0/joint_states",
+        JointState,
+        current_joint_pos_allegro_callback,
+    )
+    pub_iiwa = rospy.Publisher("/iiwa/joint_cmd", JointState, queue_size=10)
+    pub_allegro = rospy.Publisher("/allegroHand_0/joint_cmd", JointState, queue_size=10)
 
-        while CURRENT_JOINT_POS_IIWA is None or CURRENT_JOINT_POS_ALLEGRO is None:
-            print("Waiting for CURRENT_JOINT_POS_IIWA and CURRENT_JOINT_POS_ALLEGRO")
+    while not rospy.is_shutdown():
+        if CURRENT_JOINT_POS_IIWA is None or CURRENT_JOINT_POS_ALLEGRO is None:
+            print(
+                f"Waiting: CURRENT_JOINT_POS_IIWA = {CURRENT_JOINT_POS_IIWA}, CURRENT_JOINT_POS_ALLEGRO = {CURRENT_JOINT_POS_ALLEGRO}"
+            )
             rospy.sleep(0.1)
-            if rospy.is_shutdown():
-                raise Exception("rospy shutdown")
-        print("Got CURRENT_JOINT_POS_IIWA and CURRENT_JOINT_POS_ALLEGRO")
+        else:
+            print("=" * 100)
+            print("Got CURRENT_JOINT_POS_IIWA and CURRENT_JOINT_POS_ALLEGRO")
+            print("=" * 100)
+            break
 
-        print("Moving to initial pose")
+    print("Moving to initial pose")
+    move_to_pose(
+        joint_positions_array[0],
+        pub_iiwa=pub_iiwa,
+        pub_allegro=pub_allegro,
+        move_time=10.0,
+    )
+    print("Reached initial pose")
+    print("Replaying trajectory")
+    for timestep in range(len(joint_positions_array)):
+        print(f"Replaying timestep: {timestep}")
         move_to_pose(
-            joint_positions_array[0],
+            joint_positions_array[timestep],
             pub_iiwa=pub_iiwa,
             pub_allegro=pub_allegro,
-            move_time=10.0,
+            move_time=0.2,
         )
-        for timestep in range(300):
-            print(f"timestep: {timestep}")
-            move_to_pose(
-                joint_positions_array[timestep],
-                pub_iiwa=pub_iiwa,
-                pub_allegro=pub_allegro,
-                move_time=0.2,
-            )
-
-    except rospy.ROSInterruptException:
-        pass
 
 
 if __name__ == "__main__":
