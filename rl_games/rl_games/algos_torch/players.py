@@ -59,15 +59,22 @@ class PpoPlayerContinuous(BasePlayer):
         self.model.eval()
         self.is_rnn = self.model.is_rnn()
 
-    def get_action(self, obs, is_deterministic = False):
+    def get_action(self, obs, is_deterministic = False, use_default_rnn_states = False):
         if self.has_batch_dimension == False:
             obs = unsqueeze_obs(obs)
         obs = self._preproc_obs(obs)
+        rnn_states = self.states
+        if use_default_rnn_states:
+            # This should almost always be False
+            # However, for debugging purposes, we can get deterministic behavior by setting is_deterministic=True and use_default_rnn_states=True
+            rnn_states = self.model.get_default_rnn_state()
+            rnn_states = [s.to(self.device) for s in rnn_states]
+
         input_dict = {
             'is_train': False,
             'prev_actions': None, 
             'obs' : obs,
-            'rnn_states' : self.states
+            'rnn_states' : rnn_states
         }
         with torch.no_grad():
             res_dict = self.model(input_dict)
