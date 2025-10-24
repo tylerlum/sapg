@@ -99,21 +99,31 @@ class RlPlayer:
             obs=obs, is_deterministic=deterministic_actions
         )
 
+        # DEBUG:
+        DEBUGGING = False
+        if DEBUGGING:
+            zero_obs = torch.zeros_like(obs)
+            zero_action = self.player.get_action(
+                obs=zero_obs, is_deterministic=True, use_default_rnn_states=True
+            )
+            print(f"zero_obs ({zero_obs.shape}): {zero_obs}")
+            print(f"zero_action ({zero_action.shape}): {zero_action}")
+            breakpoint()
+
         normalized_action = normalized_action.reshape(-1, self.num_actions)
         assert_equals(normalized_action.shape, (batch_size, self.num_actions))
         return normalized_action
 
 
 def main() -> None:
-    import pathlib
+    from pathlib import Path
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    path_to_this_dir = pathlib.Path(__file__).parent.absolute()
 
-    CONFIG_PATH = path_to_this_dir / "config.yaml"
-    CHECKPOINT_PATH = path_to_this_dir / "checkpoint.pt"
-    NUM_OBSERVATIONS = 100
-    NUM_ACTIONS = 100
+    CONFIG_PATH = Path("/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-10-17_slow-action_randomize_turn-off-obs/00_slow-arm-hand-slowly_marker_2025-10-18_14-37-58/runs/00_slow-arm-hand-slowly_marker_2025-10-18_14-37-58/config.yaml")
+    CHECKPOINT_PATH = Path("/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-10-17_slow-action_randomize_turn-off-obs/00_slow-arm-hand-slowly_marker_2025-10-18_14-37-58/runs/00_slow-arm-hand-slowly_marker_2025-10-18_14-37-58/last/model.pth")
+    NUM_OBSERVATIONS = 117
+    NUM_ACTIONS = 23
 
     player = RlPlayer(
         num_observations=NUM_OBSERVATIONS,
@@ -123,8 +133,8 @@ def main() -> None:
         device=device,
     )
 
-    batch_size = 2
-    obs = torch.rand(batch_size, NUM_OBSERVATIONS).to(device)
+    batch_size = 1
+    obs = torch.zeros(batch_size, NUM_OBSERVATIONS).to(device)
     normalized_action = player.get_normalized_action(obs=obs)
     print(f"Using player with config: {CONFIG_PATH} and checkpoint: {CHECKPOINT_PATH}")
     print(f"And num_observations: {NUM_OBSERVATIONS} and num_actions: {NUM_ACTIONS}")

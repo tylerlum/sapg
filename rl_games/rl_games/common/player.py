@@ -360,7 +360,8 @@ class BasePlayer(object):
                 if DEBUGGING:
                     zero_obses = torch.zeros_like(obses)
                     zero_action = self.get_action(zero_obses, is_deterministic=True, use_default_rnn_states=True)
-                    print(f"zero_action: {zero_action}")
+                    print(f"zero_obses ({zero_obses.shape}): {zero_obses}")
+                    print(f"zero_action ({zero_action.shape}): {zero_action}")
                     breakpoint()
 
                 obses, r, done, info = self.env_step(self.env, action)
