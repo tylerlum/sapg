@@ -66,6 +66,8 @@ class SimRos:
         return not rospy.is_shutdown() and self.sim._continue_running()
 
     def run(self):
+        first_commands_received = False
+
         loop_no_sleep_dts, loop_dts = [], []
 
         # Loop will try to run at self.sim.config.sim_dt
@@ -79,10 +81,17 @@ class SimRos:
                 self._last_update_and_publish_time = time.time()
 
             if self.latest_iiwa_joint_cmd is None or self.latest_allegro_joint_cmd is None:
+                # Still run loop while waiting to start publishing sim state
                 # Print waiting message every 1000 loops
                 if len(loop_no_sleep_dts) % 1000 == 0:
                     print(f"Waiting: latest_iiwa_joint_cmd = {self.latest_iiwa_joint_cmd}, latest_allegro_joint_cmd = {self.latest_allegro_joint_cmd}")
             elif update_and_publish:
+                if not first_commands_received:
+                    print("=" * 100)
+                    print("First commands received, starting to publish sim state")
+                    print("=" * 100)
+                    first_commands_received = True
+
                 # Get latest joint commands
                 iiwa_joint_cmd = self.latest_iiwa_joint_cmd.copy()
                 allegro_joint_cmd = self.latest_allegro_joint_cmd.copy()
@@ -140,7 +149,7 @@ class SimRos:
 
 
 def main():
-    sim = Simulator(SimulatorConfig(enable_viewer=False))
+    sim = Simulator(SimulatorConfig(enable_viewer=False, sim_dt=1.0 / 750))
     sim_ros = SimRos(sim)
     sim_ros.run()
 
