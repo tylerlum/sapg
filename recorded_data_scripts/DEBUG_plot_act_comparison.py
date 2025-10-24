@@ -1,4 +1,4 @@
-from recorded_data_scripts.plot_recorded_data_comparison import plot_comparison, visualize_fig
+from recorded_data_scripts.plot_recorded_data_comparison import plot_per_idx_comparison, visualize_fig
 from recorded_data_scripts.recorded_data import ACTION_NAMES
 import numpy as np
 
@@ -8,8 +8,8 @@ NAME_TO_ACTIONS = {
     "v2": np.random.randn(N_ACT),
 }
 
-act_fig = plot_comparison(
-    filename_to_y={
+act_fig = plot_per_idx_comparison(
+    name_to_y={
         name: act
         for name, act in NAME_TO_ACTIONS.items()
     },

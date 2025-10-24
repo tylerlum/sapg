@@ -278,16 +278,16 @@ class RecordedData:
     # ###############
     # Hardcoded Properties
     # ###############
-    @staticmethod
-    def observation_names() -> list[str]:
+    @cached_property
+    def observation_names(self) -> list[str]:
         names = OBS_NAMES
         assert len(names) == OBSERVATIONS_DIM, (
             f"Expected {len(names)} observation names, got {OBSERVATIONS_DIM}"
         )
         return names
 
-    @staticmethod
-    def action_names() -> list[str]:
+    @cached_property
+    def action_names(self) -> list[str]:
         names = ACTION_NAMES
         assert len(names) == ACTIONS_DIM, (
             f"Expected {len(names)} action names, got {ACTIONS_DIM}"

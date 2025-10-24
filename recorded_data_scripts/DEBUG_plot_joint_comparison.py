@@ -1,4 +1,4 @@
-from recorded_data_scripts.plot_recorded_data_comparison import plot_comparison, visualize_fig
+from recorded_data_scripts.plot_recorded_data_comparison import plot_per_idx_comparison, visualize_fig
 from recorded_data_scripts.recorded_data import JOINT_NAMES_ISAACGYM
 import numpy as np
 
@@ -10,8 +10,8 @@ NAME_TO_JOINT_POS = {
     "v2_target": np.random.randn(N_JOINT),
 }
 
-joint_pos_fig = plot_comparison(
-    filename_to_y={
+joint_pos_fig = plot_per_idx_comparison(
+    name_to_y={
         name: joint_pos
         for name, joint_pos in NAME_TO_JOINT_POS.items()
     },

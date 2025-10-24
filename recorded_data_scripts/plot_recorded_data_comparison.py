@@ -4,7 +4,7 @@ import itertools
 import math
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import plotly.graph_objects as go
@@ -146,6 +146,14 @@ def visualize_fig(
     server: viser.ViserServer | None = None,
     save_html: bool = False,
 ) -> None:
+    """
+    Visualize a plotly figure in a viser server or save as an HTML file.
+
+    Args:
+        fig: The plotly figure to visualize.
+        server: The viser server to visualize the figure in. If None, the figure will not be visualized.
+        save_html: Whether to save the figure as an HTML file.
+    """
     if server is not None:
         server.gui.add_plotly(figure=fig, aspect=0.5)
 
@@ -157,25 +165,37 @@ def visualize_fig(
         fig.write_html(output_path)
 
 
-def plot_comparison(
-    filename_to_y: Dict[str, np.ndarray],
+def plot_per_idx_comparison(
+    name_to_y: Dict[str, np.ndarray],
     title: str,
     yaxis_title: str,
     y_names: List[str] | None = None,
 ) -> go.Figure:
-    # 1 figure with x axis being indices and y axis being values of observations or actions
-    # Different colors for each filename
-    filenames = list(filename_to_y.keys())
-    n_filenames = len(filenames)
-    length = len(next(iter(filename_to_y.values())))
+    """
+    Plot a comparison of values at each index for each name.
+    X axis is indices and Y axis is values.
+    Different colors for each name.
+
+    Args:
+        name_to_y: A dictionary mapping names to numpy arrays of values.
+        title: The title of the figure.
+        yaxis_title: The title of the y axis.
+        y_names: The names of the y values. If None, will be generated.
+    """
+    names = list(name_to_y.keys())
+    n_names = len(names)
+    length = len(next(iter(name_to_y.values())))
+    for name, y in name_to_y.items():
+        assert y.shape == (length,), f"Expected y for {name} to have shape (length,), got {y.shape} for length {length}"
 
     if y_names is None:
-        y_names = [f"y_{i}" for i in range(n_filenames)]
+        y_names = [f"y_{i}" for i in range(n_names)]
+    assert len(y_names) == length, f"Expected y_names to have length {length}, got {len(y_names)}"
 
     fig = go.Figure()
-    offsets = np.linspace(-0.2, 0.2, n_filenames)
-    for i, filename in enumerate(filenames):
-        y = filename_to_y[filename]
+    offsets = np.linspace(-0.2, 0.2, n_names)
+    for i, name in enumerate(names):
+        y = name_to_y[name]
         # x-position: the index for the point + small offset per file for visibility
         offset = offsets[i]
         x = np.arange(length) + offset
@@ -184,13 +204,13 @@ def plot_comparison(
                 x=x,
                 y=y,
                 mode="markers",
-                name=filename,
+                name=name,
                 marker=dict(size=8),
             )
         )
 
-    min_y = np.min(np.stack([y for y in filename_to_y.values()]))
-    max_y = np.max(np.stack([y for y in filename_to_y.values()]))
+    min_y = np.min(np.stack([y for y in name_to_y.values()]))
+    max_y = np.max(np.stack([y for y in name_to_y.values()]))
 
     # Add text annotations for each y_name
     for idx, y_name in enumerate(y_names):
@@ -232,9 +252,9 @@ def plot_comparison(
 
     fig.update_layout(
         title=title,
-        xaxis_title="Index (offset per file)",
+        xaxis_title="Index (offset per name)",
         yaxis_title=yaxis_title,
-        legend_title="Filename",
+        legend_title="Name",
         xaxis=dict(tickmode="linear", tick0=0, dtick=1),
         height=400,
         legend=dict(
@@ -253,13 +273,81 @@ def interpolate(init, final, alpha: float) -> float:
     return init + (final - init) * alpha
 
 
+def plot_grid_of_values(
+    title_to_name_to_x_y: Dict[str, Dict[str, Tuple[np.ndarray, np.ndarray]]],
+    grid_name: str,
+) -> go.Figure:
+    # e.g.,
+    # {
+    #     "Obs 0 iiwa7_joint_1": {
+    #         "2025-10-20_14-32-39_None_310.npz": ([0, 0.1, 0.2], [1, 1.1, 1.2]),
+    #         "2025-10-20_14-32-39_None_310.npz": ([0, 0.1, 0.2], [0.9, 0.91, 0.92]),
+    #     },
+    #     "Obs 1 iiwa7_joint_2": {
+    #         "2025-10-20_14-32-39_None_310.npz": ([0, 0.1, 0.2], [1, 1.1, 1.2]),
+    #         "2025-10-20_14-32-39_None_310.npz": ([0, 0.1, 0.2], [0.9, 0.91, 0.92]),
+    #     },
+    #     ...
+    # }
+
+    # Create figures
+    figures = []
+    for title, name_to_x_y in title_to_name_to_x_y.items():
+        fig = go.Figure()
+
+        for name, (x, y) in name_to_x_y.items():
+            assert len(x) == len(y), (
+                f"Expected x and y to have the same length, got {len(x)} and {len(y)} for {name}"
+            )
+            fig.add_trace(
+                go.Scatter(
+                    x=x,
+                    y=y,
+                    mode="lines+markers",
+                    name=name,
+                )
+            )
+
+        # Enforce min y axis range to make it clear when values are unchanging
+        MIN_Y_AXIS_RANGE = 0.2
+
+        all_y_values = [v for trace in fig.data for v in trace.y]
+        if len(all_y_values) == 0:
+            raise ValueError(f"No y values found for {title}")
+        y_min, y_max = np.min(all_y_values), np.max(all_y_values)
+        y_range = y_max - y_min
+        if y_range < MIN_Y_AXIS_RANGE:
+            y_center = (y_min + y_max) / 2
+            y_min_adjusted = y_center - MIN_Y_AXIS_RANGE / 2
+            y_max_adjusted = y_center + MIN_Y_AXIS_RANGE / 2
+            fig.update_yaxes(range=[y_min_adjusted, y_max_adjusted])
+
+        fig.update_layout(
+            title=title,
+            xaxis_title="Time (s)",
+            yaxis_title="Value",
+            legend_title="Name",
+        )
+
+        figures.append(fig)
+
+    # Visualize
+    for fig in figures:
+        visualize_fig(fig, save_html=True)
+
+    figures_to_grid_html(
+        figures, filename=f"values_over_time_{grid_name}.html", one_legend_per_fig=False
+    )
+
+
+
 def plot_values_at_one_time_index(
     filename_to_recorded_data: Dict[str, RecordedData],
     time_index: int,
 ) -> go.Figure:
     any_recorded_data = next(iter(filename_to_recorded_data.values()))
-    obs_fig = plot_comparison(
-        filename_to_y={
+    obs_fig = plot_per_idx_comparison(
+        name_to_y={
             filename: recorded_data.observations_array[time_index, :]
             for filename, recorded_data in filename_to_recorded_data.items()
         },
@@ -267,8 +355,8 @@ def plot_values_at_one_time_index(
         yaxis_title="Obs Value at Time Index",
         y_names=any_recorded_data.observation_names,
     )
-    action_fig = plot_comparison(
-        filename_to_y={
+    action_fig = plot_per_idx_comparison(
+        name_to_y={
             filename: recorded_data.actions_array[time_index, :]
             for filename, recorded_data in filename_to_recorded_data.items()
         },
@@ -276,8 +364,8 @@ def plot_values_at_one_time_index(
         yaxis_title="Action Value at Time Index",
         y_names=any_recorded_data.action_names,
     )
-    joint_pos_target_fig = plot_comparison(
-        filename_to_y={
+    joint_pos_target_fig = plot_per_idx_comparison(
+        name_to_y={
             filename: recorded_data.robot_joint_pos_targets_array[time_index, :]
             for filename, recorded_data in filename_to_recorded_data.items()
         },
@@ -285,8 +373,8 @@ def plot_values_at_one_time_index(
         yaxis_title="Joint Pos Target Value at Time Index",
         y_names=any_recorded_data.robot_joint_names,
     )
-    joint_position_fig = plot_comparison(
-        filename_to_y={
+    joint_position_fig = plot_per_idx_comparison(
+        name_to_y={
             filename: recorded_data.robot_joint_positions_array[time_index, :]
             for filename, recorded_data in filename_to_recorded_data.items()
         },
@@ -321,7 +409,7 @@ def plot_values_over_time(
     #     },
     #     ...
     # }
-    OBSERVATION_title_to_filename_to_x_y = {
+    OBSERVATION_title_to_name_to_x_y = {
         f"Obs_{i}_{obs_name}": {
             filename: (recorded_data.time_array, recorded_data.observations_array[:, i])
             for filename, recorded_data in filename_to_recorded_data.items()
@@ -329,14 +417,14 @@ def plot_values_over_time(
         for i, obs_name in enumerate(any_recorded_data.observation_names)
     }
 
-    ACTION_title_to_filename_to_x_y = {
+    ACTION_title_to_name_to_x_y = {
         f"Action_{i}_{action_name}": {
             filename: (recorded_data.time_array, recorded_data.actions_array[:, i])
             for filename, recorded_data in filename_to_recorded_data.items()
         }
         for i, action_name in enumerate(any_recorded_data.action_names)
     }
-    JOINT_POS_TARGET_title_to_filename_to_x_y = {
+    JOINT_POS_TARGET_title_to_name_to_x_y = {
         f"Joint_Pos_Target_{i}_{joint_pos_target_name}": {
             filename: (
                 recorded_data.time_array,
@@ -346,7 +434,7 @@ def plot_values_over_time(
         }
         for i, joint_pos_target_name in enumerate(any_recorded_data.robot_joint_names)
     }
-    JOINT_POSITION_title_to_filename_to_x_y = {
+    JOINT_POSITION_title_to_name_to_x_y = {
         f"Joint_Position_{i}_{joint_position_name}": {
             filename: (
                 recorded_data.time_array,
@@ -356,7 +444,7 @@ def plot_values_over_time(
         }
         for i, joint_position_name in enumerate(any_recorded_data.robot_joint_names)
     }
-    JOINT_POSITION_AND_TARGET_title_to_filename_to_x_y = {
+    JOINT_POSITION_AND_TARGET_title_to_name_to_x_y = {
         f"Joint_Pos_and_Target_{i}_{joint_position_and_target_name}": {
             **{
                 f"{filename}_Pos": (
@@ -377,7 +465,7 @@ def plot_values_over_time(
             any_recorded_data.robot_joint_names
         )
     }
-    JOINT_VELOCITY_title_to_filename_to_x_y = {
+    JOINT_VELOCITY_title_to_name_to_x_y = {
         f"Joint_Velocity_{i}_{joint_velocity_name}": {
             filename: (
                 recorded_data.time_array,
@@ -387,7 +475,7 @@ def plot_values_over_time(
         }
         for i, joint_velocity_name in enumerate(any_recorded_data.robot_joint_names)
     }
-    JOINT_VELOCITY_AND_FD_title_to_filename_to_x_y = {
+    JOINT_VELOCITY_AND_FD_title_to_name_to_x_y = {
         f"Joint_Vel_and_FD_{i}_{joint_velocity_and_fd_name}": {
             **{
                 f"{filename}_Vel": (
@@ -397,14 +485,14 @@ def plot_values_over_time(
                 for filename, recorded_data in filename_to_recorded_data.items()
             },
             **{
-                f"{filename}_FD1": (
+                f"{filename}_Vel_FD1": (
                     recorded_data.time_array,
                     recorded_data.robot_joint_velocities_array_fd1[:, i],
                 )
                 for filename, recorded_data in filename_to_recorded_data.items()
             },
             **{
-                f"{filename}_FD2": (
+                f"{filename}_Vel_FD2": (
                     recorded_data.time_array,
                     recorded_data.robot_joint_velocities_array_fd2[:, i],
                 )
@@ -416,63 +504,17 @@ def plot_values_over_time(
         )
     }
 
-    for name, title_to_filename_to_x_y in [
-        ("Observations", OBSERVATION_title_to_filename_to_x_y),
-        ("Actions", ACTION_title_to_filename_to_x_y),
-        ("Joint_Pos_Targets", JOINT_POS_TARGET_title_to_filename_to_x_y),
-        ("Joint_Positions", JOINT_POSITION_title_to_filename_to_x_y),
-        ("Joint_Pos_and_Targets", JOINT_POSITION_AND_TARGET_title_to_filename_to_x_y),
-        ("Joint_Velocities", JOINT_VELOCITY_title_to_filename_to_x_y),
-        ("Joint_Vel_and_FD", JOINT_VELOCITY_AND_FD_title_to_filename_to_x_y),
+    for name, title_to_name_to_x_y in [
+        ("Observations", OBSERVATION_title_to_name_to_x_y),
+        ("Actions", ACTION_title_to_name_to_x_y),
+        ("Joint_Pos_Targets", JOINT_POS_TARGET_title_to_name_to_x_y),
+        ("Joint_Positions", JOINT_POSITION_title_to_name_to_x_y),
+        ("Joint_Pos_and_Targets", JOINT_POSITION_AND_TARGET_title_to_name_to_x_y),
+        ("Joint_Velocities", JOINT_VELOCITY_title_to_name_to_x_y),
+        ("Joint_Vel_and_FD", JOINT_VELOCITY_AND_FD_title_to_name_to_x_y),
     ]:
-        # Create figures
-        figures = []
-        for title, filename_to_x_y in title_to_filename_to_x_y.items():
-            fig = go.Figure()
+        plot_grid_of_values(title_to_name_to_x_y=title_to_name_to_x_y, grid_name=name)
 
-            for filename, (x, y) in filename_to_x_y.items():
-                assert len(x) == len(y), (
-                    f"Expected x and y to have the same length, got {len(x)} and {len(y)} for {filename}"
-                )
-                fig.add_trace(
-                    go.Scatter(
-                        x=x,
-                        y=y,
-                        mode="lines+markers",
-                        name=filename,
-                    )
-                )
-
-            # Enforce min y axis range to make it clear when values are unchanging
-            MIN_Y_AXIS_RANGE = 0.2
-
-            all_y_values = [v for trace in fig.data for v in trace.y]
-            if len(all_y_values) == 0:
-                raise ValueError(f"No y values found for {title}")
-            y_min, y_max = np.min(all_y_values), np.max(all_y_values)
-            y_range = y_max - y_min
-            if y_range < MIN_Y_AXIS_RANGE:
-                y_center = (y_min + y_max) / 2
-                y_min_adjusted = y_center - MIN_Y_AXIS_RANGE / 2
-                y_max_adjusted = y_center + MIN_Y_AXIS_RANGE / 2
-                fig.update_yaxes(range=[y_min_adjusted, y_max_adjusted])
-
-            fig.update_layout(
-                title=title,
-                xaxis_title="Time (s)",
-                yaxis_title="Value",
-                legend_title="Filename",
-            )
-
-            figures.append(fig)
-
-        # Visualize
-        for fig in figures:
-            visualize_fig(fig, save_html=True)
-
-        figures_to_grid_html(
-            figures, filename=f"values_over_time_{name}.html", one_legend_per_fig=False
-        )
     return
 
 

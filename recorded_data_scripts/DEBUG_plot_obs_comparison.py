@@ -1,4 +1,4 @@
-from recorded_data_scripts.plot_recorded_data_comparison import plot_comparison, visualize_fig
+from recorded_data_scripts.plot_recorded_data_comparison import plot_per_idx_comparison, visualize_fig
 from recorded_data_scripts.recorded_data import OBS_NAMES
 import numpy as np
 
@@ -11,8 +11,8 @@ NAME_TO_OBSERVATIONS = {
 for obs in NAME_TO_OBSERVATIONS.values():
     assert obs.shape == (len(OBS_NAMES),), f"Expected observations to have shape (len(OBS_NAMES),) = ({len(OBS_NAMES)},), got {obs.shape}"
 
-obs_fig = plot_comparison(
-    filename_to_y={
+obs_fig = plot_per_idx_comparison(
+    name_to_y={
         name: obs
         for name, obs in NAME_TO_OBSERVATIONS.items()
     },
