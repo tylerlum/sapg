@@ -3,6 +3,7 @@
 import copy
 from pathlib import Path
 from typing import Literal, Optional, Tuple
+import time
 
 import numpy as np
 import pytorch_kinematics as pk
@@ -12,11 +13,34 @@ from geometry_msgs.msg import Pose
 from rl_player import RlPlayer
 from scipy.spatial.transform import Rotation as R
 from sensor_msgs.msg import JointState
+from termcolor import colored
 
 from isaacgymenvs.utils.observation_action_utils import (
     compute_joint_pos_targets,
     compute_observation,
 )
+
+def warn(message: str):
+    print(colored(message, "yellow"))
+
+def warn_every(message: str, n_seconds: float, key=None):
+    """
+    Print a warning message at most once every n_seconds per unique key.
+    Stores state inside the function itself (no globals).
+    """
+    if not hasattr(warn_every, "_last_times"):
+        warn_every._last_times = {}  # create on first call
+
+    key = key or message
+    last_times = warn_every._last_times
+    last_time = last_times.get(key, 0)
+
+    if time.time() - last_time > n_seconds:
+        warn(message)
+        last_times[key] = time.time()
+
+def info(message: str):
+    print(colored(message, "green"))
 
 
 def assert_equals(a, b):
@@ -116,6 +140,7 @@ class RLPolicyNode:
 
         # ROS rate
         self.rate_hz = 60
+        self.dt = 1.0 / self.rate_hz
         self.rate = rospy.Rate(self.rate_hz)
 
         # Set up chain and palm_serial_chain
@@ -154,8 +179,9 @@ class RLPolicyNode:
             or self.object_pose_msg is None
             or self.goal_object_pose_msg is None
         ):
-            rospy.logwarn(
-                f"Waiting for all messages to be received... iiwa_joint_state_msg: {var_to_is_none_str(self.iiwa_joint_state_msg)}, allegro_joint_state_msg: {var_to_is_none_str(self.allegro_joint_state_msg)}, object_pose_msg: {var_to_is_none_str(self.object_pose_msg)}, goal_object_pose_msg: {var_to_is_none_str(self.goal_object_pose_msg)}"
+            warn_every(
+                f"Waiting for all messages to be received... iiwa_joint_state_msg: {var_to_is_none_str(self.iiwa_joint_state_msg)}, allegro_joint_state_msg: {var_to_is_none_str(self.allegro_joint_state_msg)}, object_pose_msg: {var_to_is_none_str(self.object_pose_msg)}, goal_object_pose_msg: {var_to_is_none_str(self.goal_object_pose_msg)}",
+                n_seconds=1.0,
             )
             return None
 
@@ -176,30 +202,34 @@ class RLPolicyNode:
 
         T_R_O = self.T_R_C @ T_C_O
         object_position_R, object_quat_xyzw_R = T_to_pos_quat_xyzw(T_R_O)
+        object_pose_R = np.concatenate([object_position_R, object_quat_xyzw_R])
 
         T_R_G = self.goal_T_R_C @ T_C_G
         goal_object_pos_R, goal_object_quat_xyzw_R = T_to_pos_quat_xyzw(T_R_G)
+        goal_object_pose_R = np.concatenate([goal_object_pos_R, goal_object_quat_xyzw_R])
 
         q = np.concatenate([iiwa_position, allegro_position])
         qd = np.concatenate([iiwa_velocity, allegro_velocity])
 
         observation = compute_observation(
-            q=torch.from_numpy(q).float().to(self.device),
-            qd=torch.from_numpy(qd).float().to(self.device),
-            object_pose=torch.from_numpy(object_position_R).float().to(self.device),
-            goal_object_pose=torch.from_numpy(goal_object_pos_R)
+            q=torch.from_numpy(q).float().to(self.device)[None],
+            qd=torch.from_numpy(qd).float().to(self.device)[None],
+            object_pose=torch.from_numpy(object_pose_R).float().to(self.device)[None],
+            goal_object_pose=torch.from_numpy(goal_object_pose_R)
             .float()
-            .to(self.device),
-            object_scales=torch.from_numpy(self.object_scales).float().to(self.device),
+            .to(self.device)[None],
+            object_scales=torch.from_numpy(self.object_scales).float().to(self.device)[None],
             chain=self.chain,
             palm_serial_chain=self.palm_serial_chain,
         )
-        assert_equals(observation.shape, (self.num_observations,))
+        assert_equals(observation.shape, (1, self.num_observations,))
 
-        return torch.from_numpy(observation).float().unsqueeze(0).to(self.device)
+        return observation
 
     def publish_targets(self, joint_pos_targets: torch.Tensor):
         assert_equals(joint_pos_targets.shape, (1, self.num_actions))
+        joint_pos_targets = joint_pos_targets.squeeze(dim=0)
+
         iiwa_msg = JointState()
         iiwa_msg.header.stamp = rospy.Time.now()
         iiwa_msg.header.frame_id = ""
@@ -212,7 +242,7 @@ class RLPolicyNode:
             "iiwa_joint_6",
             "iiwa_joint_7",
         ]
-        iiwa_msg.position = joint_pos_targets[:, :7].cpu().numpy().tolist()
+        iiwa_msg.position = joint_pos_targets[:7].cpu().numpy().tolist()
         self.iiwa_joint_cmd_pub.publish(iiwa_msg)
         allegro_msg = JointState()
         allegro_msg.header.stamp = rospy.Time.now()
@@ -235,10 +265,14 @@ class RLPolicyNode:
             "joint_14.0",
             "joint_15.0",
         ]
-        allegro_msg.position = joint_pos_targets[:, 7:].cpu().numpy().tolist()
+        allegro_msg.position = joint_pos_targets[7:].cpu().numpy().tolist()
         self.allegro_joint_cmd_pub.publish(allegro_msg)
 
     def run(self):
+        first_observations_received = False
+
+        loop_no_sleep_dts, loop_dts = [], []
+
         while not rospy.is_shutdown():
             start_time = rospy.Time.now()
 
@@ -246,6 +280,12 @@ class RLPolicyNode:
             obs = self.create_observation()
 
             if obs is not None:
+                if not first_observations_received:
+                    info("=" * 100)
+                    info("First observations received, starting to publish sim state")
+                    info("=" * 100)
+                    first_observations_received = True
+
                 if self.prev_targets is None:
                     self.prev_targets = (
                         torch.from_numpy(
@@ -258,7 +298,7 @@ class RLPolicyNode:
                         )
                         .float()
                         .to(self.device)
-                    )
+                    )[None]
 
                 assert_equals(obs.shape, (1, self.num_observations))
 
@@ -289,14 +329,32 @@ class RLPolicyNode:
             self.rate.sleep()
             after_sleep_time = rospy.Time.now()
 
-            rospy.loginfo(
-                get_ros_loop_rate_str(
-                    start_time=start_time,
-                    before_sleep_time=before_sleep_time,
-                    after_sleep_time=after_sleep_time,
-                    node_name=rospy.get_name(),
-                )
-            )
+            loop_no_sleep_dt = (before_sleep_time - start_time).to_sec()
+            loop_no_sleep_dts.append(loop_no_sleep_dt)
+            loop_dt = (after_sleep_time - start_time).to_sec()
+            loop_dts.append(loop_dt)
+
+            PRINT_FPS_EVERY_N_SECONDS = 5.0
+            PRINT_FPS_EVERY_N_STEPS = int(PRINT_FPS_EVERY_N_SECONDS / self.dt)
+            if len(loop_dts) == PRINT_FPS_EVERY_N_STEPS:
+                loop_dt_array = np.array(loop_dts)
+                loop_no_sleep_dt_array = np.array(loop_no_sleep_dts)
+                fps_array = 1.0 / loop_dt_array
+                fps_no_sleep_array = 1.0 / loop_no_sleep_dt_array
+                print("FPS with sleep:")
+                print(f"  Mean: {np.mean(fps_array):.1f}")
+                print(f"  Median: {np.median(fps_array):.1f}")
+                print(f"  Max: {np.max(fps_array):.1f}")
+                print(f"  Min: {np.min(fps_array):.1f}")
+                print(f"  Std: {np.std(fps_array):.1f}")
+                print("FPS without sleep:")
+                print(f"  Mean: {np.mean(fps_no_sleep_array):.1f}")
+                print(f"  Median: {np.median(fps_no_sleep_array):.1f}")
+                print(f"  Max: {np.max(fps_no_sleep_array):.1f}")
+                print(f"  Min: {np.min(fps_no_sleep_array):.1f}")
+                print(f"  Std: {np.std(fps_no_sleep_array):.1f}")
+                print()
+                loop_no_sleep_dts, loop_dts = [], []
 
     @property
     def T_R_C(self) -> np.ndarray:

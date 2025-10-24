@@ -92,6 +92,9 @@ class RlPlayer:
         batch_size = obs.shape[0]
         assert_equals(obs.shape, (batch_size, self.num_observations))
 
+        # SAPG HACK: Need to idx to end of observation
+        obs = torch.cat([obs, 50.0 + torch.zeros((batch_size, 1), device=self.device)], dim=1)
+
         normalized_action = self.player.get_action(
             obs=obs, is_deterministic=deterministic_actions
         )
