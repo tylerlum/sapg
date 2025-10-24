@@ -8,6 +8,67 @@ from typing import Optional
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
+OBSERVATIONS_DIM = 117
+ACTIONS_DIM = 23
+JOINT_NAMES_ISAACGYM = [
+    "iiwa7_joint_1",
+    "iiwa7_joint_2",
+    "iiwa7_joint_3",
+    "iiwa7_joint_4",
+    "iiwa7_joint_5",
+    "iiwa7_joint_6",
+    "iiwa7_joint_7",
+    "index_joint_0",
+    "index_joint_1",
+    "index_joint_2",
+    "index_joint_3",
+    "middle_joint_0",
+    "middle_joint_1",
+    "middle_joint_2",
+    "middle_joint_3",
+    "ring_joint_0",
+    "ring_joint_1",
+    "ring_joint_2",
+    "ring_joint_3",
+    "thumb_joint_0",
+    "thumb_joint_1",
+    "thumb_joint_2",
+    "thumb_joint_3",
+]
+OBS_NAME_TO_NAMES = {
+    "q": [f"{name}_q" for name in JOINT_NAMES_ISAACGYM],
+    "qd": [f"{name}_qd" for name in JOINT_NAMES_ISAACGYM],
+    "palm_center_pos": [f"palm_center_pos_{x}" for x in "xyz"],
+    "palm_rot": [f"palm_rot_{x}" for x in "xyzw"],
+    "palm_linvel": [f"palm_linvel_{x}" for x in "xyz"],
+    "palm_angvel": [f"palm_angvel_{x}" for x in "xyz"],
+    "object_rot": [f"object_rot_{x}" for x in "xyzw"],
+    "object_linvel": [f"object_linvel_{x}" for x in "xyz"],
+    "object_angvel": [f"object_angvel_{x}" for x in "xyz"],
+    "fingertip_rel_pos": [
+        f"fingertip_rel_pos_{finger}_{x}"
+        for finger in ["index", "middle", "ring", "thumb"]
+        for x in "xyz"
+    ],
+    "keypoints_rel_palm": [
+        f"keypoints_rel_palm_{i}_{x}" for i in range(4) for x in "xyz"
+    ],
+    "keypoints_rel_goal": [
+        f"keypoints_rel_goal_{i}_{x}" for i in range(4) for x in "xyz"
+    ],
+    "object_scales": [f"object_scales_{x}" for x in "xyz"],
+    "closest_keypoint_max_dist": ["closest_keypoint_max_dist"],
+    "closest_fingertip_dist": [
+        f"closest_fingertip_dist_{finger}"
+        for finger in ["index", "middle", "ring", "thumb"]
+    ],
+    "lifted_object": ["lifted_object"],
+    "progress_obs": ["progress_obs"],
+    "successes": ["successes_obs"],
+    "reward_obs": ["reward_obs"],
+}
+OBS_NAMES = sum(OBS_NAME_TO_NAMES.values(), [])
+
 
 @dataclass
 class RecordedData:
@@ -214,6 +275,25 @@ class RecordedData:
         return qd
 
     # ###############
+    # Hardcoded Properties
+    # ###############
+    @cached_property
+    def observation_names(self) -> list[str]:
+        names = OBS_NAMES
+        assert len(names) == OBSERVATIONS_DIM, (
+            f"Expected {len(names)} observation names, got {OBSERVATIONS_DIM}"
+        )
+        return names
+
+    @cached_property
+    def action_names(self) -> list[str]:
+        names = JOINT_NAMES_ISAACGYM
+        assert len(names) == ACTIONS_DIM, (
+            f"Expected {len(names)} action names, got {ACTIONS_DIM}"
+        )
+        return names
+
+    # ###############
     # Simple Properties
     # ###############
     @cached_property
@@ -238,11 +318,17 @@ class RecordedData:
 
     @cached_property
     def observations_dim(self) -> int:
-        return self.observations_array.shape[-1]
+        assert self.observations_array.shape[-1] == OBSERVATIONS_DIM, (
+            f"Expected observations array to have shape (..., {OBSERVATIONS_DIM}), got {self.observations_array.shape}"
+        )
+        return OBSERVATIONS_DIM
 
     @cached_property
     def actions_dim(self) -> int:
-        return self.actions_array.shape[-1]
+        assert self.actions_array.shape[-1] == ACTIONS_DIM, (
+            f"Expected actions array to have shape (..., {ACTIONS_DIM}), got {self.actions_array.shape}"
+        )
+        return ACTIONS_DIM
 
     # ###############
     # Static methods
