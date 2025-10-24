@@ -3,7 +3,6 @@ from typing import Optional
 import numpy as np
 import torch
 from gym import spaces
-
 from human2sim2robot.sim_training.utils.cross_embodiment.rl_player_utils import (
     DummyEnv,
     read_cfg,

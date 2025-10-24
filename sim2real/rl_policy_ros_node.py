@@ -1,18 +1,23 @@
 #!/usr/bin/env python
 
 import copy
-import pytorch_kinematics as pk
 from pathlib import Path
 from typing import Literal, Optional, Tuple
 
 import numpy as np
+import pytorch_kinematics as pk
 import rospy
 import torch
 from geometry_msgs.msg import Pose
 from rl_player import RlPlayer
 from scipy.spatial.transform import Rotation as R
 from sensor_msgs.msg import JointState
-from isaacgymenvs.tasks.allegro_kuka.observation_action_utils import compute_observation, OBS_NAMES, compute_joint_pos_targets
+
+from isaacgymenvs.tasks.allegro_kuka.observation_action_utils import (
+    compute_joint_pos_targets,
+    compute_observation,
+)
+
 
 def assert_equals(a, b):
     assert a == b, f"a: {a}, b: {b}"
@@ -94,7 +99,7 @@ class RLPolicyNode:
         self.num_observations = 117  # Update this number based on actual dimensions
         self.num_actions = 23
 
-        #HACK
+        # HACK
         self.config_path = Path(__file__).parent / "config.yaml"
         self.checkpoint_path = Path(__file__).parent / "checkpoint.pt"
 
@@ -113,12 +118,16 @@ class RLPolicyNode:
 
         # Set up chain and palm_serial_chain
         asset_root = Path(__file__).parent / "../../../assets"
-        urdf_path = asset_root / "urdf/kuka_allegro_description/kuka_allegro_touch_sensor.urdf"
+        urdf_path = (
+            asset_root / "urdf/kuka_allegro_description/kuka_allegro_touch_sensor.urdf"
+        )
         assert urdf_path.exists(), f"URDF file {urdf_path} does not exist"
         self.chain = pk.build_chain_from_urdf(
             open(urdf_path).read(),
         ).to(device=self.device)
-        self.palm_serial_chain = pk.SerialChain(self.chain, "iiwa7_link_7").to(device=self.device)
+        self.palm_serial_chain = pk.SerialChain(self.chain, "iiwa7_link_7").to(
+            device=self.device
+        )
 
         # State: prev_targets
         self.prev_targets = None
@@ -176,7 +185,9 @@ class RLPolicyNode:
             q=torch.from_numpy(q).float().to(self.device),
             qd=torch.from_numpy(qd).float().to(self.device),
             object_pose=torch.from_numpy(object_position_R).float().to(self.device),
-            goal_object_pose=torch.from_numpy(goal_object_pos_R).float().to(self.device),
+            goal_object_pose=torch.from_numpy(goal_object_pos_R)
+            .float()
+            .to(self.device),
             object_scales=torch.from_numpy(self.object_scales).float().to(self.device),
             chain=self.chain,
             palm_serial_chain=self.palm_serial_chain,
@@ -234,7 +245,18 @@ class RLPolicyNode:
 
             if obs is not None:
                 if self.prev_targets is None:
-                    self.prev_targets = torch.from_numpy(np.concatenate([self.iiwa_joint_state_msg.position, self.allegro_joint_state_msg.position])).float().to(self.device)
+                    self.prev_targets = (
+                        torch.from_numpy(
+                            np.concatenate(
+                                [
+                                    self.iiwa_joint_state_msg.position,
+                                    self.allegro_joint_state_msg.position,
+                                ]
+                            )
+                        )
+                        .float()
+                        .to(self.device)
+                    )
 
                 assert_equals(obs.shape, (1, self.num_observations))
 
@@ -252,7 +274,7 @@ class RLPolicyNode:
                     prev_targets=self.prev_targets,
                     act_moving_average=0.1,
                     hand_dof_speed_scale=1.0,
-                    dt=1/60,
+                    dt=1 / 60,
                 )
                 assert_equals(joint_pos_targets.shape, (1, self.num_actions))
 
@@ -274,20 +296,19 @@ class RLPolicyNode:
                 )
             )
 
-
     @property
     def T_R_C(self) -> np.ndarray:
-        #HACK
+        # HACK
         return np.eye(4)
 
     @property
     def goal_T_R_C(self) -> np.ndarray:
-        #HACK
+        # HACK
         return np.eye(4)
 
     @property
     def object_scales(self) -> np.ndarray:
-        #HACK
+        # HACK
         return np.array([1.0, 1.0, 1.0])
 
 
