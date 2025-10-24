@@ -174,7 +174,7 @@ class SimRos:
 
 
 def main():
-    sim = Simulator(SimulatorConfig(enable_viewer=False, sim_dt=1.0 / 750))
+    sim = Simulator(SimulatorConfig(enable_viewer=False, sim_dt=1.0 / 500.0))
     sim_ros = SimRos(sim)
     sim_ros.run()
 

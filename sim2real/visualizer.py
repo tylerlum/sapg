@@ -15,21 +15,31 @@ from scipy.spatial.transform import Rotation as R
 from sensor_msgs.msg import JointState
 from termcolor import colored
 from viser.extras import ViserUrdf
+import time
 
 
-def get_ros_loop_rate_str(
-    start_time: rospy.Time,
-    before_sleep_time: rospy.Time,
-    after_sleep_time: rospy.Time,
-    node_name: Optional[str] = None,
-) -> str:
-    max_rate_dt = (before_sleep_time - start_time).to_sec()
-    max_rate_hz = 1 / max_rate_dt
-    actual_rate_dt = (after_sleep_time - start_time).to_sec()
-    actual_rate_hz = 1 / actual_rate_dt
-    loop_rate_str = f"Max rate: {np.round(max_rate_hz, 1)} Hz ({np.round(max_rate_dt * 1000, 1)} ms), Actual rate: {np.round(actual_rate_hz, 1)} Hz"
-    return f"{node_name} {loop_rate_str}" if node_name is not None else loop_rate_str
+def warn(message: str):
+    print(colored(message, "yellow"))
 
+
+def warn_every(message: str, n_seconds: float, key=None):
+    """
+    Print a warning message at most once every n_seconds per unique key.
+    Stores state inside the function itself (no globals).
+    """
+    if not hasattr(warn_every, "_last_times"):
+        warn_every._last_times = {}  # create on first call
+
+    key = key or message
+    last_times = warn_every._last_times
+    last_time = last_times.get(key, 0)
+
+    if time.time() - last_time > n_seconds:
+        warn(message)
+        last_times[key] = time.time()
+
+def info(message: str):
+    print(colored(message, "green"))
 
 NUM_ARM_JOINTS = 7
 NUM_HAND_JOINTS = 16
@@ -93,38 +103,38 @@ class RosSnapshot:
 
     def make_copy_with_defaults(self) -> RosSnapshot:
         if self.iiwa_joint_cmd is None:
-            print(colored("iiwa_joint_cmd is None", "yellow"))
+            warn_every("iiwa_joint_cmd is None", n_seconds=1.0)
             iiwa_joint_cmd = np.zeros(NUM_ARM_JOINTS)
         else:
             iiwa_joint_cmd = self.iiwa_joint_cmd
 
         if self.allegro_joint_cmd is None:
-            print(colored("allegro_joint_cmd is None", "yellow"))
+            warn_every("allegro_joint_cmd is None", n_seconds=1.0)
             allegro_joint_cmd = np.zeros(NUM_HAND_JOINTS)
         else:
             allegro_joint_cmd = self.allegro_joint_cmd
 
         if self.iiwa_joint_state is None:
-            print(colored("iiwa_joint_state is None", "yellow"))
+            warn_every("iiwa_joint_state is None", n_seconds=1.0)
             iiwa_joint_state = np.zeros(NUM_ARM_JOINTS)
         else:
             iiwa_joint_state = self.iiwa_joint_state
 
         if self.allegro_joint_state is None:
-            print(colored("allegro_joint_state is None", "yellow"))
+            warn_every("allegro_joint_state is None", n_seconds=1.0)
             allegro_joint_state = np.zeros(NUM_HAND_JOINTS)
         else:
             allegro_joint_state = self.allegro_joint_state
 
         if self.object_pose is None:
-            print(colored("object_pose is None", "yellow"))
+            warn_every("object_pose is None", n_seconds=1.0)
             object_pose = np.eye(4)
             object_pose[:3, 3] = np.zeros(3) + 100  # Far away
         else:
             object_pose = self.object_pose
 
         if self.goal_object_pose is None:
-            print(colored("goal_object_pose is None", "yellow"))
+            warn_every("goal_object_pose is None", n_seconds=1.0)
             goal_object_pose = np.eye(4)
             goal_object_pose[:3, 3] = np.zeros(3) + 100  # Far away
         else:
@@ -156,6 +166,7 @@ class ViserVisualizationNode:
 
         # Set update rate to 10Hz
         self.rate_hz = 10
+        self.dt = 1 / self.rate_hz
         self.rate = rospy.Rate(self.rate_hz)
 
     def initialize_ros_subscribers(self):
@@ -260,13 +271,13 @@ class ViserVisualizationNode:
                 "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/040_large_marker/040_large_marker/google_16k/textured_vhacd.obj"
             )
             object_mesh_path = str(DEFAULT_MESH_PATH)
-            print(colored(f"Using default object mesh: {object_mesh_path}", "yellow"))
+            warn(f"Using default object mesh: {object_mesh_path}")
         assert isinstance(object_mesh_path, str), (
             f"object_mesh_path: {object_mesh_path}"
         )
-        print("~" * 80)
-        print(f"object_mesh_path: {object_mesh_path}")
-        print("~" * 80 + "\n")
+        info("~" * 80)
+        info(f"object_mesh_path: {object_mesh_path}")
+        info("~" * 80 + "\n")
 
         goal_object_mesh_path = object_mesh_path
 
@@ -409,7 +420,7 @@ class ViserVisualizationNode:
 
     def run(self):
         """Main loop to run the node, update simulation, and publish joint states."""
-
+        loop_no_sleep_dts, loop_dts = [], []
         while not rospy.is_shutdown():
             start_time = rospy.Time.now()
 
@@ -420,14 +431,34 @@ class ViserVisualizationNode:
             before_sleep_time = rospy.Time.now()
             self.rate.sleep()
             after_sleep_time = rospy.Time.now()
-            print(
-                get_ros_loop_rate_str(
-                    start_time=start_time,
-                    before_sleep_time=before_sleep_time,
-                    after_sleep_time=after_sleep_time,
-                    node_name=rospy.get_name(),
-                )
-            )
+
+            loop_no_sleep_dt = (before_sleep_time - start_time).to_sec()
+            loop_no_sleep_dts.append(loop_no_sleep_dt)
+            loop_dt = (after_sleep_time - start_time).to_sec()
+            loop_dts.append(loop_dt)
+
+            PRINT_FPS_EVERY_N_SECONDS = 5.0
+            PRINT_FPS_EVERY_N_STEPS = int(PRINT_FPS_EVERY_N_SECONDS / self.dt)
+            if len(loop_dts) == PRINT_FPS_EVERY_N_STEPS:
+                loop_dt_array = np.array(loop_dts)
+                loop_no_sleep_dt_array = np.array(loop_no_sleep_dts)
+                fps_array = 1.0 / loop_dt_array
+                fps_no_sleep_array = 1.0 / loop_no_sleep_dt_array
+                print("FPS with sleep:")
+                print(f"  Mean: {np.mean(fps_array):.1f}")
+                print(f"  Median: {np.median(fps_array):.1f}")
+                print(f"  Max: {np.max(fps_array):.1f}")
+                print(f"  Min: {np.min(fps_array):.1f}")
+                print(f"  Std: {np.std(fps_array):.1f}")
+                print("FPS without sleep:")
+                print(f"  Mean: {np.mean(fps_no_sleep_array):.1f}")
+                print(f"  Median: {np.median(fps_no_sleep_array):.1f}")
+                print(f"  Max: {np.max(fps_no_sleep_array):.1f}")
+                print(f"  Min: {np.min(fps_no_sleep_array):.1f}")
+                print(f"  Std: {np.std(fps_no_sleep_array):.1f}")
+                print()
+                loop_no_sleep_dts, loop_dts = [], []
+
 
 
 def main():

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import time
-from typing import Literal, Optional
+from typing import Literal
 
 import numpy as np
 import rospy
@@ -20,15 +20,21 @@ def warn(message: str):
     print(colored(message, "yellow"))
 
 
-def warn_every(message: str, n_seconds: float):
-    first_time = not hasattr(warn_every, "last_warn_time")
-    enough_time_has_passed = (
-        hasattr(warn_every, "last_warn_time")
-        and time.time() - warn_every.last_warn_time > n_seconds
-    )
-    if first_time or enough_time_has_passed:
+def warn_every(message: str, n_seconds: float, key=None):
+    """
+    Print a warning message at most once every n_seconds per unique key.
+    Stores state inside the function itself (no globals).
+    """
+    if not hasattr(warn_every, "_last_times"):
+        warn_every._last_times = {}  # create on first call
+
+    key = key or message
+    last_times = warn_every._last_times
+    last_time = last_times.get(key, 0)
+
+    if time.time() - last_time > n_seconds:
         warn(message)
-        warn_every.last_warn_time = time.time()
+        last_times[key] = time.time()
 
 
 class FakeRobotNode:
