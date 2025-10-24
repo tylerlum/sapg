@@ -42,7 +42,7 @@ from isaacgym import gymapi, gymtorch, gymutil
 from torch import Tensor
 
 from isaacgymenvs.tasks.allegro_kuka.allegro_kuka_utils import DofParameters, populate_dof_properties
-from isaacgymenvs.tasks.allegro_kuka.observation_action_utils import compute_observation, OBS_NAMES, compute_joint_pos_targets
+from isaacgymenvs.utils.observation_action_utils import compute_observation, OBS_NAMES, compute_joint_pos_targets
 from isaacgymenvs.tasks.base.vec_task import VecTask
 from isaacgymenvs.tasks.allegro_kuka.generate_cuboids import (
     generate_big_cuboids,

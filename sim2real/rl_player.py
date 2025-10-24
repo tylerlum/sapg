@@ -1,12 +1,13 @@
 from typing import Optional
-
+import os
 import numpy as np
 import torch
 from gym import spaces
-from human2sim2robot.sim_training.utils.cross_embodiment.rl_player_utils import (
-    DummyEnv,
+from rl_player_utils import (
     read_cfg,
 )
+from rl_games.torch_runner import Runner, players
+
 
 
 def assert_equals(a, b):
@@ -33,31 +34,43 @@ class RlPlayer:
         self.action_space = spaces.Box(
             low=-1, high=1, shape=(num_actions,), dtype=np.float32
         )
+        self.num_envs = 1
+        self.set_env_state = lambda *args, **kwargs: None
 
         self.cfg = read_cfg(config_path=config_path, device=self.device)
-        self._run_sanity_checks()
+        # self._run_sanity_checks()
         self.player = self.create_rl_player(checkpoint_path=checkpoint_path)
 
-    def create_rl_player(self, checkpoint_path: Optional[str]) -> PpoPlayer:
-        train_params = self.cfg["train"]
-        network_config = dict_to_dataclass(train_params["network"], NetworkConfig)
-        player_config = dict_to_dataclass(train_params["player"], PlayerConfig)
-        ppo_player_config = dict_to_dataclass(
-            train_params["ppo"], PpoConfig
-        ).to_ppo_player_config()
+    def create_rl_player(
+        self, checkpoint_path: Optional[str]
+    ) -> players.PpoPlayerContinuous:
+        from rl_games.common import env_configurations
 
-        player = PpoPlayer(
-            ppo_player_config=ppo_player_config,
-            player_config=player_config,
-            network_config=network_config,
-            env=DummyEnv(
-                observation_space=self.observation_space, action_space=self.action_space
-            ),
+        env_configurations.register(
+            "rlgpu", {"env_creator": lambda **kwargs: self, "vecenv_type": "RLGPU"}
         )
+
+        config = self.cfg["train"]
+
+        # Do we need this?
+        if self.device == "cpu":
+            try:
+                config["params"]["config"]["player"]["device_name"] = "cpu"
+            except KeyError:
+                config["params"]["config"]["player"] = {"device_name": "cpu"}
+            config["params"]["config"]["device"] = "cpu"
+
+        if checkpoint_path is not None:
+            config["load_path"] = checkpoint_path
+        runner = Runner()
+        runner.load(config)
+
+        os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+        player = runner.create_player()
         player.init_rnn()
         player.has_batch_dimension = True
         if checkpoint_path is not None:
-            player.restore(str(checkpoint_path))
+            player.restore(checkpoint_path)
         return player
 
     def _run_sanity_checks(self) -> None:

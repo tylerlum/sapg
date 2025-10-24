@@ -13,7 +13,7 @@ from rl_player import RlPlayer
 from scipy.spatial.transform import Rotation as R
 from sensor_msgs.msg import JointState
 
-from isaacgymenvs.tasks.allegro_kuka.observation_action_utils import (
+from isaacgymenvs.utils.observation_action_utils import (
     compute_joint_pos_targets,
     compute_observation,
 )
@@ -100,8 +100,10 @@ class RLPolicyNode:
         self.num_actions = 23
 
         # HACK
-        self.config_path = Path(__file__).parent / "config.yaml"
-        self.checkpoint_path = Path(__file__).parent / "checkpoint.pt"
+        # self.config_path = Path(__file__).parent / "config.yaml"
+        self.config_path = Path("/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/test_24576envs_mixed_expl_learn_param_lf_1p_09_10_00h10m32s/runs/00_test_24576envs_mixed_expl_learn_param_lf_1p_09_10_00h10m32s/config.yaml")
+        # self.checkpoint_path = Path(__file__).parent / "checkpoint.pt"
+        self.checkpoint_path = Path("/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/test_24576envs_mixed_expl_learn_param_lf_1p_09_10_00h10m32s/runs/00_test_24576envs_mixed_expl_learn_param_lf_1p_09_10_00h10m32s/nn/00_test_24576envs_mixed_expl_learn_param_lf_1p_09_10_00h10m32s.pth")
 
         # Create the RL player
         self.player = RlPlayer(
@@ -117,7 +119,7 @@ class RLPolicyNode:
         self.rate = rospy.Rate(self.rate_hz)
 
         # Set up chain and palm_serial_chain
-        asset_root = Path(__file__).parent / "../../../assets"
+        asset_root = Path(__file__).parent / "../assets"
         urdf_path = (
             asset_root / "urdf/kuka_allegro_description/kuka_allegro_touch_sensor.urdf"
         )

@@ -3,7 +3,7 @@ from typing import Optional
 
 import yaml
 from gym import spaces
-from human2sim2robot.sim_training.utils.reformat import omegaconf_to_dict, print_dict
+from isaacgymenvs.utils.reformat import omegaconf_to_dict, print_dict
 from omegaconf import DictConfig, OmegaConf
 
 
