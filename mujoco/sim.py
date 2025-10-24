@@ -203,37 +203,47 @@ class Simulator:
         table_body = spec.worldbody.add_body()
         table_body.name = "table"
         table_body.pos = np.array([TABLE_POS_X, TABLE_POS_Y, TABLE_POS_Z])
+
         table_geom = table_body.add_geom()
         table_geom.name = "table_geom"
         table_geom.type = mujoco.mjtGeom.mjGEOM_BOX
         table_geom.size = np.array(
             [TABLE_LEN_X / 2, TABLE_LEN_Y / 2, TABLE_LEN_Z / 2]
         )  # Half extents
-        table_geom.pos = np.array([0.0, 0.0, 0.0])
         table_geom.rgba = WHITE_RGBA
         table_geom.friction = self.config.friction_array.copy()
 
-        # Object
+        # Box object
         GREY_RGBA = np.array([0.5, 0.5, 0.5, 1.0])
         OBJECT_POS_X, OBJECT_POS_Y, OBJECT_POS_Z = 0.0, -0.8, 0.38 + 0.3
-        mesh = spec.add_mesh()
-        mesh.name = "object_mesh"
-        # mesh.file = "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/044_flat_screwdriver/044_flat_screwdriver/google_16k/textured_vhacd.obj"
-        mesh.file = "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/040_large_marker/040_large_marker/google_16k/textured_vhacd.obj"
-        assert Path(mesh.file).exists(), f"Mesh file does not exist: {mesh.file}"
-        mesh.scale = np.array([1.0, 1.0, 1.0])
         object_body = spec.worldbody.add_body()
         object_body.name = "object"
         object_body.pos = np.array([OBJECT_POS_X, OBJECT_POS_Y, OBJECT_POS_Z])
-        object_geom = object_body.add_geom()
-        object_geom.name = "object_geom"
-        object_geom.type = mujoco.mjtGeom.mjGEOM_MESH
-        object_geom.meshname = mesh.name
-        object_geom.rgba = GREY_RGBA
-        object_geom.friction = self.config.friction_array.copy()
+
         object_free_joint = object_body.add_joint()
         object_free_joint.name = "object_free_joint"
         object_free_joint.type = mujoco.mjtJoint.mjJNT_FREE
+
+        object_geom = object_body.add_geom()
+        object_geom.name = "object_geom"
+        object_geom.rgba = GREY_RGBA
+        object_geom.friction = self.config.friction_array.copy()
+
+        ADD_BOX_OBJECT = False
+        if ADD_BOX_OBJECT:
+            BOX_LEN_X, BOX_LEN_Y, BOX_LEN_Z = 0.05, 0.05, 0.05
+            object_geom.type = mujoco.mjtGeom.mjGEOM_BOX
+            object_geom.size = np.array([BOX_LEN_X / 2, BOX_LEN_Y / 2, BOX_LEN_Z / 2])  # Half extents
+        else:
+            mesh = spec.add_mesh()
+            mesh.name = "object_mesh"
+            # mesh.file = "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/044_flat_screwdriver/044_flat_screwdriver/google_16k/textured_vhacd.obj"
+            mesh.file = "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/040_large_marker/040_large_marker/google_16k/textured_vhacd.obj"
+            assert Path(mesh.file).exists(), f"Mesh file does not exist: {mesh.file}"
+            mesh.scale = np.array([1.0, 1.0, 1.0])
+
+            object_geom.type = mujoco.mjtGeom.mjGEOM_MESH
+            object_geom.meshname = mesh.name
 
         self.mj_model = spec.compile()
         self.mj_data = mujoco.MjData(self.mj_model)
