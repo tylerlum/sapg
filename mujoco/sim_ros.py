@@ -1,16 +1,20 @@
-from sim import Simulator, SimulatorConfig, JOINT_NAMES, N_IIWA_JOINTS, N_ALLEGRO_JOINTS
 import time
+
 import numpy as np
 import rospy
-from sensor_msgs.msg import JointState
 from geometry_msgs.msg import Pose
+from sensor_msgs.msg import JointState
+from sim import JOINT_NAMES, N_IIWA_JOINTS, Simulator, SimulatorConfig
 from termcolor import colored
+
 
 def warn(message: str):
     print(colored(message, "yellow"))
 
+
 def info(message: str):
     print(colored(message, "green"))
+
 
 class SimRos:
     def __init__(self, sim: Simulator, update_and_publish_dt: float = 1.0 / 60):
@@ -25,11 +29,17 @@ class SimRos:
         self.latest_iiwa_joint_cmd = None
         self.latest_allegro_joint_cmd = None
 
-        self.iiwa_cmd_sub = rospy.Subscriber("/iiwa/joint_cmd", JointState, self._iiwa_joint_cmd_callback)
-        self.allegro_cmd_sub = rospy.Subscriber("/allegroHand_0/joint_cmd", JointState, self._allegro_joint_cmd_callback)
+        self.iiwa_cmd_sub = rospy.Subscriber(
+            "/iiwa/joint_cmd", JointState, self._iiwa_joint_cmd_callback
+        )
+        self.allegro_cmd_sub = rospy.Subscriber(
+            "/allegroHand_0/joint_cmd", JointState, self._allegro_joint_cmd_callback
+        )
 
         self.iiwa_pub = rospy.Publisher("/iiwa/joint_states", JointState, queue_size=10)
-        self.allegro_pub = rospy.Publisher("/allegroHand_0/joint_states", JointState, queue_size=10)
+        self.allegro_pub = rospy.Publisher(
+            "/allegroHand_0/joint_states", JointState, queue_size=10
+        )
         self.object_pose_pub = rospy.Publisher("/object_pose", Pose, queue_size=10)
 
     def _iiwa_joint_cmd_callback(self, msg: JointState):
@@ -39,8 +49,8 @@ class SimRos:
         self.latest_allegro_joint_cmd = np.array(msg.position)
 
     def _publish(self, sim_state: dict[str, np.ndarray]):
-        object_pos = sim_state['object_pos']
-        object_quat_wxyz = sim_state['object_quat_wxyz']
+        object_pos = sim_state["object_pos"]
+        object_quat_wxyz = sim_state["object_quat_wxyz"]
         object_pose_msg = Pose()
         object_pose_msg.position.x = object_pos[0]
         object_pose_msg.position.y = object_pos[1]
@@ -51,8 +61,8 @@ class SimRos:
         object_pose_msg.orientation.z = object_quat_wxyz[3]
         self.object_pose_pub.publish(object_pose_msg)
 
-        joint_positions = sim_state['joint_positions']
-        joint_velocities = sim_state['joint_velocities']
+        joint_positions = sim_state["joint_positions"]
+        joint_velocities = sim_state["joint_velocities"]
         joint_names = JOINT_NAMES
 
         iiwa_joint_msg = JointState(
@@ -83,15 +93,23 @@ class SimRos:
             start_loop_no_sleep_time = time.time()
 
             update_and_publish = False
-            if time.time() - self._last_update_and_publish_time > self._update_and_publish_dt:
+            if (
+                time.time() - self._last_update_and_publish_time
+                > self._update_and_publish_dt
+            ):
                 update_and_publish = True
                 self._last_update_and_publish_time = time.time()
 
-            if self.latest_iiwa_joint_cmd is None or self.latest_allegro_joint_cmd is None:
+            if (
+                self.latest_iiwa_joint_cmd is None
+                or self.latest_allegro_joint_cmd is None
+            ):
                 # Still run loop while waiting to start publishing sim state
                 # Print waiting message every 1000 loops
                 if len(loop_no_sleep_dts) % 1000 == 0:
-                    warn(f"Waiting: latest_iiwa_joint_cmd = {self.latest_iiwa_joint_cmd}, latest_allegro_joint_cmd = {self.latest_allegro_joint_cmd}")
+                    warn(
+                        f"Waiting: latest_iiwa_joint_cmd = {self.latest_iiwa_joint_cmd}, latest_allegro_joint_cmd = {self.latest_allegro_joint_cmd}"
+                    )
             elif update_and_publish:
                 if not first_commands_received:
                     info("=" * 100)
@@ -159,6 +177,7 @@ def main():
     sim = Simulator(SimulatorConfig(enable_viewer=False, sim_dt=1.0 / 750))
     sim_ros = SimRos(sim)
     sim_ros.run()
+
 
 if __name__ == "__main__":
     main()
