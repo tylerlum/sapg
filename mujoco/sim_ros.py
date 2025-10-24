@@ -4,6 +4,13 @@ import numpy as np
 import rospy
 from sensor_msgs.msg import JointState
 from geometry_msgs.msg import Pose
+from termcolor import colored
+
+def warn(message: str):
+    print(colored(message, "yellow"))
+
+def info(message: str):
+    print(colored(message, "green"))
 
 class SimRos:
     def __init__(self, sim: Simulator, update_and_publish_dt: float = 1.0 / 60):
@@ -84,12 +91,12 @@ class SimRos:
                 # Still run loop while waiting to start publishing sim state
                 # Print waiting message every 1000 loops
                 if len(loop_no_sleep_dts) % 1000 == 0:
-                    print(f"Waiting: latest_iiwa_joint_cmd = {self.latest_iiwa_joint_cmd}, latest_allegro_joint_cmd = {self.latest_allegro_joint_cmd}")
+                    warn(f"Waiting: latest_iiwa_joint_cmd = {self.latest_iiwa_joint_cmd}, latest_allegro_joint_cmd = {self.latest_allegro_joint_cmd}")
             elif update_and_publish:
                 if not first_commands_received:
-                    print("=" * 100)
-                    print("First commands received, starting to publish sim state")
-                    print("=" * 100)
+                    info("=" * 100)
+                    info("First commands received, starting to publish sim state")
+                    info("=" * 100)
                     first_commands_received = True
 
                 # Get latest joint commands
@@ -117,7 +124,7 @@ class SimRos:
                 loop_dt = loop_no_sleep_dt + sleep_dt
             else:
                 loop_dt = loop_no_sleep_dt
-                print(
+                warn(
                     f"Simulation is running slower than real time, desired FPS = {1.0 / self.sim.config.sim_dt:.1f}, actual FPS = {1.0 / loop_dt:.1f}"
                 )
             loop_dts.append(loop_dt)
