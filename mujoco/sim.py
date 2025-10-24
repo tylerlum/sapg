@@ -377,13 +377,13 @@ class Simulator:
                 loop_no_sleep_dt_array = np.array(loop_no_sleep_dts)
                 fps_array = 1.0 / loop_dt_array
                 fps_no_sleep_array = 1.0 / loop_no_sleep_dt_array
-                print(f"FPS with sleep:")
+                print("FPS with sleep:")
                 print(f"  Mean: {np.mean(fps_array):.1f}")
                 print(f"  Median: {np.median(fps_array):.1f}")
                 print(f"  Max: {np.max(fps_array):.1f}")
                 print(f"  Min: {np.min(fps_array):.1f}")
                 print(f"  Std: {np.std(fps_array):.1f}")
-                print(f"FPS without sleep:")
+                print("FPS without sleep:")
                 print(f"  Mean: {np.mean(fps_no_sleep_array):.1f}")
                 print(f"  Median: {np.median(fps_no_sleep_array):.1f}")
                 print(f"  Max: {np.max(fps_no_sleep_array):.1f}")

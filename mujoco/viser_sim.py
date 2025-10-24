@@ -1,21 +1,30 @@
-from sim import Simulator, SimulatorConfig
-import numpy as np
 import time
-import viser.transforms as vtf
 from collections import defaultdict
 from typing import Literal
-from viser_conversions import is_fixed_body, get_body_name, merge_geoms
-import mujoco
+
+import numpy as np
 import viser
+import viser.transforms as vtf
+from sim import Simulator, SimulatorConfig
+from viser_conversions import get_body_name, is_fixed_body, merge_geoms
+
+import mujoco
+
 
 class ViserSimulator:
     def __init__(self, server: viser.ViserServer, sim: Simulator):
         self.server = server
         self.sim = sim
-        self.visual_handles = self._create_mesh_handles(mesh_type="visual", visible=True)
-        self.collision_handles = self._create_mesh_handles(mesh_type="collision", visible=False)
+        self.visual_handles = self._create_mesh_handles(
+            mesh_type="visual", visible=True
+        )
+        self.collision_handles = self._create_mesh_handles(
+            mesh_type="collision", visible=False
+        )
 
-    def _create_mesh_handles(self, mesh_type: Literal["visual", "collision"], visible: bool) -> dict[int, viser.BatchedGlbHandle]:
+    def _create_mesh_handles(
+        self, mesh_type: Literal["visual", "collision"], visible: bool
+    ) -> dict[int, viser.BatchedGlbHandle]:
         return self._create_mesh_handles_static(
             server=self.server,
             mj_model=self.sim.mj_model,
@@ -38,10 +47,14 @@ class ViserSimulator:
 
         for i in range(mj_model.ngeom):
             body_id = mj_model.geom_bodyid[i]
-            is_collision = mj_model.geom_contype[i] != 0 or mj_model.geom_conaffinity[i] != 0
+            is_collision = (
+                mj_model.geom_contype[i] != 0 or mj_model.geom_conaffinity[i] != 0
+            )
 
             # Add geom to body's list if it matches the type we're looking for
-            if (mesh_type == "collision" and is_collision) or (mesh_type == "visual" and not is_collision):
+            if (mesh_type == "collision" and is_collision) or (
+                mesh_type == "visual" and not is_collision
+            ):
                 body_geoms[body_id].append(i)
 
         handles = {}
@@ -65,8 +78,12 @@ class ViserSimulator:
                 handle = server.scene.add_batched_meshes_trimesh(
                     f"/bodies/{body_name}/{mesh_type}",
                     mesh,
-                    batched_wxyzs=np.array([1.0, 0.0, 0.0, 0.0])[None].repeat(batch_size, axis=0),
-                    batched_positions=np.array([0.0, 0.0, 0.0])[None].repeat(batch_size, axis=0),
+                    batched_wxyzs=np.array([1.0, 0.0, 0.0, 0.0])[None].repeat(
+                        batch_size, axis=0
+                    ),
+                    batched_positions=np.array([0.0, 0.0, 0.0])[None].repeat(
+                        batch_size, axis=0
+                    ),
                     lod=((2.0, lod_ratio),) if lod_ratio < 0.5 else "off",
                     visible=visible,
                 )
@@ -79,7 +96,7 @@ class ViserSimulator:
     ) -> None:
         body_xpos = self.sim.mj_data.xpos
         body_xmat = self.sim.mj_data.xmat
-        body_xmat = body_xmat.reshape(body_xmat.shape[0],  3, 3)
+        body_xmat = body_xmat.reshape(body_xmat.shape[0], 3, 3)
         self._update_viser_static(
             server=self.server,
             visual_handles=self.visual_handles,
@@ -98,8 +115,12 @@ class ViserSimulator:
     ) -> None:
         batch_size, num_bodies = body_xpos.shape[:2]
         assert batch_size == 1, f"batch_size: {batch_size}, expected: 1 for now"
-        assert body_xpos.shape == (batch_size, num_bodies, 3), f"body_xpos.shape: {body_xpos.shape}, expected: ({batch_size}, {num_bodies}, 3)"
-        assert body_xmat.shape == (batch_size, num_bodies, 3, 3), f"body_xmat.shape: {body_xmat.shape}, expected: ({batch_size}, {num_bodies}, 3, 3)"
+        assert body_xpos.shape == (batch_size, num_bodies, 3), (
+            f"body_xpos.shape: {body_xpos.shape}, expected: ({batch_size}, {num_bodies}, 3)"
+        )
+        assert body_xmat.shape == (batch_size, num_bodies, 3, 3), (
+            f"body_xmat.shape: {body_xmat.shape}, expected: ({batch_size}, {num_bodies}, 3, 3)"
+        )
 
         with server.atomic():
             body_xquat = vtf.SO3.from_matrix(body_xmat).wxyz
@@ -164,13 +185,13 @@ class ViserSimulator:
                 loop_no_sleep_dt_array = np.array(loop_no_sleep_dts)
                 fps_array = 1.0 / loop_dt_array
                 fps_no_sleep_array = 1.0 / loop_no_sleep_dt_array
-                print(f"FPS with sleep:")
+                print("FPS with sleep:")
                 print(f"  Mean: {np.mean(fps_array):.1f}")
                 print(f"  Median: {np.median(fps_array):.1f}")
                 print(f"  Max: {np.max(fps_array):.1f}")
                 print(f"  Min: {np.min(fps_array):.1f}")
                 print(f"  Std: {np.std(fps_array):.1f}")
-                print(f"FPS without sleep:")
+                print("FPS without sleep:")
                 print(f"  Mean: {np.mean(fps_no_sleep_array):.1f}")
                 print(f"  Median: {np.median(fps_no_sleep_array):.1f}")
                 print(f"  Max: {np.max(fps_no_sleep_array):.1f}")
@@ -185,6 +206,7 @@ def main():
     server = viser.ViserServer()
     viser_sim = ViserSimulator(server, sim)
     viser_sim.run()
+
 
 if __name__ == "__main__":
     main()
