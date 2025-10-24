@@ -8,7 +8,8 @@ from geometry_msgs.msg import Pose
 class SimRos:
     def __init__(self, sim: Simulator, publish_dt: float = 1.0 / 60):
         self.sim = sim
-        self.publish_dt = publish_dt
+        self._publish_dt = publish_dt
+        self._last_publish_time = time.time()
         self._init_ros()
 
     def _init_ros(self):
@@ -86,14 +87,10 @@ class SimRos:
             self.sim.sim_step()
 
             # Get simulation state
-            sim_state_dict = self.sim.get_sim_state()
-            self._publish(sim_state_dict)
-
-            PRINT_SIM_STATE = False
-            if PRINT_SIM_STATE:
-                for key, value in sim_state_dict.items():
-                    print(f"{key}: {value}")
-                print()
+            if time.time() - self._last_publish_time > self._publish_dt:
+                sim_state_dict = self.sim.get_sim_state()
+                self._publish(sim_state_dict)
+                self._last_publish_time = time.time()
 
             # End of loop timekeeping
             end_loop_no_sleep_time = time.time()
