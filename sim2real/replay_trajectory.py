@@ -142,10 +142,7 @@ def move_to_pose(
 
 def main():
     file_path = Path(
-        # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-19_19-43-04.npz"
-        # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-19_19-42-41.npz"
-        # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-20_14-30-37.npz"
-        "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-20_14-32-39.npz"
+        "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-20_14-32-39_None_310.npz"
     )
     assert file_path.exists(), f"File {file_path} does not exist"
     recorded_data = RecordedData.from_file(file_path)
