@@ -51,10 +51,12 @@ class ViserMJModel:
         server: viser.ViserServer,
         mj_model: mujoco.MjModel,
         mj_data: mujoco.MjData,
+        root_node_name: str = "/",
     ):
         self.server = server
         self.mj_model = mj_model
         self.mj_data = mj_data
+        self.root_node_name = root_node_name
         self.visual_handles = self._create_mesh_handles(
             mesh_type="visual", visible=True
         )
@@ -85,6 +87,7 @@ class ViserMJModel:
             server=self.server,
             mj_model=self.mj_model,
             mesh_type=mesh_type,
+            root_node_name=self.root_node_name,
             visible=visible,
         )
 
@@ -94,6 +97,7 @@ class ViserMJModel:
         mj_model: mujoco.MjModel,
         mesh_type: Literal["visual", "collision"],
         visible: bool,
+        root_node_name: str = "/",
         batch_size: int = 1,
     ) -> dict[int, viser.BatchedGlbHandle]:
         assert batch_size == 1, f"batch_size: {batch_size}, expected: 1 for now"
@@ -131,8 +135,10 @@ class ViserMJModel:
                 lod_ratio = 1000.0 / mesh.vertices.shape[0]
 
                 # Create handle
+                if root_node_name.endswith("/"):
+                    root_node_name = root_node_name[:-1]
                 handle = server.scene.add_batched_meshes_trimesh(
-                    f"/bodies/{body_name}/{mesh_type}",
+                    f"{root_node_name}/{body_name}/{mesh_type}",
                     mesh,
                     batched_wxyzs=np.array([1.0, 0.0, 0.0, 0.0])[None].repeat(
                         batch_size, axis=0
@@ -322,6 +328,7 @@ def main():
         server=server,
         mj_model=mj_model,
         mj_data=mj_data,
+        root_node_name="/robot",
     )
 
     joint_names = viser_mj_model.joint_names
