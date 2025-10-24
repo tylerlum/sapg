@@ -202,7 +202,8 @@ def main():
             joint_positions_array[timestep],
             pub_iiwa=pub_iiwa,
             pub_allegro=pub_allegro,
-            move_time=0.2,
+            # move_time=0.2,
+            move_time=1 / 60,
         )
 
 
