@@ -1,5 +1,5 @@
-from recorded_data_scripts.plot_recorded_data_comparison import plot_values_at_one_time_index, plot_values_over_time, plot_comparison, visualize_fig
-from recorded_data_scripts.recorded_data import RecordedData, OBS_NAMES, JOINT_NAMES_ISAACGYM, ACTION_NAMES
+from recorded_data_scripts.plot_recorded_data_comparison import plot_comparison, visualize_fig
+from recorded_data_scripts.recorded_data import OBS_NAMES
 import numpy as np
 
 N_OBS = len(OBS_NAMES)
