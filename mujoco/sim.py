@@ -187,6 +187,11 @@ class Simulator:
         attachment_site = next(s for s in spec.sites if s.name == "attachment_site")
         attachment_site.attach_body(allegro_spec.worldbody, "palm", "")
 
+        # Enable gravity compensation for robot bodies
+        # https://mujoco.readthedocs.io/en/3.1.2/XMLreference.html#body-gravcomp
+        for body in spec.bodies:
+            body.gravcomp = 1.0
+
         # Table
         WHITE_RGBA = np.array([1.0, 1.0, 1.0, 1.0])
         TABLE_LEN_X, TABLE_LEN_Y, TABLE_LEN_Z = 0.475, 0.4, 0.3
