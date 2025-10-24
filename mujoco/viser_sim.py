@@ -47,9 +47,10 @@ class ViserSimulator:
         handles = {}
         with server.atomic():
             for body_id, geom_indices in body_geoms.items():
+                # Comment this out because it hides fixed geometry like the first link of robot arm
                 # Skip fixed world geometry
-                if is_fixed_body(mj_model, body_id):
-                    continue
+                # if is_fixed_body(mj_model, body_id):
+                #     continue
 
                 # Get body name
                 body_name = get_body_name(mj_model, body_id)
