@@ -68,6 +68,7 @@ OBS_NAME_TO_NAMES = {
     "reward_obs": ["reward_obs"],
 }
 OBS_NAMES = sum(OBS_NAME_TO_NAMES.values(), [])
+ACTION_NAMES = JOINT_NAMES_ISAACGYM
 
 
 @dataclass
@@ -277,17 +278,17 @@ class RecordedData:
     # ###############
     # Hardcoded Properties
     # ###############
-    @cached_property
-    def observation_names(self) -> list[str]:
+    @staticmethod
+    def observation_names() -> list[str]:
         names = OBS_NAMES
         assert len(names) == OBSERVATIONS_DIM, (
             f"Expected {len(names)} observation names, got {OBSERVATIONS_DIM}"
         )
         return names
 
-    @cached_property
-    def action_names(self) -> list[str]:
-        names = JOINT_NAMES_ISAACGYM
+    @staticmethod
+    def action_names() -> list[str]:
+        names = ACTION_NAMES
         assert len(names) == ACTIONS_DIM, (
             f"Expected {len(names)} action names, got {ACTIONS_DIM}"
         )
