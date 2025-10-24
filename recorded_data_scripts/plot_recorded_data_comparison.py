@@ -186,11 +186,15 @@ def plot_per_idx_comparison(
     n_names = len(names)
     length = len(next(iter(name_to_y.values())))
     for name, y in name_to_y.items():
-        assert y.shape == (length,), f"Expected y for {name} to have shape (length,), got {y.shape} for length {length}"
+        assert y.shape == (length,), (
+            f"Expected y for {name} to have shape (length,), got {y.shape} for length {length}"
+        )
 
     if y_names is None:
         y_names = [f"y_{i}" for i in range(n_names)]
-    assert len(y_names) == length, f"Expected y_names to have length {length}, got {len(y_names)}"
+    assert len(y_names) == length, (
+        f"Expected y_names to have length {length}, got {len(y_names)}"
+    )
 
     fig = go.Figure()
     offsets = np.linspace(-0.2, 0.2, n_names)
@@ -338,7 +342,6 @@ def plot_grid_of_values(
     figures_to_grid_html(
         figures, filename=f"values_over_time_{grid_name}.html", one_legend_per_fig=False
     )
-
 
 
 def plot_values_at_one_time_index(

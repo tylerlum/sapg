@@ -1,6 +1,7 @@
+import numpy as np
+
 from recorded_data_scripts.plot_recorded_data_comparison import plot_grid_of_values
 from recorded_data_scripts.recorded_data import ACTION_NAMES
-import numpy as np
 
 N_ACT = len(ACTION_NAMES)
 T = 100
@@ -17,4 +18,6 @@ ACTION_TITLE_TO_NAME_TO_X_Y = {
     for i, action_name in enumerate(ACTION_NAMES)
 }
 
-plot_grid_of_values(title_to_name_to_x_y=ACTION_TITLE_TO_NAME_TO_X_Y, grid_name="Actions")
+plot_grid_of_values(
+    title_to_name_to_x_y=ACTION_TITLE_TO_NAME_TO_X_Y, grid_name="Actions"
+)

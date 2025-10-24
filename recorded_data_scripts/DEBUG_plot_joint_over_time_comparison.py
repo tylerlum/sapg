@@ -1,6 +1,7 @@
+import numpy as np
+
 from recorded_data_scripts.plot_recorded_data_comparison import plot_grid_of_values
 from recorded_data_scripts.recorded_data import JOINT_NAMES_ISAACGYM
-import numpy as np
 
 N_JOINT = len(JOINT_NAMES_ISAACGYM)
 T = 100
@@ -19,4 +20,6 @@ JOINT_POS_TITLE_TO_NAME_TO_X_Y = {
     for i, joint_pos_name in enumerate(JOINT_NAMES_ISAACGYM)
 }
 
-plot_grid_of_values(title_to_name_to_x_y=JOINT_POS_TITLE_TO_NAME_TO_X_Y, grid_name="Joint_Positions")
+plot_grid_of_values(
+    title_to_name_to_x_y=JOINT_POS_TITLE_TO_NAME_TO_X_Y, grid_name="Joint_Positions"
+)

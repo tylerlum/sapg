@@ -17,12 +17,11 @@ Requires yourdfpy and robot_descriptions. Any URDF supported by yourdfpy should 
 
 from __future__ import annotations
 
-from pathlib import Path
 import time
+from pathlib import Path
 
 import numpy as np
 import tyro
-
 import viser
 from viser.extras import ViserUrdf
 
@@ -59,7 +58,9 @@ def create_robot_control_sliders(
 
 
 def main(
-    urdf_path: Path = Path("/home/tylerlum/github_repos/sapg/assets/urdf/kuka_allegro_description/allegro_touch_sensor.urdf"),
+    urdf_path: Path = Path(
+        "/home/tylerlum/github_repos/sapg/assets/urdf/kuka_allegro_description/allegro_touch_sensor.urdf"
+    ),
     load_meshes: bool = True,
     load_collision_meshes: bool = False,
 ) -> None:

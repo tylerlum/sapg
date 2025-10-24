@@ -1,7 +1,10 @@
-from recorded_data_scripts.recorded_data import RecordedData
 from pathlib import Path
 
-filepath = Path("/home/tylerlum/github_repos/sapg/recorded_data/2025-10-20_14-32-39.npz")
+from recorded_data_scripts.recorded_data import RecordedData
+
+filepath = Path(
+    "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-20_14-32-39.npz"
+)
 assert filepath.exists(), f"File {filepath} does not exist"
 recorded_data = RecordedData.from_file(filepath)
 

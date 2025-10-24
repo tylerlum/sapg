@@ -17,21 +17,22 @@ Requires yourdfpy and robot_descriptions. Any URDF supported by yourdfpy should 
 
 from __future__ import annotations
 
-from pathlib import Path
 import time
+from pathlib import Path
 from typing import Dict
 
 import numpy as np
 import tyro
-from scipy.spatial.transform import Rotation as R
-
 import viser
-from viser.extras import ViserUrdf
+from scipy.spatial.transform import Rotation as R
 from viser._scene_handles import FrameHandle
+from viser.extras import ViserUrdf
 
 
 def create_robot_control_sliders(
-    server: viser.ViserServer, viser_urdf: ViserUrdf, link_name_to_frame: Dict[str, FrameHandle]
+    server: viser.ViserServer,
+    viser_urdf: ViserUrdf,
+    link_name_to_frame: Dict[str, FrameHandle],
 ) -> tuple[list[viser.GuiInputHandle[float]], list[float]]:
     """Create slider for each joint of the robot. We also update robot model
     when slider moves."""
@@ -51,11 +52,11 @@ def create_robot_control_sliders(
             step=1e-3,
             initial_value=initial_pos,
         )
+
         def slider_on_update(_):
-            viser_urdf.update_cfg(
-                np.array([slider.value for slider in slider_handles])
-            )
+            viser_urdf.update_cfg(np.array([slider.value for slider in slider_handles]))
             update_frames(viser_urdf, link_name_to_frame)
+
         slider.on_update(  # When sliders move, we update the URDF configuration.
             slider_on_update
         )
@@ -78,7 +79,9 @@ def update_frames(viser_urdf: ViserUrdf, link_name_to_frame: Dict[str, FrameHand
 
 
 def main(
-    urdf_path: Path = Path("/home/tylerlum/github_repos/sapg/assets/urdf/kuka_allegro_description/allegro_touch_sensor.urdf"),
+    urdf_path: Path = Path(
+        "/home/tylerlum/github_repos/sapg/assets/urdf/kuka_allegro_description/allegro_touch_sensor.urdf"
+    ),
     load_meshes: bool = True,
     load_collision_meshes: bool = False,
 ) -> None:

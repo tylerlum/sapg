@@ -1,6 +1,7 @@
+import numpy as np
+
 from recorded_data_scripts.plot_recorded_data_comparison import plot_grid_of_values
 from recorded_data_scripts.recorded_data import OBS_NAMES
-import numpy as np
 
 N_OBS = len(OBS_NAMES)
 T = 100
@@ -17,4 +18,6 @@ OBS_TITLE_TO_NAME_TO_X_Y = {
     for i, obs_name in enumerate(OBS_NAMES)
 }
 
-plot_grid_of_values(title_to_name_to_x_y=OBS_TITLE_TO_NAME_TO_X_Y, grid_name="Observations")
+plot_grid_of_values(
+    title_to_name_to_x_y=OBS_TITLE_TO_NAME_TO_X_Y, grid_name="Observations"
+)
