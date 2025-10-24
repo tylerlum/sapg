@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import time
-
 from typing import Literal, Optional
 
 import numpy as np
@@ -20,28 +19,17 @@ DEFAULT_HAND_Q[12] = 0.3
 def warn(message: str):
     print(colored(message, "yellow"))
 
+
 def warn_every(message: str, n_seconds: float):
     first_time = not hasattr(warn_every, "last_warn_time")
-    enough_time_has_passed = hasattr(warn_every, "last_warn_time") and time.time() - warn_every.last_warn_time > n_seconds
+    enough_time_has_passed = (
+        hasattr(warn_every, "last_warn_time")
+        and time.time() - warn_every.last_warn_time > n_seconds
+    )
     if first_time or enough_time_has_passed:
         warn(message)
         warn_every.last_warn_time = time.time()
 
-def info(message: str):
-    print(colored(message, "green"))
-
-def get_ros_loop_rate_str(
-    start_time: rospy.Time,
-    before_sleep_time: rospy.Time,
-    after_sleep_time: rospy.Time,
-    node_name: Optional[str] = None,
-) -> str:
-    max_rate_dt = (before_sleep_time - start_time).to_sec()
-    max_rate_hz = 1 / max_rate_dt
-    actual_rate_dt = (after_sleep_time - start_time).to_sec()
-    actual_rate_hz = 1 / actual_rate_dt
-    loop_rate_str = f"Max rate: {np.round(max_rate_hz, 1)} Hz ({np.round(max_rate_dt * 1000, 1)} ms), Actual rate: {np.round(actual_rate_hz, 1)} Hz"
-    return f"{node_name} {loop_rate_str}" if node_name is not None else loop_rate_str
 
 class FakeRobotNode:
     def __init__(self):
@@ -97,10 +85,6 @@ class FakeRobotNode:
                 n_seconds=1.0,
             )
             return
-
-        print(
-            f"Updating PyBullet with iiwa joint commands: {self.iiwa_joint_cmd}, allegro joint commands: {self.allegro_joint_cmd}"
-        )
 
         delta_iiwa = self.iiwa_joint_cmd - self.iiwa_joint_q
         delta_allegro = self.allegro_joint_cmd - self.allegro_joint_q
@@ -177,9 +161,7 @@ class FakeRobotNode:
             loop_dts.append(loop_dt)
 
             PRINT_FPS_EVERY_N_SECONDS = 5.0
-            PRINT_FPS_EVERY_N_STEPS = int(
-                PRINT_FPS_EVERY_N_SECONDS / self.dt
-            )
+            PRINT_FPS_EVERY_N_STEPS = int(PRINT_FPS_EVERY_N_SECONDS / self.dt)
             if len(loop_dts) == PRINT_FPS_EVERY_N_STEPS:
                 loop_dt_array = np.array(loop_dts)
                 loop_no_sleep_dt_array = np.array(loop_no_sleep_dts)
