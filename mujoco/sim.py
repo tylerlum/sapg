@@ -323,7 +323,7 @@ class Simulator:
     # ############################################################
     # Getting body poses and simulation state
     # ############################################################
-    def continue_running(self) -> bool:
+    def _continue_running(self) -> bool:
         if self.config.enable_viewer:
             return self.viewer.is_running()
         else:
@@ -332,7 +332,7 @@ class Simulator:
     def run(self):
         loop_no_sleep_dts, loop_dts = [], []
 
-        while self.continue_running():
+        while self._continue_running():
             start_loop_no_sleep_time = time.time()
 
             # Step simulation

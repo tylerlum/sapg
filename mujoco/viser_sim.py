@@ -141,7 +141,7 @@ class ViserSimulator:
     def run(self):
         loop_no_sleep_dts, loop_dts = [], []
 
-        while self.sim.continue_running():
+        while self.sim._continue_running():
             start_loop_no_sleep_time = time.time()
 
             # Step simulation
