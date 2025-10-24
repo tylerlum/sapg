@@ -7,6 +7,10 @@ from sensor_msgs.msg import JointState
 from sim import JOINT_NAMES, N_IIWA_JOINTS, Simulator, SimulatorConfig
 from termcolor import colored
 
+# Goal object pose doesn't exist in the simulation
+# But we can just publish the goal object pose above the table
+PUBLISH_GOAL_OBJECT_POSE = True
+
 
 def warn(message: str):
     print(colored(message, "yellow"))
@@ -41,6 +45,8 @@ class SimRos:
             "/allegroHand_0/joint_states", JointState, queue_size=10
         )
         self.object_pose_pub = rospy.Publisher("/object_pose", Pose, queue_size=10)
+        if PUBLISH_GOAL_OBJECT_POSE:
+            self.goal_object_pose_pub = rospy.Publisher("/goal_object_pose", Pose, queue_size=10)
 
     def _iiwa_joint_cmd_callback(self, msg: JointState):
         self.latest_iiwa_joint_cmd = np.array(msg.position)
@@ -60,6 +66,19 @@ class SimRos:
         object_pose_msg.orientation.y = object_quat_wxyz[2]
         object_pose_msg.orientation.z = object_quat_wxyz[3]
         self.object_pose_pub.publish(object_pose_msg)
+
+        if PUBLISH_GOAL_OBJECT_POSE:
+            goal_object_pos = sim_state["table_pos"]
+            goal_object_quat_wxyz = sim_state["table_quat_wxyz"]
+            goal_object_pose_msg = Pose()
+            goal_object_pose_msg.position.x = goal_object_pos[0]
+            goal_object_pose_msg.position.y = goal_object_pos[1]
+            goal_object_pose_msg.position.z = goal_object_pos[2] + 0.5  # Above the table
+            goal_object_pose_msg.orientation.w = goal_object_quat_wxyz[0]
+            goal_object_pose_msg.orientation.x = goal_object_quat_wxyz[1]
+            goal_object_pose_msg.orientation.y = goal_object_quat_wxyz[2]
+            goal_object_pose_msg.orientation.z = goal_object_quat_wxyz[3]
+            self.goal_object_pose_pub.publish(goal_object_pose_msg)
 
         joint_positions = sim_state["joint_positions"]
         joint_velocities = sim_state["joint_velocities"]
