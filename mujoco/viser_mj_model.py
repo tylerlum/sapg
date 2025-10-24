@@ -1,3 +1,4 @@
+from __future__ import annotations
 import time
 from collections import defaultdict
 from pathlib import Path
@@ -10,6 +11,36 @@ from viser_conversions import get_body_name, is_fixed_body, merge_geoms
 
 import mujoco
 
+
+def create_robot_control_sliders(
+    server: viser.ViserServer, viser_mj_model: ViserMJModel
+) -> tuple[list[viser.GuiInputHandle[float]], list[float]]:
+    """Create slider for each joint of the robot. We also update robot model
+    when slider moves."""
+    slider_handles: list[viser.GuiInputHandle[float]] = []
+    initial_config: list[float] = []
+    for joint_name, (
+        lower,
+        upper,
+    ) in viser_mj_model.joint_limits.items():
+        lower = lower if lower is not None else -np.pi
+        upper = upper if upper is not None else np.pi
+        initial_pos = 0.0 if lower < -0.1 and upper > 0.1 else (lower + upper) / 2.0
+        slider = server.gui.add_slider(
+            label=joint_name,
+            min=lower,
+            max=upper,
+            step=1e-3,
+            initial_value=initial_pos,
+        )
+        slider.on_update(  # When sliders move, we update the URDF configuration.
+            lambda _: viser_mj_model.update_cfg(
+                q_dict={name: slider.value for name, slider in zip(viser_mj_model.joint_names, slider_handles)},
+            )
+        )
+        slider_handles.append(slider)
+        initial_config.append(initial_pos)
+    return slider_handles, initial_config
 
 class ViserMJModel:
     # ############################################################
@@ -254,6 +285,30 @@ class ViserMJModel:
             for name, joint_id in zip(self.joint_names, self.joint_ids)
         }
 
+    @property
+    def show_visual(self) -> bool:
+        """Returns whether the visual meshes are currently visible."""
+        return all(handle.visible for handle in self.visual_handles.values())
+
+    @show_visual.setter
+    def show_visual(self, visible: bool) -> None:
+        """Set whether the visual meshes are currently visible."""
+        for handle in self.visual_handles.values():
+            handle.visible = visible
+        self._update_viser()
+
+    @property
+    def show_collision(self) -> bool:
+        """Returns whether the collision meshes are currently visible."""
+        return all(handle.visible for handle in self.collision_handles.values())
+
+    @show_collision.setter
+    def show_collision(self, visible: bool) -> None:
+        """Set whether the collision meshes are currently visible."""
+        for handle in self.collision_handles.values():
+            handle.visible = visible
+        self._update_viser()
+
 
 def main():
     iiwa_xml_path = Path(
@@ -272,9 +327,56 @@ def main():
     joint_names = viser_mj_model.joint_names
     body_names = viser_mj_model.body_names
 
-    viser_mj_model.update_cfg(q_dict={
-        name: 0.0 for name in joint_names
-    })
+    # Create sliders in GUI that help us move the robot joints.
+    with server.gui.add_folder("Joint position control"):
+        (slider_handles, initial_config) = create_robot_control_sliders(
+            server, viser_mj_model
+        )
+
+    # Add visibility checkboxes.
+    with server.gui.add_folder("Visibility"):
+        show_meshes_cb = server.gui.add_checkbox(
+            "Show meshes",
+            viser_mj_model.show_visual,
+        )
+        show_collision_meshes_cb = server.gui.add_checkbox(
+            "Show collision meshes", viser_mj_model.show_collision
+        )
+
+    @show_meshes_cb.on_update
+    def _(_):
+        viser_mj_model.show_visual = show_meshes_cb.value
+
+    @show_collision_meshes_cb.on_update
+    def _(_):
+        viser_mj_model.show_collision = show_collision_meshes_cb.value
+
+    # Hide checkboxes if meshes are not loaded.
+    show_meshes_cb.visible = len(viser_mj_model.visual_handles) > 0
+    show_collision_meshes_cb.visible = len(viser_mj_model.collision_handles) > 0
+
+    # Set initial robot configuration.
+    viser_mj_model.update_cfg(q_dict={joint_names[i]: initial_config[i] for i in range(len(joint_names))})
+
+    # Create grid.
+    server.scene.add_grid(
+        "/grid",
+        width=2,
+        height=2,
+        position=(
+            0.0,
+            0.0,
+            0.0,
+        ),
+    )
+
+    # Create joint reset button.
+    reset_button = server.gui.add_button("Reset")
+
+    @reset_button.on_click
+    def _(_):
+        for s, init_q in zip(slider_handles, initial_config):
+            s.value = init_q
 
     # Sleep forever.
     while True:
