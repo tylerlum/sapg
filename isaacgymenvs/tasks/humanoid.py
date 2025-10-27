@@ -28,10 +28,10 @@
 
 import numpy as np
 import os
-import torch
 
 from isaacgym import gymtorch
 from isaacgym import gymapi
+import torch  # isort:skip
 from isaacgymenvs.utils.torch_jit_utils import scale, unscale, quat_mul, quat_conjugate, quat_from_angle_axis, \
     to_torch, get_axis_params, torch_rand_float, tensor_clamp, compute_heading_and_up, compute_rot, normalize_angle
 

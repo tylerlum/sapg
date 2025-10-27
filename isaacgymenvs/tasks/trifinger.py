@@ -28,10 +28,10 @@
 
 import numpy as np
 import os
-import torch
 
 from isaacgym import gymtorch
 from isaacgym import gymapi
+import torch  # isort:skip
 from isaacgymenvs.utils.torch_jit_utils import quat_mul 
 from collections import OrderedDict
 

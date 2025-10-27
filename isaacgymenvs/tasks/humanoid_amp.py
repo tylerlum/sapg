@@ -28,13 +28,13 @@
 
 from enum import Enum
 import numpy as np
-import torch
 import os
 
 from gym import spaces
 
 from isaacgym import gymapi
 from isaacgym import gymtorch
+import torch  # isort:skip
 
 from isaacgymenvs.tasks.amp.humanoid_amp_base import HumanoidAMPBase, dof_to_obs
 from isaacgymenvs.tasks.amp.utils_amp import gym_util

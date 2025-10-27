@@ -29,10 +29,10 @@
 import math
 import numpy as np
 import os
-import torch
 import xml.etree.ElementTree as ET
 
 from isaacgym import gymutil, gymtorch, gymapi
+import torch  # isort:skip
 from isaacgymenvs.utils.torch_jit_utils import *
 from .base.vec_task import VecTask
 

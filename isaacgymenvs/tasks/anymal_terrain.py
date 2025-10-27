@@ -33,7 +33,7 @@ from isaacgym import gymtorch
 from isaacgym import gymapi
 from .base.vec_task import VecTask
 
-import torch
+import torch  # isort:skip
 from typing import Tuple, Dict
 
 from isaacgymenvs.utils.torch_jit_utils import to_torch, get_axis_params, torch_rand_float, normalize, quat_apply, quat_rotate_inverse
