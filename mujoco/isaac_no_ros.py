@@ -33,6 +33,9 @@ class IsaacNoRos:
         obs, reward, done, info = self.sim.step(action)
         return obs["obs"], reward, done, info
 
+    def reset(self) -> torch.Tensor:
+        obs, reward, done, info = self.sim.step(torch.zeros((1, 23), device=self.device))
+        return obs["obs"]
 
 def main():
     control_dt = 1.0 / 60.0
@@ -75,7 +78,7 @@ def main():
     # )
 
     sim_no_ros = IsaacNoRos(sim=sim, control_dt=control_dt, device=device)
-    observation, _, _, _ = sim_no_ros.step(torch.zeros((1, 23), device=device))
+    observation = sim_no_ros.reset()
 
     while True:
         start_time = time.time()

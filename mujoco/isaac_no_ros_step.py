@@ -50,6 +50,10 @@ class IsaacNoRos:
         return new_obs, reward, done, info
         # return obs["obs"], reward, done, info
 
+    def reset(self) -> torch.Tensor:
+        obs, reward, done, info = self.sim.step(torch.zeros((1, 23), device=self.device))
+        return obs["obs"]
+
     def step_with_joint_pos_targets(self, action: torch.Tensor) -> Tuple[torch.Tensor, float, bool, dict]:
         # breakpoint()
         # print(f"self.sim.prev_targets: {self.sim.prev_targets}")
@@ -120,14 +124,14 @@ def main():
     )
 
     sim_no_ros = IsaacNoRos(sim=sim, control_dt=control_dt, device=device, chain=chain, palm_serial_chain=palm_serial_chain)
-    observation, _, _, _ = sim_no_ros.step(torch.zeros((1, 23), device=device))
+    observation = sim_no_ros.reset()
 
     while True:
         start_time = time.time()
-        action = policy.get_normalized_action(observation)
+        action = policy.get_normalized_action(observation, deterministic_actions=True)
         observation, _, done, _ = sim_no_ros.step_with_joint_pos_targets(action)
         if done.item():
-            observation, _, _, _ = sim_no_ros.step(torch.zeros((1, 23), device=device))
+            observation = sim_no_ros.reset()
         end_time = time.time()
         sleep_time = control_dt - (end_time - start_time)
         if sleep_time > 0:
