@@ -35,21 +35,30 @@ class IsaacNoRos:
 
 
 def main():
-    sim_dt = 1.0 / 60.0
     control_dt = 1.0 / 60.0
-    CONFIG_PATH = Path("/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-10-20_slow-action-obs-randomize-all/00_slowarmhand_slowobs_hammer_2025-10-21_02-39-06/runs/00_slowarmhand_slowobs_hammer_2025-10-21_02-39-06/config.yaml")
+    CONFIG_PATH = Path("/home/tylerlum/github_repos/sapg/closed_loop_testing/config.yaml")
     assert Path(CONFIG_PATH).exists()
+    CHECKPOINT_PATH = Path("/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-10-22_slow-action-obs-randomize-all_slower-curriculum/00_slowarmhand_slowobs_hammer_2025-10-23_00-48-56/runs/00_slowarmhand_slowobs_hammer_2025-10-23_00-48-56/last/model.pth")
+    assert CHECKPOINT_PATH.exists()
+
     device = "cuda" if torch.cuda.is_available() else "cpu"
     sim = create_env(
         config_path=str(CONFIG_PATH),
         headless=False,
         device=device,
     )
+
+    # Set env state from checkpoint to match things like success_tolerance
+    checkpoint = torch.load(CHECKPOINT_PATH)
+    env_state = checkpoint[0]["env_state"]
+    sim.set_env_state(env_state)
+    # print(f"sim.success_tolerance: {sim.success_tolerance}")
+
     policy = RlPlayer(
         num_observations=117,
         num_actions=23,
-        config_path=Path("/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-10-17_slow-action_randomize_turn-off-obs/00_slow-arm-hand-slowly_marker_2025-10-18_14-37-58/runs/00_slow-arm-hand-slowly_marker_2025-10-18_14-37-58/config.yaml"),
-        checkpoint_path=Path("/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-10-17_slow-action_randomize_turn-off-obs/00_slow-arm-hand-slowly_marker_2025-10-18_14-37-58/runs/00_slow-arm-hand-slowly_marker_2025-10-18_14-37-58/last/model.pth"),
+        config_path=CONFIG_PATH,
+        checkpoint_path=CHECKPOINT_PATH,
         device="cuda",
     )
 
@@ -70,7 +79,7 @@ def main():
 
     while True:
         start_time = time.time()
-        action = policy.get_normalized_action(observation)
+        action = policy.get_normalized_action(observation, deterministic_actions=True)  # Careful about deterministic_actions=True here!
         observation, _, _, _ = sim_no_ros.step(action)
         end_time = time.time()
         sleep_time = control_dt - (end_time - start_time)

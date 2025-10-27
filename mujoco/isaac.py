@@ -127,7 +127,7 @@ def recursive_diff(cfg1: dict, cfg2: dict, path: str = "") -> dict:
 
 def main() -> None:
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    CONFIG_PATH = Path("/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-10-20_slow-action-obs-randomize-all/00_slowarmhand_slowobs_hammer_2025-10-21_02-39-06/runs/00_slowarmhand_slowobs_hammer_2025-10-21_02-39-06/config.yaml")
+    CONFIG_PATH = Path("/home/tylerlum/github_repos/sapg/closed_loop_testing/config.yaml")
     assert Path(CONFIG_PATH).exists()
 
     env = create_env(

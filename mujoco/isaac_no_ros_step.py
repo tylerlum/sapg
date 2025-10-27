@@ -30,12 +30,33 @@ class IsaacNoRos:
         self.device = device
         self.chain = chain
         self.palm_serial_chain = palm_serial_chain
-        self.prev_targets = self.sim.prev_targets.clone()
+        # self.prev_targets = self.sim.prev_targets.clone()
 
     def step(self, action: torch.Tensor) -> Tuple[torch.Tensor, float, bool, dict]:
+        obs, reward, done, info = self.sim.step(action)
+        new_obs = compute_observation(
+            q=self.sim.arm_hand_dof_pos,
+            qd=self.sim.arm_hand_dof_vel,
+            object_pose=self.sim.object_pose,
+            goal_object_pose=self.sim.goal_pose,
+            object_scales=self.sim.object_scales,
+            chain=self.chain,
+            palm_serial_chain=self.palm_serial_chain,
+        )
+        # self.prev_targets = joint_pos_targets.clone()
+        diff = new_obs - obs["obs"]
+        max_diff = diff.abs().max()
+        print(f"in step, max_diff: {max_diff}")
+        return new_obs, reward, done, info
+        # return obs["obs"], reward, done, info
+
+    def step_with_joint_pos_targets(self, action: torch.Tensor) -> Tuple[torch.Tensor, float, bool, dict]:
+        # breakpoint()
+        # print(f"self.sim.prev_targets: {self.sim.prev_targets}")
+        # print(f"self.sim.arm_hand_dof_pos: {self.sim.arm_hand_dof_pos}")
         joint_pos_targets = compute_joint_pos_targets(
             actions=action,
-            prev_targets=self.prev_targets,
+            prev_targets=self.sim.prev_targets,
             act_moving_average=0.1,
             hand_dof_speed_scale=1.0,
             dt=1 / 60,
@@ -51,7 +72,7 @@ class IsaacNoRos:
             chain=self.chain,
             palm_serial_chain=self.palm_serial_chain,
         )
-        self.prev_targets = joint_pos_targets.clone()
+        # self.prev_targets = joint_pos_targets.clone()
         diff = new_obs - obs["obs"]
         max_diff = diff.abs().max()
         print(f"max_diff: {max_diff}")
@@ -59,21 +80,30 @@ class IsaacNoRos:
 
 
 def main():
-    sim_dt = 1.0 / 60.0
     control_dt = 1.0 / 60.0
-    CONFIG_PATH = Path("/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-10-20_slow-action-obs-randomize-all/00_slowarmhand_slowobs_hammer_2025-10-21_02-39-06/runs/00_slowarmhand_slowobs_hammer_2025-10-21_02-39-06/config.yaml")
+    CONFIG_PATH = Path("/home/tylerlum/github_repos/sapg/closed_loop_testing/config.yaml")
     assert Path(CONFIG_PATH).exists()
+    CHECKPOINT_PATH = Path("/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-10-22_slow-action-obs-randomize-all_slower-curriculum/00_slowarmhand_slowobs_hammer_2025-10-23_00-48-56/runs/00_slowarmhand_slowobs_hammer_2025-10-23_00-48-56/last/model.pth")
+    assert CHECKPOINT_PATH.exists()
+
     device = "cuda" if torch.cuda.is_available() else "cpu"
     sim = create_env(
         config_path=str(CONFIG_PATH),
         headless=False,
         device=device,
     )
+
+    # Set env state from checkpoint to match things like success_tolerance
+    checkpoint = torch.load(CHECKPOINT_PATH)
+    env_state = checkpoint[0]["env_state"]
+    sim.set_env_state(env_state)
+    # print(f"sim.success_tolerance: {sim.success_tolerance}")
+
     policy = RlPlayer(
         num_observations=117,
         num_actions=23,
-        config_path=Path("/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-10-17_slow-action_randomize_turn-off-obs/00_slow-arm-hand-slowly_marker_2025-10-18_14-37-58/runs/00_slow-arm-hand-slowly_marker_2025-10-18_14-37-58/config.yaml"),
-        checkpoint_path=Path("/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-10-17_slow-action_randomize_turn-off-obs/00_slow-arm-hand-slowly_marker_2025-10-18_14-37-58/runs/00_slow-arm-hand-slowly_marker_2025-10-18_14-37-58/last/model.pth"),
+        config_path=CONFIG_PATH,
+        checkpoint_path=CHECKPOINT_PATH,
         device="cuda",
     )
 
@@ -95,7 +125,9 @@ def main():
     while True:
         start_time = time.time()
         action = policy.get_normalized_action(observation)
-        observation, _, _, _ = sim_no_ros.step(action)
+        observation, _, done, _ = sim_no_ros.step_with_joint_pos_targets(action)
+        if done.item():
+            observation, _, _, _ = sim_no_ros.step(torch.zeros((1, 23), device=device))
         end_time = time.time()
         sleep_time = control_dt - (end_time - start_time)
         if sleep_time > 0:
