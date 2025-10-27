@@ -21,6 +21,7 @@ CURRENT_JOINT_POS_ALLEGRO = None
 HOME_JOINT_POS_IIWA = np.array([-1.571, 1.571, -0.000, 1.376, -0.000, 1.485, 2.358])
 HOME_JOINT_POS_ALLEGRO = np.zeros(16)
 HOME_JOINT_POS_ALLEGRO[12] = 0.3
+HOME_JOINT_POS = np.concatenate([HOME_JOINT_POS_IIWA, HOME_JOINT_POS_ALLEGRO])
 
 
 def current_joint_pos_iiwa_callback(msg: JointState) -> None:
@@ -146,7 +147,8 @@ def move_to_pose(
 
 def main():
     file_path = Path(
-        "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-20_14-32-39_None_310.npz"
+        # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-20_14-32-39_None_310.npz"
+        "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-24_17-37-29.npz"
     )
     assert file_path.exists(), f"File {file_path} does not exist"
     recorded_data = RecordedData.from_file(file_path)
@@ -189,22 +191,35 @@ def main():
 
     print("Moving to initial pose")
     move_to_pose(
-        joint_positions_array[0],
+        HOME_JOINT_POS,
         pub_iiwa=pub_iiwa,
         pub_allegro=pub_allegro,
         move_time=10.0,
     )
-    print("Reached initial pose")
-    print("Replaying trajectory")
-    for timestep in range(len(joint_positions_array)):
-        print(f"Replaying timestep: {timestep}")
-        move_to_pose(
-            joint_positions_array[timestep],
-            pub_iiwa=pub_iiwa,
-            pub_allegro=pub_allegro,
-            # move_time=0.2,
-            move_time=1 / 60,
-        )
+
+    # move_to_pose(
+    #     joint_positions_array[0],
+    #     pub_iiwa=pub_iiwa,
+    #     pub_allegro=pub_allegro,
+    #     move_time=10.0,
+    # )
+    # print("Reached initial pose")
+    # print("Replaying trajectory")
+    # start_time = time.time()
+    # for timestep in range(len(joint_positions_array)):
+    #     print(f"Replaying timestep: {timestep}")
+    #     move_to_pose(
+    #         joint_positions_array[timestep],
+    #         pub_iiwa=pub_iiwa,
+    #         pub_allegro=pub_allegro,
+    #         # move_time=0.2,
+    #         # move_time=0.1,
+    #         move_time=1 / 20,
+    #         # move_time=1 / 30,
+    #         # move_time=1 / 60,
+    #     )
+    # end_time = time.time()
+    # print(f"Time taken: {end_time - start_time:.2f} seconds")
 
 
 if __name__ == "__main__":
