@@ -135,7 +135,7 @@ def main() -> None:
 
     batch_size = 1
     obs = torch.zeros(batch_size, NUM_OBSERVATIONS).to(device)
-    normalized_action = player.get_normalized_action(obs=obs)
+    normalized_action = player.get_normalized_action(obs=obs, deterministic_actions=True)  # Careful about deterministic_actions=True here!
     print(f"Using player with config: {CONFIG_PATH} and checkpoint: {CHECKPOINT_PATH}")
     print(f"And num_observations: {NUM_OBSERVATIONS} and num_actions: {NUM_ACTIONS}")
     print(f"Sampled obs: {obs} with shape: {obs.shape}")
