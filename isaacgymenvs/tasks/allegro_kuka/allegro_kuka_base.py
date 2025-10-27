@@ -1237,7 +1237,10 @@ class AllegroKukaBase(VecTask):
             self.gym.find_asset_rigid_body_index(allegro_kuka_asset, name) for name in self.allegro_fingertips
         ]
 
-        self.allegro_palm_handle = self.gym.find_asset_rigid_body_index(allegro_kuka_asset, "iiwa7_link_7")
+        self.allegro_palm_handle = self.gym.find_asset_rigid_body_index(allegro_kuka_asset, "iiwa14_link_7")
+        if self.allegro_palm_handle == -1:
+            self.allegro_palm_handle = self.gym.find_asset_rigid_body_index(allegro_kuka_asset, "iiwa7_link_7")
+        assert self.allegro_palm_handle != -1, f"Allegro palm handle not found in asset {allegro_kuka_asset}"
 
         # this rely on the fact that objects are added right after the arms in terms of create_actor()
         self.object_rb_handles = list(range(self.num_hand_arm_bodies, self.num_hand_arm_bodies + object_rb_count))
@@ -2154,7 +2157,27 @@ class AllegroKukaBase(VecTask):
         self.set_actor_root_state_tensor_indexed()
 
         if self.use_relative_control:
-            raise NotImplementedError("Use relative control False for now")
+            # hand
+            self.cur_targets[:, 7 : self.num_hand_arm_dofs] = scale(
+                actions[:, 7 : self.num_hand_arm_dofs],
+                self.arm_hand_dof_lower_limits[7 : self.num_hand_arm_dofs],
+                self.arm_hand_dof_upper_limits[7 : self.num_hand_arm_dofs],
+            )
+            self.cur_targets[:, 7 : self.num_hand_arm_dofs] = (
+                self.act_moving_average * self.cur_targets[:, 7 : self.num_hand_arm_dofs]
+                + (1.0 - self.act_moving_average) * self.prev_targets[:, 7 : self.num_hand_arm_dofs]
+            )
+            self.cur_targets[:, 7 : self.num_hand_arm_dofs] = tensor_clamp(
+                self.cur_targets[:, 7 : self.num_hand_arm_dofs],
+                self.arm_hand_dof_lower_limits[7 : self.num_hand_arm_dofs],
+                self.arm_hand_dof_upper_limits[7 : self.num_hand_arm_dofs],
+            )
+
+            # arm
+            targets = self.arm_hand_dof_pos[:, :7] + self.hand_dof_speed_scale * self.dt * self.actions[:, :7]
+            self.cur_targets[:, :7] = tensor_clamp(
+                targets, self.arm_hand_dof_lower_limits[:7], self.arm_hand_dof_upper_limits[:7]
+            )
         else:
             # target position control for the hand DOFs
 
