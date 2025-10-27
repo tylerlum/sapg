@@ -11,7 +11,7 @@ import numpy as np
 import rospy
 import trimesh
 import viser
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import Pose, PoseStamped
 from scipy.spatial.transform import Rotation as R
 from sensor_msgs.msg import JointState
 from termcolor import colored
@@ -185,7 +185,7 @@ class ViserVisualizationNode:
             "/allegroHand_0/joint_cmd", JointState, self.allegro_joint_cmd_callback
         )
         self.object_pose_sub = rospy.Subscriber(
-            "/object_pose", Pose, self.object_pose_callback
+            "/robot_frame/current_object_pose", PoseStamped, self.object_pose_callback
         )
         self.goal_object_pose_sub = rospy.Subscriber(
             "/goal_object_pose", Pose, self.goal_object_pose_callback
@@ -270,7 +270,8 @@ class ViserVisualizationNode:
         object_mesh_path = rospy.get_param("/mesh_file", None)
         if object_mesh_path is None:
             DEFAULT_MESH_PATH = Path(
-                "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/040_large_marker/040_large_marker/google_16k/textured_vhacd.obj"
+                # "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/040_large_marker/040_large_marker/google_16k/textured_vhacd.obj"
+                "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/hammer_1/hammer_1.obj"
             )
             object_mesh_path = str(DEFAULT_MESH_PATH)
             warn(f"Using default object mesh: {object_mesh_path}")
@@ -335,8 +336,9 @@ class ViserVisualizationNode:
         """Callback to update the current joint positions."""
         self.ros_snapshot.allegro_joint_state = np.array(msg.position)
 
-    def object_pose_callback(self, msg: Pose):
+    def object_pose_callback(self, msg: PoseStamped):
         """ "Callback to update the current object pose."""
+        msg = msg.pose
         xyz = np.array([msg.position.x, msg.position.y, msg.position.z])
         quat_xyzw = np.array(
             [
