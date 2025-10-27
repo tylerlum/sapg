@@ -196,10 +196,16 @@ class Simulator:
         for body in spec.bodies:
             body.gravcomp = 1.0
 
+        # Move robot base to desired position
+        robot_base_bodies = [body for body in spec.bodies if body.name == "base"]
+        assert len(robot_base_bodies) == 1, f"len(robot_base_bodies): {len(robot_base_bodies)}, expected: 1"
+        robot_base_body = robot_base_bodies[0]
+        robot_base_body.pos = np.array([0.0, 0.8, 0.0])
+
         # Table
         WHITE_RGBA = np.array([1.0, 1.0, 1.0, 1.0])
         TABLE_LEN_X, TABLE_LEN_Y, TABLE_LEN_Z = 0.475, 0.4, 0.3
-        TABLE_POS_X, TABLE_POS_Y, TABLE_POS_Z = 0.0, -0.8, 0.38
+        TABLE_POS_X, TABLE_POS_Y, TABLE_POS_Z = 0.0, 0.0, 0.38
         table_body = spec.worldbody.add_body()
         table_body.name = "table"
         table_body.pos = np.array([TABLE_POS_X, TABLE_POS_Y, TABLE_POS_Z])
@@ -215,7 +221,7 @@ class Simulator:
 
         # Box object
         GREY_RGBA = np.array([0.5, 0.5, 0.5, 1.0])
-        OBJECT_POS_X, OBJECT_POS_Y, OBJECT_POS_Z = 0.0, -0.8, 0.38 + 0.3
+        OBJECT_POS_X, OBJECT_POS_Y, OBJECT_POS_Z = 0.0, 0.0, 0.38 + 0.3
         object_body = spec.worldbody.add_body()
         object_body.name = "object"
         object_body.pos = np.array([OBJECT_POS_X, OBJECT_POS_Y, OBJECT_POS_Z])
@@ -229,16 +235,17 @@ class Simulator:
         object_geom.rgba = GREY_RGBA
         object_geom.friction = self.config.friction_array.copy()
 
-        ADD_BOX_OBJECT = False
+        ADD_BOX_OBJECT = True
         if ADD_BOX_OBJECT:
-            BOX_LEN_X, BOX_LEN_Y, BOX_LEN_Z = 0.05, 0.05, 0.05
+            BOX_LEN_X, BOX_LEN_Y, BOX_LEN_Z = 0.2, 0.05, 0.05
             object_geom.type = mujoco.mjtGeom.mjGEOM_BOX
             object_geom.size = np.array([BOX_LEN_X / 2, BOX_LEN_Y / 2, BOX_LEN_Z / 2])  # Half extents
         else:
             mesh = spec.add_mesh()
             mesh.name = "object_mesh"
             # mesh.file = "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/044_flat_screwdriver/044_flat_screwdriver/google_16k/textured_vhacd.obj"
-            mesh.file = "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/040_large_marker/040_large_marker/google_16k/textured_vhacd.obj"
+            # mesh.file = "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/040_large_marker/040_large_marker/google_16k/textured_vhacd.obj"
+            mesh.file = "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/hammer_1/hammer_1.obj"
             assert Path(mesh.file).exists(), f"Mesh file does not exist: {mesh.file}"
             mesh.scale = np.array([1.0, 1.0, 1.0])
 

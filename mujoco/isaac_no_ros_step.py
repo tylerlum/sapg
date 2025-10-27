@@ -34,12 +34,23 @@ class IsaacNoRos:
 
     def step(self, action: torch.Tensor) -> Tuple[torch.Tensor, float, bool, dict]:
         obs, reward, done, info = self.sim.step(action)
+        q = self.sim.arm_hand_dof_pos
+        qd = self.sim.arm_hand_dof_vel
+        object_pose = self.sim.object_pose
+        goal_object_pose = self.sim.goal_pose
+        object_scales = self.sim.object_scales
+        print("In step:")
+        print(f"q = {q}")
+        print(f"qd = {qd}")
+        print(f"object_pose = {object_pose}")
+        print(f"goal_object_pose = {goal_object_pose}")
+        print(f"object_scales = {object_scales}")
         new_obs = compute_observation(
-            q=self.sim.arm_hand_dof_pos,
-            qd=self.sim.arm_hand_dof_vel,
-            object_pose=self.sim.object_pose,
-            goal_object_pose=self.sim.goal_pose,
-            object_scales=self.sim.object_scales,
+            q=q,
+            qd=qd,
+            object_pose=object_pose,
+            goal_object_pose=goal_object_pose,
+            object_scales=object_scales,
             chain=self.chain,
             palm_serial_chain=self.palm_serial_chain,
         )
@@ -67,12 +78,24 @@ class IsaacNoRos:
         )
 
         obs, reward, done, info = self.sim.step(action, joint_pos_targets=joint_pos_targets)
+        q = self.sim.arm_hand_dof_pos
+        qd = self.sim.arm_hand_dof_vel
+        object_pose = self.sim.object_pose
+        goal_object_pose = self.sim.goal_pose
+        object_scales = self.sim.object_scales
+        print("In step_with_joint_pos_targets:")
+        print(f"q = {q}")
+        print(f"qd = {qd}")
+        print(f"object_pose = {object_pose}")
+        print(f"goal_object_pose = {goal_object_pose}")
+        print(f"object_scales = {object_scales}")
+        breakpoint()
         new_obs = compute_observation(
-            q=self.sim.arm_hand_dof_pos,
-            qd=self.sim.arm_hand_dof_vel,
-            object_pose=self.sim.object_pose,
-            goal_object_pose=self.sim.goal_pose,
-            object_scales=self.sim.object_scales,
+            q=q,
+            qd=qd,
+            object_pose=object_pose,
+            goal_object_pose=goal_object_pose,
+            object_scales=object_scales,
             chain=self.chain,
             palm_serial_chain=self.palm_serial_chain,
         )
