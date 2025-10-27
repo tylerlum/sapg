@@ -29,7 +29,7 @@ import os
 import time
 from datetime import datetime
 from os.path import join
-from typing import Dict, Any, Tuple, List, Set
+from typing import Dict, Any, Tuple, List, Set, Optional
 
 import gym
 from gym import spaces
@@ -375,7 +375,7 @@ class VecTask(Env):
     def post_physics_step(self):
         """Compute reward and observations, reset any environments that require it."""
 
-    def step(self, actions: torch.Tensor) -> Tuple[Dict[str, torch.Tensor], torch.Tensor, torch.Tensor, Dict[str, Any]]:
+    def step(self, actions: torch.Tensor, joint_pos_targets: Optional[torch.Tensor] = None) -> Tuple[Dict[str, torch.Tensor], torch.Tensor, torch.Tensor, Dict[str, Any]]:
         """Step the physics of the environment.
 
         Args:
@@ -391,7 +391,7 @@ class VecTask(Env):
 
         action_tensor = torch.clamp(actions, -self.clip_actions, self.clip_actions)
         # apply actions
-        self.pre_physics_step(action_tensor)
+        self.pre_physics_step(action_tensor, joint_pos_targets)
 
         # step physics and render each frame
         for i in range(self.control_freq_inv):

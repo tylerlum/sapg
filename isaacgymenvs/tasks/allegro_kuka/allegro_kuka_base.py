@@ -2108,7 +2108,7 @@ class AllegroKukaBase(VecTask):
             self.extras["scalars"] = dict()
             self.extras["scalars"]["success_tolerance"] = self.success_tolerance
 
-    def pre_physics_step(self, actions):
+    def pre_physics_step(self, actions, joint_pos_targets: Optional[torch.Tensor] = None):
         PRINT_TIME_SINCE_LAST_STEP = False
         if PRINT_TIME_SINCE_LAST_STEP:
             if not hasattr(self, "last_time"):
@@ -2209,6 +2209,9 @@ class AllegroKukaBase(VecTask):
             print(f"num_errors: {num_errors}")
             print("="*100)
             breakpoint()
+
+        if joint_pos_targets is not None:
+            self.cur_targets[:, :] = joint_pos_targets.clone()
 
         if self._DO_NOT_MOVE:
             self.cur_targets[:, :] = self.prev_targets[:, :]
@@ -2465,6 +2468,7 @@ class AllegroKukaBase(VecTask):
         # add rewards to observations
         reward_obs_scale = 0.01
         obs_buf[:, reward_obs_ofs : reward_obs_ofs + 1] = rewards.unsqueeze(-1) * reward_obs_scale * self.turn_off_extra_obs_scale
+        # print(f"obs_buf: {obs_buf[0]}")
 
         self.clamp_obs(obs_buf)
 
