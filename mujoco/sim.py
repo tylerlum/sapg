@@ -237,7 +237,7 @@ class Simulator:
 
         ADD_BOX_OBJECT = True
         if ADD_BOX_OBJECT:
-            BOX_LEN_X, BOX_LEN_Y, BOX_LEN_Z = 0.2, 0.05, 0.05
+            BOX_LEN_X, BOX_LEN_Y, BOX_LEN_Z = 0.1, 0.035, 0.025
             object_geom.type = mujoco.mjtGeom.mjGEOM_BOX
             object_geom.size = np.array([BOX_LEN_X / 2, BOX_LEN_Y / 2, BOX_LEN_Z / 2])  # Half extents
         else:

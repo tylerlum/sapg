@@ -148,7 +148,10 @@ def move_to_pose(
 def main():
     file_path = Path(
         # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-20_14-32-39_None_310.npz"
-        "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-24_17-37-29.npz"
+        # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-24_17-37-29.npz"
+        # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-27_16-23-09.npz"
+        # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-27_16-23-31.npz"
+        "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-27_17-18-32.npz"
     )
     assert file_path.exists(), f"File {file_path} does not exist"
     recorded_data = RecordedData.from_file(file_path)
@@ -189,37 +192,40 @@ def main():
             print("=" * 100)
             break
 
-    print("Moving to initial pose")
-    move_to_pose(
-        HOME_JOINT_POS,
-        pub_iiwa=pub_iiwa,
-        pub_allegro=pub_allegro,
-        move_time=10.0,
-    )
-
+    # print("Moving to home pose")
     # move_to_pose(
-    #     joint_positions_array[0],
+    #     HOME_JOINT_POS,
     #     pub_iiwa=pub_iiwa,
     #     pub_allegro=pub_allegro,
     #     move_time=10.0,
     # )
-    # print("Reached initial pose")
-    # print("Replaying trajectory")
-    # start_time = time.time()
-    # for timestep in range(len(joint_positions_array)):
-    #     print(f"Replaying timestep: {timestep}")
-    #     move_to_pose(
-    #         joint_positions_array[timestep],
-    #         pub_iiwa=pub_iiwa,
-    #         pub_allegro=pub_allegro,
-    #         # move_time=0.2,
-    #         # move_time=0.1,
-    #         move_time=1 / 20,
-    #         # move_time=1 / 30,
-    #         # move_time=1 / 60,
-    #     )
-    # end_time = time.time()
-    # print(f"Time taken: {end_time - start_time:.2f} seconds")
+    # print("Reached home pose")
+
+    print("Moving to initial pose")
+    move_to_pose(
+        joint_positions_array[0],
+        pub_iiwa=pub_iiwa,
+        pub_allegro=pub_allegro,
+        move_time=10.0,
+    )
+    print("Reached initial pose")
+
+    print("Replaying trajectory")
+    start_time = time.time()
+    for timestep in range(len(joint_positions_array)):
+        print(f"Replaying timestep: {timestep}")
+        move_to_pose(
+            joint_positions_array[timestep],
+            pub_iiwa=pub_iiwa,
+            pub_allegro=pub_allegro,
+            # move_time=0.2,
+            # move_time=0.1,
+            # move_time=1 / 20,
+            # move_time=1 / 30,
+            move_time=1 / 60,
+        )
+    end_time = time.time()
+    print(f"Time taken: {end_time - start_time:.2f} seconds")
 
 
 if __name__ == "__main__":

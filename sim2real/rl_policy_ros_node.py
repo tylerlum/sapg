@@ -9,7 +9,7 @@ import numpy as np
 import pytorch_kinematics as pk
 import rospy
 import torch
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import Pose, PoseStamped
 from rl_player import RlPlayer
 from scipy.spatial.transform import Rotation as R
 from sensor_msgs.msg import JointState
@@ -106,7 +106,7 @@ class RLPolicyNode:
 
         # Subscribers
         self.object_pose_sub = rospy.Subscriber(
-            "/object_pose", Pose, self.object_pose_callback
+            "/robot_frame/current_object_pose", PoseStamped, self.object_pose_callback
         )
         self.goal_object_pose_sub = rospy.Subscriber(
             "/goal_object_pose", Pose, self.goal_object_pose_callback
@@ -123,18 +123,17 @@ class RLPolicyNode:
         self.num_observations = 117  # Update this number based on actual dimensions
         self.num_actions = 23
 
-        # HACK
-        # self.config_path = Path(__file__).parent / "config.yaml"
-        self.config_path = Path("/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/test_24576envs_mixed_expl_learn_param_lf_1p_09_10_00h10m32s/runs/00_test_24576envs_mixed_expl_learn_param_lf_1p_09_10_00h10m32s/config.yaml")
-        # self.checkpoint_path = Path(__file__).parent / "checkpoint.pt"
-        self.checkpoint_path = Path("/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/test_24576envs_mixed_expl_learn_param_lf_1p_09_10_00h10m32s/runs/00_test_24576envs_mixed_expl_learn_param_lf_1p_09_10_00h10m32s/nn/00_test_24576envs_mixed_expl_learn_param_lf_1p_09_10_00h10m32s.pth")
+        CONFIG_PATH = Path("/home/tylerlum/github_repos/sapg/closed_loop_testing/config.yaml")
+        assert Path(CONFIG_PATH).exists()
+        CHECKPOINT_PATH = Path("/juno/u/kedia/sapg/train_dir/checkpoints/hammer/absoluteControl_0.5.pth")
+        assert CHECKPOINT_PATH.exists()
 
         # Create the RL player
         self.player = RlPlayer(
             num_observations=self.num_observations,
             num_actions=self.num_actions,
-            config_path=self.config_path,
-            checkpoint_path=self.checkpoint_path,
+            config_path=CONFIG_PATH,
+            checkpoint_path=CHECKPOINT_PATH,
             device=self.device,
         )
 
@@ -146,21 +145,21 @@ class RLPolicyNode:
         # Set up chain and palm_serial_chain
         asset_root = Path(__file__).parent / "../assets"
         urdf_path = (
-            asset_root / "urdf/kuka_allegro_description/kuka_allegro_touch_sensor.urdf"
+            asset_root / "urdf/kuka_allegro_description/iiwa14_real.urdf"
         )
         assert urdf_path.exists(), f"URDF file {urdf_path} does not exist"
         self.chain = pk.build_chain_from_urdf(
             open(urdf_path).read(),
         ).to(device=self.device)
-        self.palm_serial_chain = pk.SerialChain(self.chain, "iiwa7_link_7").to(
+        self.palm_serial_chain = pk.SerialChain(self.chain, "iiwa14_link_7").to(
             device=self.device
         )
 
         # State: prev_targets
         self.prev_targets = None
 
-    def object_pose_callback(self, msg: Pose):
-        self.object_pose_msg = msg
+    def object_pose_callback(self, msg: PoseStamped):
+        self.object_pose_msg = msg.pose
 
     def goal_object_pose_callback(self, msg: Pose):
         self.goal_object_pose_msg = msg
@@ -171,7 +170,7 @@ class RLPolicyNode:
     def allegro_joint_state_callback(self, msg: JointState):
         self.allegro_joint_state_msg = msg
 
-    def create_observation(self) -> Optional[torch.Tensor]:
+    def create_observation(self) -> Tuple[Optional[torch.Tensor], Optional[np.ndarray]]:
         # Ensure all messages are received before processing
         if (
             self.iiwa_joint_state_msg is None
@@ -183,7 +182,7 @@ class RLPolicyNode:
                 f"Waiting for all messages to be received... iiwa_joint_state_msg: {var_to_is_none_str(self.iiwa_joint_state_msg)}, allegro_joint_state_msg: {var_to_is_none_str(self.allegro_joint_state_msg)}, object_pose_msg: {var_to_is_none_str(self.object_pose_msg)}, goal_object_pose_msg: {var_to_is_none_str(self.goal_object_pose_msg)}",
                 n_seconds=1.0,
             )
-            return None
+            return None, None
 
         iiwa_joint_state_msg = copy.copy(self.iiwa_joint_state_msg)
         allegro_joint_state_msg = copy.copy(self.allegro_joint_state_msg)
@@ -197,14 +196,12 @@ class RLPolicyNode:
         allegro_position = np.array(allegro_joint_state_msg.position)
         allegro_velocity = np.array(allegro_joint_state_msg.velocity)
 
-        T_C_O = pose_msg_to_T(object_pose_msg)
-        T_C_G = pose_msg_to_T(goal_object_pose_msg)
+        T_R_O = pose_msg_to_T(object_pose_msg)
+        T_R_G = pose_msg_to_T(goal_object_pose_msg)
 
-        T_R_O = self.T_R_C @ T_C_O
         object_position_R, object_quat_xyzw_R = T_to_pos_quat_xyzw(T_R_O)
         object_pose_R = np.concatenate([object_position_R, object_quat_xyzw_R])
 
-        T_R_G = self.goal_T_R_C @ T_C_G
         goal_object_pos_R, goal_object_quat_xyzw_R = T_to_pos_quat_xyzw(T_R_G)
         goal_object_pose_R = np.concatenate([goal_object_pos_R, goal_object_quat_xyzw_R])
 
@@ -224,7 +221,7 @@ class RLPolicyNode:
         )
         assert_equals(observation.shape, (1, self.num_observations,))
 
-        return observation
+        return observation, q
 
     def publish_targets(self, joint_pos_targets: torch.Tensor):
         assert_equals(joint_pos_targets.shape, (1, self.num_actions))
@@ -277,9 +274,9 @@ class RLPolicyNode:
             start_time = rospy.Time.now()
 
             # Create observation from the latest messages
-            obs = self.create_observation()
+            obs, q = self.create_observation()
 
-            if obs is not None:
+            if obs is not None and q is not None:
                 if not first_observations_received:
                     info("=" * 100)
                     info("First observations received, starting to publish sim state")
@@ -287,25 +284,14 @@ class RLPolicyNode:
                     first_observations_received = True
 
                 if self.prev_targets is None:
-                    self.prev_targets = (
-                        torch.from_numpy(
-                            np.concatenate(
-                                [
-                                    self.iiwa_joint_state_msg.position,
-                                    self.allegro_joint_state_msg.position,
-                                ]
-                            )
-                        )
-                        .float()
-                        .to(self.device)
-                    )[None]
+                    self.prev_targets = torch.from_numpy(q).float().to(self.device)[None]
 
                 assert_equals(obs.shape, (1, self.num_observations))
 
                 # Get the normalized action from the RL player
                 normalized_action = self.player.get_normalized_action(
                     obs=obs,
-                    deterministic_actions=False,
+                    deterministic_actions=True,
                     # obs=obs, deterministic_actions=True
                 )
                 # normalized_action = torch.zeros(1, self.num_actions, device=self.device)
@@ -357,19 +343,10 @@ class RLPolicyNode:
                 loop_no_sleep_dts, loop_dts = [], []
 
     @property
-    def T_R_C(self) -> np.ndarray:
-        # HACK
-        return np.eye(4)
-
-    @property
-    def goal_T_R_C(self) -> np.ndarray:
-        # HACK
-        return np.eye(4)
-
-    @property
     def object_scales(self) -> np.ndarray:
-        # HACK
-        return np.array([1.0, 1.0, 1.0])
+        object_scales = np.array([0.1, 0.035, 0.025]) * 20
+        # object_scales = np.array([3.0, 0.5, 0.5])
+        return object_scales
 
 
 if __name__ == "__main__":

@@ -15,13 +15,13 @@ from isaacgymenvs.utils.torch_jit_utils import (
 
 # Constants
 JOINT_NAMES_ISAACGYM = [
-    "iiwa7_joint_1",
-    "iiwa7_joint_2",
-    "iiwa7_joint_3",
-    "iiwa7_joint_4",
-    "iiwa7_joint_5",
-    "iiwa7_joint_6",
-    "iiwa7_joint_7",
+    "iiwa14_joint_1",
+    "iiwa14_joint_2",
+    "iiwa14_joint_3",
+    "iiwa14_joint_4",
+    "iiwa14_joint_5",
+    "iiwa14_joint_6",
+    "iiwa14_joint_7",
     "index_joint_0",
     "index_joint_1",
     "index_joint_2",
@@ -39,6 +39,32 @@ JOINT_NAMES_ISAACGYM = [
     "thumb_joint_2",
     "thumb_joint_3",
 ]
+
+# JOINT_NAMES_ISAACGYM = [
+#     "iiwa7_joint_1",
+#     "iiwa7_joint_2",
+#     "iiwa7_joint_3",
+#     "iiwa7_joint_4",
+#     "iiwa7_joint_5",
+#     "iiwa7_joint_6",
+#     "iiwa7_joint_7",
+#     "index_joint_0",
+#     "index_joint_1",
+#     "index_joint_2",
+#     "index_joint_3",
+#     "middle_joint_0",
+#     "middle_joint_1",
+#     "middle_joint_2",
+#     "middle_joint_3",
+#     "ring_joint_0",
+#     "ring_joint_1",
+#     "ring_joint_2",
+#     "ring_joint_3",
+#     "thumb_joint_0",
+#     "thumb_joint_1",
+#     "thumb_joint_2",
+#     "thumb_joint_3",
+# ]
 assert len(JOINT_NAMES_ISAACGYM) == 23, (
     f"len(JOINT_NAMES_ISAACGYM): {len(JOINT_NAMES_ISAACGYM)}, expected: 23"
 )
@@ -314,6 +340,10 @@ def compute_joint_pos_targets(
         q_lower_limits[:7],
         q_upper_limits[:7],
     )
+    cur_targets[:, :7] = (
+        act_moving_average * cur_targets[:, :7]
+        + (1.0 - act_moving_average) * prev_targets[:, :7]
+    )
     return cur_targets
 
 
@@ -351,7 +381,8 @@ def _change_joint_order(
 def _compute_palm_center_pos_and_rot(
     fk_dict: dict[str, pk.Transform3d],
 ) -> tuple[Tensor, Tensor]:
-    T_R_Ps = fk_dict["iiwa7_link_7"].get_matrix()
+    # T_R_Ps = fk_dict["iiwa7_link_7"].get_matrix()
+    T_R_Ps = fk_dict["iiwa14_link_7"].get_matrix()
     N = T_R_Ps.shape[0]
 
     T_W_Rs = (

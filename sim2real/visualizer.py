@@ -197,19 +197,20 @@ class ViserVisualizationNode:
         # Create a real robot (simulating real robot) and a command robot (visualizing commands)
         # Load robot URDF with a fixed base
         robot_urdf_path = Path(
-            "/home/tylerlum/github_repos/sapg/assets/urdf/kuka_allegro_description/kuka_allegro_touch_sensor.urdf"
+            # "/home/tylerlum/github_repos/sapg/assets/urdf/kuka_allegro_description/kuka_allegro_touch_sensor.urdf"
+            "/home/tylerlum/github_repos/sapg/assets/urdf/kuka_allegro_description/iiwa14_real.urdf"
         )
         assert robot_urdf_path.exists(), f"robot_urdf_path not found: {robot_urdf_path}"
 
         SERVER.scene.add_frame(
             "/robot/state",
-            position=(0, 0, 0),
+            position=(0, 0.8, 0),
             wxyz=(1, 0, 0, 0),
             show_axes=False,
         )
         SERVER.scene.add_frame(
             "/robot/cmd",
-            position=(0, 0, 0),
+            position=(0, 0.8, 0),
             wxyz=(1, 0, 0, 0),
             show_axes=False,
         )
@@ -242,7 +243,7 @@ class ViserVisualizationNode:
 
             SERVER.scene.add_frame(
                 "/table",
-                position=(0, -0.8, 0.38),
+                position=(0.0, 0.0, 0.38),
                 wxyz=(1, 0, 0, 0),
                 show_axes=False,
             )

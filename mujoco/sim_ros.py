@@ -2,7 +2,7 @@ import time
 
 import numpy as np
 import rospy
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import Pose, PoseStamped
 from sensor_msgs.msg import JointState
 from sim import JOINT_NAMES, N_IIWA_JOINTS, Simulator, SimulatorConfig
 from termcolor import colored
@@ -44,7 +44,7 @@ class SimRos:
         self.allegro_pub = rospy.Publisher(
             "/allegroHand_0/joint_states", JointState, queue_size=10
         )
-        self.object_pose_pub = rospy.Publisher("/object_pose", Pose, queue_size=10)
+        self.object_pose_pub = rospy.Publisher("/robot_frame/current_object_pose", PoseStamped, queue_size=10)
         if PUBLISH_GOAL_OBJECT_POSE:
             self.goal_object_pose_pub = rospy.Publisher("/goal_object_pose", Pose, queue_size=10)
 
@@ -57,14 +57,16 @@ class SimRos:
     def _publish(self, sim_state: dict[str, np.ndarray]):
         object_pos = sim_state["object_pos"]
         object_quat_wxyz = sim_state["object_quat_wxyz"]
-        object_pose_msg = Pose()
-        object_pose_msg.position.x = object_pos[0]
-        object_pose_msg.position.y = object_pos[1]
-        object_pose_msg.position.z = object_pos[2]
-        object_pose_msg.orientation.w = object_quat_wxyz[0]
-        object_pose_msg.orientation.x = object_quat_wxyz[1]
-        object_pose_msg.orientation.y = object_quat_wxyz[2]
-        object_pose_msg.orientation.z = object_quat_wxyz[3]
+        object_pose_msg = PoseStamped()
+        object_pose_msg.header.stamp = rospy.Time.now()
+        object_pose_msg.header.frame_id = "robot_frame"
+        object_pose_msg.pose.position.x = object_pos[0]
+        object_pose_msg.pose.position.y = object_pos[1]
+        object_pose_msg.pose.position.z = object_pos[2]
+        object_pose_msg.pose.orientation.w = object_quat_wxyz[0]
+        object_pose_msg.pose.orientation.x = object_quat_wxyz[1]
+        object_pose_msg.pose.orientation.y = object_quat_wxyz[2]
+        object_pose_msg.pose.orientation.z = object_quat_wxyz[3]
         self.object_pose_pub.publish(object_pose_msg)
 
         if PUBLISH_GOAL_OBJECT_POSE:

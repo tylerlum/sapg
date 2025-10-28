@@ -98,7 +98,8 @@ def main():
     control_dt = 1.0 / 60.0
     CONFIG_PATH = Path("/home/tylerlum/github_repos/sapg/closed_loop_testing/config.yaml")
     assert Path(CONFIG_PATH).exists()
-    CHECKPOINT_PATH = Path("/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-10-22_slow-action-obs-randomize-all_slower-curriculum/00_slowarmhand_slowobs_hammer_2025-10-23_00-48-56/runs/00_slowarmhand_slowobs_hammer_2025-10-23_00-48-56/last/model.pth")
+    # CHECKPOINT_PATH = Path("/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-10-22_slow-action-obs-randomize-all_slower-curriculum/00_slowarmhand_slowobs_hammer_2025-10-23_00-48-56/runs/00_slowarmhand_slowobs_hammer_2025-10-23_00-48-56/last/model.pth")
+    CHECKPOINT_PATH = Path("/juno/u/kedia/sapg/train_dir/checkpoints/hammer/absoluteControl_0.5.pth")
     assert CHECKPOINT_PATH.exists()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -113,18 +114,19 @@ def main():
 
     asset_root = Path(__file__).parent / "../assets"
     urdf_path = (
-        asset_root / "urdf/kuka_allegro_description/kuka_allegro_touch_sensor.urdf"
+        asset_root / "urdf/kuka_allegro_description/iiwa14_real.urdf"
     )
     assert urdf_path.exists(), f"URDF file {urdf_path} does not exist"
     chain = pk.build_chain_from_urdf(
         open(urdf_path).read(),
     ).to(device=device)
-    palm_serial_chain = pk.SerialChain(chain, "iiwa7_link_7").to(
+    palm_serial_chain = pk.SerialChain(chain, "iiwa14_link_7").to(
         device=device
     )
 
-    object_scales = np.array([2.0, 0.5, 0.5])
-    sim_no_ros = SimNoRos(sim=sim, object_scales=object_scales, chain=chain, palm_serial_chain=palm_serial_chain, act_moving_average=0.1, hand_dof_speed_scale=1.0, control_dt=control_dt, device=device)
+    # object_scales = np.array([2.0, 0.5, 0.5])
+    object_scales = np.array([0.1, 0.035, 0.025]) * 20
+    sim_no_ros = SimNoRos(sim=sim, object_scales=object_scales, chain=chain, palm_serial_chain=palm_serial_chain, act_moving_average=0.1, hand_dof_speed_scale=0.5, control_dt=control_dt, device=device)
 
     while True:
         start_time = time.time()
