@@ -56,6 +56,10 @@ from isaacgymenvs.tasks.allegro_kuka.object_trajectories import (
 
 DATETIME_STR = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
+# VISUALIZE_PD_TARGET_AS_BLUE_ROBOT = False is default
+# Set to True to visualize the PD target as a blue robot
+VISUALIZE_PD_TARGET_AS_BLUE_ROBOT = False
+
 
 class AllegroKukaBase(VecTask):
     def __init__(self, cfg, rl_device, sim_device, graphics_device_id, headless, virtual_screen_capture, force_render):
@@ -305,6 +309,10 @@ class AllegroKukaBase(VecTask):
         self.arm_hand_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, : self.num_hand_arm_dofs]
         self.arm_hand_dof_pos = self.arm_hand_dof_state[..., 0]
         self.arm_hand_dof_vel = self.arm_hand_dof_state[..., 1]
+        if VISUALIZE_PD_TARGET_AS_BLUE_ROBOT:
+            self.blue_robot_arm_hand_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, self.num_hand_arm_dofs:]
+            self.blue_robot_arm_hand_dof_pos = self.blue_robot_arm_hand_dof_state[..., 0]
+            self.blue_robot_arm_hand_dof_vel = self.blue_robot_arm_hand_dof_state[..., 1]
 
         self.rigid_body_states = gymtorch.wrap_tensor(rigid_body_tensor).view(self.num_envs, -1, 13)
         self.num_bodies = self.rigid_body_states.shape[1]
@@ -312,6 +320,7 @@ class AllegroKukaBase(VecTask):
         self.root_state_tensor = gymtorch.wrap_tensor(actor_root_state_tensor).view(-1, 13)
 
         self.set_actor_root_state_object_indices: List[Tensor] = []
+        self.set_dof_state_object_indices: List[Tensor] = []
 
         self.num_dofs = self.gym.get_sim_dof_count(self.sim) // self.num_envs
         self.prev_targets = torch.zeros((self.num_envs, self.num_dofs), dtype=torch.float, device=self.device)
@@ -1222,12 +1231,16 @@ class AllegroKukaBase(VecTask):
 
         self.allegro_hands = []
         self.envs = []
+        if VISUALIZE_PD_TARGET_AS_BLUE_ROBOT:
+            self.blue_robots = []
 
         object_init_state = []
         
         self.rigid_body_name_to_idx = {}
 
         self.allegro_hand_indices = []
+        if VISUALIZE_PD_TARGET_AS_BLUE_ROBOT:
+            self.blue_robot_indices = []
         object_indices = []
         table_indices = []
         object_scales = []
@@ -1269,6 +1282,28 @@ class AllegroKukaBase(VecTask):
 
                 if self.with_dof_force_sensors:
                     self.gym.enable_actor_dof_force_sensors(env_ptr, allegro_actor)
+
+            if VISUALIZE_PD_TARGET_AS_BLUE_ROBOT:
+                blue_robot_actor = self.gym.create_actor(
+                    env_ptr,
+                    allegro_kuka_asset,
+                    allegro_pose,
+                    "blue_robot",
+                    i + self.num_envs * 2,
+                    -1,
+                    0,
+                )
+                self.gym.set_actor_dof_properties(
+                    env_ptr,
+                    blue_robot_actor,
+                    allegro_hand_dof_props,
+                )
+                self.blue_robots.append(blue_robot_actor)
+                BLUE = (0, 0, 1)
+                self._set_actor_color(env_ptr, blue_robot_actor, BLUE)
+
+                blue_robot_idx = self.gym.get_actor_index(env_ptr, blue_robot_actor, gymapi.DOMAIN_SIM)
+                self.blue_robot_indices.append(blue_robot_idx)
 
             # add object
             object_asset_idx = i % len(object_assets)
@@ -1342,6 +1377,8 @@ class AllegroKukaBase(VecTask):
         self.allegro_hand_indices = to_torch(self.allegro_hand_indices, dtype=torch.long, device=self.device)
         self.object_indices = to_torch(object_indices, dtype=torch.long, device=self.device)
         self.table_indices = to_torch(table_indices, dtype=torch.long, device=self.device)
+        if VISUALIZE_PD_TARGET_AS_BLUE_ROBOT:
+            self.blue_robot_indices = to_torch(self.blue_robot_indices, dtype=torch.long, device=self.device)
 
         self.object_scales = to_torch(object_scales, dtype=torch.float, device=self.device)
         self.object_keypoint_offsets = to_torch(object_keypoint_offsets, dtype=torch.float, device=self.device)
@@ -1360,6 +1397,16 @@ class AllegroKukaBase(VecTask):
             tmp_assets_dir.cleanup()
         except Exception:
             pass
+
+    def _set_actor_color(self, env, actor, color: Tuple[float, float, float]) -> None:
+        for rigid_body_idx in range(self.gym.get_actor_rigid_body_count(env, actor)):
+            self.gym.set_rigid_body_color(
+                env,
+                actor,
+                rigid_body_idx,
+                gymapi.MESH_VISUAL,
+                gymapi.Vec3(*color),
+            )
 
     def _distance_delta_rewards(self, lifted_object: Tensor) -> Tuple[Tensor, Tensor]:
         """Rewards for fingertips approaching the object or penalty for hand getting further away from the object."""
@@ -1995,6 +2042,25 @@ class AllegroKukaBase(VecTask):
 
         self.set_actor_root_state_object_indices = []
 
+    def deferred_set_dof_state_tensor_indexed(self, dof_indices: List[Tensor]) -> None:
+        self.set_dof_state_object_indices.extend(dof_indices)
+
+    def set_dof_state_tensor_indexed(self) -> None:
+        dof_indices: List[Tensor] = self.set_dof_state_object_indices
+        if not dof_indices:
+            # nothing to set
+            return
+
+        unique_dof_indices = torch.unique(torch.cat(dof_indices).to(torch.int32))
+        self.gym.set_dof_state_tensor_indexed(
+            self.sim,
+            gymtorch.unwrap_tensor(self.dof_state),
+            gymtorch.unwrap_tensor(unique_dof_indices),
+            len(unique_dof_indices),
+        )
+
+        self.set_dof_state_object_indices = []
+
     def reset_idx(self, env_ids: Tensor, reset_buf_idxs=None, episode_reset=True, tensor_reset=True) -> None:
         # randomization can happen only at reset time, since it can reset actor positions on GPU
         if len(env_ids) == 0:
@@ -2040,6 +2106,9 @@ class AllegroKukaBase(VecTask):
             allegro_pos = self.hand_arm_default_dof_pos + noise_coeff * rand_delta
 
             self.arm_hand_dof_pos[env_ids, :] = allegro_pos
+            if VISUALIZE_PD_TARGET_AS_BLUE_ROBOT:
+                self.blue_robot_arm_hand_dof_pos[env_ids, :] = allegro_pos.clone()
+                self.blue_robot_arm_hand_dof_vel[env_ids, :] = 0.0
 
             rand_vel_floats = torch_rand_float(-1.0, 1.0, (len(env_ids), self.num_hand_arm_dofs), device=self.device)
             self.arm_hand_dof_vel[env_ids, :] = self.reset_dof_vel_noise * rand_vel_floats
@@ -2082,10 +2151,7 @@ class AllegroKukaBase(VecTask):
             self.sim, gymtorch.unwrap_tensor(self.prev_targets), gymtorch.unwrap_tensor(hand_indices), len(env_ids)
         )
 
-        self.gym.set_dof_state_tensor_indexed(
-            self.sim, gymtorch.unwrap_tensor(self.dof_state), gymtorch.unwrap_tensor(hand_indices), len(env_ids)
-        )
-
+        self.deferred_set_dof_state_tensor_indexed([hand_indices])
         self.deferred_set_actor_root_state_tensor_indexed(self._extra_object_indices(env_ids))
 
         if episode_reset and tensor_reset:
@@ -2217,7 +2283,6 @@ class AllegroKukaBase(VecTask):
             + (1.0 - self.act_moving_average) * self.prev_targets[:, :7]
         )
 
-
         # Default CHECK_WITH_COMPUTED_JOINT_POS_TARGETS = False
         # Set to True to check if the computed joint pos targets are correct
         CHECK_WITH_COMPUTED_JOINT_POS_TARGETS = False
@@ -2255,6 +2320,15 @@ class AllegroKukaBase(VecTask):
 
         self.prev_targets[:, :] = self.cur_targets[:, :]
 
+        if VISUALIZE_PD_TARGET_AS_BLUE_ROBOT:
+            self.cur_targets[:, self.num_hand_arm_dofs:] = self.cur_targets[:, :self.num_hand_arm_dofs].clone()
+            self.blue_robot_arm_hand_dof_pos[:] = self.cur_targets[:, self.num_hand_arm_dofs:].clone()
+            self.blue_robot_arm_hand_dof_vel[:] = 0.0
+
+            blue_robot_indices = self.blue_robot_indices.to(torch.int32)
+            self.deferred_set_dof_state_tensor_indexed([blue_robot_indices])
+
+        self.set_dof_state_tensor_indexed()
         self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(self.cur_targets))
 
         if self.force_scale > 0.0:
@@ -2332,7 +2406,7 @@ class AllegroKukaBase(VecTask):
             if hasattr(self, "goal_object_indices"):
                 goal_root_state = self.root_state_tensor[self.goal_object_indices, :13].cpu().numpy()
             robot_joint_velocity = self.arm_hand_dof_vel.cpu().numpy()
-            robot_joint_pos_target = self.cur_targets.cpu().numpy()
+            robot_joint_pos_target = self.cur_targets[:, :self.num_hand_arm_dofs].cpu().numpy()
             observations = self.obs_buf.cpu().numpy()
             actions = self.actions.cpu().numpy()
 
