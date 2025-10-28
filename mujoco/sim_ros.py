@@ -1,4 +1,5 @@
 import time
+from scipy.spatial.transform import Rotation as R
 
 import numpy as np
 import rospy
@@ -11,6 +12,10 @@ from termcolor import colored
 # But we can just publish the goal object pose above the table
 PUBLISH_GOAL_OBJECT_POSE = True
 
+T_W_R = np.eye(4)
+T_W_R[:3, 3] = np.array([0.0, 0.8, 0.0])
+
+T_R_W = np.linalg.inv(T_W_R)
 
 def warn(message: str):
     print(colored(message, "yellow"))
@@ -57,29 +62,45 @@ class SimRos:
     def _publish(self, sim_state: dict[str, np.ndarray]):
         object_pos = sim_state["object_pos"]
         object_quat_wxyz = sim_state["object_quat_wxyz"]
+        object_quat_xyzw = object_quat_wxyz[[1, 2, 3, 0]]
+        T_W_O = np.eye(4)
+        T_W_O[:3, 3] = object_pos
+        T_W_O[:3, :3] = R.from_quat(object_quat_xyzw).as_matrix()
+        T_R_O = T_R_W @ T_W_O
+        object_pos_R = T_R_O[:3, 3]
+        object_quat_xyzw_R = R.from_matrix(T_R_O[:3, :3]).as_quat()
+
         object_pose_msg = PoseStamped()
         object_pose_msg.header.stamp = rospy.Time.now()
         object_pose_msg.header.frame_id = "robot_frame"
-        object_pose_msg.pose.position.x = object_pos[0]
-        object_pose_msg.pose.position.y = object_pos[1]
-        object_pose_msg.pose.position.z = object_pos[2]
-        object_pose_msg.pose.orientation.w = object_quat_wxyz[0]
-        object_pose_msg.pose.orientation.x = object_quat_wxyz[1]
-        object_pose_msg.pose.orientation.y = object_quat_wxyz[2]
-        object_pose_msg.pose.orientation.z = object_quat_wxyz[3]
+        object_pose_msg.pose.position.x = object_pos_R[0]
+        object_pose_msg.pose.position.y = object_pos_R[1]
+        object_pose_msg.pose.position.z = object_pos_R[2]
+        object_pose_msg.pose.orientation.x = object_quat_xyzw_R[0]
+        object_pose_msg.pose.orientation.y = object_quat_xyzw_R[1]
+        object_pose_msg.pose.orientation.z = object_quat_xyzw_R[2]
+        object_pose_msg.pose.orientation.w = object_quat_xyzw_R[3]
         self.object_pose_pub.publish(object_pose_msg)
 
         if PUBLISH_GOAL_OBJECT_POSE:
             goal_object_pos = sim_state["table_pos"]
             goal_object_quat_wxyz = sim_state["table_quat_wxyz"]
+            goal_object_quat_xyzw = goal_object_quat_wxyz[[1, 2, 3, 0]]
+            T_W_G = np.eye(4)
+            T_W_G[:3, 3] = goal_object_pos
+            T_W_G[:3, :3] = R.from_quat(goal_object_quat_xyzw).as_matrix()
+            T_R_G = T_R_W @ T_W_G
+            goal_object_pos_R = T_R_G[:3, 3]
+            goal_object_quat_xyzw_R = R.from_matrix(T_R_G[:3, :3]).as_quat()
+
             goal_object_pose_msg = Pose()
-            goal_object_pose_msg.position.x = goal_object_pos[0]
-            goal_object_pose_msg.position.y = goal_object_pos[1]
-            goal_object_pose_msg.position.z = goal_object_pos[2] + 0.5  # Above the table
-            goal_object_pose_msg.orientation.w = goal_object_quat_wxyz[0]
-            goal_object_pose_msg.orientation.x = goal_object_quat_wxyz[1]
-            goal_object_pose_msg.orientation.y = goal_object_quat_wxyz[2]
-            goal_object_pose_msg.orientation.z = goal_object_quat_wxyz[3]
+            goal_object_pose_msg.position.x = goal_object_pos_R[0]
+            goal_object_pose_msg.position.y = goal_object_pos_R[1]
+            goal_object_pose_msg.position.z = goal_object_pos_R[2] + 0.3  # Above the table
+            goal_object_pose_msg.orientation.x = goal_object_quat_xyzw_R[0]
+            goal_object_pose_msg.orientation.y = goal_object_quat_xyzw_R[1]
+            goal_object_pose_msg.orientation.z = goal_object_quat_xyzw_R[2]
+            goal_object_pose_msg.orientation.w = goal_object_quat_xyzw_R[3]
             self.goal_object_pose_pub.publish(goal_object_pose_msg)
 
         joint_positions = sim_state["joint_positions"]

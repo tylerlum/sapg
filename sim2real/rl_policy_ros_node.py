@@ -20,6 +20,9 @@ from isaacgymenvs.utils.observation_action_utils import (
     compute_observation,
 )
 
+T_W_R = np.eye(4)
+T_W_R[:3, 3] = np.array([0.0, 0.8, 0.0])
+
 def warn(message: str):
     print(colored(message, "yellow"))
 
@@ -199,11 +202,14 @@ class RLPolicyNode:
         T_R_O = pose_msg_to_T(object_pose_msg)
         T_R_G = pose_msg_to_T(goal_object_pose_msg)
 
-        object_position_R, object_quat_xyzw_R = T_to_pos_quat_xyzw(T_R_O)
-        object_pose_R = np.concatenate([object_position_R, object_quat_xyzw_R])
+        T_W_O = T_W_R @ T_R_O
+        T_W_G = T_W_R @ T_R_G
 
-        goal_object_pos_R, goal_object_quat_xyzw_R = T_to_pos_quat_xyzw(T_R_G)
-        goal_object_pose_R = np.concatenate([goal_object_pos_R, goal_object_quat_xyzw_R])
+        object_position_W, object_quat_xyzw_W = T_to_pos_quat_xyzw(T_W_O)
+        object_pose_W = np.concatenate([object_position_W, object_quat_xyzw_W])
+
+        goal_object_pos_W, goal_object_quat_xyzw_W = T_to_pos_quat_xyzw(T_W_G)
+        goal_object_pose_W = np.concatenate([goal_object_pos_W, goal_object_quat_xyzw_W])
 
         q = np.concatenate([iiwa_position, allegro_position])
         qd = np.concatenate([iiwa_velocity, allegro_velocity])
@@ -211,8 +217,8 @@ class RLPolicyNode:
         observation = compute_observation(
             q=torch.from_numpy(q).float().to(self.device)[None],
             qd=torch.from_numpy(qd).float().to(self.device)[None],
-            object_pose=torch.from_numpy(object_pose_R).float().to(self.device)[None],
-            goal_object_pose=torch.from_numpy(goal_object_pose_R)
+            object_pose=torch.from_numpy(object_pose_W).float().to(self.device)[None],
+            goal_object_pose=torch.from_numpy(goal_object_pose_W)
             .float()
             .to(self.device)[None],
             object_scales=torch.from_numpy(self.object_scales).float().to(self.device)[None],
@@ -220,6 +226,13 @@ class RLPolicyNode:
             palm_serial_chain=self.palm_serial_chain,
         )
         assert_equals(observation.shape, (1, self.num_observations,))
+
+        # print(f"q: {q}")
+        # print(f"qd: {qd}")
+        # print(f"object_pose_W: {object_pose_W}")
+        # print(f"goal_object_pose_W: {goal_object_pose_W}")
+        # print(f"object_scales: {self.object_scales}")
+        # breakpoint()
 
         return observation, q
 
@@ -270,7 +283,15 @@ class RLPolicyNode:
 
         loop_no_sleep_dts, loop_dts = [], []
 
+        CURRENT_STEP = 0
         while not rospy.is_shutdown():
+            print(f"Current step: {CURRENT_STEP}")
+            if CURRENT_STEP > 1500:
+                print("Exiting")
+                import sys
+                sys.exit(0)
+            CURRENT_STEP += 1
+
             start_time = rospy.Time.now()
 
             # Create observation from the latest messages
@@ -301,16 +322,19 @@ class RLPolicyNode:
                     actions=normalized_action,
                     prev_targets=self.prev_targets,
                     act_moving_average=0.1,
-                    hand_dof_speed_scale=1.0,
+                    hand_dof_speed_scale=0.5,
                     dt=1 / 60,
                 )
                 assert_equals(joint_pos_targets.shape, (1, self.num_actions))
 
                 # Publish the targets
                 self.publish_targets(joint_pos_targets)
+                print(f"CURRENT_STEP: {CURRENT_STEP}")
+                print(f"joint_pos_targets: {joint_pos_targets}")
+                print()
                 self.prev_targets = joint_pos_targets.clone()
 
-            # Sleep to maintain 15 loop rate
+            # Sleep to maintain loop rate
             before_sleep_time = rospy.Time.now()
             self.rate.sleep()
             after_sleep_time = rospy.Time.now()
@@ -320,9 +344,10 @@ class RLPolicyNode:
             loop_dt = (after_sleep_time - start_time).to_sec()
             loop_dts.append(loop_dt)
 
-            PRINT_FPS_EVERY_N_SECONDS = 5.0
-            PRINT_FPS_EVERY_N_STEPS = int(PRINT_FPS_EVERY_N_SECONDS / self.dt)
-            if len(loop_dts) == PRINT_FPS_EVERY_N_STEPS:
+            # PRINT_FPS_EVERY_N_SECONDS = 5.0
+            # PRINT_FPS_EVERY_N_STEPS = int(PRINT_FPS_EVERY_N_SECONDS / self.dt)
+            # if len(loop_dts) == PRINT_FPS_EVERY_N_STEPS:
+            if True:
                 loop_dt_array = np.array(loop_dts)
                 loop_no_sleep_dt_array = np.array(loop_no_sleep_dts)
                 fps_array = 1.0 / loop_dt_array

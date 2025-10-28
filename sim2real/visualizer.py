@@ -17,6 +17,8 @@ from sensor_msgs.msg import JointState
 from termcolor import colored
 from viser.extras import ViserUrdf
 
+T_W_R = np.eye(4)
+T_W_R[:3, 3] = np.array([0.0, 0.8, 0.0])
 
 def warn(message: str):
     print(colored(message, "yellow"))
@@ -398,8 +400,7 @@ class ViserVisualizationNode:
         # Object pose is in camera frame = C frame
         # We want it in world frame = robot frame = R frame
         T_R_O = object_pose
-        T_W_O = T_R_O.copy()
-        T_W_O[:3, 3] += np.array([0.0, 0.8, 0.0])
+        T_W_O = T_W_R @ T_R_O
         object_pos = T_W_O[:3, 3]
         object_quat_xyzw = R.from_matrix(T_W_O[:3, :3]).as_quat()
         self.object_viser.position = object_pos
@@ -409,10 +410,9 @@ class ViserVisualizationNode:
         # Goal object pose is in camera frame = C frame
         # We want it in world frame = robot frame = R frame
         T_R_G = goal_object_pose
-        T_W_G = T_R_G.copy()
-        T_W_G[:3, 3] += np.array([0.0, 0.8, 0.0])
+        T_W_G = T_W_R @ T_R_G
         goal_object_pos = T_W_G[:3, 3]
-        goal_object_quat_xyzw = R.from_matrix(T_R_G[:3, :3]).as_quat()
+        goal_object_quat_xyzw = R.from_matrix(T_W_G[:3, :3]).as_quat()
         self.goal_object_viser.position = goal_object_pos
         self.goal_object_viser.wxyz = goal_object_quat_xyzw[[3, 0, 1, 2]]
 
