@@ -192,40 +192,40 @@ def main():
             print("=" * 100)
             break
 
-    # print("Moving to home pose")
-    # move_to_pose(
-    #     HOME_JOINT_POS,
-    #     pub_iiwa=pub_iiwa,
-    #     pub_allegro=pub_allegro,
-    #     move_time=10.0,
-    # )
-    # print("Reached home pose")
-
-    print("Moving to initial pose")
+    print("Moving to home pose")
     move_to_pose(
-        joint_positions_array[0],
+        HOME_JOINT_POS,
         pub_iiwa=pub_iiwa,
         pub_allegro=pub_allegro,
         move_time=10.0,
     )
-    print("Reached initial pose")
+    print("Reached home pose")
 
-    print("Replaying trajectory")
-    start_time = time.time()
-    for timestep in range(len(joint_positions_array)):
-        print(f"Replaying timestep: {timestep}")
-        move_to_pose(
-            joint_positions_array[timestep],
-            pub_iiwa=pub_iiwa,
-            pub_allegro=pub_allegro,
-            # move_time=0.2,
-            # move_time=0.1,
-            # move_time=1 / 20,
-            # move_time=1 / 30,
-            move_time=1 / 60,
-        )
-    end_time = time.time()
-    print(f"Time taken: {end_time - start_time:.2f} seconds")
+    # print("Moving to initial pose")
+    # move_to_pose(
+    #     joint_positions_array[0],
+    #     pub_iiwa=pub_iiwa,
+    #     pub_allegro=pub_allegro,
+    #     move_time=10.0,
+    # )
+    # print("Reached initial pose")
+
+    # print("Replaying trajectory")
+    # start_time = time.time()
+    # for timestep in range(len(joint_positions_array)):
+    #     print(f"Replaying timestep: {timestep}")
+    #     move_to_pose(
+    #         joint_positions_array[timestep],
+    #         pub_iiwa=pub_iiwa,
+    #         pub_allegro=pub_allegro,
+    #         # move_time=0.2,
+    #         # move_time=0.1,
+    #         # move_time=1 / 20,
+    #         # move_time=1 / 30,
+    #         move_time=1 / 60,
+    #     )
+    # end_time = time.time()
+    # print(f"Time taken: {end_time - start_time:.2f} seconds")
 
 
 if __name__ == "__main__":

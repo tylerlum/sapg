@@ -54,6 +54,7 @@ CYAN_RGB = (0, 255, 255)
 MAGENTA_RGB = (255, 0, 255)
 WHITE_RGB = (255, 255, 255)
 BLACK_RGB = (0, 0, 0)
+BLACK_RGBA_TRANSLUCENT = (0, 0, 0, 0.5)
 
 AXES_LENGTH = 0.1
 AXES_RADIUS = 0.001
@@ -251,7 +252,7 @@ class ViserVisualizationNode:
                 SERVER,
                 table_urdf_path,
                 root_node_name="/table",
-                mesh_color_override=BLACK_RGB,
+                mesh_color_override=BLACK_RGBA_TRANSLUCENT,
             )
 
             TRANSPARENT_TABLE = False
@@ -396,32 +397,24 @@ class ViserVisualizationNode:
         # Update the object pose
         # Object pose is in camera frame = C frame
         # We want it in world frame = robot frame = R frame
-        T_C_O = object_pose
-        T_R_O = self.T_R_C @ T_C_O
-        object_pos = T_R_O[:3, 3]
-        object_quat_xyzw = R.from_matrix(T_R_O[:3, :3]).as_quat()
+        T_R_O = object_pose
+        T_W_O = T_R_O.copy()
+        T_W_O[:3, 3] += np.array([0.0, 0.8, 0.0])
+        object_pos = T_W_O[:3, 3]
+        object_quat_xyzw = R.from_matrix(T_W_O[:3, :3]).as_quat()
         self.object_viser.position = object_pos
         self.object_viser.wxyz = object_quat_xyzw[[3, 0, 1, 2]]
 
         # Update the goal object pose
         # Goal object pose is in camera frame = C frame
         # We want it in world frame = robot frame = R frame
-        T_C_G = goal_object_pose
-        T_R_G = self.goal_T_R_C @ T_C_G
-        goal_object_pos = T_R_G[:3, 3]
+        T_R_G = goal_object_pose
+        T_W_G = T_R_G.copy()
+        T_W_G[:3, 3] += np.array([0.0, 0.8, 0.0])
+        goal_object_pos = T_W_G[:3, 3]
         goal_object_quat_xyzw = R.from_matrix(T_R_G[:3, :3]).as_quat()
         self.goal_object_viser.position = goal_object_pos
         self.goal_object_viser.wxyz = goal_object_quat_xyzw[[3, 0, 1, 2]]
-
-    @property
-    def T_R_C(self) -> np.ndarray:
-        # HACK
-        return np.eye(4)
-
-    @property
-    def goal_T_R_C(self) -> np.ndarray:
-        # HACK
-        return np.eye(4)
 
     def run(self):
         """Main loop to run the node, update simulation, and publish joint states."""
