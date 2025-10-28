@@ -1,0 +1,75 @@
+from argparse import ArgumentParser
+from pathlib import Path
+from typing import Literal
+import trimesh
+
+def run_coacd(
+    mesh_path: Path,
+    output_dir: Path,
+    max_convex_hull: int = -1,
+) -> list[trimesh.Trimesh]:
+    """Run COACD on a mesh and return the list of convex hulls."""
+    assert mesh_path.exists(), f"Mesh file {mesh_path} does not exist"
+    assert mesh_path.suffix == ".obj", f"Mesh file {mesh_path} is not an OBJ file"
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    MODE: Literal["subprocess", "python"] = "subprocess"
+    if MODE == "subprocess":
+        from subprocess import run
+        output_mesh_path = output_dir / mesh_path.name
+        cmd = f"coacd -i {mesh_path} -o {output_mesh_path} -c {max_convex_hull}"
+        print(f"Running command: {cmd}")
+        run(cmd, shell=True, check=True)
+
+        assert output_mesh_path.exists(), f"Output mesh file {output_mesh_path} does not exist"
+        output_mesh = trimesh.load(output_mesh_path)
+        parts = output_mesh.split()
+        for i, part in enumerate(parts):
+            filename = output_dir / f"decomp_{i}.obj"
+            print(f"Saving part {i} to {filename}")
+            part.export(filename)
+        print(f"Decomposition complete. {len(parts)} parts found and saved to {output_dir}.")
+        return parts
+    elif MODE == "python":
+        import coacd
+        import numpy as np
+        input_mesh = trimesh.load(mesh_path)
+        coacd_mesh = coacd.Mesh(input_mesh.vertices, input_mesh.faces)
+        convex_vs_fs_parts = coacd.run_coacd(coacd_mesh, max_convex_hull=max_convex_hull)
+        parts = []
+        for vs, fs in convex_vs_fs_parts:
+            parts.append(trimesh.Trimesh(vs, fs))
+
+        np.random.seed(0)
+        scene = trimesh.Scene()
+        for part in parts:
+            part.visual.vertex_colors[:, :3] = (np.random.rand(3) * 255).astype(np.uint8)
+            scene.add_geometry(part)
+        output_mesh_path = output_dir / mesh_path.name
+        print(f"Saving scene to {output_mesh_path}")
+        scene.export(output_mesh_path)
+
+        for i, part in enumerate(parts):
+            filename = output_dir / f"decomp_{i}.obj"
+            print(f"Saving part {i} to {filename}")
+            part.export(filename)
+        print(f"Decomposition complete. {len(parts)} parts found and saved to {output_dir}.")
+        return parts
+    else:
+        raise ValueError(f"Invalid mode: {MODE}")
+
+def main():
+    parser = ArgumentParser()
+    parser.add_argument("--mesh_path", type=Path, required=True)
+    parser.add_argument("--output_dir", type=Path, required=True)
+    parser.add_argument("--max_convex_hull", type=int, default=-1)
+    args = parser.parse_args()
+    run_coacd(
+        mesh_path=args.mesh_path,
+        output_dir=args.output_dir,
+        max_convex_hull=args.max_convex_hull,
+    )
+
+if __name__ == "__main__":
+    main()
