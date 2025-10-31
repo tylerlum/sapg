@@ -230,27 +230,49 @@ class Simulator:
         object_free_joint.name = "object_free_joint"
         object_free_joint.type = mujoco.mjtJoint.mjJNT_FREE
 
-        object_geom = object_body.add_geom()
-        object_geom.name = "object_geom"
-        object_geom.rgba = GREY_RGBA
-        object_geom.friction = self.config.friction_array.copy()
-
-        ADD_BOX_OBJECT = True
+        ADD_BOX_OBJECT = False
         if ADD_BOX_OBJECT:
-            BOX_LEN_X, BOX_LEN_Y, BOX_LEN_Z = 0.1, 0.035, 0.025
+            BOX_LEN_X, BOX_LEN_Y, BOX_LEN_Z = 0.30, 0.03, 0.02
+
+            object_geom = object_body.add_geom()
+            object_geom.name = "object_geom"
+            object_geom.rgba = GREY_RGBA
+            object_geom.friction = self.config.friction_array.copy()
+
             object_geom.type = mujoco.mjtGeom.mjGEOM_BOX
             object_geom.size = np.array([BOX_LEN_X / 2, BOX_LEN_Y / 2, BOX_LEN_Z / 2])  # Half extents
         else:
-            mesh = spec.add_mesh()
-            mesh.name = "object_mesh"
-            # mesh.file = "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/044_flat_screwdriver/044_flat_screwdriver/google_16k/textured_vhacd.obj"
-            # mesh.file = "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/040_large_marker/040_large_marker/google_16k/textured_vhacd.obj"
-            mesh.file = "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/hammer_1/hammer_1.obj"
-            assert Path(mesh.file).exists(), f"Mesh file does not exist: {mesh.file}"
-            mesh.scale = np.array([1.0, 1.0, 1.0])
+            mesh_paths = [
+                Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects_convex_decomp/hammer_1/decomp_0.obj"),
+                Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects_convex_decomp/hammer_1/decomp_1.obj"),
+                Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects_convex_decomp/hammer_1/decomp_2.obj"),
+                Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects_convex_decomp/hammer_1/decomp_3.obj"),
+            ]
+            for mesh_path in mesh_paths:
+                assert mesh_path.exists(), f"Mesh file does not exist: {mesh_path}"
+                mesh = spec.add_mesh()
+                mesh.name = mesh_path.stem
+                mesh.file = str(mesh_path)
+                assert Path(mesh.file).exists(), f"Mesh file does not exist: {mesh.file}"
+                mesh.scale = np.array([1.0, 1.0, 1.0])
 
-            object_geom.type = mujoco.mjtGeom.mjGEOM_MESH
-            object_geom.meshname = mesh.name
+                object_geom = object_body.add_geom()
+                object_geom.name = f"object_geom_{mesh_path.stem}"
+                object_geom.rgba = GREY_RGBA
+                object_geom.friction = self.config.friction_array.copy()
+                object_geom.type = mujoco.mjtGeom.mjGEOM_MESH
+                object_geom.meshname = mesh.name
+
+            # mesh = spec.add_mesh()
+            # mesh.name = "object_mesh"
+            # # mesh.file = "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/044_flat_screwdriver/044_flat_screwdriver/google_16k/textured_vhacd.obj"
+            # # mesh.file = "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/040_large_marker/040_large_marker/google_16k/textured_vhacd.obj"
+            # mesh.file = "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/hammer_1/hammer_1.obj"
+            # assert Path(mesh.file).exists(), f"Mesh file does not exist: {mesh.file}"
+            # mesh.scale = np.array([1.0, 1.0, 1.0])
+
+            # object_geom.type = mujoco.mjtGeom.mjGEOM_MESH
+            # object_geom.meshname = mesh.name
 
         self.mj_model = spec.compile()
         self.mj_data = mujoco.MjData(self.mj_model)
