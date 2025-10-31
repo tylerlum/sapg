@@ -2269,19 +2269,13 @@ class AllegroKukaBase(VecTask):
                 targets, self.arm_hand_dof_lower_limits[:7], self.arm_hand_dof_upper_limits[:7]
             )
 
-        # # Clipping arm
-        # max_delta = 0.025
-        # self.cur_targets[:, :7] = tensor_clamp(
-        #     self.cur_targets[:, :7],
-        #     self.arm_hand_dof_pos[:, :7] - max_delta,
-        #     self.arm_hand_dof_pos[:, :7] + max_delta,
-        # )
-
         # Smooth arm
-        self.cur_targets[:, :7] = (
-            self.act_moving_average * self.cur_targets[:, :7]
-            + (1.0 - self.act_moving_average) * self.prev_targets[:, :7]
-        )
+        SMOOTH_ARM = True
+        if SMOOTH_ARM:
+            self.cur_targets[:, :7] = (
+                self.act_moving_average * self.cur_targets[:, :7]
+                + (1.0 - self.act_moving_average) * self.prev_targets[:, :7]
+            )
 
         # Default CHECK_WITH_COMPUTED_JOINT_POS_TARGETS = False
         # Set to True to check if the computed joint pos targets are correct

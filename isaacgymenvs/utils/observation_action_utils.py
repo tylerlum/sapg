@@ -340,10 +340,12 @@ def compute_joint_pos_targets(
         q_lower_limits[:7],
         q_upper_limits[:7],
     )
-    cur_targets[:, :7] = (
-        act_moving_average * cur_targets[:, :7]
-        + (1.0 - act_moving_average) * prev_targets[:, :7]
-    )
+    SMOOTH_ARM = True
+    if SMOOTH_ARM:
+        cur_targets[:, :7] = (
+            act_moving_average * cur_targets[:, :7]
+            + (1.0 - act_moving_average) * prev_targets[:, :7]
+        )
     return cur_targets
 
 
