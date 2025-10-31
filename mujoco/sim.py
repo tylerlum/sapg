@@ -242,12 +242,8 @@ class Simulator:
             object_geom.type = mujoco.mjtGeom.mjGEOM_BOX
             object_geom.size = np.array([BOX_LEN_X / 2, BOX_LEN_Y / 2, BOX_LEN_Z / 2])  # Half extents
         else:
-            mesh_paths = [
-                Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects_convex_decomp/hammer_1/decomp_0.obj"),
-                Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects_convex_decomp/hammer_1/decomp_1.obj"),
-                Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects_convex_decomp/hammer_1/decomp_2.obj"),
-                Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects_convex_decomp/hammer_1/decomp_3.obj"),
-            ]
+            # mesh_paths = list(Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects_convex_decomp/hammer_1").glob("decomp_*.obj"))
+            mesh_paths = list(Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects_convex_decomp/040_large_marker").glob("decomp_*.obj"))
             for mesh_path in mesh_paths:
                 assert mesh_path.exists(), f"Mesh file does not exist: {mesh_path}"
                 mesh = spec.add_mesh()
