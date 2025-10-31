@@ -42,7 +42,7 @@ from isaacgym import gymapi, gymtorch, gymutil
 from torch import Tensor
 
 from isaacgymenvs.tasks.allegro_kuka.allegro_kuka_utils import DofParameters, populate_dof_properties
-from isaacgymenvs.utils.observation_action_utils import compute_observation, OBS_NAMES, compute_joint_pos_targets
+from isaacgymenvs.utils.observation_action_utils import compute_observation, OBS_NAMES, compute_joint_pos_targets, create_chain_and_serial_chain
 from isaacgymenvs.tasks.base.vec_task import VecTask
 from isaacgymenvs.tasks.allegro_kuka.generate_cuboids import (
     generate_big_cuboids,
@@ -1246,14 +1246,27 @@ class AllegroKukaBase(VecTask):
         object_scales = []
         object_keypoint_offsets = []
 
+        # Sanity checks
+        body_names = self.gym.get_asset_rigid_body_names(allegro_kuka_asset)
+        for name in self.allegro_fingertips:
+            assert name in body_names, f"Finger {name} not found in asset {allegro_kuka_asset}"
+        has_iiwa14 = "iiwa14_link_7" in body_names
+        has_iiwa7 = "iiwa7_link_7" in body_names
+        if (has_iiwa14 and has_iiwa7) or (not has_iiwa14 and not has_iiwa7):
+            raise ValueError(f"Either iiwa14 or iiwa7 must be in the asset {allegro_kuka_asset}, but not both, has_iiwa14: {has_iiwa14}, has_iiwa7: {has_iiwa7}, body_names: {body_names}")
+
         self.allegro_fingertip_handles = [
             self.gym.find_asset_rigid_body_index(allegro_kuka_asset, name) for name in self.allegro_fingertips
         ]
 
-        self.allegro_palm_handle = self.gym.find_asset_rigid_body_index(allegro_kuka_asset, "iiwa14_link_7")
-        if self.allegro_palm_handle == -1:
+        if has_iiwa14:
+            self.robot_name = "iiwa14"
+            self.allegro_palm_handle = self.gym.find_asset_rigid_body_index(allegro_kuka_asset, "iiwa14_link_7")
+        elif has_iiwa7:
+            self.robot_name = "iiwa7"
             self.allegro_palm_handle = self.gym.find_asset_rigid_body_index(allegro_kuka_asset, "iiwa7_link_7")
-        assert self.allegro_palm_handle != -1, f"Allegro palm handle not found in asset {allegro_kuka_asset}"
+        else:
+            raise ValueError(f"Either iiwa14 or iiwa7 must be in the asset {allegro_kuka_asset}, but not both, has_iiwa14: {has_iiwa14}, has_iiwa7: {has_iiwa7}, body_names: {body_names}")
 
         # this rely on the fact that objects are added right after the arms in terms of create_actor()
         self.object_rb_handles = list(range(self.num_hand_arm_bodies, self.num_hand_arm_bodies + object_rb_count))
@@ -1848,13 +1861,7 @@ class AllegroKukaBase(VecTask):
             import pytorch_kinematics as pk
             # Create chain and palm_serial_chain from URDF
             if not hasattr(self, "chain") or not hasattr(self, "palm_serial_chain"):
-                asset_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../assets")
-                urdf_path = Path(asset_root) / self.hand_arm_asset_file
-                assert urdf_path.exists(), f"URDF file {urdf_path} does not exist"
-                self.chain = pk.build_chain_from_urdf(
-                    open(urdf_path).read(),
-                ).to(device=self.device)
-                self.palm_serial_chain = pk.SerialChain(self.chain, "iiwa7_link_7").to(device=self.device)
+                self.chain, self.palm_serial_chain = create_chain_and_serial_chain(device=self.device, robot_name=self.robot_name)
 
             computed_obs = compute_observation(
                 q=self.arm_hand_dof_pos,

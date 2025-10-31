@@ -14,6 +14,7 @@ import pytorch_kinematics as pk
 from isaacgymenvs.utils.observation_action_utils import (
     compute_joint_pos_targets,
     compute_observation,
+    create_chain_and_serial_chain,
 )
 
 def warn(message: str):
@@ -134,17 +135,7 @@ def main():
         device="cuda",
     )
 
-    asset_root = Path(__file__).parent / "../assets"
-    urdf_path = (
-        asset_root / "urdf/kuka_allegro_description/iiwa14_real.urdf"
-    )
-    assert urdf_path.exists(), f"URDF file {urdf_path} does not exist"
-    chain = pk.build_chain_from_urdf(
-        open(urdf_path).read(),
-    ).to(device=device)
-    palm_serial_chain = pk.SerialChain(chain, "iiwa14_link_7").to(
-        device=device
-    )
+    chain, palm_serial_chain = create_chain_and_serial_chain(device=device, robot_name="iiwa14")
 
     sim_no_ros = IsaacNoRos(sim=sim, control_dt=control_dt, device=device, chain=chain, palm_serial_chain=palm_serial_chain)
     observation = sim_no_ros.reset()

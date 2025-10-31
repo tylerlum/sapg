@@ -65,18 +65,6 @@ def main():
         device="cuda",
     )
 
-    # asset_root = Path(__file__).parent / "../assets"
-    # urdf_path = (
-    #     asset_root / "urdf/kuka_allegro_description/kuka_allegro_touch_sensor.urdf"
-    # )
-    # assert urdf_path.exists(), f"URDF file {urdf_path} does not exist"
-    # chain = pk.build_chain_from_urdf(
-    #     open(urdf_path).read(),
-    # ).to(device=device)
-    # palm_serial_chain = pk.SerialChain(chain, "iiwa7_link_7").to(
-    #     device=device
-    # )
-
     sim_no_ros = IsaacNoRos(sim=sim, control_dt=control_dt, device=device)
     observation = sim_no_ros.reset()
 

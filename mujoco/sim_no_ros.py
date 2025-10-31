@@ -12,6 +12,7 @@ import pytorch_kinematics as pk
 from isaacgymenvs.utils.observation_action_utils import (
     compute_joint_pos_targets,
     compute_observation,
+    create_chain_and_serial_chain,
 )
 
 def warn(message: str):
@@ -99,7 +100,8 @@ def main():
     CONFIG_PATH = Path("/home/tylerlum/github_repos/sapg/closed_loop_testing/config.yaml")
     assert Path(CONFIG_PATH).exists()
     # CHECKPOINT_PATH = Path("/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-10-22_slow-action-obs-randomize-all_slower-curriculum/00_slowarmhand_slowobs_hammer_2025-10-23_00-48-56/runs/00_slowarmhand_slowobs_hammer_2025-10-23_00-48-56/last/model.pth")
-    CHECKPOINT_PATH = Path("/juno/u/kedia/sapg/train_dir/checkpoints/hammer/absoluteControl_0.5.pth")
+    # CHECKPOINT_PATH = Path("/juno/u/kedia/sapg/train_dir/checkpoints/hammer/absoluteControl_0.5.pth")
+    CHECKPOINT_PATH = Path("/juno/u/kedia/sapg/train_dir/checkpoints/hammer/relativeControl_5.pth")
     assert CHECKPOINT_PATH.exists()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -112,17 +114,7 @@ def main():
         device=device,
     )
 
-    asset_root = Path(__file__).parent / "../assets"
-    urdf_path = (
-        asset_root / "urdf/kuka_allegro_description/iiwa14_real.urdf"
-    )
-    assert urdf_path.exists(), f"URDF file {urdf_path} does not exist"
-    chain = pk.build_chain_from_urdf(
-        open(urdf_path).read(),
-    ).to(device=device)
-    palm_serial_chain = pk.SerialChain(chain, "iiwa14_link_7").to(
-        device=device
-    )
+    chain, palm_serial_chain = create_chain_and_serial_chain(device=device, robot_name="iiwa14")
 
     # object_scales = np.array([2.0, 0.5, 0.5])
     object_scales = np.array([0.1, 0.035, 0.025]) * 20

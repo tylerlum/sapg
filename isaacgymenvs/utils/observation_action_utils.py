@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from typing import Literal, Tuple
 import numpy as np
 import pytorch_kinematics as pk
 import torch
+from pathlib import Path
 from torch import Tensor
 
 from isaacgymenvs.utils.torch_jit_utils import (
@@ -126,6 +128,33 @@ FINGERTIP_OFFSETS_np = np.array(
 OBJECT_KEYPOINT_OFFSETS_np = np.array(
     [[1, 1, 1], [1, 1, -1], [-1, -1, 1], [-1, -1, -1]]
 )
+
+
+def create_chain_and_serial_chain(device: str, robot_name: Literal["iiwa14", "iiwa7"]) -> Tuple[pk.Chain, pk.SerialChain]:
+    asset_root = Path(__file__).parent / "../../assets"
+    assert asset_root.exists(), f"Asset root {asset_root} does not exist"
+
+    if robot_name == "iiwa14":
+        urdf_path = (
+            asset_root / "urdf/kuka_allegro_description/iiwa14_real.urdf"
+        )
+        palm_link_name = "iiwa14_link_7"
+    elif robot_name == "iiwa7":
+        urdf_path = (
+            asset_root / "urdf/kuka_allegro_description/iiwa7_real.urdf"
+        )
+        palm_link_name = "iiwa7_link_7"
+    else:
+        raise ValueError(f"Invalid robot name: {robot_name}")
+    assert urdf_path.exists(), f"URDF file {urdf_path} does not exist"
+
+    chain = pk.build_chain_from_urdf(
+        open(urdf_path).read(),
+    ).to(device=device)
+    palm_serial_chain = pk.SerialChain(chain, palm_link_name).to(
+        device=device
+    )
+    return chain, palm_serial_chain
 
 
 def compute_observation(
@@ -582,16 +611,10 @@ cfg = Config(
     hand_dof_speed_scale=1.0,
     dt=1/60,
 )
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
 # Load chain and palm_serial_chain
-KUKA_ALLEGRO_URDF_PATH = Path(
-    "/home/tylerlum/github_repos/sapg/assets/urdf/kuka_allegro_description/kuka_allegro_touch_sensor.urdf"
-)
-assert KUKA_ALLEGRO_URDF_PATH.exists(), (
-    f"KUKA_ALLEGRO_URDF_PATH not found: {KUKA_ALLEGRO_URDF_PATH}"
-)
-chain = pk.build_chain_from_urdf(open(KUKA_ALLEGRO_URDF_PATH).read()).to(device=DEVICE, dtype=torch.float32)
-palm_serial_chain = pk.SerialChain(chain, "iiwa14_link_7").to(device=DEVICE, dtype=torch.float32)
+chain, palm_serial_chain = create_chain_and_serial_chain(device=device, robot_name="iiwa14")
 
 # Load policy
 wandb_run_path = "tylerlum/sapg_allegro_kuka_reorientation/uid_00_default_marker_2025-10-18_01-43-44"
