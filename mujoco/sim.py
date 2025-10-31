@@ -243,7 +243,13 @@ class Simulator:
             object_geom.size = np.array([BOX_LEN_X / 2, BOX_LEN_Y / 2, BOX_LEN_Z / 2])  # Half extents
         else:
             # mesh_paths = list(Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects_convex_decomp/hammer_1").glob("decomp_*.obj"))
-            mesh_paths = list(Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects_convex_decomp/040_large_marker").glob("decomp_*.obj"))
+            # mesh_paths = list(Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects_convex_decomp/hammer_2").glob("decomp_*.obj"))
+            mesh_paths = list(Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects_convex_decomp/040_large_marker").glob("decomp_*.obj"))  # Still sinks into table
+            # mesh_paths = list(Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects_convex_decomp/044_flat_screwdriver").glob("decomp_*.obj"))
+            # mesh_paths = list(Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects_convex_decomp/phone").glob("decomp_*.obj"))  # Still sinks into table
+            # mesh_paths = list(Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects_convex_decomp/whiteboard_eraser").glob("decomp_*.obj"))
+            # mesh_paths = list(Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects_convex_decomp/YcbHammer").glob("decomp_*.obj"))
+
             for mesh_path in mesh_paths:
                 assert mesh_path.exists(), f"Mesh file does not exist: {mesh_path}"
                 mesh = spec.add_mesh()

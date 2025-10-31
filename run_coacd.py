@@ -1,21 +1,21 @@
 from argparse import ArgumentParser
 from pathlib import Path
-from typing import Literal
+from typing import Literal, List
 import trimesh
 
 def run_coacd(
     mesh_path: Path,
     output_dir: Path,
     max_convex_hull: int = -1,
-) -> list[trimesh.Trimesh]:
+    mode: Literal["subprocess", "python"] = "python",
+) -> List[trimesh.Trimesh]:
     """Run COACD on a mesh and return the list of convex hulls."""
     assert mesh_path.exists(), f"Mesh file {mesh_path} does not exist"
     assert mesh_path.suffix == ".obj", f"Mesh file {mesh_path} is not an OBJ file"
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    MODE: Literal["subprocess", "python"] = "subprocess"
-    if MODE == "subprocess":
+    if mode == "subprocess":
         from subprocess import run
         output_mesh_path = output_dir / mesh_path.name
         cmd = f"coacd -i {mesh_path} -o {output_mesh_path} -c {max_convex_hull}"
@@ -31,10 +31,10 @@ def run_coacd(
             part.export(filename)
         print(f"Decomposition complete. {len(parts)} parts found and saved to {output_dir}.")
         return parts
-    elif MODE == "python":
+    elif mode == "python":
         import coacd
         import numpy as np
-        input_mesh = trimesh.load(mesh_path)
+        input_mesh = trimesh.load(mesh_path, force="mesh")
         coacd_mesh = coacd.Mesh(input_mesh.vertices, input_mesh.faces)
         convex_vs_fs_parts = coacd.run_coacd(coacd_mesh, max_convex_hull=max_convex_hull)
         parts = []
@@ -57,7 +57,7 @@ def run_coacd(
         print(f"Decomposition complete. {len(parts)} parts found and saved to {output_dir}.")
         return parts
     else:
-        raise ValueError(f"Invalid mode: {MODE}")
+        raise ValueError(f"Invalid mode: {mode}")
 
 def main():
     parser = ArgumentParser()
