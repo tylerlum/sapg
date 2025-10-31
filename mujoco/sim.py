@@ -244,7 +244,7 @@ class Simulator:
         else:
             # mesh_paths = list(Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects_convex_decomp/hammer_1").glob("decomp_*.obj"))
             # mesh_paths = list(Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects_convex_decomp/hammer_2").glob("decomp_*.obj"))
-            mesh_paths = list(Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects_convex_decomp/040_large_marker").glob("decomp_*.obj"))  # Still sinks into table
+            mesh_paths = list(Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects_convex_decomp/040_large_marker").glob("decomp_*.obj"))
             # mesh_paths = list(Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects_convex_decomp/044_flat_screwdriver").glob("decomp_*.obj"))
             # mesh_paths = list(Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects_convex_decomp/phone").glob("decomp_*.obj"))  # Still sinks into table
             # mesh_paths = list(Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects_convex_decomp/whiteboard_eraser").glob("decomp_*.obj"))
