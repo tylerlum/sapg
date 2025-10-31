@@ -89,7 +89,7 @@ class IsaacNoRos:
         print(f"object_pose = {object_pose}")
         print(f"goal_object_pose = {goal_object_pose}")
         print(f"object_scales = {object_scales}")
-        breakpoint()
+        # breakpoint()
         new_obs = compute_observation(
             q=q,
             qd=qd,
@@ -136,13 +136,13 @@ def main():
 
     asset_root = Path(__file__).parent / "../assets"
     urdf_path = (
-        asset_root / "urdf/kuka_allegro_description/kuka_allegro_touch_sensor.urdf"
+        asset_root / "urdf/kuka_allegro_description/iiwa14_real.urdf"
     )
     assert urdf_path.exists(), f"URDF file {urdf_path} does not exist"
     chain = pk.build_chain_from_urdf(
         open(urdf_path).read(),
     ).to(device=device)
-    palm_serial_chain = pk.SerialChain(chain, "iiwa7_link_7").to(
+    palm_serial_chain = pk.SerialChain(chain, "iiwa14_link_7").to(
         device=device
     )
 

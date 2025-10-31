@@ -591,7 +591,7 @@ assert KUKA_ALLEGRO_URDF_PATH.exists(), (
     f"KUKA_ALLEGRO_URDF_PATH not found: {KUKA_ALLEGRO_URDF_PATH}"
 )
 chain = pk.build_chain_from_urdf(open(KUKA_ALLEGRO_URDF_PATH).read()).to(device=DEVICE, dtype=torch.float32)
-palm_serial_chain = pk.SerialChain(chain, "iiwa7_link_7").to(device=DEVICE, dtype=torch.float32)
+palm_serial_chain = pk.SerialChain(chain, "iiwa14_link_7").to(device=DEVICE, dtype=torch.float32)
 
 # Load policy
 wandb_run_path = "tylerlum/sapg_allegro_kuka_reorientation/uid_00_default_marker_2025-10-18_01-43-44"
