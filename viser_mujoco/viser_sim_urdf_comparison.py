@@ -3,8 +3,9 @@ from pathlib import Path
 
 import numpy as np
 import viser
-from sim2sim.mujoco_sim.mujoco_sim import INIT_JOINT_POS, MujocoSim, MujocoSimConfig
 from viser.extras import ViserUrdf
+
+from sim2sim.mujoco_sim.mujoco_sim import INIT_JOINT_POS, MujocoSim, MujocoSimConfig
 from viser_mujoco.viser_sim import ViserMujocoSim
 
 

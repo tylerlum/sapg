@@ -1,14 +1,13 @@
 """Convert MuJoCo mesh data to trimesh format with texture support."""
 
+import mujoco
 import numpy as np
 import trimesh
 import trimesh.visual
 import trimesh.visual.material
 import viser.transforms as vtf
-from PIL import Image
-
-import mujoco
 from mujoco import mj_id2name, mjtGeom, mjtObj
+from PIL import Image
 
 
 def mujoco_mesh_to_trimesh(
@@ -78,9 +77,9 @@ def mujoco_mesh_to_trimesh(
         face_texcoord_idx = mj_model.mesh_facetexcoord[
             face_start : face_start + face_count
         ]
-        assert face_texcoord_idx.shape == (face_count, 3), (
-            f"Expected face_texcoord_idx shape ({face_count}, 3), got {face_texcoord_idx.shape}"
-        )
+        assert (
+            face_texcoord_idx.shape == (face_count, 3)
+        ), f"Expected face_texcoord_idx shape ({face_count}, 3), got {face_texcoord_idx.shape}"
 
         # Since the same vertex can have different UVs in different faces,
         # we need to duplicate vertices. Each face will get its own 3 vertices.
@@ -88,12 +87,13 @@ def mujoco_mesh_to_trimesh(
         # Duplicate vertices for each face reference.
         # faces.flatten() gives us vertex indices in order: [v0_f0, v1_f0, v2_f0, v0_f1, v1_f1, v2_f1, ...]
         new_vertices = vertices[faces.flatten()]  # Shape: (face_count * 3, 3)
-        assert new_vertices.shape == (
-            face_count * 3,
-            3,
-        ), (
-            f"Expected new_vertices shape ({face_count * 3}, 3), got {new_vertices.shape}"
-        )
+        assert (
+            new_vertices.shape
+            == (
+                face_count * 3,
+                3,
+            )
+        ), f"Expected new_vertices shape ({face_count * 3}, 3), got {new_vertices.shape}"
 
         # Get UV coordinates for each duplicated vertex.
         # face_texcoord_idx.flatten() gives us texcoord indices in the same order.
@@ -146,9 +146,9 @@ def mujoco_mesh_to_trimesh(
 
                 # Extract raw texture data.
                 tex_data = mj_model.tex_data[tex_adr : tex_adr + tex_size]
-                assert tex_data.shape == (tex_size,), (
-                    f"Expected tex_data shape ({tex_size},), got {tex_data.shape}"
-                )
+                assert tex_data.shape == (
+                    tex_size,
+                ), f"Expected tex_data shape ({tex_size},), got {tex_data.shape}"
 
                 # Reshape texture data based on number of channels.
                 # Note: MuJoCo uses OpenGL convention (origin at bottom-left)
@@ -278,9 +278,9 @@ def mujoco_mesh_to_trimesh(
                 )
 
     # Final sanity checks.
-    assert mesh.vertices.shape[1] == 3, (
-        f"Vertices should be Nx3, got {mesh.vertices.shape}"
-    )
+    assert (
+        mesh.vertices.shape[1] == 3
+    ), f"Vertices should be Nx3, got {mesh.vertices.shape}"
     assert mesh.faces.shape[1] == 3, f"Faces should be Nx3, got {mesh.faces.shape}"
     assert len(mesh.vertices) > 0, "Mesh has no vertices"
     assert len(mesh.faces) > 0, "Mesh has no faces"

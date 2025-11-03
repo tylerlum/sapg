@@ -1,21 +1,23 @@
 from __future__ import annotations
+
 import time
 from collections import defaultdict
-from scipy.spatial.transform import Rotation as R
 from pathlib import Path
 from typing import Literal
 
+import mujoco
 import numpy as np
 import viser
 import viser.transforms as vtf
 from viser._scene_handles import FrameHandle
-from viser_mujoco.viser_conversions import get_body_name, is_fixed_body, merge_geoms
 
-import mujoco
+from viser_mujoco.viser_conversions import get_body_name, is_fixed_body, merge_geoms
 
 
 def create_robot_control_sliders(
-    server: viser.ViserServer, viser_mj_model: ViserMJModel, link_name_to_frame: dict[str, FrameHandle]
+    server: viser.ViserServer,
+    viser_mj_model: ViserMJModel,
+    link_name_to_frame: dict[str, FrameHandle],
 ) -> tuple[list[viser.GuiInputHandle[float]], list[float]]:
     """Create slider for each joint of the robot. We also update robot model
     when slider moves."""
@@ -35,11 +37,16 @@ def create_robot_control_sliders(
             step=1e-3,
             initial_value=initial_pos,
         )
+
         def slider_on_update(_):
             viser_mj_model.update_cfg(
-                q_dict={name: slider.value for name, slider in zip(viser_mj_model.joint_names, slider_handles)},
+                q_dict={
+                    name: slider.value
+                    for name, slider in zip(viser_mj_model.joint_names, slider_handles)
+                },
             )
             update_frames(viser_mj_model, link_name_to_frame)
+
         slider.on_update(  # When sliders move, we update the URDF configuration.
             slider_on_update
         )
@@ -48,11 +55,15 @@ def create_robot_control_sliders(
     return slider_handles, initial_config
 
 
-def update_frames(viser_mj_model: ViserMJModel, link_name_to_frame: dict[str, FrameHandle]):
+def update_frames(
+    viser_mj_model: ViserMJModel, link_name_to_frame: dict[str, FrameHandle]
+):
     for link_name, frame in link_name_to_frame.items():
         link_pos, link_quat_wxyz = viser_mj_model.get_body_pose(link_name)
         assert link_pos.shape == (3,), f"link_pos.shape: {link_pos.shape}"
-        assert link_quat_wxyz.shape == (4,), f"link_quat_wxyz.shape: {link_quat_wxyz.shape}"
+        assert link_quat_wxyz.shape == (
+            4,
+        ), f"link_quat_wxyz.shape: {link_quat_wxyz.shape}"
         frame.position = link_pos.copy()
         frame.wxyz = link_quat_wxyz.copy()
 
@@ -195,12 +206,12 @@ class ViserMJModel:
     ) -> None:
         batch_size, num_bodies = body_xpos.shape[:2]
         assert batch_size == 1, f"batch_size: {batch_size}, expected: 1 for now"
-        assert body_xpos.shape == (batch_size, num_bodies, 3), (
-            f"body_xpos.shape: {body_xpos.shape}, expected: ({batch_size}, {num_bodies}, 3)"
-        )
-        assert body_xmat.shape == (batch_size, num_bodies, 3, 3), (
-            f"body_xmat.shape: {body_xmat.shape}, expected: ({batch_size}, {num_bodies}, 3, 3)"
-        )
+        assert (
+            body_xpos.shape == (batch_size, num_bodies, 3)
+        ), f"body_xpos.shape: {body_xpos.shape}, expected: ({batch_size}, {num_bodies}, 3)"
+        assert (
+            body_xmat.shape == (batch_size, num_bodies, 3, 3)
+        ), f"body_xmat.shape: {body_xmat.shape}, expected: ({batch_size}, {num_bodies}, 3, 3)"
 
         with server.atomic():
             body_xquat = vtf.SO3.from_matrix(body_xmat).wxyz
@@ -221,9 +232,11 @@ class ViserMJModel:
     def update_cfg(
         self, q_dict: dict[str, float], actuator_dict: dict[str, float] | None = None
     ) -> None:
-        assert set(q_dict.keys()).issubset(set(self.joint_names)), (
-            f"q_dict.keys(): {q_dict.keys()}, expected subset of {self.joint_names} for joint positions"
-        )
+        assert set(
+            q_dict.keys()
+        ).issubset(
+            set(self.joint_names)
+        ), f"q_dict.keys(): {q_dict.keys()}, expected subset of {self.joint_names} for joint positions"
 
         # Set joint positions
         for name, value in q_dict.items():
@@ -232,9 +245,11 @@ class ViserMJModel:
 
         # Set actuator positions
         if actuator_dict is not None:
-            assert set(actuator_dict.keys()).issubset(set(self.actuator_names)), (
-                f"actuator_dict.keys(): {actuator_dict.keys()}, expected subset of {self.actuator_names} for actuator commands"
-            )
+            assert set(
+                actuator_dict.keys()
+            ).issubset(
+                set(self.actuator_names)
+            ), f"actuator_dict.keys(): {actuator_dict.keys()}, expected subset of {self.actuator_names} for actuator commands"
             for name, value in actuator_dict.items():
                 actuator_id = self.mj_model.actuator(name=name).id
                 self.mj_data.ctrl[actuator_id] = value
@@ -302,7 +317,10 @@ class ViserMJModel:
     @property
     def joint_limits(self) -> dict[str, tuple[float, float]]:
         return {
-            name: (self.mj_model.jnt_range[joint_id][0], self.mj_model.jnt_range[joint_id][1])
+            name: (
+                self.mj_model.jnt_range[joint_id][0],
+                self.mj_model.jnt_range[joint_id][1],
+            )
             for name, joint_id in zip(self.joint_names, self.joint_ids)
         }
 
@@ -364,7 +382,7 @@ def main():
             )
 
     joint_names = viser_mj_model.joint_names
-    body_names = viser_mj_model.body_names
+    _body_names = viser_mj_model.body_names
 
     # Create sliders in GUI that help us move the robot joints.
     with server.gui.add_folder("Joint position control"):
@@ -395,7 +413,9 @@ def main():
     show_collision_meshes_cb.visible = len(viser_mj_model.collision_handles) > 0
 
     # Set initial robot configuration.
-    viser_mj_model.update_cfg(q_dict={joint_names[i]: initial_config[i] for i in range(len(joint_names))})
+    viser_mj_model.update_cfg(
+        q_dict={joint_names[i]: initial_config[i] for i in range(len(joint_names))}
+    )
     update_frames(viser_mj_model, link_name_to_frame)
 
     # Create grid.
