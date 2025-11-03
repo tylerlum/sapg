@@ -1,5 +1,3 @@
-import sys
-sys.path.append("/home/tylerlum/github_repos/sapg")
 import time
 from collections import defaultdict
 from typing import Literal
@@ -8,7 +6,7 @@ import numpy as np
 import viser
 import viser.transforms as vtf
 from sim2sim.mujoco_sim.mujoco_sim import MujocoSim, MujocoSimConfig
-from viser_conversions import get_body_name, is_fixed_body, merge_geoms
+from viser_mujoco.viser_conversions import get_body_name, is_fixed_body, merge_geoms
 
 import mujoco
 

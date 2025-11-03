@@ -1,5 +1,3 @@
-import sys
-sys.path.append("/home/tylerlum/github_repos/sapg")
 import time
 from scipy.spatial.transform import Rotation as R
 

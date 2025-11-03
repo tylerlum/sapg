@@ -1,13 +1,10 @@
-import sys
-sys.path.append("/home/tylerlum/github_repos/sapg")
 from isaacgymenvs.tasks.allegro_kuka.allegro_kuka_base import AllegroKukaBase  # isort:skip
 from typing import Tuple
 import time
 from pathlib import Path
 from sim2real.rl_player import RlPlayer
-import numpy as np
 import torch  # isort:skip
-from isaac import create_env
+from sim2sim.isaac_sim.isaac_env import create_env
 from termcolor import colored
 import pytorch_kinematics as pk
 

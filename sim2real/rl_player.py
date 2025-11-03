@@ -3,7 +3,7 @@ import os
 import numpy as np
 import torch
 from gym import spaces
-from rl_player_utils import (
+from sim2real.rl_player_utils import (
     read_cfg,
 )
 from rl_games.torch_runner import Runner, players

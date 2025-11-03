@@ -9,7 +9,7 @@ import numpy as np
 import viser
 import viser.transforms as vtf
 from viser._scene_handles import FrameHandle
-from viser_conversions import get_body_name, is_fixed_body, merge_geoms
+from viser_mujoco.viser_conversions import get_body_name, is_fixed_body, merge_geoms
 
 import mujoco
 
