@@ -187,7 +187,12 @@ class AllegroKukaBase(VecTask):
         )
 
         if self.use_sharpa:
-            self.allegro_fingertips = ["right_index_DP", "right_middle_DP", "right_ring_DP", "right_thumb_DP", "right_pinky_DP"]
+            if self.use_right_sharpa:
+                self.allegro_fingertips = ["right_index_DP", "right_middle_DP", "right_ring_DP", "right_thumb_DP", "right_pinky_DP"]
+            elif self.use_left_sharpa:
+                self.allegro_fingertips = ["left_index_DP", "left_middle_DP", "left_ring_DP", "left_thumb_DP", "left_pinky_DP"]
+            else:
+                raise ValueError(f"Unknown sharpa type: {self.use_sharpa}")
             self.fingertip_offsets = np.array(
                 [[0.02, 0.002, 0], [0.02, 0.002, 0], [0.02, 0.002, 0], [0.02, 0.002, 0], [0.02, 0.002, 0]], dtype=np.float32
                 # [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]], dtype=np.float32
@@ -2520,6 +2525,14 @@ class AllegroKukaBase(VecTask):
     @property
     def use_sharpa(self) -> bool:
         return "sharpa" in self.cfg["env"]["asset"]["kukaAllegro"].lower()
+
+    @property
+    def use_right_sharpa(self) -> bool:
+        return "right_sharpa" in self.cfg["env"]["asset"]["kukaAllegro"].lower()
+
+    @property
+    def use_left_sharpa(self) -> bool:
+        return "left_sharpa" in self.cfg["env"]["asset"]["kukaAllegro"].lower()
 
     @property
     def act_moving_average(self) -> float:

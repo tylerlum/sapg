@@ -143,7 +143,8 @@ env:
     # gives a bit more FPS.
     kukaAllegro: "urdf/kuka_allegro_description/kuka_allegro_touch_sensor.urdf"
     # kukaAllegro: "urdf/kuka_allegro_description/iiwa14_real.urdf"
-    # kukaAllegro: "urdf/kuka_allegro_description/iiwa14_sharpa.urdf"
+    # kukaAllegro: "urdf/kuka_allegro_description/iiwa14_right_sharpa.urdf"
+    # kukaAllegro: "urdf/kuka_allegro_description/iiwa14_left_sharpa.urdf"
 
     # This is the URDF which has more accurate collision shapes and weights.
     # I believe since the hand is much lighter, the policy has more control over the movement of both arm and
