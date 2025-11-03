@@ -66,14 +66,14 @@ class DofParameters:
 def populate_dof_properties(hand_arm_dof_props, params: DofParameters, arm_dofs: int, hand_dofs: int) -> None:
     assert len(hand_arm_dof_props["stiffness"]) == arm_dofs + hand_dofs
 
-    hand_arm_dof_props["stiffness"][0:arm_dofs].fill(params.kuka_stiffness)
+    hand_arm_dof_props["stiffness"][0:arm_dofs] = params.kuka_stiffness
     hand_arm_dof_props["stiffness"][arm_dofs:].fill(params.allegro_stiffness)
 
     assert len(params.kuka_effort) == arm_dofs
     hand_arm_dof_props["effort"][0:arm_dofs] = params.kuka_effort
     hand_arm_dof_props["effort"][arm_dofs:].fill(params.allegro_effort)
 
-    hand_arm_dof_props["damping"][0:arm_dofs].fill(params.kuka_damping)
+    hand_arm_dof_props["damping"][0:arm_dofs] = params.kuka_damping
     hand_arm_dof_props["damping"][arm_dofs:].fill(params.allegro_damping)
 
     if params.dof_friction >= 0:

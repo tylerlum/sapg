@@ -1279,6 +1279,16 @@ class AllegroKukaBase(VecTask):
 
             allegro_actor = self.gym.create_actor(env_ptr, allegro_kuka_asset, allegro_pose, "allegro", i, -1, 0)
 
+            # HACK: Ovewrite
+            # self.dof_params.allegro_stiffness = 80
+            # self.dof_params.allegro_stiffness = 160
+            # self.dof_params.allegro_stiffness = 4000
+            # self.dof_params.allegro_damping = 200
+            # self.dof_params.allegro_effort = 350
+            self.dof_params.kuka_stiffness = [600, 600, 500, 400, 200, 200, 200]
+            # self.dof_params.kuka_damping = [20, 20, 20, 20, 20, 20, 20]
+            # self.dof_params.kuka_damping = [20, 20, 17, 14, 7, 7, 7]
+            self.dof_params.kuka_damping = [20, 20, 17, 10, 5, 5, 5]
             populate_dof_properties(allegro_hand_dof_props, self.dof_params, self.num_arm_dofs, self.num_hand_dofs)
 
             self.gym.set_actor_dof_properties(env_ptr, allegro_actor, allegro_hand_dof_props)
