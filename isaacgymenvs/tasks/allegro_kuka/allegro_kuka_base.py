@@ -177,7 +177,8 @@ class AllegroKukaBase(VecTask):
 
         self.allegro_fingertips = ["right_index_DP", "right_middle_DP", "right_ring_DP", "right_thumb_DP", "right_pinky_DP"]
         self.fingertip_offsets = np.array(
-            [[0.05, 0.005, 0], [0.05, 0.005, 0], [0.05, 0.005, 0], [0.06, 0.005, 0], [0.05, 0.005, 0]], dtype=np.float32
+            [[0.02, 0.002, 0], [0.02, 0.002, 0], [0.02, 0.002, 0], [0.02, 0.002, 0], [0.02, 0.002, 0]], dtype=np.float32
+            # [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]], dtype=np.float32
         )
         self.palm_offset = np.array([-0.00, -0.02, 0.16], dtype=np.float32)
 
@@ -2605,22 +2606,22 @@ class AllegroKukaBase(VecTask):
             palm_center_pos_cpu = self.palm_center_pos.cpu().numpy()
             palm_rot_cpu = self._palm_rot.cpu().numpy()
 
-            # for i in range(self.num_envs):
-            #     palm_center_transform = gymapi.Transform()
-            #     palm_center_transform.p = gymapi.Vec3(*palm_center_pos_cpu[i])
-            #     palm_center_transform.r = gymapi.Quat(*palm_rot_cpu[i])
-            #     gymutil.draw_lines(sphere_geom_white, self.gym, self.viewer, self.envs[i], palm_center_transform)
+            for i in range(self.num_envs):
+                palm_center_transform = gymapi.Transform()
+                palm_center_transform.p = gymapi.Vec3(*palm_center_pos_cpu[i])
+                palm_center_transform.r = gymapi.Quat(*palm_rot_cpu[i])
+                gymutil.draw_lines(sphere_geom_white, self.gym, self.viewer, self.envs[i], palm_center_transform)
 
-            # for j in range(self.num_allegro_fingertips):
-            #     fingertip_pos_cpu = self.fingertip_pos_offset[:, j].cpu().numpy()
-            #     fingertip_rot_cpu = self.fingertip_rot[:, j].cpu().numpy()
+            for j in range(self.num_allegro_fingertips):
+                fingertip_pos_cpu = self.fingertip_pos_offset[:, j].cpu().numpy()
+                fingertip_rot_cpu = self.fingertip_rot[:, j].cpu().numpy()
 
-            #     for i in range(self.num_envs):
-            #         fingertip_transform = gymapi.Transform()
-            #         fingertip_transform.p = gymapi.Vec3(*fingertip_pos_cpu[i])
-            #         fingertip_transform.r = gymapi.Quat(*fingertip_rot_cpu[i])
+                for i in range(self.num_envs):
+                    fingertip_transform = gymapi.Transform()
+                    fingertip_transform.p = gymapi.Vec3(*fingertip_pos_cpu[i])
+                    fingertip_transform.r = gymapi.Quat(*fingertip_rot_cpu[i])
 
-            #         gymutil.draw_lines(sphere_geom, self.gym, self.viewer, self.envs[i], fingertip_transform)
+                    gymutil.draw_lines(sphere_geom, self.gym, self.viewer, self.envs[i], fingertip_transform)
 
             # for j in range(self.num_keypoints):
             #     keypoint_pos_cpu = self.obj_keypoint_pos[:, j].cpu().numpy()
