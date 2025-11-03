@@ -8,10 +8,10 @@ from hydra import compose, initialize
 from omegaconf import DictConfig, OmegaConf
 
 from isaacgymenvs.tasks import isaacgym_task_map
+from isaacgymenvs.utils.reformat import omegaconf_to_dict
 from sim2real.rl_player_utils import (
     read_cfg_omegaconf,
 )
-from isaacgymenvs.utils.reformat import omegaconf_to_dict
 
 
 def create_env(
@@ -39,9 +39,9 @@ def create_env(
 
         # Put cfg second to override init_cfg
         merged_cfg = OmegaConf.merge(init_cfg, cfg)
-        assert isinstance(merged_cfg, DictConfig), (
-            f"Expected DictConfig, got {type(merged_cfg)}"
-        )
+        assert isinstance(
+            merged_cfg, DictConfig
+        ), f"Expected DictConfig, got {type(merged_cfg)}"
 
         # Print the differences
         diff = recursive_diff(
@@ -127,7 +127,9 @@ def recursive_diff(cfg1: dict, cfg2: dict, path: str = "") -> dict:
 
 def main() -> None:
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    CONFIG_PATH = Path("/home/tylerlum/github_repos/sapg/closed_loop_testing/config.yaml")
+    CONFIG_PATH = Path(
+        "/home/tylerlum/github_repos/sapg/closed_loop_testing/config.yaml"
+    )
     assert Path(CONFIG_PATH).exists()
 
     env = create_env(

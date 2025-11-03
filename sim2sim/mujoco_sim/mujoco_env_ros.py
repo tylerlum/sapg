@@ -1,12 +1,18 @@
 import time
-from scipy.spatial.transform import Rotation as R
 
 import numpy as np
 import rospy
 from geometry_msgs.msg import Pose, PoseStamped
+from scipy.spatial.transform import Rotation as R
 from sensor_msgs.msg import JointState
-from sim2sim.mujoco_sim.mujoco_sim import JOINT_NAMES, N_IIWA_JOINTS, MujocoSim, MujocoSimConfig
 from termcolor import colored
+
+from sim2sim.mujoco_sim.mujoco_sim import (
+    JOINT_NAMES,
+    N_IIWA_JOINTS,
+    MujocoSim,
+    MujocoSimConfig,
+)
 
 # Goal object pose doesn't exist in the simulation
 # But we can just publish the goal object pose above the table
@@ -16,6 +22,7 @@ T_W_R = np.eye(4)
 T_W_R[:3, 3] = np.array([0.0, 0.8, 0.0])
 
 T_R_W = np.linalg.inv(T_W_R)
+
 
 def warn(message: str):
     print(colored(message, "yellow"))
@@ -49,9 +56,13 @@ class MujocoEnvRos:
         self.allegro_pub = rospy.Publisher(
             "/allegroHand_0/joint_states", JointState, queue_size=10
         )
-        self.object_pose_pub = rospy.Publisher("/robot_frame/current_object_pose", PoseStamped, queue_size=10)
+        self.object_pose_pub = rospy.Publisher(
+            "/robot_frame/current_object_pose", PoseStamped, queue_size=10
+        )
         if PUBLISH_GOAL_OBJECT_POSE:
-            self.goal_object_pose_pub = rospy.Publisher("/goal_object_pose", Pose, queue_size=10)
+            self.goal_object_pose_pub = rospy.Publisher(
+                "/goal_object_pose", Pose, queue_size=10
+            )
 
     def _iiwa_joint_cmd_callback(self, msg: JointState):
         self.latest_iiwa_joint_cmd = np.array(msg.position)
@@ -96,7 +107,9 @@ class MujocoEnvRos:
             goal_object_pose_msg = Pose()
             goal_object_pose_msg.position.x = goal_object_pos_R[0]
             goal_object_pose_msg.position.y = goal_object_pos_R[1]
-            goal_object_pose_msg.position.z = goal_object_pos_R[2] + 0.3  # Above the table
+            goal_object_pose_msg.position.z = (
+                goal_object_pos_R[2] + 0.3
+            )  # Above the table
             goal_object_pose_msg.orientation.x = goal_object_quat_xyzw_R[0]
             goal_object_pose_msg.orientation.y = goal_object_quat_xyzw_R[1]
             goal_object_pose_msg.orientation.z = goal_object_quat_xyzw_R[2]

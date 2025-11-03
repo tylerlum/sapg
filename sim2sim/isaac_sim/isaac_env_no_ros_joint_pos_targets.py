@@ -1,18 +1,21 @@
 from isaacgymenvs.tasks.allegro_kuka.allegro_kuka_base import AllegroKukaBase  # isort:skip
-from typing import Tuple
 import time
 from pathlib import Path
+from typing import Tuple
+
 from sim2real.rl_player import RlPlayer
+
 import torch  # isort:skip
-from sim2sim.isaac_sim.isaac_env import create_env
-from termcolor import colored
 import pytorch_kinematics as pk
+from termcolor import colored
 
 from isaacgymenvs.utils.observation_action_utils import (
     compute_joint_pos_targets,
     compute_observation,
     create_chain_and_serial_chain,
 )
+from sim2sim.isaac_sim.isaac_env import create_env
+
 
 def warn(message: str):
     print(colored(message, "yellow"))
@@ -23,7 +26,14 @@ def info(message: str):
 
 
 class IsaacEnvNoRosJointPosTargets:
-    def __init__(self, sim: AllegroKukaBase, control_dt: float, device: str, chain: pk.Chain, palm_serial_chain: pk.SerialChain):
+    def __init__(
+        self,
+        sim: AllegroKukaBase,
+        control_dt: float,
+        device: str,
+        chain: pk.Chain,
+        palm_serial_chain: pk.SerialChain,
+    ):
         self.sim = sim
         self.device = device
         self.chain = chain
@@ -59,10 +69,14 @@ class IsaacEnvNoRosJointPosTargets:
         # return obs["obs"], reward, done, info
 
     def reset(self) -> torch.Tensor:
-        obs, reward, done, info = self.sim.step(torch.zeros((1, 23), device=self.device))
+        obs, reward, done, info = self.sim.step(
+            torch.zeros((1, 23), device=self.device)
+        )
         return obs["obs"]
 
-    def step_with_joint_pos_targets(self, action: torch.Tensor) -> Tuple[torch.Tensor, float, bool, dict]:
+    def step_with_joint_pos_targets(
+        self, action: torch.Tensor
+    ) -> Tuple[torch.Tensor, float, bool, dict]:
         # breakpoint()
         # print(f"self.sim.prev_targets: {self.sim.prev_targets}")
         # print(f"self.sim.arm_hand_dof_pos: {self.sim.arm_hand_dof_pos}")
@@ -74,7 +88,9 @@ class IsaacEnvNoRosJointPosTargets:
             dt=1 / 60,
         )
 
-        obs, reward, done, info = self.sim.step(action, joint_pos_targets=joint_pos_targets)
+        obs, reward, done, info = self.sim.step(
+            action, joint_pos_targets=joint_pos_targets
+        )
         q = self.sim.arm_hand_dof_pos
         qd = self.sim.arm_hand_dof_vel
         object_pose = self.sim.object_pose
@@ -105,9 +121,13 @@ class IsaacEnvNoRosJointPosTargets:
 
 def main():
     control_dt = 1.0 / 60.0
-    CONFIG_PATH = Path("/home/tylerlum/github_repos/sapg/closed_loop_testing/config.yaml")
+    CONFIG_PATH = Path(
+        "/home/tylerlum/github_repos/sapg/closed_loop_testing/config.yaml"
+    )
     assert Path(CONFIG_PATH).exists()
-    CHECKPOINT_PATH = Path("/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-10-22_slow-action-obs-randomize-all_slower-curriculum/00_slowarmhand_slowobs_hammer_2025-10-23_00-48-56/runs/00_slowarmhand_slowobs_hammer_2025-10-23_00-48-56/last/model.pth")
+    CHECKPOINT_PATH = Path(
+        "/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-10-22_slow-action-obs-randomize-all_slower-curriculum/00_slowarmhand_slowobs_hammer_2025-10-23_00-48-56/runs/00_slowarmhand_slowobs_hammer_2025-10-23_00-48-56/last/model.pth"
+    )
     assert CHECKPOINT_PATH.exists()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -131,15 +151,25 @@ def main():
         device="cuda",
     )
 
-    chain, palm_serial_chain = create_chain_and_serial_chain(device=device, robot_name="iiwa14")
+    chain, palm_serial_chain = create_chain_and_serial_chain(
+        device=device, robot_name="iiwa14"
+    )
 
-    isaac_env_no_ros_joint_pos_targets = IsaacEnvNoRosJointPosTargets(sim=sim, control_dt=control_dt, device=device, chain=chain, palm_serial_chain=palm_serial_chain)
+    isaac_env_no_ros_joint_pos_targets = IsaacEnvNoRosJointPosTargets(
+        sim=sim,
+        control_dt=control_dt,
+        device=device,
+        chain=chain,
+        palm_serial_chain=palm_serial_chain,
+    )
     observation = isaac_env_no_ros_joint_pos_targets.reset()
 
     while True:
         start_time = time.time()
         action = policy.get_normalized_action(observation, deterministic_actions=True)
-        observation, _, done, _ = isaac_env_no_ros_joint_pos_targets.step_with_joint_pos_targets(action)
+        observation, _, done, _ = (
+            isaac_env_no_ros_joint_pos_targets.step_with_joint_pos_targets(action)
+        )
         if done.item():
             observation = isaac_env_no_ros_joint_pos_targets.reset()
         end_time = time.time()
@@ -147,10 +177,10 @@ def main():
         if sleep_time > 0:
             time.sleep(sleep_time)
         else:
-            print(f"Control loop too slow! Desired FPS: {1.0 / control_dt:.1f}, Actual FPS: {1.0 / (end_time - start_time):.1f}")
+            print(
+                f"Control loop too slow! Desired FPS: {1.0 / control_dt:.1f}, Actual FPS: {1.0 / (end_time - start_time):.1f}"
+            )
 
 
 if __name__ == "__main__":
     main()
-
-

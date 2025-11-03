@@ -4,10 +4,9 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
+import mujoco
 import mujoco.viewer
 import numpy as np
-
-import mujoco
 
 # ############################################################
 # Constants
@@ -34,9 +33,7 @@ IIWA_ACTUATOR_NAMES = [
 ]
 assert (
     len(IIWA_INIT_JOINT_POS) == len(IIWA_JOINT_NAMES) == len(IIWA_ACTUATOR_NAMES) == 7
-), (
-    f"len(IIWA_INIT_JOINT_POS): {len(IIWA_INIT_JOINT_POS)}, len(IIWA_JOINT_NAMES): {len(IIWA_JOINT_NAMES)}, len(IIWA_ACTUATOR_NAMES): {len(IIWA_ACTUATOR_NAMES)}, expected: 7"
-)
+), f"len(IIWA_INIT_JOINT_POS): {len(IIWA_INIT_JOINT_POS)}, len(IIWA_JOINT_NAMES): {len(IIWA_JOINT_NAMES)}, len(IIWA_ACTUATOR_NAMES): {len(IIWA_ACTUATOR_NAMES)}, expected: 7"
 
 N_ALLEGRO_JOINTS = 16
 ALLEGRO_INIT_JOINT_POS = np.zeros(16)
@@ -82,17 +79,15 @@ assert (
     == len(ALLEGRO_JOINT_NAMES)
     == len(ALLEGRO_ACTUATOR_NAMES)
     == 16
-), (
-    f"len(ALLEGRO_INIT_JOINT_POS): {len(ALLEGRO_INIT_JOINT_POS)}, len(ALLEGRO_JOINT_NAMES): {len(ALLEGRO_JOINT_NAMES)}, len(ALLEGRO_ACTUATOR_NAMES): {len(ALLEGRO_ACTUATOR_NAMES)}, expected: 16"
-)
+), f"len(ALLEGRO_INIT_JOINT_POS): {len(ALLEGRO_INIT_JOINT_POS)}, len(ALLEGRO_JOINT_NAMES): {len(ALLEGRO_JOINT_NAMES)}, len(ALLEGRO_ACTUATOR_NAMES): {len(ALLEGRO_ACTUATOR_NAMES)}, expected: 16"
 
 N_JOINTS = N_IIWA_JOINTS + N_ALLEGRO_JOINTS
 INIT_JOINT_POS = np.concatenate([IIWA_INIT_JOINT_POS, ALLEGRO_INIT_JOINT_POS])
 JOINT_NAMES = IIWA_JOINT_NAMES + ALLEGRO_JOINT_NAMES
 ACTUATOR_NAMES = IIWA_ACTUATOR_NAMES + ALLEGRO_ACTUATOR_NAMES
-assert len(INIT_JOINT_POS) == len(JOINT_NAMES) == len(ACTUATOR_NAMES) == N_JOINTS, (
-    f"len(INIT_JOINT_POS): {len(INIT_JOINT_POS)}, len(JOINT_NAMES): {len(JOINT_NAMES)}, len(ACTUATOR_NAMES): {len(ACTUATOR_NAMES)}, expected: {N_JOINTS}"
-)
+assert (
+    len(INIT_JOINT_POS) == len(JOINT_NAMES) == len(ACTUATOR_NAMES) == N_JOINTS
+), f"len(INIT_JOINT_POS): {len(INIT_JOINT_POS)}, len(JOINT_NAMES): {len(JOINT_NAMES)}, len(ACTUATOR_NAMES): {len(ACTUATOR_NAMES)}, expected: {N_JOINTS}"
 
 N_BODY_NAMES = 33
 BODY_NAMES = [
@@ -130,13 +125,14 @@ BODY_NAMES = [
     "table",
     "object",
 ]
-assert len(BODY_NAMES) == N_BODY_NAMES, (
-    f"len(BODY_NAMES): {len(BODY_NAMES)}, expected: {N_BODY_NAMES}"
-)
+assert (
+    len(BODY_NAMES) == N_BODY_NAMES
+), f"len(BODY_NAMES): {len(BODY_NAMES)}, expected: {N_BODY_NAMES}"
 
 # ############################################################
 # Config
 # ############################################################
+
 
 @dataclass
 class FrictionConfig:
@@ -190,9 +186,9 @@ class MujocoSim:
         allegro_xml_path = Path(
             "/home/tylerlum/github_repos/mujoco_menagerie/wonik_allegro/right_hand_offset.xml"
         )
-        assert allegro_xml_path.exists(), (
-            f"Allegro XML path does not exist: {allegro_xml_path}"
-        )
+        assert (
+            allegro_xml_path.exists()
+        ), f"Allegro XML path does not exist: {allegro_xml_path}"
         allegro_spec = mujoco.MjSpec.from_file(str(allegro_xml_path))
         attachment_site = next(s for s in spec.sites if s.name == "attachment_site")
         attachment_site.attach_body(allegro_spec.worldbody, "palm", "")
@@ -204,7 +200,9 @@ class MujocoSim:
 
         # Move robot base to desired position
         robot_base_bodies = [body for body in spec.bodies if body.name == "base"]
-        assert len(robot_base_bodies) == 1, f"len(robot_base_bodies): {len(robot_base_bodies)}, expected: 1"
+        assert (
+            len(robot_base_bodies) == 1
+        ), f"len(robot_base_bodies): {len(robot_base_bodies)}, expected: 1"
         robot_base_body = robot_base_bodies[0]
         robot_base_body.pos = np.array([0.0, 0.8, 0.0])
 
@@ -246,14 +244,20 @@ class MujocoSim:
             object_geom.friction = self.config.friction_array.copy()
 
             object_geom.type = mujoco.mjtGeom.mjGEOM_BOX
-            object_geom.size = np.array([BOX_LEN_X / 2, BOX_LEN_Y / 2, BOX_LEN_Z / 2])  # Half extents
+            object_geom.size = np.array(
+                [BOX_LEN_X / 2, BOX_LEN_Y / 2, BOX_LEN_Z / 2]
+            )  # Half extents
         else:
             # Use list of convex decomp meshes for object
             # Use run_coacd.py to generate convex decomp meshes
 
             # mesh_paths = list(Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects_convex_decomp/hammer_1").glob("decomp_*.obj"))
             # mesh_paths = list(Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects_convex_decomp/hammer_2").glob("decomp_*.obj"))
-            mesh_paths = list(Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects_convex_decomp/040_large_marker").glob("decomp_*.obj"))
+            mesh_paths = list(
+                Path(
+                    "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects_convex_decomp/040_large_marker"
+                ).glob("decomp_*.obj")
+            )
             # mesh_paths = list(Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects_convex_decomp/044_flat_screwdriver").glob("decomp_*.obj"))
             # mesh_paths = list(Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects_convex_decomp/phone").glob("decomp_*.obj"))  # Still sinks into table
             # mesh_paths = list(Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects_convex_decomp/whiteboard_eraser").glob("decomp_*.obj"))
@@ -264,7 +268,9 @@ class MujocoSim:
                 mesh = spec.add_mesh()
                 mesh.name = mesh_path.stem
                 mesh.file = str(mesh_path)
-                assert Path(mesh.file).exists(), f"Mesh file does not exist: {mesh.file}"
+                assert Path(
+                    mesh.file
+                ).exists(), f"Mesh file does not exist: {mesh.file}"
                 mesh.scale = np.array([1.0, 1.0, 1.0])
 
                 object_geom = object_body.add_geom()
@@ -298,15 +304,15 @@ class MujocoSim:
         print()
 
     def _validate(self) -> None:
-        assert JOINT_NAMES == self.joint_names[:N_JOINTS], (
-            f"JOINT_NAMES: {JOINT_NAMES}, self.joint_names: {self.joint_names[:N_JOINTS]}"
-        )
-        assert ACTUATOR_NAMES == self.actuator_names[:N_JOINTS], (
-            f"ACTUATOR_NAMES: {ACTUATOR_NAMES}, self.actuator_names: {self.actuator_names[:N_JOINTS]}"
-        )
-        assert BODY_NAMES == self.body_names, (
-            f"BODY_NAMES: {BODY_NAMES}, self.body_names: {self.body_names}"
-        )
+        assert (
+            JOINT_NAMES == self.joint_names[:N_JOINTS]
+        ), f"JOINT_NAMES: {JOINT_NAMES}, self.joint_names: {self.joint_names[:N_JOINTS]}"
+        assert (
+            ACTUATOR_NAMES == self.actuator_names[:N_JOINTS]
+        ), f"ACTUATOR_NAMES: {ACTUATOR_NAMES}, self.actuator_names: {self.actuator_names[:N_JOINTS]}"
+        assert (
+            BODY_NAMES == self.body_names
+        ), f"BODY_NAMES: {BODY_NAMES}, self.body_names: {self.body_names}"
 
     # ############################################################
     # Setting robot joint positions and targets
@@ -318,9 +324,9 @@ class MujocoSim:
             self.mj_data.qpos[joint_id] = q[i]
 
     def set_robot_joint_pos_targets(self, q_targets: np.ndarray) -> None:
-        assert q_targets.shape == (N_JOINTS,), (
-            f"q_targets.shape: {q_targets.shape}, expected: ({N_JOINTS},)"
-        )
+        assert q_targets.shape == (
+            N_JOINTS,
+        ), f"q_targets.shape: {q_targets.shape}, expected: ({N_JOINTS},)"
         self.robot_joint_pos_targets = q_targets.copy()
 
     # ############################################################
@@ -470,6 +476,7 @@ def main():
     )
     mujoco_sim = MujocoSim(mujoco_sim_config)
     mujoco_sim.run()
+
 
 if __name__ == "__main__":
     main()

@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
 import copy
+import time
 from pathlib import Path
 from typing import Literal, Optional, Tuple
-import time
 
 import numpy as np
 import pytorch_kinematics as pk
@@ -23,8 +23,10 @@ from isaacgymenvs.utils.observation_action_utils import (
 T_W_R = np.eye(4)
 T_W_R[:3, 3] = np.array([0.0, 0.8, 0.0])
 
+
 def warn(message: str):
     print(colored(message, "yellow"))
+
 
 def warn_every(message: str, n_seconds: float, key=None):
     """
@@ -41,6 +43,7 @@ def warn_every(message: str, n_seconds: float, key=None):
     if time.time() - last_time > n_seconds:
         warn(message)
         last_times[key] = time.time()
+
 
 def info(message: str):
     print(colored(message, "green"))
@@ -126,9 +129,13 @@ class RLPolicyNode:
         self.num_observations = 117  # Update this number based on actual dimensions
         self.num_actions = 23
 
-        CONFIG_PATH = Path("/home/tylerlum/github_repos/sapg/closed_loop_testing/config.yaml")
+        CONFIG_PATH = Path(
+            "/home/tylerlum/github_repos/sapg/closed_loop_testing/config.yaml"
+        )
         assert Path(CONFIG_PATH).exists()
-        CHECKPOINT_PATH = Path("/juno/u/kedia/sapg/train_dir/checkpoints/hammer/absoluteControl_0.5.pth")
+        CHECKPOINT_PATH = Path(
+            "/juno/u/kedia/sapg/train_dir/checkpoints/hammer/absoluteControl_0.5.pth"
+        )
         assert CHECKPOINT_PATH.exists()
 
         # Create the RL player
@@ -147,9 +154,7 @@ class RLPolicyNode:
 
         # Set up chain and palm_serial_chain
         asset_root = Path(__file__).parent / "../assets"
-        urdf_path = (
-            asset_root / "urdf/kuka_allegro_description/iiwa14_real.urdf"
-        )
+        urdf_path = asset_root / "urdf/kuka_allegro_description/iiwa14_real.urdf"
         assert urdf_path.exists(), f"URDF file {urdf_path} does not exist"
         self.chain = pk.build_chain_from_urdf(
             open(urdf_path).read(),
@@ -209,7 +214,9 @@ class RLPolicyNode:
         object_pose_W = np.concatenate([object_position_W, object_quat_xyzw_W])
 
         goal_object_pos_W, goal_object_quat_xyzw_W = T_to_pos_quat_xyzw(T_W_G)
-        goal_object_pose_W = np.concatenate([goal_object_pos_W, goal_object_quat_xyzw_W])
+        goal_object_pose_W = np.concatenate(
+            [goal_object_pos_W, goal_object_quat_xyzw_W]
+        )
 
         q = np.concatenate([iiwa_position, allegro_position])
         qd = np.concatenate([iiwa_velocity, allegro_velocity])
@@ -221,11 +228,19 @@ class RLPolicyNode:
             goal_object_pose=torch.from_numpy(goal_object_pose_W)
             .float()
             .to(self.device)[None],
-            object_scales=torch.from_numpy(self.object_scales).float().to(self.device)[None],
+            object_scales=torch.from_numpy(self.object_scales)
+            .float()
+            .to(self.device)[None],
             chain=self.chain,
             palm_serial_chain=self.palm_serial_chain,
         )
-        assert_equals(observation.shape, (1, self.num_observations,))
+        assert_equals(
+            observation.shape,
+            (
+                1,
+                self.num_observations,
+            ),
+        )
 
         # print(f"q: {q}")
         # print(f"qd: {qd}")
@@ -289,6 +304,7 @@ class RLPolicyNode:
             if CURRENT_STEP > 1500:
                 print("Exiting")
                 import sys
+
                 sys.exit(0)
             CURRENT_STEP += 1
 
@@ -305,7 +321,9 @@ class RLPolicyNode:
                     first_observations_received = True
 
                 if self.prev_targets is None:
-                    self.prev_targets = torch.from_numpy(q).float().to(self.device)[None]
+                    self.prev_targets = (
+                        torch.from_numpy(q).float().to(self.device)[None]
+                    )
 
                 assert_equals(obs.shape, (1, self.num_observations))
 

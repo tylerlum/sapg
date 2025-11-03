@@ -1,17 +1,22 @@
 import time
-import torch
 from pathlib import Path
-from sim2real.rl_player import RlPlayer
+
 import numpy as np
-from sim2sim.mujoco_sim.mujoco_sim import JOINT_NAMES, N_IIWA_JOINTS, MujocoSim, MujocoSimConfig
-from termcolor import colored
 import pytorch_kinematics as pk
+import torch
+from termcolor import colored
 
 from isaacgymenvs.utils.observation_action_utils import (
     compute_joint_pos_targets,
     compute_observation,
     create_chain_and_serial_chain,
 )
+from sim2real.rl_player import RlPlayer
+from sim2sim.mujoco_sim.mujoco_sim import (
+    MujocoSim,
+    MujocoSimConfig,
+)
+
 
 def warn(message: str):
     print(colored(message, "yellow"))
@@ -22,7 +27,17 @@ def info(message: str):
 
 
 class MujocoEnvNoRos:
-    def __init__(self, sim: MujocoSim, object_scales: np.ndarray, chain: pk.Chain, palm_serial_chain: pk.SerialChain, act_moving_average: float, hand_dof_speed_scale: float, control_dt: float, device: str):
+    def __init__(
+        self,
+        sim: MujocoSim,
+        object_scales: np.ndarray,
+        chain: pk.Chain,
+        palm_serial_chain: pk.SerialChain,
+        act_moving_average: float,
+        hand_dof_speed_scale: float,
+        control_dt: float,
+        device: str,
+    ):
         self.sim = sim
         self.object_scales = object_scales
         self.chain = chain
@@ -55,17 +70,24 @@ class MujocoEnvNoRos:
             goal_object_pose=torch.from_numpy(goal_object_pose_R)
             .float()
             .to(self.device)[None],
-            object_scales=torch.from_numpy(self.object_scales).float().to(self.device)[None],
+            object_scales=torch.from_numpy(self.object_scales)
+            .float()
+            .to(self.device)[None],
             chain=self.chain,
             palm_serial_chain=self.palm_serial_chain,
         )
-        assert observation.shape == (1, 117,), f"observation.shape: {observation.shape}, expected: (1, 117,)"
+        assert observation.shape == (
+            1,
+            117,
+        ), f"observation.shape: {observation.shape}, expected: (1, 117,)"
         return observation
 
     def step(self, action: torch.Tensor) -> None:
         joint_cmd = compute_joint_pos_targets(
             actions=action,
-            prev_targets=torch.from_numpy(self.sim.robot_joint_pos_targets).float().to(self.device)[None],
+            prev_targets=torch.from_numpy(self.sim.robot_joint_pos_targets)
+            .float()
+            .to(self.device)[None],
             act_moving_average=self.act_moving_average,
             hand_dof_speed_scale=self.hand_dof_speed_scale,
             dt=self.control_dt,
@@ -88,11 +110,15 @@ class MujocoEnvNoRos:
 def main():
     sim_dt = 1.0 / 600.0
     control_dt = 1.0 / 60.0
-    CONFIG_PATH = Path("/home/tylerlum/github_repos/sapg/closed_loop_testing/config.yaml")
+    CONFIG_PATH = Path(
+        "/home/tylerlum/github_repos/sapg/closed_loop_testing/config.yaml"
+    )
     assert Path(CONFIG_PATH).exists()
     # CHECKPOINT_PATH = Path("/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-10-22_slow-action-obs-randomize-all_slower-curriculum/00_slowarmhand_slowobs_hammer_2025-10-23_00-48-56/runs/00_slowarmhand_slowobs_hammer_2025-10-23_00-48-56/last/model.pth")
     # CHECKPOINT_PATH = Path("/juno/u/kedia/sapg/train_dir/checkpoints/hammer/absoluteControl_0.5.pth")
-    CHECKPOINT_PATH = Path("/juno/u/kedia/sapg/train_dir/checkpoints/hammer/relativeControl_5.pth")
+    CHECKPOINT_PATH = Path(
+        "/juno/u/kedia/sapg/train_dir/checkpoints/hammer/relativeControl_5.pth"
+    )
     assert CHECKPOINT_PATH.exists()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -105,17 +131,30 @@ def main():
         device=device,
     )
 
-    chain, palm_serial_chain = create_chain_and_serial_chain(device=device, robot_name="iiwa14")
+    chain, palm_serial_chain = create_chain_and_serial_chain(
+        device=device, robot_name="iiwa14"
+    )
 
     # object_scales = np.array([2.0, 0.5, 0.5])
     object_scales = np.array([0.1, 0.035, 0.025]) * 20
-    mujoco_env_no_ros = MujocoEnvNoRos(sim=sim, object_scales=object_scales, chain=chain, palm_serial_chain=palm_serial_chain, act_moving_average=0.1, hand_dof_speed_scale=0.5, control_dt=control_dt, device=device)
+    mujoco_env_no_ros = MujocoEnvNoRos(
+        sim=sim,
+        object_scales=object_scales,
+        chain=chain,
+        palm_serial_chain=palm_serial_chain,
+        act_moving_average=0.1,
+        hand_dof_speed_scale=0.5,
+        control_dt=control_dt,
+        device=device,
+    )
 
     while True:
         start_time = time.time()
         # Get observation, get action, step simulation
         observation = mujoco_env_no_ros.compute_observation()
-        action = policy.get_normalized_action(observation, deterministic_actions=True)  # Careful about deterministic_actions=True here!
+        action = policy.get_normalized_action(
+            observation, deterministic_actions=True
+        )  # Careful about deterministic_actions=True here!
         mujoco_env_no_ros.step(action)
         end_time = time.time()
 
@@ -124,9 +163,10 @@ def main():
         if sleep_time > 0:
             time.sleep(sleep_time)
         else:
-            print(f"Control loop too slow! Desired FPS: {1.0 / control_dt:.1f}, Actual FPS: {1.0 / (end_time - start_time):.1f}")
+            print(
+                f"Control loop too slow! Desired FPS: {1.0 / control_dt:.1f}, Actual FPS: {1.0 / (end_time - start_time):.1f}"
+            )
 
 
 if __name__ == "__main__":
     main()
-

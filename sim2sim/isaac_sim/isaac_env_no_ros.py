@@ -1,17 +1,15 @@
 from isaacgymenvs.tasks.allegro_kuka.allegro_kuka_base import AllegroKukaBase  # isort:skip
-from typing import Tuple
 import time
 from pathlib import Path
-from sim2real.rl_player import RlPlayer
-import torch  # isort:skip
-from sim2sim.isaac_sim.isaac_env import create_env
-from termcolor import colored
-import pytorch_kinematics as pk
+from typing import Tuple
 
-from isaacgymenvs.utils.observation_action_utils import (
-    compute_joint_pos_targets,
-    compute_observation,
-)
+from sim2real.rl_player import RlPlayer
+
+import torch  # isort:skip
+from termcolor import colored
+
+from sim2sim.isaac_sim.isaac_env import create_env
+
 
 def warn(message: str):
     print(colored(message, "yellow"))
@@ -31,14 +29,21 @@ class IsaacEnvNoRos:
         return obs["obs"], reward, done, info
 
     def reset(self) -> torch.Tensor:
-        obs, reward, done, info = self.sim.step(torch.zeros((1, 23), device=self.device))
+        obs, reward, done, info = self.sim.step(
+            torch.zeros((1, 23), device=self.device)
+        )
         return obs["obs"]
+
 
 def main():
     control_dt = 1.0 / 60.0
-    CONFIG_PATH = Path("/home/tylerlum/github_repos/sapg/closed_loop_testing/config.yaml")
+    CONFIG_PATH = Path(
+        "/home/tylerlum/github_repos/sapg/closed_loop_testing/config.yaml"
+    )
     assert Path(CONFIG_PATH).exists()
-    CHECKPOINT_PATH = Path("/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-10-22_slow-action-obs-randomize-all_slower-curriculum/00_slowarmhand_slowobs_hammer_2025-10-23_00-48-56/runs/00_slowarmhand_slowobs_hammer_2025-10-23_00-48-56/last/model.pth")
+    CHECKPOINT_PATH = Path(
+        "/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-10-22_slow-action-obs-randomize-all_slower-curriculum/00_slowarmhand_slowobs_hammer_2025-10-23_00-48-56/runs/00_slowarmhand_slowobs_hammer_2025-10-23_00-48-56/last/model.pth"
+    )
     assert CHECKPOINT_PATH.exists()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -67,17 +72,19 @@ def main():
 
     while True:
         start_time = time.time()
-        action = policy.get_normalized_action(observation, deterministic_actions=True)  # Careful about deterministic_actions=True here!
+        action = policy.get_normalized_action(
+            observation, deterministic_actions=True
+        )  # Careful about deterministic_actions=True here!
         observation, _, _, _ = isaac_env_no_ros.step(action)
         end_time = time.time()
         sleep_time = control_dt - (end_time - start_time)
         if sleep_time > 0:
             time.sleep(sleep_time)
         else:
-            print(f"Control loop too slow! Desired FPS: {1.0 / control_dt:.1f}, Actual FPS: {1.0 / (end_time - start_time):.1f}")
+            print(
+                f"Control loop too slow! Desired FPS: {1.0 / control_dt:.1f}, Actual FPS: {1.0 / (end_time - start_time):.1f}"
+            )
 
 
 if __name__ == "__main__":
     main()
-
-

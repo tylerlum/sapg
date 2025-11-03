@@ -20,6 +20,7 @@ from viser.extras import ViserUrdf
 T_W_R = np.eye(4)
 T_W_R[:3, 3] = np.array([0.0, 0.8, 0.0])
 
+
 def warn(message: str):
     print(colored(message, "yellow"))
 

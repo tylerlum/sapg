@@ -1,13 +1,14 @@
-from typing import Optional
 import os
+from typing import Optional
+
 import numpy as np
 import torch
 from gym import spaces
+
+from rl_games.torch_runner import Runner, players
 from sim2real.rl_player_utils import (
     read_cfg,
 )
-from rl_games.torch_runner import Runner, players
-
 
 
 def assert_equals(a, b):
@@ -93,7 +94,9 @@ class RlPlayer:
         assert_equals(obs.shape, (batch_size, self.num_observations))
 
         # SAPG HACK: Need to idx to end of observation
-        obs = torch.cat([obs, 50.0 + torch.zeros((batch_size, 1), device=self.device)], dim=1)
+        obs = torch.cat(
+            [obs, 50.0 + torch.zeros((batch_size, 1), device=self.device)], dim=1
+        )
 
         normalized_action = self.player.get_action(
             obs=obs, is_deterministic=deterministic_actions
@@ -120,8 +123,12 @@ def main() -> None:
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    CONFIG_PATH = Path("/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-10-17_slow-action_randomize_turn-off-obs/00_slow-arm-hand-slowly_marker_2025-10-18_14-37-58/runs/00_slow-arm-hand-slowly_marker_2025-10-18_14-37-58/config.yaml")
-    CHECKPOINT_PATH = Path("/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-10-17_slow-action_randomize_turn-off-obs/00_slow-arm-hand-slowly_marker_2025-10-18_14-37-58/runs/00_slow-arm-hand-slowly_marker_2025-10-18_14-37-58/last/model.pth")
+    CONFIG_PATH = Path(
+        "/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-10-17_slow-action_randomize_turn-off-obs/00_slow-arm-hand-slowly_marker_2025-10-18_14-37-58/runs/00_slow-arm-hand-slowly_marker_2025-10-18_14-37-58/config.yaml"
+    )
+    CHECKPOINT_PATH = Path(
+        "/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-10-17_slow-action_randomize_turn-off-obs/00_slow-arm-hand-slowly_marker_2025-10-18_14-37-58/runs/00_slow-arm-hand-slowly_marker_2025-10-18_14-37-58/last/model.pth"
+    )
     NUM_OBSERVATIONS = 117
     NUM_ACTIONS = 23
 
@@ -135,7 +142,9 @@ def main() -> None:
 
     batch_size = 1
     obs = torch.zeros(batch_size, NUM_OBSERVATIONS).to(device)
-    normalized_action = player.get_normalized_action(obs=obs, deterministic_actions=True)  # Careful about deterministic_actions=True here!
+    normalized_action = player.get_normalized_action(
+        obs=obs, deterministic_actions=True
+    )  # Careful about deterministic_actions=True here!
     print(f"Using player with config: {CONFIG_PATH} and checkpoint: {CHECKPOINT_PATH}")
     print(f"And num_observations: {NUM_OBSERVATIONS} and num_actions: {NUM_ACTIONS}")
     print(f"Sampled obs: {obs} with shape: {obs.shape}")

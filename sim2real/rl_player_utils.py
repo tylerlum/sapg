@@ -3,8 +3,9 @@ from typing import Optional
 
 import yaml
 from gym import spaces
-from isaacgymenvs.utils.reformat import omegaconf_to_dict, print_dict
 from omegaconf import DictConfig, OmegaConf
+
+from isaacgymenvs.utils.reformat import omegaconf_to_dict, print_dict
 
 
 @dataclass
