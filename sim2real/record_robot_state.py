@@ -1,12 +1,15 @@
-import rospy
-from pathlib import Path
-from recorded_data_scripts.recorded_data import RecordedData
-from typing import Optional
-import numpy as np
 import copy
-from sensor_msgs.msg import JointState
 import time
+from pathlib import Path
+from typing import Optional
+
+import numpy as np
+import rospy
+from sensor_msgs.msg import JointState
 from termcolor import colored
+
+from recorded_data_scripts.recorded_data import RecordedData
+
 
 def warn(message: str):
     print(colored(message, "yellow"))
@@ -31,6 +34,7 @@ def warn_every(message: str, n_seconds: float, key=None):
 
 def info(message: str):
     print(colored(message, "green"))
+
 
 JOINT_NAMES = [
     "iiwa7_joint_1",
@@ -79,10 +83,20 @@ class RecordRobotState:
         self.allegro_joint_pos_target_history: list[np.ndarray] = []
 
         # Subscribers
-        self.iiwa_joint_state_sub = rospy.Subscriber("/iiwa/joint_states", JointState, self._iiwa_joint_state_callback)
-        self.allegro_joint_state_sub = rospy.Subscriber("/allegroHand_0/joint_states", JointState, self._allegro_joint_state_callback)
-        self.iiwa_joint_cmd_sub = rospy.Subscriber("/iiwa/joint_cmd", JointState, self._iiwa_joint_cmd_callback)
-        self.allegro_joint_cmd_sub = rospy.Subscriber("/allegroHand_0/joint_cmd", JointState, self._allegro_joint_cmd_callback)
+        self.iiwa_joint_state_sub = rospy.Subscriber(
+            "/iiwa/joint_states", JointState, self._iiwa_joint_state_callback
+        )
+        self.allegro_joint_state_sub = rospy.Subscriber(
+            "/allegroHand_0/joint_states",
+            JointState,
+            self._allegro_joint_state_callback,
+        )
+        self.iiwa_joint_cmd_sub = rospy.Subscriber(
+            "/iiwa/joint_cmd", JointState, self._iiwa_joint_cmd_callback
+        )
+        self.allegro_joint_cmd_sub = rospy.Subscriber(
+            "/allegroHand_0/joint_cmd", JointState, self._allegro_joint_cmd_callback
+        )
 
         # ROS rate
         self.rate_hz = 60
@@ -103,7 +117,12 @@ class RecordRobotState:
 
     def run(self):
         while not rospy.is_shutdown():
-            if self.latest_iiwa_joint_state is None or self.latest_allegro_joint_state is None or self.latest_iiwa_joint_cmd is None or self.latest_allegro_joint_cmd is None:
+            if (
+                self.latest_iiwa_joint_state is None
+                or self.latest_allegro_joint_state is None
+                or self.latest_iiwa_joint_cmd is None
+                or self.latest_allegro_joint_cmd is None
+            ):
                 warn_every(
                     f"Waiting: latest_iiwa_joint_state = {self.latest_iiwa_joint_state}, latest_allegro_joint_state = {self.latest_allegro_joint_state}, latest_iiwa_joint_cmd = {self.latest_iiwa_joint_cmd}, latest_allegro_joint_cmd = {self.latest_allegro_joint_cmd}",
                     n_seconds=1.0,
@@ -144,7 +163,6 @@ class RecordRobotState:
 
             self.rate.sleep()
 
-
     def save_to_file(self, file_path: Path):
         file_path.parent.mkdir(parents=True, exist_ok=True)
         print(f"Saving to file: {file_path}")
@@ -157,22 +175,36 @@ class RecordRobotState:
 
         iiwa_joint_positions = np.array(self.iiwa_joint_position_history)
         allegro_joint_positions = np.array(self.allegro_joint_position_history)
-        robot_joint_positions = np.concatenate([iiwa_joint_positions, allegro_joint_positions], axis=1)
+        robot_joint_positions = np.concatenate(
+            [iiwa_joint_positions, allegro_joint_positions], axis=1
+        )
 
         iiwa_joint_velocities = np.array(self.iiwa_joint_velocity_history)
         allegro_joint_velocities = np.array(self.allegro_joint_velocity_history)
-        robot_joint_velocities = np.concatenate([iiwa_joint_velocities, allegro_joint_velocities], axis=1)
+        robot_joint_velocities = np.concatenate(
+            [iiwa_joint_velocities, allegro_joint_velocities], axis=1
+        )
 
         iiwa_joint_pos_targets = np.array(self.iiwa_joint_pos_target_history)
         allegro_joint_pos_targets = np.array(self.allegro_joint_pos_target_history)
-        robot_joint_pos_targets = np.concatenate([iiwa_joint_pos_targets, allegro_joint_pos_targets], axis=1)
+        robot_joint_pos_targets = np.concatenate(
+            [iiwa_joint_pos_targets, allegro_joint_pos_targets], axis=1
+        )
 
         time_array = np.array(self.time_history)
 
-        assert robot_joint_positions.shape == (T, 23), f"robot_joint_positions.shape: {robot_joint_positions.shape}, expected: (T, 23)"
-        assert robot_joint_velocities.shape == (T, 23), f"robot_joint_velocities.shape: {robot_joint_velocities.shape}, expected: (T, 23)"
-        assert robot_joint_pos_targets.shape == (T, 23), f"robot_joint_pos_targets.shape: {robot_joint_pos_targets.shape}, expected: (T, 23)"
-        assert time_array.shape == (T,), f"time_array.shape: {time_array.shape}, expected: (T,)"
+        assert robot_joint_positions.shape == (T, 23), (
+            f"robot_joint_positions.shape: {robot_joint_positions.shape}, expected: (T, 23)"
+        )
+        assert robot_joint_velocities.shape == (T, 23), (
+            f"robot_joint_velocities.shape: {robot_joint_velocities.shape}, expected: (T, 23)"
+        )
+        assert robot_joint_pos_targets.shape == (T, 23), (
+            f"robot_joint_pos_targets.shape: {robot_joint_pos_targets.shape}, expected: (T, 23)"
+        )
+        assert time_array.shape == (T,), (
+            f"time_array.shape: {time_array.shape}, expected: (T,)"
+        )
 
         recorded_data = RecordedData(
             robot_root_states_array=robot_root_states_array,
@@ -184,6 +216,7 @@ class RecordRobotState:
             robot_joint_pos_targets_array=robot_joint_pos_targets,
         )
         recorded_data.to_file(file_path)
+
 
 def main():
     pass

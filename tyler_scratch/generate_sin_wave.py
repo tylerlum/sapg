@@ -1,10 +1,11 @@
-from recorded_data_scripts.recorded_data import RecordedData
-from typing import Literal
-from pathlib import Path
 from dataclasses import dataclass
-import tyro
-import numpy as np
+from pathlib import Path
+from typing import Literal
 
+import numpy as np
+import tyro
+
+from recorded_data_scripts.recorded_data import RecordedData
 
 # Home joint positions
 HOME_JOINT_POS_IIWA = np.array([-1.571, 1.571, -0.000, 1.376, -0.000, 1.485, 2.358])
@@ -51,19 +52,25 @@ class SinWaveCfg:
         return int(self.total_time / self.dt)
 
 
-def generate_sin_wave(cfg: SinWaveCfg, output_dir: Path, mode: Literal["hand", "arm"]) -> np.ndarray:
+def generate_sin_wave(
+    cfg: SinWaveCfg, output_dir: Path, mode: Literal["hand", "arm"]
+) -> np.ndarray:
     # Validate inputs
     assert mode in ["hand", "arm"], f"Invalid mode: {mode}"
 
     # Generate time array and sin wave
     time_array = np.linspace(0, cfg.total_time, cfg.T)
     sin_wave = cfg.amplitude * np.sin(2 * np.pi * time_array / cfg.period)
-    assert time_array.shape == sin_wave.shape == (cfg.T,), f"Expected time_array.shape and sin_wave.shape to be (cfg.T,), got {time_array.shape} and {sin_wave.shape}"
+    assert time_array.shape == sin_wave.shape == (cfg.T,), (
+        f"Expected time_array.shape and sin_wave.shape to be (cfg.T,), got {time_array.shape} and {sin_wave.shape}"
+    )
 
     # Add to home position
     J = len(JOINT_NAMES)
     robot_joint_positions_array = HOME_JOINT_POS.copy()[None].repeat(cfg.T, axis=0)
-    assert robot_joint_positions_array.shape == (cfg.T, J), f"Expected robot_joint_positions_array.shape to be (cfg.T, {J}), got {robot_joint_positions_array.shape}"
+    assert robot_joint_positions_array.shape == (cfg.T, J), (
+        f"Expected robot_joint_positions_array.shape to be (cfg.T, {J}), got {robot_joint_positions_array.shape}"
+    )
 
     if mode == "hand":
         robot_joint_positions_array[:, 7:] += sin_wave[..., None]
@@ -83,7 +90,12 @@ def generate_sin_wave(cfg: SinWaveCfg, output_dir: Path, mode: Literal["hand", "
         time_array=time_array,
         robot_joint_names=JOINT_NAMES,
     )
-    output_path = output_dir / (f"sin_wave_{mode}_{cfg.total_time}s_{cfg.period}s_{cfg.amplitude}rad".replace(".", "-") + ".npz")
+    output_path = output_dir / (
+        f"sin_wave_{mode}_{cfg.total_time}s_{cfg.period}s_{cfg.amplitude}rad".replace(
+            ".", "-"
+        )
+        + ".npz"
+    )
     output_path.parent.mkdir(parents=True, exist_ok=True)
     print(f"Saving recorded data to {output_path}")
     recorded_data.to_file(output_path)
@@ -93,6 +105,6 @@ def generate_sin_wave(cfg: SinWaveCfg, output_dir: Path, mode: Literal["hand", "
 def main():
     tyro.cli(generate_sin_wave)
 
+
 if __name__ == "__main__":
     main()
-
