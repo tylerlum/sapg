@@ -25,7 +25,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/right_hand_C_MC_visual.STL" />
+        <mesh filename="meshes/right_hand_C_MC_visual.STL" />
       </geometry>
       <material name="">
         <color rgba="0.79216 0.81961 0.93333 1" />
@@ -37,7 +37,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/right_hand_C_MC.STL" />
+        <mesh filename="meshes/right_hand_C_MC.STL" />
       </geometry>
     </collision>
   </link>
@@ -63,7 +63,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/right_thumb_CMC_VL_visual.STL" />
+        <mesh filename="meshes/right_thumb_CMC_VL_visual.STL" />
       </geometry>
       <material name="">
         <color rgba="0.79216 0.81961 0.93333 1" />
@@ -102,7 +102,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/right_thumb_MC_visual.STL" />
+        <mesh filename="meshes/right_thumb_MC_visual.STL" />
       </geometry>
       <material name="">
         <color rgba="0.8902 0.8902 0.91373 1" />
@@ -114,7 +114,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/right_thumb_MC.STL" />
+        <mesh filename="meshes/right_thumb_MC.STL" />
       </geometry>
     </collision>
   </link>
@@ -150,7 +150,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/right_thumb_MCP_VL_visual.STL" />
+        <mesh filename="meshes/right_thumb_MCP_VL_visual.STL" />
       </geometry>
       <material name="">
         <color rgba="0.79216 0.81961 0.93333 1" />
@@ -189,7 +189,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/right_thumb_PP_visual.STL" />
+        <mesh filename="meshes/right_thumb_PP_visual.STL" />
       </geometry>
       <material name="">
         <color rgba="0.79216 0.81961 0.93333 1" />
@@ -201,7 +201,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/right_thumb_PP.STL" />
+        <mesh filename="meshes/right_thumb_PP.STL" />
       </geometry>
     </collision>
   </link>
@@ -237,7 +237,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/right_thumb_DP_visual.STL" />
+        <mesh filename="meshes/right_thumb_DP_visual.STL" />
       </geometry>
       <material name="">
         <color rgba="0.79216 0.81961 0.93333 1" />
@@ -249,7 +249,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/right_thumb_DP.STL" />
+        <mesh filename="meshes/right_thumb_DP.STL" />
       </geometry>
     </collision>
   </link>
@@ -285,7 +285,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/thumb_elastomer_surface.STL" />
+        <mesh filename="meshes/thumb_elastomer_surface.STL" />
       </geometry>
       <material name="">
         <color rgba="0.2 1 0.2 1" />
@@ -297,7 +297,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/thumb_elastomer.STL" />
+        <mesh filename="meshes/thumb_elastomer.STL" />
       </geometry>
     </collision>
   </link>
@@ -358,7 +358,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/right_MCP_VL_visual.STL" />
+        <mesh filename="meshes/right_MCP_VL_visual.STL" />
       </geometry>
       <material name="">
         <color rgba="0.79216 0.81961 0.93333 1" />
@@ -370,7 +370,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/MCP_VL.STL" />
+        <mesh filename="meshes/MCP_VL.STL" />
       </geometry>
     </collision>
   </link>
@@ -406,7 +406,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/right_PP_visual.STL" />
+        <mesh filename="meshes/right_PP_visual.STL" />
       </geometry>
       <material name="">
         <color rgba="0.79216 0.81961 0.93333 1" />
@@ -418,7 +418,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/right_PP.STL" />
+        <mesh filename="meshes/right_PP.STL" />
       </geometry>
     </collision>
   </link>
@@ -454,7 +454,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/right_MP_visual.STL" />
+        <mesh filename="meshes/right_MP_visual.STL" />
       </geometry>
       <material name="">
         <color rgba="0.79216 0.81961 0.93333 1" />
@@ -466,7 +466,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/right_MP.STL" />
+        <mesh filename="meshes/right_MP.STL" />
       </geometry>
     </collision>
   </link>
@@ -502,7 +502,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/right_DP_visual.STL" />
+        <mesh filename="meshes/right_DP_visual.STL" />
       </geometry>
       <material name="">
         <color rgba="0.79216 0.81961 0.93333 1" />
@@ -514,7 +514,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/right_DP.STL" />
+        <mesh filename="meshes/right_DP.STL" />
       </geometry>
     </collision>
   </link>
@@ -550,7 +550,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/elastomer_surface.STL" />
+        <mesh filename="meshes/elastomer_surface.STL" />
       </geometry>
       <material name="">
         <color rgba="0.2 1 0.2 1" />
@@ -562,7 +562,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/elastomer.STL" />
+        <mesh filename="meshes/elastomer.STL" />
       </geometry>
     </collision>
   </link>
@@ -623,7 +623,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/right_MCP_VL_visual.STL" />
+        <mesh filename="meshes/right_MCP_VL_visual.STL" />
       </geometry>
       <material name="">
         <color rgba="0.79216 0.81961 0.93333 1" />
@@ -635,7 +635,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/MCP_VL.STL" />
+        <mesh filename="meshes/MCP_VL.STL" />
       </geometry>
     </collision>
   </link>
@@ -671,7 +671,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/right_PP_visual.STL" />
+        <mesh filename="meshes/right_PP_visual.STL" />
       </geometry>
       <material name="">
         <color rgba="0.79216 0.81961 0.93333 1" />
@@ -683,7 +683,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/right_PP.STL" />
+        <mesh filename="meshes/right_PP.STL" />
       </geometry>
     </collision>
   </link>
@@ -719,7 +719,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/right_MP_visual.STL" />
+        <mesh filename="meshes/right_MP_visual.STL" />
       </geometry>
       <material name="">
         <color rgba="0.79216 0.81961 0.93333 1" />
@@ -731,7 +731,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/right_MP.STL" />
+        <mesh filename="meshes/right_MP.STL" />
       </geometry>
     </collision>
   </link>
@@ -767,7 +767,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/right_DP_visual.STL" />
+        <mesh filename="meshes/right_DP_visual.STL" />
       </geometry>
       <material name="">
         <color rgba="0.79216 0.81961 0.93333 1" />
@@ -779,7 +779,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/right_DP.STL" />
+        <mesh filename="meshes/right_DP.STL" />
       </geometry>
     </collision>
   </link>
@@ -815,7 +815,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/elastomer_surface.STL" />
+        <mesh filename="meshes/elastomer_surface.STL" />
       </geometry>
       <material name="">
         <color rgba="0.2 1 0.2 1" />
@@ -827,7 +827,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/elastomer.STL" />
+        <mesh filename="meshes/elastomer.STL" />
       </geometry>
     </collision>
   </link>
@@ -888,7 +888,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/right_MCP_VL_visual.STL" />
+        <mesh filename="meshes/right_MCP_VL_visual.STL" />
       </geometry>
       <material name="">
         <color rgba="0.79216 0.81961 0.93333 1" />
@@ -900,7 +900,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/MCP_VL.STL" />
+        <mesh filename="meshes/MCP_VL.STL" />
       </geometry>
     </collision>
   </link>
@@ -936,7 +936,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/right_PP_visual.STL" />
+        <mesh filename="meshes/right_PP_visual.STL" />
       </geometry>
       <material name="">
         <color rgba="0.79216 0.81961 0.93333 1" />
@@ -948,7 +948,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/right_PP.STL" />
+        <mesh filename="meshes/right_PP.STL" />
       </geometry>
     </collision>
   </link>
@@ -984,7 +984,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/right_MP_visual.STL" />
+        <mesh filename="meshes/right_MP_visual.STL" />
       </geometry>
       <material name="">
         <color rgba="0.79216 0.81961 0.93333 1" />
@@ -996,7 +996,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/right_MP.STL" />
+        <mesh filename="meshes/right_MP.STL" />
       </geometry>
     </collision>
   </link>
@@ -1032,7 +1032,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/right_DP_visual.STL" />
+        <mesh filename="meshes/right_DP_visual.STL" />
       </geometry>
       <material name="">
         <color rgba="0.79216 0.81961 0.93333 1" />
@@ -1044,7 +1044,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/right_DP.STL" />
+        <mesh filename="meshes/right_DP.STL" />
       </geometry>
     </collision>
   </link>
@@ -1080,7 +1080,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/elastomer_surface.STL" />
+        <mesh filename="meshes/elastomer_surface.STL" />
       </geometry>
       <material name="">
         <color rgba="0.2 1 0.2 1" />
@@ -1092,7 +1092,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/elastomer.STL" />
+        <mesh filename="meshes/elastomer.STL" />
       </geometry>
     </collision>
   </link>
@@ -1153,7 +1153,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/right_pinky_MC_visual.STL" />
+        <mesh filename="meshes/right_pinky_MC_visual.STL" />
       </geometry>
       <material name="">
         <color rgba="0.79216 0.81961 0.93333 1" />
@@ -1165,7 +1165,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/right_pinky_MC.STL" />
+        <mesh filename="meshes/right_pinky_MC.STL" />
       </geometry>
     </collision>
   </link>
@@ -1201,7 +1201,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/right_MCP_VL_visual.STL" />
+        <mesh filename="meshes/right_MCP_VL_visual.STL" />
       </geometry>
       <material name="">
         <color rgba="0.79216 0.81961 0.93333 1" />
@@ -1213,7 +1213,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/MCP_VL.STL" />
+        <mesh filename="meshes/MCP_VL.STL" />
       </geometry>
     </collision>
   </link>
@@ -1249,7 +1249,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/right_PP_visual.STL" />
+        <mesh filename="meshes/right_PP_visual.STL" />
       </geometry>
       <material name="">
         <color rgba="0.79216 0.81961 0.93333 1" />
@@ -1261,7 +1261,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/right_PP.STL" />
+        <mesh filename="meshes/right_PP.STL" />
       </geometry>
     </collision>
   </link>
@@ -1297,7 +1297,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/right_MP_visual.STL" />
+        <mesh filename="meshes/right_MP_visual.STL" />
       </geometry>
       <material name="">
         <color rgba="0.79216 0.81961 0.93333 1" />
@@ -1309,7 +1309,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/right_MP.STL" />
+        <mesh filename="meshes/right_MP.STL" />
       </geometry>
     </collision>
   </link>
@@ -1345,7 +1345,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/right_DP_visual.STL" />
+        <mesh filename="meshes/right_DP_visual.STL" />
       </geometry>
       <material name="">
         <color rgba="0.79216 0.81961 0.93333 1" />
@@ -1357,7 +1357,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/right_DP.STL" />
+        <mesh filename="meshes/right_DP.STL" />
       </geometry>
     </collision>
   </link>
@@ -1393,7 +1393,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/elastomer_surface.STL" />
+        <mesh filename="meshes/elastomer_surface.STL" />
       </geometry>
       <material name="">
         <color rgba="0.1 1 0.2 1" />
@@ -1405,7 +1405,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="package://right_sharpa_ha4/meshes/elastomer.STL" />
+        <mesh filename="meshes/elastomer.STL" />
       </geometry>
     </collision>
   </link>
