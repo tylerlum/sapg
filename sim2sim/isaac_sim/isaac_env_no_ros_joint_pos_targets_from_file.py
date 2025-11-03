@@ -86,7 +86,7 @@ def main():
         config_path=str(CONFIG_PATH),
         headless=False,
         device=DEVICE,
-        episode_length=T,
+        episode_length=T*2,  # Make it not reset before finishing the trajectory
     )
 
     # Set env state from checkpoint to match things like success_tolerance
@@ -101,7 +101,7 @@ def main():
     )
     observation = isaac_env_no_ros_joint_pos_targets_from_file.reset()
     joint_pos_history = []
-    joint_pos_history.append(isaac_env_no_ros_joint_pos_targets_from_file.env.arm_hand_dof_pos.clone().cpu().numpy()[0])
+    # joint_pos_history.append(isaac_env_no_ros_joint_pos_targets_from_file.env.arm_hand_dof_pos.clone().cpu().numpy()[0])
 
     idx = 0
     while True:
@@ -114,8 +114,53 @@ def main():
         idx += 1
         if idx >= T:
             joint_pos_history = np.array(joint_pos_history)
+            print(f"Reached end of trajectory!")
             print(f"joint_pos_history.shape: {joint_pos_history.shape}")
             print(f"joint_pos_targets_array.shape: {joint_pos_targets_array.shape}")
+            assert joint_pos_history.shape == joint_pos_targets_array.shape, f"joint_pos_history.shape: {joint_pos_history.shape}, expected: {joint_pos_targets_array.shape}"
+            robot_root_states_array = np.zeros((T, 13))
+            robot_root_states_array[:, 6] = 1.0  # quaternion xyzw has w=1
+            object_root_states_array = np.zeros((T, 13))
+            object_root_states_array[:, 6] = 1.0  # quaternion xyzw has w=1
+            robot_joint_names = [
+                "iiwa_joint_1",
+                "iiwa_joint_2",
+                "iiwa_joint_3",
+                "iiwa_joint_4",
+                "iiwa_joint_5",
+                "iiwa_joint_6",
+                "iiwa_joint_7",
+                "allegro_joint_1",
+                "allegro_joint_2",
+                "allegro_joint_3",
+                "allegro_joint_4",
+                "allegro_joint_5",
+                "allegro_joint_6",
+                "allegro_joint_7",
+                "allegro_joint_8",
+                "allegro_joint_9",
+                "allegro_joint_10",
+                "allegro_joint_11",
+                "allegro_joint_12",
+                "allegro_joint_13",
+                "allegro_joint_14",
+                "allegro_joint_15",
+                "allegro_joint_16",
+            ]
+            time_array = np.arange(T) * CONTROL_DT
+            new_recorded_data = RecordedData(
+                robot_root_states_array=robot_root_states_array,
+                object_root_states_array=object_root_states_array,
+                robot_joint_positions_array=joint_pos_history,
+                time_array=time_array,
+                robot_joint_names=robot_joint_names,
+                robot_joint_pos_targets_array=joint_pos_targets_array,
+            )
+            output_path = RECORDED_DATA_PATH.parent / f"{RECORDED_DATA_PATH.stem}_isaac_stiffness4000_damping200_effort350.npz"
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            print(f"Saving recorded data to {output_path}")
+            new_recorded_data.to_file(output_path)
+            print(f"Saved recorded data to {output_path}")
             breakpoint()
         if done.item():
             # idx = 0
