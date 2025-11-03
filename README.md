@@ -161,6 +161,152 @@ task.env.maxConsecutiveSuccesses=10 \
 task.env.enableDebugVis=True
 ```
 
+# Sim2Sim
+
+For Sim2Sim, there are a few "axes" of variation:
+
+* Simulator: Mujoco vs. Isaac
+
+* Communication: ROS (async different processes) vs. No ROS (same process synchronous)
+
+Convention: `env` refers to a wrapper around simulator that has a `step` method and returns an observation.
+
+## Mujoco
+
+Standard Mujoco simulation:
+
+```
+python sim2sim/mujoco_sim/mujoco_sim.py
+```
+
+Mujoco environment with no ROS:
+
+```
+python sim2sim/mujoco_sim/mujoco_env_no_ros.py
+```
+
+Mujoco environment with ROS:
+
+```
+python sim2sim/mujoco_sim/mujoco_env_ros.py
+```
+
+## Isaac
+
+For Isaac, we can either have the env step with raw actions in `[-1, 1]` or with joint position targets.
+
+Standard Isaac environment:
+
+```
+python sim2sim/isaac_sim/isaac_env.py
+```
+
+Isaac environment with no ROS:
+
+```
+python sim2sim/isaac_sim/isaac_env_no_ros.py
+```
+
+Isaac environment with no ROS and joint position targets:
+
+```
+python sim2sim/isaac_sim/isaac_env_no_ros_joint_pos_targets.py
+```
+
+As of right now, we have not implemented the following because isaacgym requires Python 3.8 and robostack requires Python 3.10+ (can do this if use system-level ROS):
+
+```
+python sim2sim/isaac_sim/isaac_env_ros_joint_pos_targets.py
+```
+
+
+# Sim2Real
+
+For Sim2Real policy deployment, we will require at least 3 nodes:
+
+1. RL Policy Node: Takes in observations, runs policy to get raw actions, converts to joint position targets, and publishes to robot.
+2. Perception Node: Reads in RGB-D images, uses SAM2 and FoundationPose to get object pose, and publishes to robot.
+3. Robot Node: Sends joint position targets to robot and publishes joint states to ROS.
+
+(2) and (3) are not in this repo.
+
+The RL Policy Node is in this repo:
+
+```
+python sim2real/rl_policy_ros_node.py
+```
+
+Home robot:
+
+```
+python sim2real/home_robot.py
+```
+
+Open-loop replay of joint position trajectory:
+
+```
+python sim2real/replay_trajectory.py
+```
+
+Visualizer node:
+
+```
+python sim2real/visualizer.py
+```
+
+If want to try without a real robot, you can either use mujoco sim2sim (will publish object pose and goal object pose):
+
+```
+python sim2sim/mujoco_sim/mujoco_env_ros.py
+```
+
+Or fake_robot_ros_node.py (no physics, just interpolating to joint position targets):
+
+```
+python sim2real/fake_robot_ros_node.py
+```
+
+# Viser
+
+## URDF Files
+
+Standard URDF visualization with viser (mostly from Viser example code):
+
+```
+python viser_urdf/viser_urdf.py
+```
+
+Standard URDF visualization with viser with additional visualization of each of the frames of the robot (X = Red, Y = Green, Z = Blue).
+
+```
+python viser_urdf/viser_urdf_with_frames.py
+```
+
+## MJCF XML Files
+
+MJCF XML visualization with viser (motivated by MjLabs code but heavily simplified):
+
+```
+python viser_mujoco/viser_mj_model.py
+```
+
+MJCF XML visualization with viser with additional visualization of each of the frames of the robot (X = Red, Y = Green, Z = Blue).
+
+```
+python viser_mujoco/viser_mj_model_with_frames.py
+```
+
+Visualize the MujocoSim with viser.
+
+```
+python viser_mujoco/viser_sim.py
+```
+
+Visualize the MujocoSim and compare with the URDF visualization.
+
+```
+python viser_mujoco/viser_sim_urdf_comparison.py
+```
 
 # ORIGINAL README
 [![arXiv](https://img.shields.io/badge/arXiv-2407.20230-df2a2a.svg)](https://arxiv.org/abs/2407.20230)
