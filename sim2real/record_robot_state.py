@@ -1,3 +1,5 @@
+import signal
+import datetime
 import copy
 import time
 from pathlib import Path
@@ -67,6 +69,12 @@ class RecordRobotState:
     def __init__(self):
         rospy.init_node("record_robot_state")
 
+        # Signal handling to save on shutdown
+        # When in progress saving to file, stop updating latest joint states and commands
+        self._is_in_progress_saving_to_file = False
+        signal.signal(signal.SIGINT, self._signal_handler)
+        signal.signal(signal.SIGTERM, self._signal_handler)
+
         # Store latest joint states and commands
         self.latest_iiwa_joint_state: Optional[JointState] = None
         self.latest_allegro_joint_state: Optional[JointState] = None
@@ -128,12 +136,17 @@ class RecordRobotState:
                     n_seconds=1.0,
                 )
                 self.rate.sleep()
-                continue
+            else:
+                break  # All messages received, exit loop
 
         info("All messages received, starting to record robot state")
 
         start_time = time.time()
         while not rospy.is_shutdown():
+            if self._is_in_progress_saving_to_file:
+                warn("In progress of saving to file, exiting")
+                break
+
             # Record time
             current_time = time.time()
             dt = current_time - start_time
@@ -161,11 +174,29 @@ class RecordRobotState:
             self.allegro_joint_pos_target_history.append(allegro_joint_cmd_position)
             self.time_history.append(dt)
 
+            info(f"Recorded {len(self.time_history)} steps over {dt:.2f} seconds")
             self.rate.sleep()
+
+    def _signal_handler(self, signum, frame):
+        if self._is_in_progress_saving_to_file:
+            warn("Already in progress of saving to file, skipping")
+            return
+
+        self._is_in_progress_saving_to_file = True
+        if len(self.time_history) == 0:
+            warn("No data recorded, skipping")
+        else:
+            info(f"Received signal {signum}, saving to file")
+            datetime_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            output_path = Path("recorded_robot_state") / f"{datetime_str}.npz"
+            self.save_to_file(output_path)
+            info(f"Saved to file: {output_path}")
+
+        rospy.signal_shutdown("Shutting down")
 
     def save_to_file(self, file_path: Path):
         file_path.parent.mkdir(parents=True, exist_ok=True)
-        print(f"Saving to file: {file_path}")
+        info(f"Saving to file: {file_path}")
 
         T = len(self.time_history)
         robot_root_states_array = np.zeros((T, 13))
@@ -219,7 +250,8 @@ class RecordRobotState:
 
 
 def main():
-    pass
+    record_robot_state = RecordRobotState()
+    record_robot_state.run()
 
 
 if __name__ == "__main__":

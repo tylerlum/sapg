@@ -266,6 +266,18 @@ Or fake_robot_ros_node.py (no physics, just interpolating to joint position targ
 python sim2real/fake_robot_ros_node.py
 ```
 
+Move hand to "limp" position:
+
+```
+rostopic pub /allegroHand_0/joint_cmd sensor_msgs/JointState "header:
+  seq: 0
+  stamp: {secs: 0, nsecs: 0}
+  frame_id: ''
+position: [0.03580158647006279, 1.190307500756139, 0.04091241471899582, -0.0020815739716152164, -0.003517249230515697, 1.2851153897506231, 0.044026046173861466, 0.014320749234448864, -0.026443060708318096, 1.3508007502819834, 0.019888673216377658, 0.0169404863577189, 1.3616900779442058, 0.01507557136958743, 0.1047496180391897, 0.009729167245470401]
+velocity: []
+effort: []"
+```
+
 # Viser
 
 ## URDF Files
