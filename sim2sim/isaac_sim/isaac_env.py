@@ -2,6 +2,7 @@
 from isaacgymenvs.tasks.allegro_kuka.allegro_kuka_base import AllegroKukaBase  # isort:skip
 
 from pathlib import Path
+from typing import Optional
 
 import torch
 from hydra import compose, initialize
@@ -20,6 +21,7 @@ def create_env(
     headless: bool = False,
     enable_viewer_sync_at_start: bool = True,
     merge_with_default_config: bool = True,
+    episode_length: Optional[int] = None,
 ) -> AllegroKukaBase:
     cfg = read_cfg_omegaconf(config_path=config_path, device=device)
 
@@ -60,6 +62,7 @@ def create_env(
         cfg=cfg,
         headless=headless,
         enable_viewer_sync_at_start=enable_viewer_sync_at_start,
+        episode_length=episode_length,
     )
 
 
@@ -67,11 +70,14 @@ def create_env_from_cfg(
     cfg: DictConfig,
     headless: bool = False,
     enable_viewer_sync_at_start: bool = True,
+    episode_length: Optional[int] = None,
 ) -> AllegroKukaBase:
     # Modify the config
     cfg.headless = headless
     cfg.task.sim.enable_viewer_sync_at_start = enable_viewer_sync_at_start
     cfg.task.env.numEnvs = 1
+    if episode_length is not None:
+        cfg.task.env.episodeLength = episode_length
 
     # HACK: Assume that graphics_device_id should be 0
     # This is a pretty reasonable assumption because we are typically doing this testing on a workstation with 1 GPU
@@ -127,7 +133,8 @@ def recursive_diff(cfg1: dict, cfg2: dict, path: str = "") -> dict:
 
 
 def main() -> None:
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    # DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+    DEVICE = "cpu"  # "cpu" faster for single env
     CONFIG_PATH = Path(
         "/home/tylerlum/github_repos/sapg/closed_loop_testing/config.yaml"
     )
@@ -136,7 +143,7 @@ def main() -> None:
     env = create_env(
         config_path=str(CONFIG_PATH),
         headless=False,
-        device=device,
+        device=DEVICE,
     )
 
     print(env)
@@ -144,7 +151,7 @@ def main() -> None:
     N_STEPS = 1000
     for _ in range(N_STEPS):
         action = torch.rand(
-            (env.num_envs, env.num_acts), device=device, dtype=torch.float
+            (env.num_envs, env.num_acts), device=DEVICE, dtype=torch.float
         )
         obs, reward, done, info = env.step(action)
 

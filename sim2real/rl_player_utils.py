@@ -76,6 +76,8 @@ def read_cfg_omegaconf(config_path: str, device: Optional[str] = None) -> DictCo
             # OLD
             omegaconf_cfg.train.params.config.device = device
             omegaconf_cfg.train.params.config.device_name = device
+            omegaconf_cfg.rl_device = device
+            omegaconf_cfg.sim_device = device
         else:
             # NEW
             omegaconf_cfg.rl_device = device

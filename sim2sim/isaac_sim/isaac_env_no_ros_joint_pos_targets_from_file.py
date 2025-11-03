@@ -80,11 +80,13 @@ def main():
     T = joint_pos_targets_array.shape[0]
     assert joint_pos_targets_array.shape == (T, N_ACT), f"joint_pos_targets_array.shape: {joint_pos_targets_array.shape}, expected: ({T}, {N_ACT})"
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    # DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+    DEVICE = "cpu"  # "cpu" faster for single env
     env = create_env(
         config_path=str(CONFIG_PATH),
         headless=False,
-        device=device,
+        device=DEVICE,
+        episode_length=T,
     )
 
     # Set env state from checkpoint to match things like success_tolerance
@@ -95,7 +97,7 @@ def main():
     isaac_env_no_ros_joint_pos_targets_from_file = IsaacEnvNoRosJointPosTargetsFromFile(
         env=env,
         control_dt=CONTROL_DT,
-        device=device,
+        device=DEVICE,
     )
     observation = isaac_env_no_ros_joint_pos_targets_from_file.reset()
     joint_pos_history = []
@@ -104,9 +106,9 @@ def main():
     idx = 0
     while True:
         start_time = time.time()
-        print(f"idx: {idx}")
+        # print(f"idx: {idx}")
         observation, _, done, _ = (
-            isaac_env_no_ros_joint_pos_targets_from_file.step_with_joint_pos_targets(torch.from_numpy(joint_pos_targets_array[idx]).to(device).float().unsqueeze(0))
+            isaac_env_no_ros_joint_pos_targets_from_file.step_with_joint_pos_targets(torch.from_numpy(joint_pos_targets_array[idx]).to(DEVICE).float().unsqueeze(0))
         )
         joint_pos_history.append(isaac_env_no_ros_joint_pos_targets_from_file.env.arm_hand_dof_pos.clone().cpu().numpy()[0])
         idx += 1

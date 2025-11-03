@@ -47,11 +47,12 @@ def main():
     )
     assert CHECKPOINT_PATH.exists()
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    # DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+    DEVICE = "cpu"  # "cpu" faster for single env
     env = create_env(
         config_path=str(CONFIG_PATH),
         headless=False,
-        device=device,
+        device=DEVICE,
     )
 
     # Set env state from checkpoint to match things like success_tolerance
@@ -64,10 +65,10 @@ def main():
         num_actions=N_ACT,
         config_path=CONFIG_PATH,
         checkpoint_path=CHECKPOINT_PATH,
-        device="cuda",
+        device=DEVICE,
     )
 
-    isaac_env_no_ros = IsaacEnvNoRos(env=env, device=device)
+    isaac_env_no_ros = IsaacEnvNoRos(env=env, device=DEVICE)
     observation = isaac_env_no_ros.reset()
 
     while True:
