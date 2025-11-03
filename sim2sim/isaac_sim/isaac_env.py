@@ -30,7 +30,8 @@ def create_env(
         # Merging with the default config will add this field with the default value
         print("Merging with default config")
 
-        with initialize(version_base="1.1", config_path="../isaacgymenvs/cfg"):
+        # Should be path of the isaacgymenvs/cfg directory relative to this file's directory
+        with initialize(version_base="1.1", config_path="../../isaacgymenvs/cfg"):
             init_cfg = compose(config_name="config")
 
         # Disable struct mode to allow merging
@@ -39,9 +40,9 @@ def create_env(
 
         # Put cfg second to override init_cfg
         merged_cfg = OmegaConf.merge(init_cfg, cfg)
-        assert isinstance(
-            merged_cfg, DictConfig
-        ), f"Expected DictConfig, got {type(merged_cfg)}"
+        assert isinstance(merged_cfg, DictConfig), (
+            f"Expected DictConfig, got {type(merged_cfg)}"
+        )
 
         # Print the differences
         diff = recursive_diff(

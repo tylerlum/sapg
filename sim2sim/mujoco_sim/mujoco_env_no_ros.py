@@ -17,6 +17,9 @@ from sim2sim.mujoco_sim.mujoco_sim import (
     MujocoSimConfig,
 )
 
+N_OBS = 117
+N_ACT = 23
+
 
 def warn(message: str):
     print(colored(message, "yellow"))
@@ -67,19 +70,19 @@ class MujocoEnvNoRos:
             q=torch.from_numpy(q).float().to(self.device)[None],
             qd=torch.from_numpy(qd).float().to(self.device)[None],
             object_pose=torch.from_numpy(object_pose_R).float().to(self.device)[None],
-            goal_object_pose=torch.from_numpy(goal_object_pose_R)
-            .float()
-            .to(self.device)[None],
-            object_scales=torch.from_numpy(self.object_scales)
-            .float()
-            .to(self.device)[None],
+            goal_object_pose=(
+                torch.from_numpy(goal_object_pose_R).float().to(self.device)[None]
+            ),
+            object_scales=(
+                torch.from_numpy(self.object_scales).float().to(self.device)[None]
+            ),
             chain=self.chain,
             palm_serial_chain=self.palm_serial_chain,
         )
         assert observation.shape == (
             1,
-            117,
-        ), f"observation.shape: {observation.shape}, expected: (1, 117,)"
+            N_OBS,
+        ), f"observation.shape: {observation.shape}, expected: (1, {N_OBS})"
         return observation
 
     def step(self, action: torch.Tensor) -> None:
@@ -108,8 +111,13 @@ class MujocoEnvNoRos:
 
 
 def main():
-    sim_dt = 1.0 / 600.0
-    control_dt = 1.0 / 60.0
+    # Parameters
+    SIM_DT = 1.0 / 600.0  # Mujoco sim step (needs to be small to get stable physics)
+    CONTROL_DT = 1.0 / 60.0  # Control loop frequency (policy loop rate)
+    ACT_MOVING_AVERAGE = 0.1
+    HAND_DOF_SPEED_SCALE = 0.5
+    OBJECT_SCALES = np.array([0.1, 0.035, 0.025]) * 20
+
     CONFIG_PATH = Path(
         "/home/tylerlum/github_repos/sapg/closed_loop_testing/config.yaml"
     )
@@ -122,10 +130,10 @@ def main():
     assert CHECKPOINT_PATH.exists()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    sim = MujocoSim(MujocoSimConfig(enable_viewer=True, sim_dt=sim_dt))
+    sim = MujocoSim(MujocoSimConfig(enable_viewer=True, sim_dt=SIM_DT))
     policy = RlPlayer(
-        num_observations=117,
-        num_actions=23,
+        num_observations=N_OBS,
+        num_actions=N_ACT,
         config_path=CONFIG_PATH,
         checkpoint_path=CHECKPOINT_PATH,
         device=device,
@@ -135,16 +143,14 @@ def main():
         device=device, robot_name="iiwa14"
     )
 
-    # object_scales = np.array([2.0, 0.5, 0.5])
-    object_scales = np.array([0.1, 0.035, 0.025]) * 20
     mujoco_env_no_ros = MujocoEnvNoRos(
         sim=sim,
-        object_scales=object_scales,
+        object_scales=OBJECT_SCALES,
         chain=chain,
         palm_serial_chain=palm_serial_chain,
-        act_moving_average=0.1,
-        hand_dof_speed_scale=0.5,
-        control_dt=control_dt,
+        act_moving_average=ACT_MOVING_AVERAGE,
+        hand_dof_speed_scale=HAND_DOF_SPEED_SCALE,
+        control_dt=CONTROL_DT,
         device=device,
     )
 
@@ -159,12 +165,12 @@ def main():
         end_time = time.time()
 
         # Sleep to maintain control loop frequency
-        sleep_time = control_dt - (end_time - start_time)
+        sleep_time = CONTROL_DT - (end_time - start_time)
         if sleep_time > 0:
             time.sleep(sleep_time)
         else:
             print(
-                f"Control loop too slow! Desired FPS: {1.0 / control_dt:.1f}, Actual FPS: {1.0 / (end_time - start_time):.1f}"
+                f"Control loop too slow! Desired FPS: {1.0 / CONTROL_DT:.1f}, Actual FPS: {1.0 / (end_time - start_time):.1f}"
             )
 
 
