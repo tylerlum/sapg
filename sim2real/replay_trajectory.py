@@ -142,20 +142,28 @@ def main():
         # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-24_17-37-29.npz"
         # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-27_16-23-09.npz"
         # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-27_16-23-31.npz"
-        "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-27_17-18-32.npz"
+        # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-27_17-18-32.npz"
+
+        # Arm sin waves
+        # "/home/tylerlum/github_repos/sapg/2025-11-02_sin_waves/sin_wave_arm_10-0s_2-0s_0-1rad.npz"
+        # "/home/tylerlum/github_repos/sapg/2025-11-02_sin_waves/sin_wave_arm_10-0s_2-0s_0-2rad.npz"
+        # "/home/tylerlum/github_repos/sapg/2025-11-02_sin_waves/sin_wave_arm_10-0s_1-0s_0-1rad.npz"
+        # "/home/tylerlum/github_repos/sapg/2025-11-02_sin_waves/sin_wave_arm_10-0s_1-0s_0-2rad.npz"
+
+        # Hand sin waves
+        # "/home/tylerlum/github_repos/sapg/2025-11-02_sin_waves/sin_wave_hand_10-0s_2-0s_0-1rad.npz"
+        # "/home/tylerlum/github_repos/sapg/2025-11-02_sin_waves/sin_wave_hand_10-0s_2-0s_0-2rad.npz"
+        # "/home/tylerlum/github_repos/sapg/2025-11-02_sin_waves/sin_wave_hand_10-0s_1-0s_0-1rad.npz"
+        "/home/tylerlum/github_repos/sapg/2025-11-02_sin_waves/sin_wave_hand_10-0s_1-0s_0-2rad.npz"
     )
     assert file_path.exists(), f"File {file_path} does not exist"
     recorded_data = RecordedData.from_file(file_path)
     joint_positions_array = recorded_data.robot_joint_positions_array
-    joint_pos_targets_array = recorded_data.robot_joint_pos_targets_array
     joint_names = recorded_data.robot_joint_names
     T = joint_positions_array.shape[0]
     J = len(joint_names)
     assert joint_positions_array.shape == (T, J), (
         f"joint_positions_array.shape: {joint_positions_array.shape}, expected: ({T}, {J})"
-    )
-    assert joint_pos_targets_array.shape == (T, J), (
-        f"joint_pos_targets_array.shape: {joint_pos_targets_array.shape}, expected: ({T}, {J})"
     )
 
     # Initialize ROS node
