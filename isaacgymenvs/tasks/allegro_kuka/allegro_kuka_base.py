@@ -76,9 +76,8 @@ class AllegroKukaBase(VecTask):
 
         # 4 joints for index, middle, ring, and thumb and 7 for kuka arm
         self.num_arm_dofs = 7
-        self.num_finger_dofs = 4
-        self.num_allegro_fingertips = 4
-        self.num_hand_dofs = self.num_finger_dofs * self.num_allegro_fingertips
+        self.num_allegro_fingertips = 5
+        self.num_hand_dofs = 22
         self.num_hand_arm_dofs = self.num_hand_dofs + self.num_arm_dofs
 
         self.num_allegro_kuka_actions = self.num_hand_arm_dofs
@@ -176,9 +175,9 @@ class AllegroKukaBase(VecTask):
 
         self.num_keypoints = len(self.keypoints_offsets)
 
-        self.allegro_fingertips = ["index_link_3", "middle_link_3", "ring_link_3", "thumb_link_3"]
+        self.allegro_fingertips = ["right_index_DP", "right_middle_DP", "right_ring_DP", "right_thumb_DP", "right_pinky_DP"]
         self.fingertip_offsets = np.array(
-            [[0.05, 0.005, 0], [0.05, 0.005, 0], [0.05, 0.005, 0], [0.06, 0.005, 0]], dtype=np.float32
+            [[0.05, 0.005, 0], [0.05, 0.005, 0], [0.05, 0.005, 0], [0.06, 0.005, 0], [0.05, 0.005, 0]], dtype=np.float32
         )
         self.palm_offset = np.array([-0.00, -0.02, 0.16], dtype=np.float32)
 
