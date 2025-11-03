@@ -1,0 +1,132 @@
+from isaacgymenvs.tasks.allegro_kuka.allegro_kuka_base import AllegroKukaBase  # isort:skip
+import numpy as np
+from recorded_data_scripts.recorded_data import RecordedData
+import time
+from pathlib import Path
+from typing import Tuple
+
+from sim2real.rl_player import RlPlayer
+
+import torch  # isort:skip
+import pytorch_kinematics as pk
+from termcolor import colored
+
+from isaacgymenvs.utils.observation_action_utils import (
+    compute_joint_pos_targets,
+    compute_observation,
+)
+from sim2sim.isaac_sim.isaac_env import create_env
+
+N_OBS = 117
+N_ACT = 23
+
+ACT_MOVING_AVERAGE = 0.1
+HAND_DOF_SPEED_SCALE = 0.5
+
+
+def warn(message: str):
+    print(colored(message, "yellow"))
+
+
+def info(message: str):
+    print(colored(message, "green"))
+
+
+class IsaacEnvNoRosJointPosTargetsFromFile:
+    def __init__(
+        self,
+        env: AllegroKukaBase,
+        control_dt: float,
+        device: str,
+    ):
+        self.env = env
+        self.control_dt = control_dt
+        self.device = device
+
+    def step(self, action: torch.Tensor) -> Tuple[torch.Tensor, float, bool, dict]:
+        obs, reward, done, info = self.env.step(action)
+        return obs["obs"], reward, done, info
+
+    def reset(self) -> torch.Tensor:
+        obs, _, _, _ = self.env.step(torch.zeros((1, N_ACT), device=self.device))
+        return obs["obs"]
+
+    def step_with_joint_pos_targets(
+        self, joint_pos_targets: torch.Tensor
+    ) -> Tuple[torch.Tensor, float, bool, dict]:
+        obs, reward, done, info = self.env.step(
+            torch.zeros((1, N_ACT), device=self.device), joint_pos_targets=joint_pos_targets
+        )
+        return obs["obs"], reward, done, info
+
+
+def main():
+    CONTROL_DT = 1.0 / 60.0
+    CONFIG_PATH = Path(
+        "/home/tylerlum/github_repos/sapg/closed_loop_testing/config.yaml"
+    )
+    assert Path(CONFIG_PATH).exists()
+    CHECKPOINT_PATH = Path(
+        "/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-10-22_slow-action-obs-randomize-all_slower-curriculum/00_slowarmhand_slowobs_hammer_2025-10-23_00-48-56/runs/00_slowarmhand_slowobs_hammer_2025-10-23_00-48-56/last/model.pth"
+    )
+    assert CHECKPOINT_PATH.exists()
+
+    RECORDED_DATA_PATH = Path(
+        "/home/tylerlum/github_repos/sapg/recorded_robot_state/2025-11-02_18-48-58_sin_wave_hand_10-0s_1-0s_0-2rad.npz"
+    )
+    assert RECORDED_DATA_PATH.exists()
+    recorded_data = RecordedData.from_file(RECORDED_DATA_PATH)
+    joint_pos_targets_array = recorded_data.robot_joint_pos_targets_array
+    T = joint_pos_targets_array.shape[0]
+    assert joint_pos_targets_array.shape == (T, N_ACT), f"joint_pos_targets_array.shape: {joint_pos_targets_array.shape}, expected: ({T}, {N_ACT})"
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    env = create_env(
+        config_path=str(CONFIG_PATH),
+        headless=False,
+        device=device,
+    )
+
+    # Set env state from checkpoint to match things like success_tolerance
+    checkpoint = torch.load(CHECKPOINT_PATH)
+    env_state = checkpoint[0]["env_state"]
+    env.set_env_state(env_state)
+
+    isaac_env_no_ros_joint_pos_targets_from_file = IsaacEnvNoRosJointPosTargetsFromFile(
+        env=env,
+        control_dt=CONTROL_DT,
+        device=device,
+    )
+    observation = isaac_env_no_ros_joint_pos_targets_from_file.reset()
+    joint_pos_history = []
+    joint_pos_history.append(isaac_env_no_ros_joint_pos_targets_from_file.env.arm_hand_dof_pos.clone().cpu().numpy()[0])
+
+    idx = 0
+    while True:
+        start_time = time.time()
+        print(f"idx: {idx}")
+        observation, _, done, _ = (
+            isaac_env_no_ros_joint_pos_targets_from_file.step_with_joint_pos_targets(torch.from_numpy(joint_pos_targets_array[idx]).to(device).float().unsqueeze(0))
+        )
+        joint_pos_history.append(isaac_env_no_ros_joint_pos_targets_from_file.env.arm_hand_dof_pos.clone().cpu().numpy()[0])
+        idx += 1
+        if idx >= T:
+            joint_pos_history = np.array(joint_pos_history)
+            print(f"joint_pos_history.shape: {joint_pos_history.shape}")
+            print(f"joint_pos_targets_array.shape: {joint_pos_targets_array.shape}")
+            breakpoint()
+        if done.item():
+            # idx = 0
+            observation = isaac_env_no_ros_joint_pos_targets_from_file.reset()
+        end_time = time.time()
+        sleep_time = CONTROL_DT - (end_time - start_time)
+        if sleep_time > 0:
+            time.sleep(sleep_time)
+        else:
+            print(
+                f"Control loop too slow! Desired FPS: {1.0 / CONTROL_DT:.1f}, Actual FPS: {1.0 / (end_time - start_time):.1f}"
+            )
+
+
+if __name__ == "__main__":
+    main()
