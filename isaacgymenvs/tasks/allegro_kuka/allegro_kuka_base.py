@@ -2294,7 +2294,7 @@ class AllegroKukaBase(VecTask):
             )
 
         # Smooth arm
-        SMOOTH_ARM = True
+        SMOOTH_ARM = self.cfg["env"]["smooth_arm"]
         if SMOOTH_ARM:
             self.cur_targets[:, :7] = (
                 self.act_moving_average * self.cur_targets[:, :7]
