@@ -1,5 +1,5 @@
 import sys
-sys.path.append("/home/tylerlum/github_repos/sapg/sim2real")
+sys.path.append("/home/tylerlum/github_repos/sapg")
 from isaacgymenvs.tasks.allegro_kuka.allegro_kuka_base import AllegroKukaBase  # isort:skip
 from typing import Tuple
 import time
@@ -24,7 +24,7 @@ def info(message: str):
     print(colored(message, "green"))
 
 
-class IsaacNoRos:
+class IsaacEnvNoRos:
     def __init__(self, sim: AllegroKukaBase, control_dt: float, device: str):
         self.sim = sim
         self.device = device
@@ -65,13 +65,13 @@ def main():
         device="cuda",
     )
 
-    sim_no_ros = IsaacNoRos(sim=sim, control_dt=control_dt, device=device)
-    observation = sim_no_ros.reset()
+    isaac_env_no_ros = IsaacEnvNoRos(sim=sim, control_dt=control_dt, device=device)
+    observation = isaac_env_no_ros.reset()
 
     while True:
         start_time = time.time()
         action = policy.get_normalized_action(observation, deterministic_actions=True)  # Careful about deterministic_actions=True here!
-        observation, _, _, _ = sim_no_ros.step(action)
+        observation, _, _, _ = isaac_env_no_ros.step(action)
         end_time = time.time()
         sleep_time = control_dt - (end_time - start_time)
         if sleep_time > 0:

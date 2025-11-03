@@ -1,11 +1,11 @@
 import sys
-sys.path.append("/home/tylerlum/github_repos/sapg/sim2real")
+sys.path.append("/home/tylerlum/github_repos/sapg")
 import time
 import torch
 from pathlib import Path
 from sim2real.rl_player import RlPlayer
 import numpy as np
-from sim import JOINT_NAMES, N_IIWA_JOINTS, Simulator, SimulatorConfig
+from sim2sim.mujoco_sim.mujoco_sim import JOINT_NAMES, N_IIWA_JOINTS, MujocoSim, MujocoSimConfig
 from termcolor import colored
 import pytorch_kinematics as pk
 
@@ -23,8 +23,8 @@ def info(message: str):
     print(colored(message, "green"))
 
 
-class SimNoRos:
-    def __init__(self, sim: Simulator, object_scales: np.ndarray, chain: pk.Chain, palm_serial_chain: pk.SerialChain, act_moving_average: float, hand_dof_speed_scale: float, control_dt: float, device: str):
+class MujocoEnvNoRos:
+    def __init__(self, sim: MujocoSim, object_scales: np.ndarray, chain: pk.Chain, palm_serial_chain: pk.SerialChain, act_moving_average: float, hand_dof_speed_scale: float, control_dt: float, device: str):
         self.sim = sim
         self.object_scales = object_scales
         self.chain = chain
@@ -50,12 +50,6 @@ class SimNoRos:
         q = sim_state["joint_positions"]
         qd = sim_state["joint_velocities"]
 
-        print(f"q = {q}")
-        print(f"qd = {qd}")
-        print(f"object_pose_R = {object_pose_R}")
-        print(f"goal_object_pose_R = {goal_object_pose_R}")
-        print(f"object_scales = {self.object_scales}")
-        # breakpoint()
         observation = compute_observation(
             q=torch.from_numpy(q).float().to(self.device)[None],
             qd=torch.from_numpy(qd).float().to(self.device)[None],
@@ -68,7 +62,6 @@ class SimNoRos:
             palm_serial_chain=self.palm_serial_chain,
         )
         assert observation.shape == (1, 117,), f"observation.shape: {observation.shape}, expected: (1, 117,)"
-        print(f"observation: {observation[0]}")
         return observation
 
     def step(self, action: torch.Tensor) -> None:
@@ -105,7 +98,7 @@ def main():
     assert CHECKPOINT_PATH.exists()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    sim = Simulator(SimulatorConfig(enable_viewer=True, sim_dt=sim_dt))
+    sim = MujocoSim(MujocoSimConfig(enable_viewer=True, sim_dt=sim_dt))
     policy = RlPlayer(
         num_observations=117,
         num_actions=23,
@@ -118,16 +111,17 @@ def main():
 
     # object_scales = np.array([2.0, 0.5, 0.5])
     object_scales = np.array([0.1, 0.035, 0.025]) * 20
-    sim_no_ros = SimNoRos(sim=sim, object_scales=object_scales, chain=chain, palm_serial_chain=palm_serial_chain, act_moving_average=0.1, hand_dof_speed_scale=0.5, control_dt=control_dt, device=device)
+    mujoco_env_no_ros = MujocoEnvNoRos(sim=sim, object_scales=object_scales, chain=chain, palm_serial_chain=palm_serial_chain, act_moving_average=0.1, hand_dof_speed_scale=0.5, control_dt=control_dt, device=device)
 
     while True:
         start_time = time.time()
-        observation = sim_no_ros.compute_observation()
-        print(f"observation: {observation[0]}")
-        # breakpoint()
-        action = policy.get_normalized_action(observation)
-        sim_no_ros.step(action)
+        # Get observation, get action, step simulation
+        observation = mujoco_env_no_ros.compute_observation()
+        action = policy.get_normalized_action(observation, deterministic_actions=True)  # Careful about deterministic_actions=True here!
+        mujoco_env_no_ros.step(action)
         end_time = time.time()
+
+        # Sleep to maintain control loop frequency
         sleep_time = control_dt - (end_time - start_time)
         if sleep_time > 0:
             time.sleep(sleep_time)

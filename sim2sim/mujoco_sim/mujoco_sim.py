@@ -9,7 +9,9 @@ import numpy as np
 
 import mujoco
 
-# Robot constants
+# ############################################################
+# Constants
+# ############################################################
 N_IIWA_JOINTS = 7
 IIWA_INIT_JOINT_POS = np.array([-1.571, 1.571, -0.000, 1.376, -0.000, 1.485, 2.358])
 IIWA_JOINT_NAMES = [
@@ -132,6 +134,9 @@ assert len(BODY_NAMES) == N_BODY_NAMES, (
     f"len(BODY_NAMES): {len(BODY_NAMES)}, expected: {N_BODY_NAMES}"
 )
 
+# ############################################################
+# Config
+# ############################################################
 
 @dataclass
 class FrictionConfig:
@@ -141,7 +146,7 @@ class FrictionConfig:
 
 
 @dataclass
-class SimulatorConfig:
+class MujocoSimConfig:
     enable_viewer: bool
     sim_dt: float = 1.0 / 1000  # Need a high enough frequency to get stable physics
     friction: FrictionConfig = field(default_factory=FrictionConfig)
@@ -161,17 +166,18 @@ class SimulatorConfig:
         )
 
 
-class Simulator:
+class MujocoSim:
     # ############################################################
     # Initialization
     # ############################################################
-    def __init__(self, config: SimulatorConfig):
+    def __init__(self, config: MujocoSimConfig):
         self.config = config
         self._init_scene()
         self.set_robot_joint_pos_targets(INIT_JOINT_POS)
         self.set_robot_joint_positions(INIT_JOINT_POS)
 
     def _init_scene(self) -> None:
+        # Robot
         iiwa_xml_path = Path(
             "/home/tylerlum/github_repos/mujoco_menagerie/kuka_iiwa_14/scene.xml"
         )
@@ -219,7 +225,7 @@ class Simulator:
         table_geom.rgba = WHITE_RGBA
         table_geom.friction = self.config.friction_array.copy()
 
-        # Box object
+        # Object
         GREY_RGBA = np.array([0.5, 0.5, 0.5, 1.0])
         OBJECT_POS_X, OBJECT_POS_Y, OBJECT_POS_Z = 0.0, 0.0, 0.38 + 0.3
         object_body = spec.worldbody.add_body()
@@ -242,6 +248,9 @@ class Simulator:
             object_geom.type = mujoco.mjtGeom.mjGEOM_BOX
             object_geom.size = np.array([BOX_LEN_X / 2, BOX_LEN_Y / 2, BOX_LEN_Z / 2])  # Half extents
         else:
+            # Use list of convex decomp meshes for object
+            # Use run_coacd.py to generate convex decomp meshes
+
             # mesh_paths = list(Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects_convex_decomp/hammer_1").glob("decomp_*.obj"))
             # mesh_paths = list(Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects_convex_decomp/hammer_2").glob("decomp_*.obj"))
             mesh_paths = list(Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects_convex_decomp/040_large_marker").glob("decomp_*.obj"))
@@ -264,17 +273,6 @@ class Simulator:
                 object_geom.friction = self.config.friction_array.copy()
                 object_geom.type = mujoco.mjtGeom.mjGEOM_MESH
                 object_geom.meshname = mesh.name
-
-            # mesh = spec.add_mesh()
-            # mesh.name = "object_mesh"
-            # # mesh.file = "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/044_flat_screwdriver/044_flat_screwdriver/google_16k/textured_vhacd.obj"
-            # # mesh.file = "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/040_large_marker/040_large_marker/google_16k/textured_vhacd.obj"
-            # mesh.file = "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/hammer_1/hammer_1.obj"
-            # assert Path(mesh.file).exists(), f"Mesh file does not exist: {mesh.file}"
-            # mesh.scale = np.array([1.0, 1.0, 1.0])
-
-            # object_geom.type = mujoco.mjtGeom.mjGEOM_MESH
-            # object_geom.meshname = mesh.name
 
         self.mj_model = spec.compile()
         self.mj_data = mujoco.MjData(self.mj_model)
@@ -466,9 +464,12 @@ class Simulator:
         return [self.mj_model.body(name=name).id for name in self.body_names]
 
 
-if __name__ == "__main__":
-    simulator_config = SimulatorConfig(
+def main():
+    mujoco_sim_config = MujocoSimConfig(
         enable_viewer=True,
     )
-    simulator = Simulator(simulator_config)
-    simulator.run()
+    mujoco_sim = MujocoSim(mujoco_sim_config)
+    mujoco_sim.run()
+
+if __name__ == "__main__":
+    main()

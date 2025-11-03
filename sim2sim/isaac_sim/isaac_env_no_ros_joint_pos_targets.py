@@ -1,11 +1,10 @@
 import sys
-sys.path.append("/home/tylerlum/github_repos/sapg/sim2real")
+sys.path.append("/home/tylerlum/github_repos/sapg")
 from isaacgymenvs.tasks.allegro_kuka.allegro_kuka_base import AllegroKukaBase  # isort:skip
 from typing import Tuple
 import time
 from pathlib import Path
 from sim2real.rl_player import RlPlayer
-import numpy as np
 import torch  # isort:skip
 from isaac import create_env
 from termcolor import colored
@@ -25,13 +24,12 @@ def info(message: str):
     print(colored(message, "green"))
 
 
-class IsaacNoRos:
+class IsaacEnvNoRosJointPosTargets:
     def __init__(self, sim: AllegroKukaBase, control_dt: float, device: str, chain: pk.Chain, palm_serial_chain: pk.SerialChain):
         self.sim = sim
         self.device = device
         self.chain = chain
         self.palm_serial_chain = palm_serial_chain
-        # self.prev_targets = self.sim.prev_targets.clone()
 
     def step(self, action: torch.Tensor) -> Tuple[torch.Tensor, float, bool, dict]:
         obs, reward, done, info = self.sim.step(action)
@@ -137,15 +135,15 @@ def main():
 
     chain, palm_serial_chain = create_chain_and_serial_chain(device=device, robot_name="iiwa14")
 
-    sim_no_ros = IsaacNoRos(sim=sim, control_dt=control_dt, device=device, chain=chain, palm_serial_chain=palm_serial_chain)
-    observation = sim_no_ros.reset()
+    isaac_env_no_ros_joint_pos_targets = IsaacEnvNoRosJointPosTargets(sim=sim, control_dt=control_dt, device=device, chain=chain, palm_serial_chain=palm_serial_chain)
+    observation = isaac_env_no_ros_joint_pos_targets.reset()
 
     while True:
         start_time = time.time()
         action = policy.get_normalized_action(observation, deterministic_actions=True)
-        observation, _, done, _ = sim_no_ros.step_with_joint_pos_targets(action)
+        observation, _, done, _ = isaac_env_no_ros_joint_pos_targets.step_with_joint_pos_targets(action)
         if done.item():
-            observation = sim_no_ros.reset()
+            observation = isaac_env_no_ros_joint_pos_targets.reset()
         end_time = time.time()
         sleep_time = control_dt - (end_time - start_time)
         if sleep_time > 0:

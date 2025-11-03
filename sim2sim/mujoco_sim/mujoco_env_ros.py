@@ -1,3 +1,5 @@
+import sys
+sys.path.append("/home/tylerlum/github_repos/sapg")
 import time
 from scipy.spatial.transform import Rotation as R
 
@@ -5,7 +7,7 @@ import numpy as np
 import rospy
 from geometry_msgs.msg import Pose, PoseStamped
 from sensor_msgs.msg import JointState
-from sim import JOINT_NAMES, N_IIWA_JOINTS, Simulator, SimulatorConfig
+from sim2sim.mujoco_sim.mujoco_sim import JOINT_NAMES, N_IIWA_JOINTS, MujocoSim, MujocoSimConfig
 from termcolor import colored
 
 # Goal object pose doesn't exist in the simulation
@@ -25,8 +27,8 @@ def info(message: str):
     print(colored(message, "green"))
 
 
-class SimRos:
-    def __init__(self, sim: Simulator, update_and_publish_dt: float = 1.0 / 60):
+class MujocoEnvRos:
+    def __init__(self, sim: MujocoSim, update_and_publish_dt: float = 1.0 / 60):
         self.sim = sim
         self._update_and_publish_dt = update_and_publish_dt
         self._last_update_and_publish_time = time.time()
@@ -219,9 +221,9 @@ class SimRos:
 
 
 def main():
-    sim = Simulator(SimulatorConfig(enable_viewer=False, sim_dt=1.0 / 500.0))
-    sim_ros = SimRos(sim)
-    sim_ros.run()
+    sim = MujocoSim(MujocoSimConfig(enable_viewer=False, sim_dt=1.0 / 500.0))
+    mujoco_env_ros = MujocoEnvRos(sim)
+    mujoco_env_ros.run()
 
 
 if __name__ == "__main__":

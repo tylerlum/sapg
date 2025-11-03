@@ -1,3 +1,5 @@
+import sys
+sys.path.append("/home/tylerlum/github_repos/sapg")
 import time
 from collections import defaultdict
 from typing import Literal
@@ -5,14 +7,14 @@ from typing import Literal
 import numpy as np
 import viser
 import viser.transforms as vtf
-from sim import Simulator, SimulatorConfig
+from sim2sim.mujoco_sim.mujoco_sim import MujocoSim, MujocoSimConfig
 from viser_conversions import get_body_name, is_fixed_body, merge_geoms
 
 import mujoco
 
 
-class ViserSimulator:
-    def __init__(self, server: viser.ViserServer, sim: Simulator):
+class ViserMujocoSim:
+    def __init__(self, server: viser.ViserServer, sim: MujocoSim):
         self.server = server
         self.sim = sim
         self.visual_handles = self._create_mesh_handles(
@@ -202,10 +204,10 @@ class ViserSimulator:
 
 
 def main():
-    sim = Simulator(SimulatorConfig(enable_viewer=False))
+    sim = MujocoSim(MujocoSimConfig(enable_viewer=False))
     server = viser.ViserServer()
-    viser_sim = ViserSimulator(server, sim)
-    viser_sim.run()
+    viser_mujoco_sim = ViserMujocoSim(server, sim)
+    viser_mujoco_sim.run()
 
 
 if __name__ == "__main__":
