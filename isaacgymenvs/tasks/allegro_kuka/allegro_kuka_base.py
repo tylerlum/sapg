@@ -76,8 +76,14 @@ class AllegroKukaBase(VecTask):
 
         # 4 joints for index, middle, ring, and thumb and 7 for kuka arm
         self.num_arm_dofs = 7
-        self.num_allegro_fingertips = 5
-        self.num_hand_dofs = 22
+        self.num_finger_dofs = 4
+        self.num_allegro_fingertips = 4
+        self.num_hand_dofs = self.num_finger_dofs * self.num_allegro_fingertips
+
+        if self.use_sharpa:
+            self.num_allegro_fingertips = 5
+            self.num_hand_dofs = 22
+            self.num_finger_dofs = None  # Different per finger
         self.num_hand_arm_dofs = self.num_hand_dofs + self.num_arm_dofs
 
         self.num_allegro_kuka_actions = self.num_hand_arm_dofs
@@ -175,11 +181,17 @@ class AllegroKukaBase(VecTask):
 
         self.num_keypoints = len(self.keypoints_offsets)
 
-        self.allegro_fingertips = ["right_index_DP", "right_middle_DP", "right_ring_DP", "right_thumb_DP", "right_pinky_DP"]
+        self.allegro_fingertips = ["index_link_3", "middle_link_3", "ring_link_3", "thumb_link_3"]
         self.fingertip_offsets = np.array(
-            [[0.02, 0.002, 0], [0.02, 0.002, 0], [0.02, 0.002, 0], [0.02, 0.002, 0], [0.02, 0.002, 0]], dtype=np.float32
-            # [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]], dtype=np.float32
+            [[0.05, 0.005, 0], [0.05, 0.005, 0], [0.05, 0.005, 0], [0.06, 0.005, 0]], dtype=np.float32
         )
+
+        if self.use_sharpa:
+            self.allegro_fingertips = ["right_index_DP", "right_middle_DP", "right_ring_DP", "right_thumb_DP", "right_pinky_DP"]
+            self.fingertip_offsets = np.array(
+                [[0.02, 0.002, 0], [0.02, 0.002, 0], [0.02, 0.002, 0], [0.02, 0.002, 0], [0.02, 0.002, 0]], dtype=np.float32
+                # [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]], dtype=np.float32
+            )
         self.palm_offset = np.array([-0.00, -0.02, 0.16], dtype=np.float32)
 
         assert self.num_allegro_fingertips == len(self.allegro_fingertips)
@@ -2505,6 +2517,9 @@ class AllegroKukaBase(VecTask):
                 self.observations_array = []
                 self.actions_array = []
 
+    @property
+    def use_sharpa(self) -> bool:
+        return "sharpa" in self.cfg["env"]["asset"]["kukaAllegro"].lower()
 
     @property
     def act_moving_average(self) -> float:
@@ -2966,3 +2981,4 @@ class AllegroKukaBase(VecTask):
         self.num_initial_states = len(self.initial_root_state_tensors)
 
         print(f"{self.num_initial_states} states loaded from file {self.load_states_filename}!")
+
