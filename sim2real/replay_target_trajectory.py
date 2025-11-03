@@ -37,18 +37,18 @@ def current_joint_pos_allegro_callback(msg: JointState) -> None:
 def interpolate_joint_pos(
     joint_pos1: np.ndarray, joint_pos2: np.ndarray, num_steps: int
 ) -> np.ndarray:
-    assert (
-        joint_pos1.shape == joint_pos2.shape
-    ), f"joint_pos1.shape: {joint_pos1.shape}, joint_pos2.shape: {joint_pos2.shape}"
+    assert joint_pos1.shape == joint_pos2.shape, (
+        f"joint_pos1.shape: {joint_pos1.shape}, joint_pos2.shape: {joint_pos2.shape}"
+    )
     joint_positions_list = []
     for i in range(num_steps):
         joint_positions_list.append(
             joint_pos1 + (joint_pos2 - joint_pos1) * (i + 1) / num_steps
         )
     joint_positions_array = np.array(joint_positions_list)
-    assert (
-        joint_positions_array.shape == (num_steps, joint_pos1.shape[0])
-    ), f"joint_positions_array.shape: {joint_positions_array.shape}, expected: ({num_steps}, {joint_pos1.shape[0]})"
+    assert joint_positions_array.shape == (num_steps, joint_pos1.shape[0]), (
+        f"joint_positions_array.shape: {joint_positions_array.shape}, expected: ({num_steps}, {joint_pos1.shape[0]})"
+    )
     return np.array(joint_positions_list)
 
 
@@ -57,9 +57,9 @@ def publish_joint_pos_targets(
     pub_iiwa: rospy.Publisher,
     pub_allegro: rospy.Publisher,
 ) -> None:
-    assert joint_pos_targets.shape == (
-        23,
-    ), f"joint_pos_targets.shape: {joint_pos_targets.shape}, expected: ({23},)"
+    assert joint_pos_targets.shape == (23,), (
+        f"joint_pos_targets.shape: {joint_pos_targets.shape}, expected: ({23},)"
+    )
     iiwa_joint_pos = joint_pos_targets[:7]
     allegro_joint_pos = joint_pos_targets[7:]
 
@@ -110,9 +110,9 @@ def move_to_pose(
     move_time: float = 10.0,
     control_hz: int = 60,
 ) -> None:
-    assert target_pos.shape == (
-        23,
-    ), f"target_pos.shape: {target_pos.shape}, expected: ({23},)"
+    assert target_pos.shape == (23,), (
+        f"target_pos.shape: {target_pos.shape}, expected: ({23},)"
+    )
     current_allegro_pos = CURRENT_JOINT_POS_ALLEGRO.copy()
     current_iiwa_pos = CURRENT_JOINT_POS_IIWA.copy()
     current_pos = np.concatenate([current_iiwa_pos, current_allegro_pos])
@@ -167,12 +167,12 @@ def main():
     joint_names = recorded_data.robot_joint_names
     T = joint_positions_array.shape[0]
     J = len(joint_names)
-    assert (
-        joint_positions_array.shape == (T, J)
-    ), f"joint_positions_array.shape: {joint_positions_array.shape}, expected: ({T}, {J})"
-    assert (
-        joint_pos_targets_array.shape == (T, J)
-    ), f"joint_pos_targets_array.shape: {joint_pos_targets_array.shape}, expected: ({T}, {J})"
+    assert joint_positions_array.shape == (T, J), (
+        f"joint_positions_array.shape: {joint_positions_array.shape}, expected: ({T}, {J})"
+    )
+    assert joint_pos_targets_array.shape == (T, J), (
+        f"joint_pos_targets_array.shape: {joint_pos_targets_array.shape}, expected: ({T}, {J})"
+    )
 
     rospy.init_node("iiwa_allegro_joint_publisher", anonymous=True)
 

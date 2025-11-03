@@ -1,9 +1,5 @@
-# For RecordedData import issue
-import sys
-
-sys.path.append("/home/tylerlum/github_repos/sapg")
-
 import copy
+import sys
 import time
 from pathlib import Path
 
@@ -17,12 +13,6 @@ from recorded_data_scripts.recorded_data import RecordedData
 CURRENT_JOINT_POS_IIWA = None
 CURRENT_JOINT_POS_ALLEGRO = None
 
-# Home joint positions
-HOME_JOINT_POS_IIWA = np.array([-1.571, 1.571, -0.000, 1.376, -0.000, 1.485, 2.358])
-HOME_JOINT_POS_ALLEGRO = np.zeros(16)
-HOME_JOINT_POS_ALLEGRO[12] = 0.3
-HOME_JOINT_POS = np.concatenate([HOME_JOINT_POS_IIWA, HOME_JOINT_POS_ALLEGRO])
-
 
 def current_joint_pos_iiwa_callback(msg: JointState) -> None:
     global CURRENT_JOINT_POS_IIWA
@@ -35,20 +25,20 @@ def current_joint_pos_allegro_callback(msg: JointState) -> None:
 
 
 def interpolate_joint_pos(
-    joint_pos1: np.ndarray, joint_pos2: np.ndarray, num_steps: int
+    init_joint_pos: np.ndarray, final_joint_pos: np.ndarray, num_steps: int
 ) -> np.ndarray:
-    assert (
-        joint_pos1.shape == joint_pos2.shape
-    ), f"joint_pos1.shape: {joint_pos1.shape}, joint_pos2.shape: {joint_pos2.shape}"
+    assert init_joint_pos.shape == final_joint_pos.shape, (
+        f"init_joint_pos.shape: {init_joint_pos.shape}, final_joint_pos.shape: {final_joint_pos.shape}"
+    )
     joint_positions_list = []
     for i in range(num_steps):
         joint_positions_list.append(
-            joint_pos1 + (joint_pos2 - joint_pos1) * (i + 1) / num_steps
+            init_joint_pos + (final_joint_pos - init_joint_pos) * (i + 1) / num_steps
         )
     joint_positions_array = np.array(joint_positions_list)
-    assert (
-        joint_positions_array.shape == (num_steps, joint_pos1.shape[0])
-    ), f"joint_positions_array.shape: {joint_positions_array.shape}, expected: ({num_steps}, {joint_pos1.shape[0]})"
+    assert joint_positions_array.shape == (num_steps, init_joint_pos.shape[0]), (
+        f"joint_positions_array.shape: {joint_positions_array.shape}, expected: ({num_steps}, {init_joint_pos.shape[0]})"
+    )
     return np.array(joint_positions_list)
 
 
@@ -57,9 +47,9 @@ def publish_joint_pos_targets(
     pub_iiwa: rospy.Publisher,
     pub_allegro: rospy.Publisher,
 ) -> None:
-    assert joint_pos_targets.shape == (
-        23,
-    ), f"joint_pos_targets.shape: {joint_pos_targets.shape}, expected: ({23},)"
+    assert joint_pos_targets.shape == (23,), (
+        f"joint_pos_targets.shape: {joint_pos_targets.shape}, expected: ({23},)"
+    )
     iiwa_joint_pos = joint_pos_targets[:7]
     allegro_joint_pos = joint_pos_targets[7:]
 
@@ -110,9 +100,9 @@ def move_to_pose(
     move_time: float = 10.0,
     control_hz: int = 60,
 ) -> None:
-    assert target_pos.shape == (
-        23,
-    ), f"target_pos.shape: {target_pos.shape}, expected: ({23},)"
+    assert target_pos.shape == (23,), (
+        f"target_pos.shape: {target_pos.shape}, expected: ({23},)"
+    )
     current_allegro_pos = CURRENT_JOINT_POS_ALLEGRO.copy()
     current_iiwa_pos = CURRENT_JOINT_POS_IIWA.copy()
     current_pos = np.concatenate([current_iiwa_pos, current_allegro_pos])
@@ -120,8 +110,8 @@ def move_to_pose(
     SECONDS_TO_MOVE = move_time
     CONTROL_HZ = control_hz
     interpolated_targets = interpolate_joint_pos(
-        joint_pos1=current_pos,
-        joint_pos2=target_pos,
+        init_joint_pos=current_pos,
+        final_joint_pos=target_pos,
         num_steps=int(CONTROL_HZ * SECONDS_TO_MOVE),
     )
     for target_pos in interpolated_targets:
@@ -146,6 +136,7 @@ def move_to_pose(
 
 
 def main():
+    # Read in trajectory
     file_path = Path(
         # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-20_14-32-39_None_310.npz"
         # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-24_17-37-29.npz"
@@ -160,15 +151,17 @@ def main():
     joint_names = recorded_data.robot_joint_names
     T = joint_positions_array.shape[0]
     J = len(joint_names)
-    assert (
-        joint_positions_array.shape == (T, J)
-    ), f"joint_positions_array.shape: {joint_positions_array.shape}, expected: ({T}, {J})"
-    assert (
-        joint_pos_targets_array.shape == (T, J)
-    ), f"joint_pos_targets_array.shape: {joint_pos_targets_array.shape}, expected: ({T}, {J})"
+    assert joint_positions_array.shape == (T, J), (
+        f"joint_positions_array.shape: {joint_positions_array.shape}, expected: ({T}, {J})"
+    )
+    assert joint_pos_targets_array.shape == (T, J), (
+        f"joint_pos_targets_array.shape: {joint_pos_targets_array.shape}, expected: ({T}, {J})"
+    )
 
+    # Initialize ROS node
     rospy.init_node("iiwa_allegro_joint_publisher", anonymous=True)
 
+    # Create subscribers and publishers
     _sub_iiwa = rospy.Subscriber(
         "/iiwa/joint_states", JointState, current_joint_pos_iiwa_callback
     )
@@ -180,6 +173,7 @@ def main():
     pub_iiwa = rospy.Publisher("/iiwa/joint_cmd", JointState, queue_size=10)
     pub_allegro = rospy.Publisher("/allegroHand_0/joint_cmd", JointState, queue_size=10)
 
+    # Wait for current joint positions to be available
     while not rospy.is_shutdown():
         if CURRENT_JOINT_POS_IIWA is None or CURRENT_JOINT_POS_ALLEGRO is None:
             print(
@@ -192,40 +186,33 @@ def main():
             print("=" * 100)
             break
 
-    print("Moving to home pose")
+    # Move to initial pose
+    print("Moving to initial pose")
     move_to_pose(
-        HOME_JOINT_POS,
+        joint_positions_array[0],
         pub_iiwa=pub_iiwa,
         pub_allegro=pub_allegro,
         move_time=10.0,
     )
-    print("Reached home pose")
+    print("Reached initial pose")
 
-    # print("Moving to initial pose")
-    # move_to_pose(
-    #     joint_positions_array[0],
-    #     pub_iiwa=pub_iiwa,
-    #     pub_allegro=pub_allegro,
-    #     move_time=10.0,
-    # )
-    # print("Reached initial pose")
-
-    # print("Replaying trajectory")
-    # start_time = time.time()
-    # for timestep in range(len(joint_positions_array)):
-    #     print(f"Replaying timestep: {timestep}")
-    #     move_to_pose(
-    #         joint_positions_array[timestep],
-    #         pub_iiwa=pub_iiwa,
-    #         pub_allegro=pub_allegro,
-    #         # move_time=0.2,
-    #         # move_time=0.1,
-    #         # move_time=1 / 20,
-    #         # move_time=1 / 30,
-    #         move_time=1 / 60,
-    #     )
-    # end_time = time.time()
-    # print(f"Time taken: {end_time - start_time:.2f} seconds")
+    # Replay trajectory
+    print("Replaying trajectory")
+    start_time = time.time()
+    for timestep in range(len(joint_positions_array)):
+        print(f"Replaying timestep: {timestep}")
+        move_to_pose(
+            joint_positions_array[timestep],
+            pub_iiwa=pub_iiwa,
+            pub_allegro=pub_allegro,
+            # move_time=0.2,
+            # move_time=0.1,
+            # move_time=1 / 20,
+            # move_time=1 / 30,
+            move_time=1 / 60,
+        )
+    end_time = time.time()
+    print(f"Time taken: {end_time - start_time:.2f} seconds")
 
 
 if __name__ == "__main__":

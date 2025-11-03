@@ -4,8 +4,8 @@ from typing import Optional
 import numpy as np
 import torch
 from gym import spaces
-
 from rl_games.torch_runner import Runner, players
+
 from sim2real.rl_player_utils import (
     read_cfg,
 )

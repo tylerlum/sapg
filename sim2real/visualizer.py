@@ -231,9 +231,9 @@ class ViserVisualizationNode:
         # Set the cmd robot to be translucent
         # NOTE: To change opacity, you must create ViserUrdf with mesh_color_override
         for robot_cmd_mesh in self.robot_cmd_viser._meshes:
-            assert isinstance(
-                robot_cmd_mesh, viser.MeshHandle
-            ), f"robot_cmd_mesh is not a MeshHandle, you must create ViserUrdf with mesh_color_override: {type(robot_cmd_mesh)}"
+            assert isinstance(robot_cmd_mesh, viser.MeshHandle), (
+                f"robot_cmd_mesh is not a MeshHandle, you must create ViserUrdf with mesh_color_override: {type(robot_cmd_mesh)}"
+            )
             robot_cmd_mesh.opacity = 0.5
 
         LOAD_TABLE = True
@@ -241,9 +241,9 @@ class ViserVisualizationNode:
             table_urdf_path = Path(
                 "/home/tylerlum/github_repos/sapg/assets/urdf/table_narrow.urdf"
             )
-            assert (
-                table_urdf_path.exists()
-            ), f"table_urdf_path not found: {table_urdf_path}"
+            assert table_urdf_path.exists(), (
+                f"table_urdf_path not found: {table_urdf_path}"
+            )
 
             SERVER.scene.add_frame(
                 "/table",
@@ -264,9 +264,9 @@ class ViserVisualizationNode:
                 # Make the table transparent
                 # Change the color of each link (including the base)
                 for table_mesh in table_viser._meshes:
-                    assert isinstance(
-                        table_mesh, viser.MeshHandle
-                    ), f"table_mesh is not a MeshHandle, you must create ViserUrdf with mesh_color_override: {type(table_mesh)}"
+                    assert isinstance(table_mesh, viser.MeshHandle), (
+                        f"table_mesh is not a MeshHandle, you must create ViserUrdf with mesh_color_override: {type(table_mesh)}"
+                    )
                     table_mesh.color = (0, 0, 0)
                     table_mesh.opacity = 0.5
 
@@ -280,9 +280,9 @@ class ViserVisualizationNode:
             )
             object_mesh_path = str(DEFAULT_MESH_PATH)
             warn(f"Using default object mesh: {object_mesh_path}")
-        assert isinstance(
-            object_mesh_path, str
-        ), f"object_mesh_path: {object_mesh_path}"
+        assert isinstance(object_mesh_path, str), (
+            f"object_mesh_path: {object_mesh_path}"
+        )
         info("~" * 80)
         info(f"object_mesh_path: {object_mesh_path}")
         info("~" * 80 + "\n")

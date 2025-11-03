@@ -22,6 +22,7 @@ N_ACT = 23
 ACT_MOVING_AVERAGE = 0.1
 HAND_DOF_SPEED_SCALE = 0.5
 
+
 def warn(message: str):
     print(colored(message, "yellow"))
 
@@ -64,9 +65,7 @@ class IsaacEnvNoRosJointPosTargets:
         return new_obs, reward, done, info
 
     def reset(self) -> torch.Tensor:
-        obs, _, _, _ = self.env.step(
-            torch.zeros((1, N_ACT), device=self.device)
-        )
+        obs, _, _, _ = self.env.step(torch.zeros((1, N_ACT), device=self.device))
         return obs["obs"]
 
     def step_with_joint_pos_targets(
