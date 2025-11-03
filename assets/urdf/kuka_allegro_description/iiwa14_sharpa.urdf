@@ -389,7 +389,8 @@
   <joint name="allegro_mount_joint" type="fixed">
     <!-- <origin xyz="0.065 0 0.0275" rpy="0 1.57 0" /> -->
     <!-- <origin rpy="0 -1.5708 0.785398" xyz="0.008219 -0.02063 0.08086"/> -->
-    <origin rpy="0 -1.5708 1.5708" xyz="0.01 -0.02063 0.08"/>
+    <!-- <origin rpy="0 -1.5708 1.5708" xyz="0.01 -0.02063 0.08"/> -->
+    <origin rpy="0 0 -1.5708" xyz="0.0 0.0 0.04"/>
     <parent link="allegro_mount"/>
     <child link="right_hand_C_MC"/>
 
