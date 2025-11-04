@@ -26,9 +26,9 @@ env:
   stiffnessScale: 1.0
   forceLimitScale: 1.0
   useRelativeControl: False
-  dofSpeedScale: 10.0
-  handMovingAverage: 1.0
-  armMovingAverage: 1.0
+  dofSpeedScale: 10.0  # often set to 1.0
+  handMovingAverage: 1.0  # often set to 0.1
+  armMovingAverage: 1.0  # often set to 0.1
   dofSpeedScaleFinal: ${eval:"None"}  # often set to 1.0
   armMovingAverageFinal: ${eval:"None"}  # often set to 0.1
   handMovingAverageFinal: ${eval:"None"}  # often set to 0.1
@@ -67,14 +67,14 @@ env:
   dofFriction: -1.0  # negative values are ignored and the default friction from URDF file is used
 
   # gain of PD controller (?)
-  allegroStiffness: 40.0
-  kukaStiffness: 40.0
+  allegroStiffness: 4000.0  # Used to be 40.0
+  kukaStiffness: 300.0  # Used to be 40.0
 
   allegroEffort: 0.35  # this is what was used in sim-to-real experiment. Motor torque in Newton*meters
   kukaEffort: [300, 300, 300, 300, 300, 300, 300]  # see Physics v2
 
-  allegroDamping: 5.0
-  kukaDamping: 5.0
+  allegroDamping: 200.0  # Used to be 5.0
+  kukaDamping: 20.0  # Used to be 5.0
 
   allegroArmature: 0
   kukaArmature: 0
@@ -143,8 +143,8 @@ env:
     # high in general. But in turn this leads to smoother movements and better looking behaviors.
     # Additionally, collision shapes of fingertips are more primitive (just rough convex hulls), which
     # gives a bit more FPS.
-    kukaAllegro: "urdf/kuka_allegro_description/kuka_allegro_touch_sensor.urdf"
-    # kukaAllegro: "urdf/kuka_allegro_description/iiwa14_real.urdf"
+    # kukaAllegro: "urdf/kuka_allegro_description/kuka_allegro_touch_sensor.urdf"
+    kukaAllegro: "urdf/kuka_allegro_description/iiwa14_real.urdf"
     # kukaAllegro: "urdf/kuka_allegro_description/iiwa14_right_sharpa.urdf"
     # kukaAllegro: "urdf/kuka_allegro_description/iiwa14_left_sharpa.urdf"
 
