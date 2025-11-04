@@ -2331,7 +2331,7 @@ class AllegroKukaBase(VecTask):
             breakpoint()
 
         if joint_pos_targets is not None:
-            self.cur_targets[:, :] = joint_pos_targets.clone()
+            self.cur_targets[:, :self.num_hand_arm_dofs] = joint_pos_targets.clone()
 
         if self._DO_NOT_MOVE:
             self.cur_targets[:, :] = self.prev_targets[:, :]
