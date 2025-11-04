@@ -20,7 +20,7 @@ N_OBS = 117
 N_ACT = 23
 
 ACT_MOVING_AVERAGE = 0.1
-HAND_DOF_SPEED_SCALE = 0.5
+HAND_DOF_SPEED_SCALE = 1.0
 
 
 def warn(message: str):
@@ -53,6 +53,16 @@ class IsaacEnvNoRosJointPosTargets:
         object_pose = self.env.object_pose
         goal_object_pose = self.env.goal_pose
         object_scales = self.env.object_scales
+
+        DEBUG = False
+        if DEBUG:
+            print(f"q = {q}")
+            print(f"qd = {qd}")
+            print(f"object_pose = {object_pose}")
+            print(f"goal_object_pose = {goal_object_pose}")
+            print(f"object_scales = {object_scales}")
+            breakpoint()
+
         new_obs = compute_observation(
             q=q,
             qd=qd,
@@ -87,6 +97,16 @@ class IsaacEnvNoRosJointPosTargets:
         object_pose = self.env.object_pose
         goal_object_pose = self.env.goal_pose
         object_scales = self.env.object_scales
+
+        DEBUG = False
+        if DEBUG:
+            print(f"q = {q}")
+            print(f"qd = {qd}")
+            print(f"object_pose = {object_pose}")
+            print(f"goal_object_pose = {goal_object_pose}")
+            print(f"object_scales = {object_scales}")
+            breakpoint()
+
         new_obs = compute_observation(
             q=q,
             qd=qd,
@@ -96,6 +116,24 @@ class IsaacEnvNoRosJointPosTargets:
             chain=self.chain,
             palm_serial_chain=self.palm_serial_chain,
         )
+
+        DEBUG = False
+        if DEBUG:
+            diff= (obs['obs'] - new_obs).abs()[0]
+            print(f"diff = {diff}")
+            print(f"diff.max() = {diff.max()}")
+            print(f"diff.argsort() = {diff.argsort()}")
+
+            from isaacgymenvs.utils.observation_action_utils import OBS_NAMES
+            idxs = diff.argsort()
+            for idx in idxs:
+                print(f"OBS_NAMES[{idx}] = {OBS_NAMES[idx]}")
+                print(f"obs['obs'][{idx}] = {obs['obs'][0, idx]}")
+                print(f"new_obs[{idx}] = {new_obs[0, idx]}")
+                print(f"diff[{idx}] = {diff[idx]}")
+                print(f"--------------------------------")
+
+            breakpoint()
         return new_obs, reward, done, info
 
 
@@ -132,7 +170,7 @@ def main():
     )
 
     chain, palm_serial_chain = create_chain_and_serial_chain(
-        device=DEVICE, robot_name="iiwa14"
+        device=DEVICE, robot_name="iiwa7"
     )
 
     isaac_env_no_ros_joint_pos_targets = IsaacEnvNoRosJointPosTargets(

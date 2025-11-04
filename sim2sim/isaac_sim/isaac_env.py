@@ -34,7 +34,7 @@ def create_env(
 
         # Should be path of the isaacgymenvs/cfg directory relative to this file's directory
         with initialize(version_base="1.1", config_path="../../isaacgymenvs/cfg"):
-            init_cfg = compose(config_name="config")
+            init_cfg = compose(config_name="config", overrides=["task=AllegroKukaLSTM"])
 
         # Disable struct mode to allow merging
         OmegaConf.set_struct(init_cfg, False)

@@ -29,6 +29,19 @@ class IsaacEnvNoRos:
 
     def step(self, action: torch.Tensor) -> Tuple[torch.Tensor, float, bool, dict]:
         obs, reward, done, info = self.env.step(action)
+        DEBUG = False
+        if DEBUG:
+            q = self.env.arm_hand_dof_pos
+            qd = self.env.arm_hand_dof_vel
+            object_pose = self.env.object_pose
+            goal_object_pose = self.env.goal_pose
+            object_scales = self.env.object_scales
+            print(f"q = {q}")
+            print(f"qd = {qd}")
+            print(f"object_pose = {object_pose}")
+            print(f"goal_object_pose = {goal_object_pose}")
+            print(f"object_scales = {object_scales}")
+            breakpoint()
         return obs["obs"], reward, done, info
 
     def reset(self) -> torch.Tensor:
