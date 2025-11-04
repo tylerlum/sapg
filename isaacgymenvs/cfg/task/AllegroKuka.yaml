@@ -62,7 +62,7 @@ env:
   dofFriction: -1.0  # negative values are ignored and the default friction from URDF file is used
 
   # gain of PD controller (?)
-  allegroStiffness: 80.0
+  allegroStiffness: 40.0
   kukaStiffness: 40.0
 
   allegroEffort: 0.35  # this is what was used in sim-to-real experiment. Motor torque in Newton*meters

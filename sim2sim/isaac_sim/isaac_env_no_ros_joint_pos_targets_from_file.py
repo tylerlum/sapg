@@ -72,8 +72,9 @@ def main():
     assert CHECKPOINT_PATH.exists()
 
     RECORDED_DATA_PATH = Path(
-        # "/home/tylerlum/github_repos/sapg/recorded_robot_state/2025-11-02_18-48-58_sin_wave_hand_10-0s_1-0s_0-2rad.npz"
-        "/home/tylerlum/github_repos/sapg/recorded_robot_state/2025-11-02_18-41-23_sin_wave_arm_10-0s_2-0s_0-2rad.npz"
+        "/home/tylerlum/github_repos/sapg/recorded_robot_state/2025-11-02_18-48-58_sin_wave_hand_10-0s_1-0s_0-2rad.npz"
+        # "/home/tylerlum/github_repos/sapg/recorded_robot_state/2025-11-02_18-41-23_sin_wave_arm_10-0s_2-0s_0-2rad.npz"
+        # "/home/tylerlum/github_repos/sapg/recorded_robot_state/2025-11-02_18-42-11_sin_wave_arm_10-0s_1-0s_0-1rad.npz"
     )
     assert RECORDED_DATA_PATH.exists()
     recorded_data = RecordedData.from_file(RECORDED_DATA_PATH)
@@ -158,7 +159,8 @@ def main():
                 robot_joint_pos_targets_array=joint_pos_targets_array,
             )
             # output_path = RECORDED_DATA_PATH.parent / f"{RECORDED_DATA_PATH.stem}_isaac_stiffness4000_damping200_effort350.npz"
-            output_path = RECORDED_DATA_PATH.parent / f"{RECORDED_DATA_PATH.stem}_isaac_copygains_scaled_damping_2.npz"
+            # output_path = RECORDED_DATA_PATH.parent / f"{RECORDED_DATA_PATH.stem}_isaac_copygains_scaled_damping_2.npz"
+            output_path = RECORDED_DATA_PATH.parent / f"{RECORDED_DATA_PATH.stem}_isaac.npz"
             output_path.parent.mkdir(parents=True, exist_ok=True)
             print(f"Saving recorded data to {output_path}")
             new_recorded_data.to_file(output_path)

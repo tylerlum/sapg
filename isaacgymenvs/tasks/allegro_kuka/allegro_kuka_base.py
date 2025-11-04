@@ -58,7 +58,7 @@ DATETIME_STR = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
 # VISUALIZE_PD_TARGET_AS_BLUE_ROBOT = False is default
 # Set to True to visualize the PD target as a blue robot
-VISUALIZE_PD_TARGET_AS_BLUE_ROBOT = False
+VISUALIZE_PD_TARGET_AS_BLUE_ROBOT = True
 
 
 class AllegroKukaBase(VecTask):
@@ -1285,10 +1285,10 @@ class AllegroKukaBase(VecTask):
             # self.dof_params.allegro_stiffness = 4000
             # self.dof_params.allegro_damping = 200
             # self.dof_params.allegro_effort = 350
-            self.dof_params.kuka_stiffness = [600, 600, 500, 400, 200, 200, 200]
+            # self.dof_params.kuka_stiffness = [600, 600, 500, 400, 200, 200, 200]
             # self.dof_params.kuka_damping = [20, 20, 20, 20, 20, 20, 20]
             # self.dof_params.kuka_damping = [20, 20, 17, 14, 7, 7, 7]
-            self.dof_params.kuka_damping = [20, 20, 17, 10, 5, 5, 5]
+            # self.dof_params.kuka_damping = [20, 20, 17, 10, 5, 5, 5]
             populate_dof_properties(allegro_hand_dof_props, self.dof_params, self.num_arm_dofs, self.num_hand_dofs)
 
             self.gym.set_actor_dof_properties(env_ptr, allegro_actor, allegro_hand_dof_props)
@@ -2324,7 +2324,7 @@ class AllegroKukaBase(VecTask):
             breakpoint()
 
         if joint_pos_targets is not None:
-            self.cur_targets[:, :] = joint_pos_targets.clone()
+            self.cur_targets[:, :self.num_hand_arm_dofs] = joint_pos_targets.clone()
 
         if self._DO_NOT_MOVE:
             self.cur_targets[:, :] = self.prev_targets[:, :]
