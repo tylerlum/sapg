@@ -1,12 +1,50 @@
 # SAPG: Split and Aggregate Policy Gradients (ICML 2024 Oral) 
 
-# TYLER README (Last Updated: October 15, 2025)
+# TYLER README (Last Updated: November 4, 2025)
 
-From:
+## Rough Installation Instructions
+```
+conda create -n sapg_env python=3.8  # isaacgym requires Python 3.8
+conda activate sapg_env
 
+# Misc
+pip install \
+  absl-py aiohttp aiosignal async-timeout attrs backports.functools-lru-cache \
+  blinker cachetools certifi cffi charset-normalizer click cryptography debugpy decorator \
+  google-auth google-auth-oauthlib grpcio idna importlib-metadata ipykernel ipython \
+  jupyter-client jupyter-core markdown markupsafe matplotlib matplotlib-inline nest-asyncio \
+  numpy oauthlib packaging parso pexpect pickleshare pillow prompt-toolkit protobuf psutil \
+  pyasn1 pyasn1-modules pycparser pygments pyjwt pyopenssl pysocks python-dateutil \
+  torch torchvision pyyaml pyzmq requests requests-oauthlib rsa scipy setuptools six \
+  tensorboard tensorboard-data-server tensorboard-plugin-wit tk tornado traitlets \
+  typing-extensions urllib3 werkzeug wheel \
+  antlr4-python3-runtime cloudpickle cycler docker-pycreds fasteners fonttools freetype-py \
+  gitpython gym gym-notices hydra-core imageio jinja2 kiwisolver lxml matplotlib networkx \
+  ninja omegaconf opencv-python pathtools promise pyglet pyopengl pyparsing pyrender pysdf \
+  pyvirtualdisplay sentry-sdk setproctitle shortuuid smmap tensorboardx termcolor transforms3d \
+  trimesh urdfpy wandb warp-lang
+
+# Viser
+pip install viser
+
+# Mujoco
+pip install mujoco
+
+# Download the Isaac Gym Preview 4 release from https://developer.nvidia.com/isaac-gym
+cd isaacgym/python
+pip install -e .
+pip install numpy==1.23.0  # isaacgym does not support numpy 1.24+
+
+# Install this repo's rl_games
+cd <this repo>/rl_games
+pip install -e .
+
+# Install this repo
+cd <this repo>
+pip install -e .
 ```
-commit f0496ee69a4fa63de4ba4d96874e764f8f3bc302 (HEAD -> 2025-10-15_NewObjects, tyler_origin/2025-10-15_NewObjects)
-```
+
+To use with ROS, we use RoboStack with ROS1 Noetic: https://robostack.github.io/noetic.html. This requires a separate conda env because it does not support Python 3.8.
 
 ## Pretrain (Standard Cuboid)
 
