@@ -29,6 +29,10 @@ def viser_modify_mesh_interactive(input_mesh_path: Path, output_mesh_path: Path)
     # mesh_origin_frame = fixed frame
     # mesh_frame = moving frame that is rigidly attached to the mesh as the user modifies it
 
+    # #########################################################
+    # Create scene
+    # #########################################################
+
     # Create server
     server = viser.ViserServer()
 
@@ -64,28 +68,10 @@ def viser_modify_mesh_interactive(input_mesh_path: Path, output_mesh_path: Path)
     # Store the output mesh vis handle so that we can remove it when saving a new mesh
     output_mesh_vis = None
 
+    # #########################################################
     # Add controls
-    with server.gui.add_folder("Frame Controls"):
-        # Reset button resets the mesh frame to the origin
-        reset_button = server.gui.add_button(
-            label="Reset",
-        )
-
-        # Mesh scale state
-        MESH_SCALE = 1.0
-        scale_slider = server.gui.add_slider(
-            label="Scale",
-            min=0.01,
-            max=10.0,
-            step=0.01,
-            initial_value=1.0,
-        )
-
-        # Save button saves the mesh frame to the output mesh path
-        save_button = server.gui.add_button(
-            label="Save",
-        )
-
+    # #########################################################
+    with server.gui.add_folder("Pose Sliders"):
         # Moving slider moves the frame
         # Moving the frame moves the slider
         # To avoid infinite loop, need a stateful variable that tells us if the update is from user moving slider or user moving frame
@@ -136,24 +122,27 @@ def viser_modify_mesh_interactive(input_mesh_path: Path, output_mesh_path: Path)
             initial_value=0.0,
         )
 
-    @reset_button.on_click
-    def _(_):
-        x_slider.value = 0.0
-        y_slider.value = 0.0
-        z_slider.value = 0.0
-        R_slider.value = 0.0
-        P_slider.value = 0.0
-        Y_slider.value = 0.0
+    with server.gui.add_folder("Scale Slider"):
+        # Mesh scale state
+        MESH_SCALE = 1.0
+        scale_slider = server.gui.add_slider(
+            label="Scale",
+            min=0.01,
+            max=10.0,
+            step=0.01,
+            initial_value=1.0,
+        )
 
-    @scale_slider.on_update
-    def _(_):
-        nonlocal MESH_SCALE
-        MESH_SCALE = scale_slider.value
+    with server.gui.add_folder("Buttons"):
+        # Reset button resets the mesh frame to the origin
+        reset_button = server.gui.add_button(
+            label="Reset",
+        )
 
-        # After some experimentation, this is the only way I could update the scale
-        # Modifying mesh_vis.vertices directly didn't work because of the equality check not working for vectorized np arrays
-        # Also, running this does not modify mesh_vis.vertices, so this works (calls to _queue_update don't stack on each other)
-        mesh_vis._queue_update("vertices", mesh_vis.vertices * MESH_SCALE)
+        # Save button saves the mesh frame to the output mesh path
+        save_button = server.gui.add_button(
+            label="Save",
+        )
 
     @save_button.on_click
     def _(_):
@@ -244,6 +233,25 @@ def viser_modify_mesh_interactive(input_mesh_path: Path, output_mesh_path: Path)
         P_slider.value = RPY[1]
         Y_slider.value = RPY[2]
         USER_MOVED_FRAME = False
+
+    @reset_button.on_click
+    def _(_):
+        x_slider.value = 0.0
+        y_slider.value = 0.0
+        z_slider.value = 0.0
+        R_slider.value = 0.0
+        P_slider.value = 0.0
+        Y_slider.value = 0.0
+
+    @scale_slider.on_update
+    def _(_):
+        nonlocal MESH_SCALE
+        MESH_SCALE = scale_slider.value
+
+        # After some experimentation, this is the only way I could update the scale
+        # Modifying mesh_vis.vertices directly didn't work because of the equality check not working for vectorized np arrays
+        # Also, running this does not modify mesh_vis.vertices, so this works (calls to _queue_update don't stack on each other)
+        mesh_vis._queue_update("vertices", mesh_vis.vertices * MESH_SCALE)
 
     while True:
         print(
