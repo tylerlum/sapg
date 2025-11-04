@@ -690,6 +690,12 @@ class AllegroKukaBase(VecTask):
                 need_vhacd=True,
                 fixed_trajectory=get_screwdriver_trajectory(init_state, device=self.device),
             ),
+            "hairbrush": Hammer(
+                file=str(root_dir / "assets/urdf/tyler_objects/hairbrush/hairbrush.urdf"),
+                scale=[3.0, 0.5, 0.5],
+                need_vhacd=True,
+                fixed_trajectory=get_eraser_trajectory(init_state, device=self.device),
+            ),
         }
         for hammer in name_to_hammer_dict.values():
             assert Path(hammer.file).exists(), f"Hammer file {hammer.file} does not exist"
@@ -780,6 +786,12 @@ class AllegroKukaBase(VecTask):
             need_vhacds = [name_to_hammer_dict["044_flat_screwdriver"].need_vhacd]
             if USE_FIXED_SET_OF_GOAL_STATES:
                 self.trajectory_states = name_to_hammer_dict["044_flat_screwdriver"].fixed_trajectory
+        elif object_type == "hairbrush":
+            object_asset_files = [name_to_hammer_dict["hairbrush"].file]
+            object_asset_scales = [name_to_hammer_dict["hairbrush"].scale]
+            need_vhacds = [name_to_hammer_dict["hairbrush"].need_vhacd]
+            if USE_FIXED_SET_OF_GOAL_STATES:
+                self.trajectory_states = name_to_hammer_dict["hairbrush"].fixed_trajectory
         elif object_type == "all_hammers":
             object_asset_files = [hammer.file for hammer in name_to_hammer_dict.values()]
             object_asset_scales = [hammer.scale for hammer in name_to_hammer_dict.values()]
