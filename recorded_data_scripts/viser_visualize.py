@@ -37,7 +37,13 @@ def main():
         # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-20_14-32-39.npz"
         # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-27_16-23-09.npz"
         # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-27_16-23-31.npz"
-        "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-27_17-18-32.npz"
+        # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-27_17-18-32.npz"
+        # "/home/tylerlum/github_repos/sapg/recorded_robot_state/2025-11-02_18-42-11_sin_wave_arm_10-0s_1-0s_0-1rad.npz"
+        # "/home/tylerlum/github_repos/sapg/recorded_robot_state/2025-11-02_18-42-11_sin_wave_arm_10-0s_1-0s_0-1rad_isaac.npz"
+        "/home/tylerlum/github_repos/sapg/recorded_robot_state/2025-11-02_18-42-11_sin_wave_arm_10-0s_1-0s_0-1rad_isaac_newgains.npz"
+        # "/home/tylerlum/github_repos/sapg/recorded_robot_state/2025-11-02_18-48-58_sin_wave_hand_10-0s_1-0s_0-2rad.npz"
+        # "/home/tylerlum/github_repos/sapg/recorded_robot_state/2025-11-02_18-48-58_sin_wave_hand_10-0s_1-0s_0-2rad_isaac.npz"
+        # "/home/tylerlum/github_repos/sapg/recorded_robot_state/2025-11-02_18-48-58_sin_wave_hand_10-0s_1-0s_0-2rad_isaac_newgains.npz"
     )
     assert file_path.exists(), f"File {file_path} does not exist"
     recorded_data = RecordedData.from_file(file_path)
@@ -89,6 +95,16 @@ def main():
     kuka_allegro_viser = ViserUrdf(
         SERVER, KUKA_ALLEGRO_URDF_PATH, root_node_name="/robot/state"
     )
+
+    # Target robot
+    if recorded_data.robot_joint_pos_targets_array is not None:
+        target_kuka_allegro_frame = SERVER.scene.add_frame(
+            "/target_robot/state", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS
+        )
+        BLUE_RGBA = (0, 0, 255, 0.5)
+        target_kuka_allegro_viser = ViserUrdf(
+            SERVER, KUKA_ALLEGRO_URDF_PATH, root_node_name="/target_robot/state", mesh_color_override=BLUE_RGBA
+        )
 
     # Object
     object_frame = SERVER.scene.add_frame(
@@ -220,6 +236,8 @@ def main():
     # Main loop
     # ###########
     while True:
+        start_loop_time = time.time()
+
         # Get data
         robot_root_state = recorded_data.robot_root_states_array[FRAME_IDX]
         object_root_state = recorded_data.object_root_states_array[FRAME_IDX]
@@ -231,12 +249,16 @@ def main():
         # Robot
         kuka_allegro_frame.position = robot_root_state[:3]
         kuka_allegro_frame.wxyz = xyzw_to_wxyz(robot_root_state[3:7])
-        kuka_allegro_joint_pos_viser_order = RecordedData.change_joint_order(
-            robot_joint_position,
-            from_order=recorded_data.robot_joint_names,
-            to_order=kuka_allegro_viser_joint_names,
-        )
+        kuka_allegro_joint_pos_viser_order = robot_joint_position
         kuka_allegro_viser.update_cfg(kuka_allegro_joint_pos_viser_order)
+
+        # Target robot
+        if recorded_data.robot_joint_pos_targets_array is not None:
+            robot_joint_pos_target = recorded_data.robot_joint_pos_targets_array[FRAME_IDX]
+            target_kuka_allegro_frame.position = robot_root_state[:3]
+            target_kuka_allegro_frame.wxyz = xyzw_to_wxyz(robot_root_state[3:7])
+            target_kuka_allegro_joint_pos_viser_order = robot_joint_pos_target
+            target_kuka_allegro_viser.update_cfg(target_kuka_allegro_joint_pos_viser_order)
 
         # Object
         object_frame.position = object_root_state[:3]
@@ -257,12 +279,7 @@ def main():
             )
 
         # Floating allegro hand
-        allegro_joint_pos_viser_order = RecordedData.change_joint_order(
-            robot_joint_position,
-            from_order=recorded_data.robot_joint_names,
-            to_order=allegro_viser_joint_names,
-            require_all_joints=False,
-        )
+        allegro_joint_pos_viser_order = robot_joint_position[7:]
         allegro_viser.update_cfg(allegro_joint_pos_viser_order)
 
         # Palm
@@ -304,7 +321,13 @@ def main():
         # ###########
         # Sleep and update frame index
         # ###########
-        time.sleep(recorded_data.dt)
+        end_loop_time = time.time()
+        loop_dt = end_loop_time - start_loop_time
+        sleep_dt = recorded_data.dt - loop_dt
+        if sleep_dt > 0:
+            time.sleep(sleep_dt)
+        else:
+            print(f"Loop too slow! Desired FPS: {1.0 / recorded_data.dt:.1f}, Actual FPS: {1.0 / loop_dt:.1f}")
         if not PAUSED:
             frame_idx_slider.value = int(
                 np.clip(
