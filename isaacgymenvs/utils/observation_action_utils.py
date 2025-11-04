@@ -321,7 +321,8 @@ def compute_observation(
 def compute_joint_pos_targets(
     actions: Tensor,
     prev_targets: Tensor,
-    act_moving_average: float,
+    hand_moving_average: float,
+    arm_moving_average: float,
     hand_dof_speed_scale: float,
     dt: float,
 ) -> Tensor:
@@ -339,8 +340,11 @@ def compute_joint_pos_targets(
     assert q_upper_limits.shape == (J,), (
         f"q_upper_limits.shape: {q_upper_limits.shape}, expected: (J,)"
     )
-    assert 0.0 <= act_moving_average <= 1.0, (
-        f"act_moving_average: {act_moving_average}, expected: (0.0, 1.0)"
+    assert 0.0 <= hand_moving_average <= 1.0, (
+        f"hand_moving_average: {hand_moving_average}, expected: (0.0, 1.0)"
+    )
+    assert 0.0 <= arm_moving_average <= 1.0, (
+        f"arm_moving_average: {arm_moving_average}, expected: (0.0, 1.0)"
     )
 
     # hand
@@ -351,8 +355,8 @@ def compute_joint_pos_targets(
         q_upper_limits[7:23],
     )
     cur_targets[:, 7:23] = (
-        act_moving_average * cur_targets[:, 7:23]
-        + (1.0 - act_moving_average) * prev_targets[:, 7:23]
+        hand_moving_average * cur_targets[:, 7:23]
+        + (1.0 - hand_moving_average) * prev_targets[:, 7:23]
     )
     cur_targets[:, 7:23] = tensor_clamp(
         cur_targets[:, 7:23],
@@ -369,12 +373,10 @@ def compute_joint_pos_targets(
         q_lower_limits[:7],
         q_upper_limits[:7],
     )
-    SMOOTH_ARM = True
-    if SMOOTH_ARM:
-        cur_targets[:, :7] = (
-            act_moving_average * cur_targets[:, :7]
-            + (1.0 - act_moving_average) * prev_targets[:, :7]
-        )
+    cur_targets[:, :7] = (
+        arm_moving_average * cur_targets[:, :7]
+        + (1.0 - arm_moving_average) * prev_targets[:, :7]
+    )
     return cur_targets
 
 
