@@ -133,6 +133,16 @@ def viser_modify_mesh_interactive(input_mesh_path: Path, output_mesh_path: Path)
             initial_value=1.0,
         )
 
+    with server.gui.add_folder("Visibility"):
+        show_mesh_origin_frame_cb = server.gui.add_checkbox(
+            label="Show mesh origin frame",
+            initial_value=True,
+        )
+        show_mesh_frame_cb = server.gui.add_checkbox(
+            label="Show mesh frame",
+            initial_value=True,
+        )
+
     with server.gui.add_folder("Buttons"):
         # Reset button resets the mesh frame to the origin
         reset_button = server.gui.add_button(
@@ -143,40 +153,6 @@ def viser_modify_mesh_interactive(input_mesh_path: Path, output_mesh_path: Path)
         save_button = server.gui.add_button(
             label="Save",
         )
-
-    @save_button.on_click
-    def _(_):
-        # Save the mesh frame to the output mesh path
-        position = mesh_frame.position
-        wxyz = mesh_frame.wxyz
-        xyzw = wxyz_to_xyzw(wxyz)
-        T = np.eye(4)
-        T[:3, 3] = position
-        T[:3, :3] = R.from_quat(xyzw).as_matrix()
-
-        # Must apply scale before applying transform so that the transform is not scaled
-        # Must do deepcopy so that the original mesh is not modified
-        output_mesh = deepcopy(mesh).apply_scale(MESH_SCALE).apply_transform(T)
-
-        output_mesh_path.parent.mkdir(parents=True, exist_ok=True)
-        output_mesh.export(output_mesh_path)
-        print(f"Saved output mesh to {output_mesh_path}")
-
-        GREEN_RGB = (0, 255, 0)
-        nonlocal output_mesh_vis
-        if output_mesh_vis is not None:
-            print("Removing previous output mesh from scene")
-            output_mesh_vis.remove()
-            output_mesh_vis = None
-
-        output_mesh_vis = server.scene.add_mesh_simple(
-            name="/output_mesh",
-            vertices=output_mesh.vertices,
-            faces=output_mesh.faces,
-            color=GREEN_RGB,
-            opacity=0.5,
-        )
-        print("Added output mesh to scene")
 
     def update_frame_position_from_sliders_if_user_did_not_move_frame():
         if USER_MOVED_FRAME:
@@ -234,6 +210,14 @@ def viser_modify_mesh_interactive(input_mesh_path: Path, output_mesh_path: Path)
         Y_slider.value = RPY[2]
         USER_MOVED_FRAME = False
 
+    @show_mesh_origin_frame_cb.on_update
+    def _(_):
+        _mesh_origin_frame.show_axes = show_mesh_origin_frame_cb.value
+
+    @show_mesh_frame_cb.on_update
+    def _(_):
+        mesh_frame.active_axes = (show_mesh_frame_cb.value, show_mesh_frame_cb.value, show_mesh_frame_cb.value)
+
     @reset_button.on_click
     def _(_):
         x_slider.value = 0.0
@@ -242,6 +226,40 @@ def viser_modify_mesh_interactive(input_mesh_path: Path, output_mesh_path: Path)
         R_slider.value = 0.0
         P_slider.value = 0.0
         Y_slider.value = 0.0
+
+    @save_button.on_click
+    def _(_):
+        # Save the mesh frame to the output mesh path
+        position = mesh_frame.position
+        wxyz = mesh_frame.wxyz
+        xyzw = wxyz_to_xyzw(wxyz)
+        T = np.eye(4)
+        T[:3, 3] = position
+        T[:3, :3] = R.from_quat(xyzw).as_matrix()
+
+        # Must apply scale before applying transform so that the transform is not scaled
+        # Must do deepcopy so that the original mesh is not modified
+        output_mesh = deepcopy(mesh).apply_scale(MESH_SCALE).apply_transform(T)
+
+        output_mesh_path.parent.mkdir(parents=True, exist_ok=True)
+        output_mesh.export(output_mesh_path)
+        print(f"Saved output mesh to {output_mesh_path}")
+
+        GREEN_RGB = (0, 255, 0)
+        nonlocal output_mesh_vis
+        if output_mesh_vis is not None:
+            print("Removing previous output mesh from scene")
+            output_mesh_vis.remove()
+            output_mesh_vis = None
+
+        output_mesh_vis = server.scene.add_mesh_simple(
+            name="/output_mesh",
+            vertices=output_mesh.vertices,
+            faces=output_mesh.faces,
+            color=GREEN_RGB,
+            opacity=0.5,
+        )
+        print("Added output mesh to scene")
 
     @scale_slider.on_update
     def _(_):
