@@ -61,6 +61,7 @@ def viser_modify_mesh_interactive(input_mesh_path: Path, output_mesh_path: Path)
         faces=mesh.faces,
     )
 
+    # Store the output mesh vis handle so that we can remove it when saving a new mesh
     output_mesh_vis = None
 
     # Add controls
@@ -150,7 +151,7 @@ def viser_modify_mesh_interactive(input_mesh_path: Path, output_mesh_path: Path)
         MESH_SCALE = scale_slider.value
 
         # After some experimentation, this is the only way I could update the scale
-        # Modifying mesh_vis.vertices directly didn't work because of the has equality check not working for vectorized np arrays
+        # Modifying mesh_vis.vertices directly didn't work because of the equality check not working for vectorized np arrays
         # Also, running this does not modify mesh_vis.vertices, so this works (calls to _queue_update don't stack on each other)
         mesh_vis._queue_update("vertices", mesh_vis.vertices * MESH_SCALE)
 
@@ -177,6 +178,8 @@ def viser_modify_mesh_interactive(input_mesh_path: Path, output_mesh_path: Path)
         if output_mesh_vis is not None:
             print("Removing previous output mesh from scene")
             output_mesh_vis.remove()
+            output_mesh_vis = None
+
         output_mesh_vis = server.scene.add_mesh_simple(
             name="/output_mesh",
             vertices=output_mesh.vertices,
@@ -246,8 +249,8 @@ def viser_modify_mesh_interactive(input_mesh_path: Path, output_mesh_path: Path)
         print(
             f"mesh_frame.position: {mesh_frame.position}, mesh_frame.wxyz: {mesh_frame.wxyz}"
         )
-        breakpoint()
         time.sleep(1.0)
+        # breakpoint()
 
 
 def main():
