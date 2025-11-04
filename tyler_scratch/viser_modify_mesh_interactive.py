@@ -12,7 +12,15 @@ from typing import Literal
 AXES_LENGTH = 0.1
 AXES_RADIUS = 0.01
 
-def viser_modify_mesh_interactive(input_mesh_path: Path, output_mesh_path: Path, mode: Literal["simple", "trimesh"]):
+def xyzw_to_wxyz(xyzw: np.ndarray) -> np.ndarray:
+    assert xyzw.shape[-1] == 4, f"Expected xyzw to be (..., 4), got {xyzw.shape}"
+    return xyzw[..., [3, 0, 1, 2]]
+
+def wxyz_to_xyzw(wxyz: np.ndarray) -> np.ndarray:
+    assert wxyz.shape[-1] == 4, f"Expected wxyz to be (..., 4), got {wxyz.shape}"
+    return wxyz[..., [1, 2, 3, 0]]
+
+def viser_modify_mesh_interactive(input_mesh_path: Path, output_mesh_path: Path):
     # The goal of this function is to allow the user to modify a mesh interactively in viser.
     # More specifically, we will assume a fixed mesh origin frame and allow the user to translate and rotate the mesh wrt that fixed frame.
     # mesh_origin_frame = fixed frame
@@ -32,17 +40,20 @@ def viser_modify_mesh_interactive(input_mesh_path: Path, output_mesh_path: Path,
 
     # Load mesh
     mesh = trimesh.load(input_mesh_path)
-    if mode == "simple":
-        mesh_vis = server.scene.add_mesh_simple(name="/mesh_origin_frame/mesh_frame/mesh", vertices=mesh.vertices, faces=mesh.faces)
-    elif mode == "trimesh":
-        mesh_vis = server.scene.add_mesh_trimesh(name="/mesh_origin_frame/mesh_frame/mesh", mesh=mesh)
-    else:
-        raise ValueError(f"Invalid mode: {mode}")
+    mesh_vis = server.scene.add_mesh_simple(name="/mesh_origin_frame/mesh_frame/mesh", vertices=mesh.vertices, faces=mesh.faces)
+
+    output_mesh_vis = None
 
     # Add controls
     with server.gui.add_folder("Frame Controls"):
+        # Reset button resets the mesh frame to the origin
         reset_button = server.gui.add_button(
             label="Reset",
+        )
+
+        # Save button saves the mesh frame to the output mesh path
+        save_button = server.gui.add_button(
+            label="Save",
         )
 
         # Moving slider moves the frame
@@ -97,14 +108,38 @@ def viser_modify_mesh_interactive(input_mesh_path: Path, output_mesh_path: Path,
 
     @reset_button.on_click
     def _(_):
-        mesh_frame.position = (0, 0, 0)
-        mesh_frame.wxyz = (1, 0, 0, 0)
         x_slider.value = 0.0
         y_slider.value = 0.0
         z_slider.value = 0.0
         R_slider.value = 0.0
         P_slider.value = 0.0
         Y_slider.value = 0.0
+
+    @save_button.on_click
+    def _(_):
+        # Save the mesh frame to the output mesh path
+        position = mesh_frame.position
+        wxyz = mesh_frame.wxyz
+        xyzw = wxyz_to_xyzw(wxyz)
+        T = np.eye(4)
+        T[:3, 3] = position
+        T[:3, :3] = R.from_quat(xyzw).as_matrix()
+        output_mesh = mesh.apply_transform(T)
+
+        output_mesh_path.parent.mkdir(parents=True, exist_ok=True)
+        output_mesh.export(output_mesh_path)
+        print(f"Saved output mesh to {output_mesh_path}")
+
+        GREEN_RGB = (0, 255, 0)
+        nonlocal output_mesh_vis
+        if output_mesh_vis is None:
+            output_mesh_vis = server.scene.add_mesh_simple(name="/output_mesh", vertices=output_mesh.vertices, faces=output_mesh.faces, color=GREEN_RGB, opacity=0.5)
+        else:
+            output_mesh_vis.vertices[:] = output_mesh.vertices
+            output_mesh_vis.faces = output_mesh.faces
+            output_mesh_vis.color = GREEN_RGB
+            output_mesh_vis.opacity = 0.5
+        print("Added output mesh to scene")
 
 
     def update_frame_position_from_sliders_if_user_did_not_move_frame():
@@ -119,7 +154,7 @@ def viser_modify_mesh_interactive(input_mesh_path: Path, output_mesh_path: Path,
             return
         RPY = np.deg2rad(np.array([R_slider.value, P_slider.value, Y_slider.value]))
         xyzw = R.from_euler('xyz', RPY).as_quat()
-        wxyz = xyzw[[3, 0, 1, 2]]
+        wxyz = xyzw_to_wxyz(xyzw)
         mesh_frame.wxyz = wxyz
 
     @x_slider.on_update
@@ -146,7 +181,6 @@ def viser_modify_mesh_interactive(input_mesh_path: Path, output_mesh_path: Path,
     def _(_):
         update_frame_wxyz_from_sliders_if_user_did_not_move_frame()
 
-
     @mesh_frame.on_update
     def _(_):
         nonlocal USER_MOVED_FRAME
@@ -157,7 +191,7 @@ def viser_modify_mesh_interactive(input_mesh_path: Path, output_mesh_path: Path,
         x_slider.value = mesh_frame.position[0]
         y_slider.value = mesh_frame.position[1]
         z_slider.value = mesh_frame.position[2]
-        xyzw = mesh_frame.wxyz[[1, 2, 3, 0]]
+        xyzw = wxyz_to_xyzw(mesh_frame.wxyz)
         RPY = np.round(np.rad2deg(R.from_quat(xyzw).as_euler('xyz')), 1)
         R_slider.value = RPY[0]
         P_slider.value = RPY[1]
@@ -180,7 +214,6 @@ def main():
     viser_modify_mesh_interactive(
         input_mesh_path=args.input_mesh_path,
         output_mesh_path=args.output_mesh_path,
-        mode="simple",
     )
 
 if __name__ == "__main__":

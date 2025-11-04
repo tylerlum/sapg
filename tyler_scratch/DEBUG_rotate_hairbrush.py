@@ -9,9 +9,6 @@ assert orig_obj_path.exists(), f"Object file {orig_obj_path} does not exist"
 print(f"Loading object from {orig_obj_path}")
 orig_obj = trimesh.load(orig_obj_path)
 
-# new_x = orig_y
-# new_y = -orig_z
-# new_z = -orig_x
 T = np.eye(4)
 R = Rotation.from_euler('zx', [-115, 180], degrees=True).as_matrix()
 T[:3, :3] = R
