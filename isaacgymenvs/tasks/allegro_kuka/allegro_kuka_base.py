@@ -2247,59 +2247,39 @@ class AllegroKukaBase(VecTask):
         self.set_actor_root_state_tensor_indexed()
 
         if self.use_relative_control:
-            # hand
-            self.cur_targets[:, 7 : self.num_hand_arm_dofs] = scale(
-                actions[:, 7 : self.num_hand_arm_dofs],
-                self.arm_hand_dof_lower_limits[7 : self.num_hand_arm_dofs],
-                self.arm_hand_dof_upper_limits[7 : self.num_hand_arm_dofs],
-            )
-            self.cur_targets[:, 7 : self.num_hand_arm_dofs] = (
-                self.act_moving_average * self.cur_targets[:, 7 : self.num_hand_arm_dofs]
-                + (1.0 - self.act_moving_average) * self.prev_targets[:, 7 : self.num_hand_arm_dofs]
-            )
-            self.cur_targets[:, 7 : self.num_hand_arm_dofs] = tensor_clamp(
-                self.cur_targets[:, 7 : self.num_hand_arm_dofs],
-                self.arm_hand_dof_lower_limits[7 : self.num_hand_arm_dofs],
-                self.arm_hand_dof_upper_limits[7 : self.num_hand_arm_dofs],
-            )
-
-            # arm
+            # arm relative to current position
             targets = self.arm_hand_dof_pos[:, :7] + self.hand_dof_speed_scale * self.dt * self.actions[:, :7]
             self.cur_targets[:, :7] = tensor_clamp(
                 targets, self.arm_hand_dof_lower_limits[:7], self.arm_hand_dof_upper_limits[:7]
             )
         else:
-            # target position control for the hand DOFs
-
-            # hand
-            self.cur_targets[:, 7 : self.num_hand_arm_dofs] = scale(
-                actions[:, 7 : self.num_hand_arm_dofs],
-                self.arm_hand_dof_lower_limits[7 : self.num_hand_arm_dofs],
-                self.arm_hand_dof_upper_limits[7 : self.num_hand_arm_dofs],
-            )
-            self.cur_targets[:, 7 : self.num_hand_arm_dofs] = (
-                self.act_moving_average * self.cur_targets[:, 7 : self.num_hand_arm_dofs]
-                + (1.0 - self.act_moving_average) * self.prev_targets[:, 7 : self.num_hand_arm_dofs]
-            )
-            self.cur_targets[:, 7 : self.num_hand_arm_dofs] = tensor_clamp(
-                self.cur_targets[:, 7 : self.num_hand_arm_dofs],
-                self.arm_hand_dof_lower_limits[7 : self.num_hand_arm_dofs],
-                self.arm_hand_dof_upper_limits[7 : self.num_hand_arm_dofs],
-            )
-
-            # Arm
+            # arm relative to previous target
             targets = self.prev_targets[:, :7] + self.hand_dof_speed_scale * self.dt * self.actions[:, :7]
             self.cur_targets[:, :7] = tensor_clamp(
                 targets, self.arm_hand_dof_lower_limits[:7], self.arm_hand_dof_upper_limits[:7]
             )
 
         # Smooth arm
-        SMOOTH_ARM = self.cfg["env"]["smooth_arm"]
-        if SMOOTH_ARM:
-            self.cur_targets[:, :7] = (
-                self.act_moving_average * self.cur_targets[:, :7]
-                + (1.0 - self.act_moving_average) * self.prev_targets[:, :7]
-            )
+        self.cur_targets[:, :7] = (
+            self.arm_moving_average * self.cur_targets[:, :7]
+            + (1.0 - self.arm_moving_average) * self.prev_targets[:, :7]
+        )
+
+        # hand
+        self.cur_targets[:, 7 : self.num_hand_arm_dofs] = scale(
+            actions[:, 7 : self.num_hand_arm_dofs],
+            self.arm_hand_dof_lower_limits[7 : self.num_hand_arm_dofs],
+            self.arm_hand_dof_upper_limits[7 : self.num_hand_arm_dofs],
+        )
+        self.cur_targets[:, 7 : self.num_hand_arm_dofs] = (
+            self.hand_moving_average * self.cur_targets[:, 7 : self.num_hand_arm_dofs]
+            + (1.0 - self.hand_moving_average) * self.prev_targets[:, 7 : self.num_hand_arm_dofs]
+        )
+        self.cur_targets[:, 7 : self.num_hand_arm_dofs] = tensor_clamp(
+            self.cur_targets[:, 7 : self.num_hand_arm_dofs],
+            self.arm_hand_dof_lower_limits[7 : self.num_hand_arm_dofs],
+            self.arm_hand_dof_upper_limits[7 : self.num_hand_arm_dofs],
+        )
 
         # Default CHECK_WITH_COMPUTED_JOINT_POS_TARGETS = False
         # Set to True to check if the computed joint pos targets are correct
@@ -2308,7 +2288,8 @@ class AllegroKukaBase(VecTask):
             computed_joint_pos_targets = compute_joint_pos_targets(
                 actions=self.actions,
                 prev_targets=self.prev_targets,
-                act_moving_average=self.act_moving_average,
+                hand_moving_average=self.hand_moving_average,
+                arm_moving_average=self.arm_moving_average,
                 hand_dof_speed_scale=self.hand_dof_speed_scale,
                 dt=self.dt,
             )
@@ -2535,13 +2516,24 @@ class AllegroKukaBase(VecTask):
         return "left_sharpa" in self.cfg["env"]["asset"]["kukaAllegro"].lower()
 
     @property
-    def act_moving_average(self) -> float:
-        if self.cfg["env"]["actionsMovingAverageFinal"] is None or not hasattr(self, "_tyler_curriculum_scale"):
-            return self.cfg["env"]["actionsMovingAverage"]
+    def hand_moving_average(self) -> float:
+        if self.cfg["env"]["handMovingAverageFinal"] is None or not hasattr(self, "_tyler_curriculum_scale"):
+            return self.cfg["env"]["handMovingAverage"]
         else:
             return self.interpolate(
-                init=self.cfg["env"]["actionsMovingAverage"],
-                final=self.cfg["env"]["actionsMovingAverageFinal"],
+                init=self.cfg["env"]["handMovingAverage"],
+                final=self.cfg["env"]["handMovingAverageFinal"],
+                alpha=self._tyler_curriculum_scale,
+            )
+
+    @property
+    def arm_moving_average(self) -> float:
+        if self.cfg["env"]["armMovingAverageFinal"] is None or not hasattr(self, "_tyler_curriculum_scale"):
+            return self.cfg["env"]["armMovingAverage"]
+        else:
+            return self.interpolate(
+                init=self.cfg["env"]["armMovingAverage"],
+                final=self.cfg["env"]["armMovingAverageFinal"],
                 alpha=self._tyler_curriculum_scale,
             )
 

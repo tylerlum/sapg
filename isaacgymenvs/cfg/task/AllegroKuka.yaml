@@ -27,7 +27,12 @@ env:
   forceLimitScale: 1.0
   useRelativeControl: False
   dofSpeedScale: 10.0
-  actionsMovingAverage: 1.0
+  handMovingAverage: 1.0
+  armMovingAverage: 1.0
+  dofSpeedScaleFinal: ${eval:"None"}  # often set to 1.0
+  armMovingAverageFinal: ${eval:"None"}  # often set to 0.1
+  handMovingAverageFinal: ${eval:"None"}  # often set to 0.1
+
   controlFrequencyInv: 1 # 60 Hz
 
   resetPositionNoiseX: 0.1
@@ -131,11 +136,6 @@ env:
   turn_off_object_vel_obs_slowly: False
 
   use_obs_dropout: False
-
-  dofSpeedScaleFinal: ${eval:"None"}
-  actionsMovingAverageFinal: ${eval:"None"}
-
-  smooth_arm: False
 
   asset:
     # Whis was the original kuka_allegro asset.
