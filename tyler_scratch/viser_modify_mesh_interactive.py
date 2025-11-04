@@ -51,6 +51,16 @@ def viser_modify_mesh_interactive(input_mesh_path: Path, output_mesh_path: Path)
             label="Reset",
         )
 
+        # Mesh scale state
+        MESH_SCALE = 1.0
+        scale_slider = server.gui.add_slider(
+            label="Scale",
+            min=0.01,
+            max=10.0,
+            step=0.01,
+            initial_value=1.0,
+        )
+
         # Save button saves the mesh frame to the output mesh path
         save_button = server.gui.add_button(
             label="Save",
@@ -115,6 +125,16 @@ def viser_modify_mesh_interactive(input_mesh_path: Path, output_mesh_path: Path)
         P_slider.value = 0.0
         Y_slider.value = 0.0
 
+    @scale_slider.on_update
+    def _(_):
+        nonlocal MESH_SCALE
+        MESH_SCALE = scale_slider.value
+
+        # After some experimentation, this is the only way I could update the scale
+        # Modifying mesh_vis.vertices directly didn't work because of the has equality check not working for vectorized np arrays
+        # Also, running this does not modify mesh_vis.vertices, so this works (calls to _queue_update don't stack on each other)
+        mesh_vis._queue_update("vertices", mesh_vis.vertices * MESH_SCALE)
+
     @save_button.on_click
     def _(_):
         # Save the mesh frame to the output mesh path
@@ -124,7 +144,10 @@ def viser_modify_mesh_interactive(input_mesh_path: Path, output_mesh_path: Path)
         T = np.eye(4)
         T[:3, 3] = position
         T[:3, :3] = R.from_quat(xyzw).as_matrix()
-        output_mesh = mesh.apply_transform(T)
+
+        # Must apply scale before applying transform so that the transform is not scaled
+        # Must do deepcopy so that the original mesh is not modified
+        output_mesh = deepcopy(mesh).apply_scale(MESH_SCALE).apply_transform(T)
 
         output_mesh_path.parent.mkdir(parents=True, exist_ok=True)
         output_mesh.export(output_mesh_path)
@@ -132,15 +155,11 @@ def viser_modify_mesh_interactive(input_mesh_path: Path, output_mesh_path: Path)
 
         GREEN_RGB = (0, 255, 0)
         nonlocal output_mesh_vis
-        if output_mesh_vis is None:
-            output_mesh_vis = server.scene.add_mesh_simple(name="/output_mesh", vertices=output_mesh.vertices, faces=output_mesh.faces, color=GREEN_RGB, opacity=0.5)
-        else:
-            output_mesh_vis.vertices[:] = output_mesh.vertices
-            output_mesh_vis.faces = output_mesh.faces
-            output_mesh_vis.color = GREEN_RGB
-            output_mesh_vis.opacity = 0.5
+        if output_mesh_vis is not None:
+            print("Removing previous output mesh from scene")
+            output_mesh_vis.remove()
+        output_mesh_vis = server.scene.add_mesh_simple(name="/output_mesh", vertices=output_mesh.vertices, faces=output_mesh.faces, color=GREEN_RGB, opacity=0.5)
         print("Added output mesh to scene")
-
 
     def update_frame_position_from_sliders_if_user_did_not_move_frame():
         if USER_MOVED_FRAME:
