@@ -33,6 +33,7 @@ import tempfile
 import time
 from collections import OrderedDict
 from os.path import join
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -154,5 +155,10 @@ def get_username():
 def project_tmp_dir():
     tmp_dir_name = f'ige_{get_username()}'
     return safe_ensure_dir_exists(join(tempfile.gettempdir(), tmp_dir_name))
+
+def get_repo_root_dir() -> Path:
+    # This is in sapg/isaacgymenvs/utils/utils.py
+    # We want path to be sapg
+    return Path(__file__).parent.parent.parent
 
 # EOF
