@@ -60,7 +60,9 @@ def create_robot_control_sliders(
 
 
 def main(
-    urdf_path: Path = get_repo_root_dir() / "assets/urdf/kuka_allegro_description/allegro_touch_sensor.urdf",
+    urdf_path: Path = (
+        get_repo_root_dir() / "assets/urdf/kuka_allegro_description/iiwa14_real.urdf"
+    ),
     load_meshes: bool = True,
     load_collision_meshes: bool = False,
 ) -> None:

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import time
 from collections import defaultdict
-from pathlib import Path
 from typing import Literal
 
 import mujoco
@@ -11,9 +10,9 @@ import viser
 import viser.transforms as vtf
 from viser._scene_handles import FrameHandle
 
+from isaacgymenvs.utils.utils import get_repo_root_dir
 from viser_mujoco.viser_conversions import get_body_name, is_fixed_body, merge_geoms
 
-from isaacgymenvs.utils.utils import get_repo_root_dir
 
 def create_robot_control_sliders(
     server: viser.ViserServer,
@@ -62,9 +61,9 @@ def update_frames(
     for link_name, frame in link_name_to_frame.items():
         link_pos, link_quat_wxyz = viser_mj_model.get_body_pose(link_name)
         assert link_pos.shape == (3,), f"link_pos.shape: {link_pos.shape}"
-        assert link_quat_wxyz.shape == (
-            4,
-        ), f"link_quat_wxyz.shape: {link_quat_wxyz.shape}"
+        assert link_quat_wxyz.shape == (4,), (
+            f"link_quat_wxyz.shape: {link_quat_wxyz.shape}"
+        )
         frame.position = link_pos.copy()
         frame.wxyz = link_quat_wxyz.copy()
 
@@ -207,12 +206,12 @@ class ViserMJModel:
     ) -> None:
         batch_size, num_bodies = body_xpos.shape[:2]
         assert batch_size == 1, f"batch_size: {batch_size}, expected: 1 for now"
-        assert (
-            body_xpos.shape == (batch_size, num_bodies, 3)
-        ), f"body_xpos.shape: {body_xpos.shape}, expected: ({batch_size}, {num_bodies}, 3)"
-        assert (
-            body_xmat.shape == (batch_size, num_bodies, 3, 3)
-        ), f"body_xmat.shape: {body_xmat.shape}, expected: ({batch_size}, {num_bodies}, 3, 3)"
+        assert body_xpos.shape == (batch_size, num_bodies, 3), (
+            f"body_xpos.shape: {body_xpos.shape}, expected: ({batch_size}, {num_bodies}, 3)"
+        )
+        assert body_xmat.shape == (batch_size, num_bodies, 3, 3), (
+            f"body_xmat.shape: {body_xmat.shape}, expected: ({batch_size}, {num_bodies}, 3, 3)"
+        )
 
         with server.atomic():
             body_xquat = vtf.SO3.from_matrix(body_xmat).wxyz
@@ -233,11 +232,9 @@ class ViserMJModel:
     def update_cfg(
         self, q_dict: dict[str, float], actuator_dict: dict[str, float] | None = None
     ) -> None:
-        assert set(
-            q_dict.keys()
-        ).issubset(
-            set(self.joint_names)
-        ), f"q_dict.keys(): {q_dict.keys()}, expected subset of {self.joint_names} for joint positions"
+        assert set(q_dict.keys()).issubset(set(self.joint_names)), (
+            f"q_dict.keys(): {q_dict.keys()}, expected subset of {self.joint_names} for joint positions"
+        )
 
         # Set joint positions
         for name, value in q_dict.items():
@@ -246,11 +243,9 @@ class ViserMJModel:
 
         # Set actuator positions
         if actuator_dict is not None:
-            assert set(
-                actuator_dict.keys()
-            ).issubset(
-                set(self.actuator_names)
-            ), f"actuator_dict.keys(): {actuator_dict.keys()}, expected subset of {self.actuator_names} for actuator commands"
+            assert set(actuator_dict.keys()).issubset(set(self.actuator_names)), (
+                f"actuator_dict.keys(): {actuator_dict.keys()}, expected subset of {self.actuator_names} for actuator commands"
+            )
             for name, value in actuator_dict.items():
                 actuator_id = self.mj_model.actuator(name=name).id
                 self.mj_data.ctrl[actuator_id] = value

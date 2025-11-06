@@ -1,7 +1,9 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Tuple, List
+from typing import List, Optional, Tuple
+
 from isaacgymenvs.utils.utils import get_repo_root_dir
+
 
 @dataclass
 class Object:
@@ -21,128 +23,231 @@ class Object:
         assert self.filepath.exists(), f"Filepath {self.filepath} does not exist"
 
         if self.coacd_filepaths is not None:
-            assert len(self.coacd_filepaths) > 0, f"coacd_filepaths is empty: {self.coacd_filepaths}"
+            assert len(self.coacd_filepaths) > 0, (
+                f"coacd_filepaths is empty: {self.coacd_filepaths}"
+            )
             for coacd_filepath in self.coacd_filepaths:
-                assert coacd_filepath.exists(), f"COACD file {coacd_filepath} does not exist"
+                assert coacd_filepath.exists(), (
+                    f"COACD file {coacd_filepath} does not exist"
+                )
+
 
 NAME_TO_OBJECT = {
     "scanned_hammer_1": Object(
-        filepath=get_repo_root_dir() / "assets/urdf/tyler_objects/hammer_1/hammer_1.urdf",
-        coacd_filepaths=list((get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/hammer_1").glob("decomp_*.obj")),
+        filepath=(
+            get_repo_root_dir() / "assets/urdf/tyler_objects/hammer_1/hammer_1.urdf",
+        ),
+        coacd_filepaths=list(
+            (
+                get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/hammer_1"
+            ).glob("decomp_*.obj")
+        ),
         scale=(3.0, 0.5, 0.5),
         need_vhacd=True,
     ),
     "scanned_hammer_2": Object(
-        filepath=get_repo_root_dir() / "assets/urdf/tyler_objects/hammer_2/hammer_2.urdf",
-        coacd_filepaths=list((get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/hammer_2").glob("decomp_*.obj")),
+        filepath=(
+            get_repo_root_dir() / "assets/urdf/tyler_objects/hammer_2/hammer_2.urdf",
+        ),
+        coacd_filepaths=list(
+            (
+                get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/hammer_2"
+            ).glob("decomp_*.obj")
+        ),
         scale=(3.0, 0.5, 0.5),
         need_vhacd=True,
     ),
     "YcbHammer": Object(
-        filepath=get_repo_root_dir() / "assets/urdf/tyler_objects/YcbHammer/model.urdf",
-        coacd_filepaths=list((get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/YcbHammer").glob("decomp_*.obj")),
+        filepath=(
+            get_repo_root_dir() / "assets/urdf/tyler_objects/YcbHammer/model.urdf",
+        ),
+        coacd_filepaths=list(
+            (
+                get_repo_root_dir()
+                / "assets/urdf/tyler_objects_convex_decomp/YcbHammer"
+            ).glob("decomp_*.obj")
+        ),
         scale=(3.0, 0.5, 0.5),
         need_vhacd=True,
     ),
     "cuboidal_hammer": Object(
-        filepath=get_repo_root_dir() / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_0-3_0-03_0-02_0-03_0-1_0-02_0-1_0-2.urdf",
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_0-3_0-03_0-02_0-03_0-1_0-02_0-1_0-2.urdf",
+        ),
         coacd_filepaths=None,  # Don't currently have COACD for object made of primitives
         scale=(3.0, 0.5, 0.5),
         need_vhacd=False,
     ),
     "cylindrical_hammer": Object(
-        filepath=get_repo_root_dir() / "assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0-3_0-015_0-015_0-1_0-1_0-2.urdf",
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0-3_0-015_0-015_0-1_0-1_0-2.urdf",
+        ),
         coacd_filepaths=None,  # Don't currently have COACD for object made of primitives
         scale=(3.0, 0.5, 0.5),
         need_vhacd=False,
     ),
     "cuboidal_hammer_1-25x": Object(
-        filepath=get_repo_root_dir() / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_0-375_0-0375_0-025_0-0375_0-125_0-025_0-1_0-2.urdf",
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_0-375_0-0375_0-025_0-0375_0-125_0-025_0-1_0-2.urdf",
+        ),
         coacd_filepaths=None,  # Don't currently have COACD for object made of primitives
         scale=(3.0, 0.5, 0.5),
         need_vhacd=False,
     ),
     "cuboidal_hammer_1-5x": Object(
-        filepath=get_repo_root_dir() / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_0-44999999999999996_0-045_0-03_0-045_0-15000000000000002_0-03_0-1_0-2.urdf",
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_0-44999999999999996_0-045_0-03_0-045_0-15000000000000002_0-03_0-1_0-2.urdf",
+        ),
         coacd_filepaths=None,  # Don't currently have COACD for object made of primitives
         scale=(3.0, 0.5, 0.5),
         need_vhacd=False,
     ),
     "cuboidal_hammer_1-75x": Object(
-        filepath=get_repo_root_dir() / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_0-525_0-0525_0-035_0-0525_0-17500000000000002_0-035_0-1_0-2.urdf",
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_0-525_0-0525_0-035_0-0525_0-17500000000000002_0-035_0-1_0-2.urdf",
+        ),
         coacd_filepaths=None,  # Don't currently have COACD for object made of primitives
         scale=(3.0, 0.5, 0.5),
         need_vhacd=False,
     ),
     "cuboidal_hammer_2x": Object(
-        filepath=get_repo_root_dir() / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_0-6_0-06_0-04_0-06_0-2_0-04_0-1_0-2.urdf",
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_0-6_0-06_0-04_0-06_0-2_0-04_0-1_0-2.urdf",
+        ),
         coacd_filepaths=None,  # Don't currently have COACD for object made of primitives
         scale=(3.0, 0.5, 0.5),
         need_vhacd=False,
     ),
     "cylindrical_hammer_1-25x": Object(
-        filepath=get_repo_root_dir() / "assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0-375_0-01875_0-01875_0-125_0-125_0-2.urdf",
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0-375_0-01875_0-01875_0-125_0-125_0-2.urdf",
+        ),
         coacd_filepaths=None,  # Don't currently have COACD for object made of primitives
         scale=(3.0, 0.5, 0.5),
         need_vhacd=False,
     ),
     "cylindrical_hammer_1-5x": Object(
-        filepath=get_repo_root_dir() / "assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0-44999999999999996_0-0225_0-0225_0-15000000000000002_0-15000000000000002_0-2.urdf",
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0-44999999999999996_0-0225_0-0225_0-15000000000000002_0-15000000000000002_0-2.urdf",
+        ),
         coacd_filepaths=None,  # Don't currently have COACD for object made of primitives
         scale=(3.0, 0.5, 0.5),
         need_vhacd=False,
     ),
     "cylindrical_hammer_1-75x": Object(
-        filepath=get_repo_root_dir() / "assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0-525_0-02625_0-02625_0-17500000000000002_0-17500000000000002_0-2.urdf",
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0-525_0-02625_0-02625_0-17500000000000002_0-17500000000000002_0-2.urdf",
+        ),
         coacd_filepaths=None,  # Don't currently have COACD for object made of primitives
         scale=(3.0, 0.5, 0.5),
         need_vhacd=False,
     ),
     "cylindrical_hammer_2x": Object(
-        filepath=get_repo_root_dir() / "assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0-6_0-03_0-03_0-2_0-2_0-2.urdf",
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0-6_0-03_0-03_0-2_0-2_0-2.urdf",
+        ),
         coacd_filepaths=None,  # Don't currently have COACD for object made of primitives
         scale=(3.0, 0.5, 0.5),
         need_vhacd=False,
     ),
     "040_large_marker": Object(
-        filepath=get_repo_root_dir() / "assets/urdf/tyler_objects/040_large_marker/040_large_marker.urdf",
-        coacd_filepaths=list((get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/040_large_marker").glob("decomp_*.obj")),
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/tyler_objects/040_large_marker/040_large_marker.urdf",
+        ),
+        coacd_filepaths=list(
+            (
+                get_repo_root_dir()
+                / "assets/urdf/tyler_objects_convex_decomp/040_large_marker"
+            ).glob("decomp_*.obj")
+        ),
         scale=(3.0, 0.5, 0.5),
         need_vhacd=True,
     ),
     "whiteboard_eraser": Object(
-        filepath=get_repo_root_dir() / "assets/urdf/tyler_objects/whiteboard_eraser/source/model.urdf",
-        coacd_filepaths=list((get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/whiteboard_eraser").glob("decomp_*.obj")),
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/tyler_objects/whiteboard_eraser/source/model.urdf",
+        ),
+        coacd_filepaths=list(
+            (
+                get_repo_root_dir()
+                / "assets/urdf/tyler_objects_convex_decomp/whiteboard_eraser"
+            ).glob("decomp_*.obj")
+        ),
         scale=(3.0, 0.5, 0.5),
         need_vhacd=True,
     ),
     "phone": Object(
-        filepath=get_repo_root_dir() / "assets/urdf/tyler_objects/phone/model.urdf",
-        coacd_filepaths=list((get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/phone").glob("decomp_*.obj")),
+        filepath=(get_repo_root_dir() / "assets/urdf/tyler_objects/phone/model.urdf",),
+        coacd_filepaths=list(
+            (
+                get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/phone"
+            ).glob("decomp_*.obj")
+        ),
         scale=(3.0, 0.5, 0.5),
         need_vhacd=True,
     ),
     "044_flat_screwdriver": Object(
-        filepath=get_repo_root_dir() / "assets/urdf/tyler_objects/044_flat_screwdriver/044_flat_screwdriver.urdf",
-        coacd_filepaths=list((get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/044_flat_screwdriver").glob("decomp_*.obj")),
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/tyler_objects/044_flat_screwdriver/044_flat_screwdriver.urdf",
+        ),
+        coacd_filepaths=list(
+            (
+                get_repo_root_dir()
+                / "assets/urdf/tyler_objects_convex_decomp/044_flat_screwdriver"
+            ).glob("decomp_*.obj")
+        ),
         scale=(3.0, 0.5, 0.5),
         need_vhacd=True,
     ),
     "hairbrush": Object(
-        filepath=get_repo_root_dir() / "assets/urdf/tyler_objects/hairbrush/hairbrush.urdf",
-        coacd_filepaths=list((get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/hairbrush").glob("decomp_*.obj")),
+        filepath=(
+            get_repo_root_dir() / "assets/urdf/tyler_objects/hairbrush/hairbrush.urdf",
+        ),
+        coacd_filepaths=list(
+            (
+                get_repo_root_dir()
+                / "assets/urdf/tyler_objects_convex_decomp/hairbrush"
+            ).glob("decomp_*.obj")
+        ),
         scale=(3.0, 0.5, 0.5),
         need_vhacd=True,
     ),
     "real_flat_screwdriver": Object(
-        filepath=get_repo_root_dir() / "assets/urdf/tyler_objects/real_flat_screwdriver/real_flat_screwdriver.urdf",
-        coacd_filepaths=list((get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/real_flat_screwdriver").glob("decomp_*.obj")),
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/tyler_objects/real_flat_screwdriver/real_flat_screwdriver.urdf",
+        ),
+        coacd_filepaths=list(
+            (
+                get_repo_root_dir()
+                / "assets/urdf/tyler_objects_convex_decomp/real_flat_screwdriver"
+            ).glob("decomp_*.obj")
+        ),
         scale=(3.0, 0.5, 0.5),
         need_vhacd=True,
     ),
     "mallet": Object(
-        filepath=get_repo_root_dir() / "assets/urdf/tyler_objects/mallet/mallet.urdf",
-        coacd_filepaths=list((get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/mallet").glob("decomp_*.obj")),
+        filepath=(
+            get_repo_root_dir() / "assets/urdf/tyler_objects/mallet/mallet.urdf",
+        ),
+        coacd_filepaths=list(
+            (
+                get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/mallet"
+            ).glob("decomp_*.obj")
+        ),
         scale=(3.0, 0.5, 0.5),
         need_vhacd=True,
     ),
