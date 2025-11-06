@@ -2173,6 +2173,30 @@ class AllegroKukaBase(VecTask):
         if self.randomize and episode_reset:
             self.apply_randomizations(self.randomization_params)
 
+        # Do this before reset_target_pose so that the successes is 0 for the new episode
+        if episode_reset and tensor_reset:
+            self.progress_buf[env_ids] = 0
+            self.reset_buf[env_ids] = 0
+
+            self.prev_episode_successes[env_ids] = self.successes[env_ids]
+            self.successes[env_ids] = 0
+
+            self.prev_episode_true_objective[env_ids] = self.true_objective[env_ids]
+            self.true_objective[env_ids] = 0
+
+            self.prev_episode_closest_keypoint_max_dist[env_ids] = torch.where(self.prev_episode_successes[env_ids] > 0, self.prev_total_episode_closest_keypoint_max_dist[env_ids]/self.prev_episode_successes[env_ids], self.total_episode_closest_keypoint_max_dist[env_ids])
+            self.total_episode_closest_keypoint_max_dist[env_ids] = 0
+            self.prev_total_episode_closest_keypoint_max_dist[env_ids] = 0
+
+            for key in self.rewards_episode.keys():
+                self.rewards_episode[key][env_ids] = 0
+
+            if self.save_states:
+                self.dump_env_states(env_ids)
+
+            self.extras["scalars"] = dict()
+            self.extras["scalars"]["success_tolerance"] = self.success_tolerance
+
         # randomize start object poses
         self.reset_target_pose(env_ids, reset_buf_idxs, tensor_reset=tensor_reset)
 
@@ -2257,29 +2281,6 @@ class AllegroKukaBase(VecTask):
 
         self.deferred_set_dof_state_tensor_indexed([hand_indices])
         self.deferred_set_actor_root_state_tensor_indexed(self._extra_object_indices(env_ids))
-
-        if episode_reset and tensor_reset:
-            self.progress_buf[env_ids] = 0
-            self.reset_buf[env_ids] = 0
-
-            self.prev_episode_successes[env_ids] = self.successes[env_ids]
-            self.successes[env_ids] = 0
-
-            self.prev_episode_true_objective[env_ids] = self.true_objective[env_ids]
-            self.true_objective[env_ids] = 0
-            
-            self.prev_episode_closest_keypoint_max_dist[env_ids] = torch.where(self.prev_episode_successes[env_ids] > 0, self.prev_total_episode_closest_keypoint_max_dist[env_ids]/self.prev_episode_successes[env_ids], self.total_episode_closest_keypoint_max_dist[env_ids])
-            self.total_episode_closest_keypoint_max_dist[env_ids] = 0
-            self.prev_total_episode_closest_keypoint_max_dist[env_ids] = 0
-
-            for key in self.rewards_episode.keys():
-                self.rewards_episode[key][env_ids] = 0
-
-            if self.save_states:
-                self.dump_env_states(env_ids)
-
-            self.extras["scalars"] = dict()
-            self.extras["scalars"]["success_tolerance"] = self.success_tolerance
 
     def pre_physics_step(self, actions, joint_pos_targets: Optional[torch.Tensor] = None):
         PRINT_TIME_SINCE_LAST_STEP = False
