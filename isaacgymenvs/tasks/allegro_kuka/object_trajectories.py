@@ -40,11 +40,17 @@ def get_hairbrush_trajectory(object_init_state, device="cuda"):
     pick_up_state[3:7] = R.from_euler('y', 0, degrees=True).as_quat()
     pick_up_state[2] += 0.2
 
-    # next state rotates -90 degrees around x axis wrt last state
+    # next state rotates -180 degrees around x axis wrt last state
     rotate_180_state = pick_up_state.copy()
     rotate_180_state[3:7] = (R.from_quat(pick_up_state[3:7]) * R.from_euler('x', -180, degrees=True)).as_quat()
 
-    trajectory_states = [pick_up_state, rotate_180_state]
+    # If include pickup state, it forces it to lift with same orientation and then do a rotation
+    # Rather than allowing it to do the reorientation before the full lift
+    INCLUDE_PICKUP_STATE = True
+    if INCLUDE_PICKUP_STATE:
+        trajectory_states = [pick_up_state, rotate_180_state]
+    else:
+        trajectory_states = [rotate_180_state]
 
     middle_state = rotate_180_state.copy()
 

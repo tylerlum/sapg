@@ -57,10 +57,6 @@ from isaacgymenvs.tasks.allegro_kuka.object_trajectories import (
 
 DATETIME_STR = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-# VISUALIZE_PD_TARGET_AS_BLUE_ROBOT = False is default
-# Set to True to visualize the PD target as a blue robot
-VISUALIZE_PD_TARGET_AS_BLUE_ROBOT = False
-
 
 def assert_equals(a, b):
     assert a == b, f"a: {a}, b: {b}"
@@ -330,7 +326,7 @@ class AllegroKukaBase(VecTask):
         self.arm_hand_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, : self.num_hand_arm_dofs]
         self.arm_hand_dof_pos = self.arm_hand_dof_state[..., 0]
         self.arm_hand_dof_vel = self.arm_hand_dof_state[..., 1]
-        if VISUALIZE_PD_TARGET_AS_BLUE_ROBOT:
+        if self.VISUALIZE_PD_TARGET_AS_BLUE_ROBOT:
             self.blue_robot_arm_hand_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, self.num_hand_arm_dofs:]
             self.blue_robot_arm_hand_dof_pos = self.blue_robot_arm_hand_dof_state[..., 0]
             self.blue_robot_arm_hand_dof_vel = self.blue_robot_arm_hand_dof_state[..., 1]
@@ -1310,15 +1306,16 @@ class AllegroKukaBase(VecTask):
 
         self.allegro_hands = []
         self.envs = []
-        if VISUALIZE_PD_TARGET_AS_BLUE_ROBOT:
+        if self.VISUALIZE_PD_TARGET_AS_BLUE_ROBOT:
             self.blue_robots = []
+        self.objects = []
 
         object_init_state = []
         
         self.rigid_body_name_to_idx = {}
 
         self.allegro_hand_indices = []
-        if VISUALIZE_PD_TARGET_AS_BLUE_ROBOT:
+        if self.VISUALIZE_PD_TARGET_AS_BLUE_ROBOT:
             self.blue_robot_indices = []
         object_indices = []
         table_indices = []
@@ -1350,8 +1347,8 @@ class AllegroKukaBase(VecTask):
         # this rely on the fact that objects are added right after the arms in terms of create_actor()
         self.object_rb_handles = list(range(self.num_hand_arm_bodies, self.num_hand_arm_bodies + object_rb_count))
 
-        # Set asset rigid shape properties
-        MODIFY_ASSET_FRICTIONS = True
+        # Set asset rigid shape properties (friction)
+        MODIFY_ASSET_FRICTIONS = False
         if MODIFY_ASSET_FRICTIONS:
             self.set_allegro_kuka_asset_rigid_shape_properties(
                 allegro_kuka_asset=allegro_kuka_asset,
@@ -1393,7 +1390,7 @@ class AllegroKukaBase(VecTask):
                 if self.with_dof_force_sensors:
                     self.gym.enable_actor_dof_force_sensors(env_ptr, allegro_actor)
 
-            if VISUALIZE_PD_TARGET_AS_BLUE_ROBOT:
+            if self.VISUALIZE_PD_TARGET_AS_BLUE_ROBOT:
                 blue_robot_actor = self.gym.create_actor(
                     env_ptr,
                     allegro_kuka_asset,
@@ -1467,6 +1464,30 @@ class AllegroKukaBase(VecTask):
 
             self.envs.append(env_ptr)
             self.allegro_hands.append(allegro_actor)
+            self.objects.append(object_handle)
+
+        # Set mass and inertia of object
+        MODIFY_OBJECT_MASS_AND_INERTIA = False
+        if MODIFY_OBJECT_MASS_AND_INERTIA:
+            original_masses, original_inertias = [], []
+            for env, object in zip(self.envs, self.objects):
+                object_rb_props = self.gym.get_actor_rigid_body_properties(env, object)
+                assert len(object_rb_props) == 1, f"Expected 1 rigid body, got {len(object_rb_props)}"
+                object_rb_prop = object_rb_props[0]
+                original_mass = object_rb_prop.mass
+                original_inertia = (object_rb_prop.inertia.x.x, object_rb_prop.inertia.y.y, object_rb_prop.inertia.z.z)
+                original_masses.append(original_mass)
+                original_inertias.append(original_inertia)
+            print(f"Original masses: {original_masses[0]}")
+            print(f"Original inertias: {original_inertias[0]}")
+            self.set_object_masses_and_inertias(
+                envs=self.envs,
+                objects=self.objects,
+                masses=[0.2] * len(self.objects),
+                inertias=[
+                    (0.001, 0.001, 0.001)
+                ] * len(self.objects),
+            )
 
         # we are not using new mass values after DR when calculating random forces applied to an object,
         # which should be ok as long as the randomization range is not too big
@@ -1487,7 +1508,7 @@ class AllegroKukaBase(VecTask):
         self.allegro_hand_indices = to_torch(self.allegro_hand_indices, dtype=torch.long, device=self.device)
         self.object_indices = to_torch(object_indices, dtype=torch.long, device=self.device)
         self.table_indices = to_torch(table_indices, dtype=torch.long, device=self.device)
-        if VISUALIZE_PD_TARGET_AS_BLUE_ROBOT:
+        if self.VISUALIZE_PD_TARGET_AS_BLUE_ROBOT:
             self.blue_robot_indices = to_torch(self.blue_robot_indices, dtype=torch.long, device=self.device)
 
         self.object_scales = to_torch(object_scales, dtype=torch.float, device=self.device)
@@ -2234,7 +2255,7 @@ class AllegroKukaBase(VecTask):
             allegro_pos = self.hand_arm_default_dof_pos + noise_coeff * rand_delta
 
             self.arm_hand_dof_pos[env_ids, :] = allegro_pos
-            if VISUALIZE_PD_TARGET_AS_BLUE_ROBOT:
+            if self.VISUALIZE_PD_TARGET_AS_BLUE_ROBOT:
                 self.blue_robot_arm_hand_dof_pos[env_ids, :] = allegro_pos.clone()
                 self.blue_robot_arm_hand_dof_vel[env_ids, :] = 0.0
 
@@ -2400,7 +2421,7 @@ class AllegroKukaBase(VecTask):
 
         self.prev_targets[:, :] = self.cur_targets[:, :]
 
-        if VISUALIZE_PD_TARGET_AS_BLUE_ROBOT:
+        if self.VISUALIZE_PD_TARGET_AS_BLUE_ROBOT:
             self.cur_targets[:, self.num_hand_arm_dofs:] = self.cur_targets[:, :self.num_hand_arm_dofs].clone()
             self.blue_robot_arm_hand_dof_pos[:] = self.cur_targets[:, self.num_hand_arm_dofs:].clone()
             self.blue_robot_arm_hand_dof_vel[:] = 0.0
@@ -3140,3 +3161,21 @@ class AllegroKukaBase(VecTask):
         for i in range(len(rigid_shape_props)):
             rigid_shape_props[i].friction = friction
         self.gym.set_asset_rigid_shape_properties(object_asset, rigid_shape_props)
+
+    def set_object_masses_and_inertias(self, envs: List[gymapi.Env], objects: List[int], masses: List[float], inertias: List[Tuple[float, float, float]]):
+        for env, object, mass, inertia in zip(envs, objects, masses, inertias):
+            object_rb_props = self.gym.get_actor_rigid_body_properties(env, object)
+            OBJECT_NUM_RIGID_BODIES = 1
+            assert_equals(len(object_rb_props), OBJECT_NUM_RIGID_BODIES)
+            for i in range(OBJECT_NUM_RIGID_BODIES):
+                object_rb_props[i].mass = mass
+                object_rb_props[i].inertia.x.x = inertia[0]
+                object_rb_props[i].inertia.y.y = inertia[1]
+                object_rb_props[i].inertia.z.z = inertia[2]
+            self.gym.set_actor_rigid_body_properties(env, object, object_rb_props)
+
+    @property
+    def VISUALIZE_PD_TARGET_AS_BLUE_ROBOT(self) -> bool:
+        if "VISUALIZE_PD_TARGET_AS_BLUE_ROBOT" in self.cfg["env"]:
+            return self.cfg["env"]["VISUALIZE_PD_TARGET_AS_BLUE_ROBOT"]
+        return False
