@@ -270,11 +270,15 @@ class ViserVisualizationNode:
 
         # Load the object mesh
         FAR_AWAY_OBJECT_POSITION = np.ones(3)
-        object_mesh_path = rospy.get_param("/mesh_file", None)
-        if object_mesh_path is None:
-            DEFAULT_MESH_PATH = get_repo_root_dir() / "assets/urdf/tyler_objects/040_large_marker/040_large_marker/google_16k/textured_vhacd.obj"
-            object_mesh_path = str(DEFAULT_MESH_PATH)
-            warn(f"Using default object mesh: {object_mesh_path}")
+        from isaacgymenvs.utils.objects import NAME_TO_OBJECT
+        object_name = rospy.get_param("/object_name", None)
+        if object_name is None:
+            DEFAULT_OBJECT_NAME = "044_flat_screwdriver"
+            warn(f"Using default object name: {DEFAULT_OBJECT_NAME}")
+
+        object_mesh_path = str(NAME_TO_OBJECT[DEFAULT_OBJECT_NAME].filepath)
+        # object_mesh_path = str(get_repo_root_dir() / "assets/urdf/tyler_objects/040_large_marker/040_large_marker/google_16k/textured_vhacd.obj")
+
         assert isinstance(object_mesh_path, str), (
             f"object_mesh_path: {object_mesh_path}"
         )

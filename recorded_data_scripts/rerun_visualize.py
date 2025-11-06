@@ -128,11 +128,11 @@ def main():
     assert KUKA_ALLEGRO_URDF_PATH.exists(), (
         f"KUKA_ALLEGRO_URDF_PATH not found: {KUKA_ALLEGRO_URDF_PATH}"
     )
-    OBJECT_URDF_PATH = Path(
-        "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/044_flat_screwdriver/044_flat_screwdriver.urdf"
-        # "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/phone/model.urdf"
-        # "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/040_large_marker/040_large_marker.urdf"
-    )
+    from isaacgymenvs.utils.objects import NAME_TO_OBJECT
+    OBJECT_URDF_PATH = NAME_TO_OBJECT["044_flat_screwdriver"].filepath
+    # OBJECT_URDF_PATH = Path(
+    #     "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/044_flat_screwdriver/044_flat_screwdriver.urdf"
+    # )
     assert OBJECT_URDF_PATH.exists(), f"OBJECT_URDF_PATH not found: {OBJECT_URDF_PATH}"
     ALLEGRO_URDF_PATH = Path(
         "/home/tylerlum/github_repos/sapg/assets/urdf/kuka_allegro_description/allegro_touch_sensor.urdf"

@@ -35,7 +35,7 @@ class Object:
 NAME_TO_OBJECT = {
     "scanned_hammer_1": Object(
         filepath=(
-            get_repo_root_dir() / "assets/urdf/tyler_objects/hammer_1/hammer_1.urdf",
+            get_repo_root_dir() / "assets/urdf/tyler_objects/hammer_1/hammer_1.urdf"
         ),
         coacd_filepaths=list(
             (
@@ -47,7 +47,7 @@ NAME_TO_OBJECT = {
     ),
     "scanned_hammer_2": Object(
         filepath=(
-            get_repo_root_dir() / "assets/urdf/tyler_objects/hammer_2/hammer_2.urdf",
+            get_repo_root_dir() / "assets/urdf/tyler_objects/hammer_2/hammer_2.urdf"
         ),
         coacd_filepaths=list(
             (
@@ -59,7 +59,7 @@ NAME_TO_OBJECT = {
     ),
     "YcbHammer": Object(
         filepath=(
-            get_repo_root_dir() / "assets/urdf/tyler_objects/YcbHammer/model.urdf",
+            get_repo_root_dir() / "assets/urdf/tyler_objects/YcbHammer/model.urdf"
         ),
         coacd_filepaths=list(
             (
@@ -73,7 +73,7 @@ NAME_TO_OBJECT = {
     "cuboidal_hammer": Object(
         filepath=(
             get_repo_root_dir()
-            / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_0-3_0-03_0-02_0-03_0-1_0-02_0-1_0-2.urdf",
+            / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_0-3_0-03_0-02_0-03_0-1_0-02_0-1_0-2.urdf"
         ),
         coacd_filepaths=None,  # Don't currently have COACD for object made of primitives
         scale=(3.0, 0.5, 0.5),
@@ -82,7 +82,7 @@ NAME_TO_OBJECT = {
     "cylindrical_hammer": Object(
         filepath=(
             get_repo_root_dir()
-            / "assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0-3_0-015_0-015_0-1_0-1_0-2.urdf",
+            / "assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0-3_0-015_0-015_0-1_0-1_0-2.urdf"
         ),
         coacd_filepaths=None,  # Don't currently have COACD for object made of primitives
         scale=(3.0, 0.5, 0.5),
@@ -91,7 +91,7 @@ NAME_TO_OBJECT = {
     "cuboidal_hammer_1-25x": Object(
         filepath=(
             get_repo_root_dir()
-            / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_0-375_0-0375_0-025_0-0375_0-125_0-025_0-1_0-2.urdf",
+            / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_0-375_0-0375_0-025_0-0375_0-125_0-025_0-1_0-2.urdf"
         ),
         coacd_filepaths=None,  # Don't currently have COACD for object made of primitives
         scale=(3.0, 0.5, 0.5),
@@ -100,7 +100,7 @@ NAME_TO_OBJECT = {
     "cuboidal_hammer_1-5x": Object(
         filepath=(
             get_repo_root_dir()
-            / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_0-44999999999999996_0-045_0-03_0-045_0-15000000000000002_0-03_0-1_0-2.urdf",
+            / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_0-44999999999999996_0-045_0-03_0-045_0-15000000000000002_0-03_0-1_0-2.urdf"
         ),
         coacd_filepaths=None,  # Don't currently have COACD for object made of primitives
         scale=(3.0, 0.5, 0.5),
@@ -109,7 +109,7 @@ NAME_TO_OBJECT = {
     "cuboidal_hammer_1-75x": Object(
         filepath=(
             get_repo_root_dir()
-            / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_0-525_0-0525_0-035_0-0525_0-17500000000000002_0-035_0-1_0-2.urdf",
+            / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_0-525_0-0525_0-035_0-0525_0-17500000000000002_0-035_0-1_0-2.urdf"
         ),
         coacd_filepaths=None,  # Don't currently have COACD for object made of primitives
         scale=(3.0, 0.5, 0.5),
@@ -118,7 +118,7 @@ NAME_TO_OBJECT = {
     "cuboidal_hammer_2x": Object(
         filepath=(
             get_repo_root_dir()
-            / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_0-6_0-06_0-04_0-06_0-2_0-04_0-1_0-2.urdf",
+            / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_0-6_0-06_0-04_0-06_0-2_0-04_0-1_0-2.urdf"
         ),
         coacd_filepaths=None,  # Don't currently have COACD for object made of primitives
         scale=(3.0, 0.5, 0.5),
@@ -127,7 +127,7 @@ NAME_TO_OBJECT = {
     "cylindrical_hammer_1-25x": Object(
         filepath=(
             get_repo_root_dir()
-            / "assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0-375_0-01875_0-01875_0-125_0-125_0-2.urdf",
+            / "assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0-375_0-01875_0-01875_0-125_0-125_0-2.urdf"
         ),
         coacd_filepaths=None,  # Don't currently have COACD for object made of primitives
         scale=(3.0, 0.5, 0.5),
@@ -136,7 +136,7 @@ NAME_TO_OBJECT = {
     "cylindrical_hammer_1-5x": Object(
         filepath=(
             get_repo_root_dir()
-            / "assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0-44999999999999996_0-0225_0-0225_0-15000000000000002_0-15000000000000002_0-2.urdf",
+            / "assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0-44999999999999996_0-0225_0-0225_0-15000000000000002_0-15000000000000002_0-2.urdf"
         ),
         coacd_filepaths=None,  # Don't currently have COACD for object made of primitives
         scale=(3.0, 0.5, 0.5),
@@ -145,7 +145,7 @@ NAME_TO_OBJECT = {
     "cylindrical_hammer_1-75x": Object(
         filepath=(
             get_repo_root_dir()
-            / "assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0-525_0-02625_0-02625_0-17500000000000002_0-17500000000000002_0-2.urdf",
+            / "assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0-525_0-02625_0-02625_0-17500000000000002_0-17500000000000002_0-2.urdf"
         ),
         coacd_filepaths=None,  # Don't currently have COACD for object made of primitives
         scale=(3.0, 0.5, 0.5),
@@ -154,7 +154,7 @@ NAME_TO_OBJECT = {
     "cylindrical_hammer_2x": Object(
         filepath=(
             get_repo_root_dir()
-            / "assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0-6_0-03_0-03_0-2_0-2_0-2.urdf",
+            / "assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0-6_0-03_0-03_0-2_0-2_0-2.urdf"
         ),
         coacd_filepaths=None,  # Don't currently have COACD for object made of primitives
         scale=(3.0, 0.5, 0.5),
@@ -163,7 +163,7 @@ NAME_TO_OBJECT = {
     "040_large_marker": Object(
         filepath=(
             get_repo_root_dir()
-            / "assets/urdf/tyler_objects/040_large_marker/040_large_marker.urdf",
+            / "assets/urdf/tyler_objects/040_large_marker/040_large_marker.urdf"
         ),
         coacd_filepaths=list(
             (
@@ -177,7 +177,7 @@ NAME_TO_OBJECT = {
     "whiteboard_eraser": Object(
         filepath=(
             get_repo_root_dir()
-            / "assets/urdf/tyler_objects/whiteboard_eraser/source/model.urdf",
+            / "assets/urdf/tyler_objects/whiteboard_eraser/source/model.urdf"
         ),
         coacd_filepaths=list(
             (
@@ -189,7 +189,7 @@ NAME_TO_OBJECT = {
         need_vhacd=True,
     ),
     "phone": Object(
-        filepath=(get_repo_root_dir() / "assets/urdf/tyler_objects/phone/model.urdf",),
+        filepath=(get_repo_root_dir() / "assets/urdf/tyler_objects/phone/model.urdf"),
         coacd_filepaths=list(
             (
                 get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/phone"
@@ -201,7 +201,7 @@ NAME_TO_OBJECT = {
     "044_flat_screwdriver": Object(
         filepath=(
             get_repo_root_dir()
-            / "assets/urdf/tyler_objects/044_flat_screwdriver/044_flat_screwdriver.urdf",
+            / "assets/urdf/tyler_objects/044_flat_screwdriver/044_flat_screwdriver.urdf"
         ),
         coacd_filepaths=list(
             (
@@ -214,7 +214,7 @@ NAME_TO_OBJECT = {
     ),
     "hairbrush": Object(
         filepath=(
-            get_repo_root_dir() / "assets/urdf/tyler_objects/hairbrush/hairbrush.urdf",
+            get_repo_root_dir() / "assets/urdf/tyler_objects/hairbrush/hairbrush.urdf"
         ),
         coacd_filepaths=list(
             (
@@ -228,7 +228,7 @@ NAME_TO_OBJECT = {
     "real_flat_screwdriver": Object(
         filepath=(
             get_repo_root_dir()
-            / "assets/urdf/tyler_objects/real_flat_screwdriver/real_flat_screwdriver.urdf",
+            / "assets/urdf/tyler_objects/real_flat_screwdriver/real_flat_screwdriver.urdf"
         ),
         coacd_filepaths=list(
             (
@@ -241,7 +241,7 @@ NAME_TO_OBJECT = {
     ),
     "mallet": Object(
         filepath=(
-            get_repo_root_dir() / "assets/urdf/tyler_objects/mallet/mallet.urdf",
+            get_repo_root_dir() / "assets/urdf/tyler_objects/mallet/mallet.urdf"
         ),
         coacd_filepaths=list(
             (

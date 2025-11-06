@@ -252,15 +252,12 @@ class MujocoSim:
             # Use list of convex decomp meshes for object
             # Use run_coacd.py to generate convex decomp meshes
 
-            # mesh_paths = list((get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/hammer_1").glob("decomp_*.obj"))
-            # mesh_paths = list((get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/hammer_2").glob("decomp_*.obj"))
-            mesh_paths = list(
-                (get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/040_large_marker").glob("decomp_*.obj")
-            )
+            from isaacgymenvs.utils.objects import NAME_TO_OBJECT
+            object_name = "044_flat_screwdriver"
+            mesh_paths = NAME_TO_OBJECT[object_name].coacd_filepaths
+            assert mesh_paths is not None, f"mesh_paths is None for object_name: {object_name}"
+            assert len(mesh_paths) > 0, f"len(mesh_paths) is 0 for object_name: {object_name}"
             # mesh_paths = list((get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/044_flat_screwdriver").glob("decomp_*.obj"))
-            # mesh_paths = list((get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/phone").glob("decomp_*.obj"))  # Still sinks into table
-            # mesh_paths = list((get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/whiteboard_eraser").glob("decomp_*.obj"))
-            # mesh_paths = list((get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/YcbHammer").glob("decomp_*.obj"))
 
             for mesh_path in mesh_paths:
                 assert mesh_path.exists(), f"Mesh file does not exist: {mesh_path}"
