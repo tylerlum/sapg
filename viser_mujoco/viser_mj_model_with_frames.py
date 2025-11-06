@@ -13,6 +13,7 @@ from viser._scene_handles import FrameHandle
 
 from viser_mujoco.viser_conversions import get_body_name, is_fixed_body, merge_geoms
 
+from isaacgymenvs.utils.utils import get_repo_root_dir
 
 def create_robot_control_sliders(
     server: viser.ViserServer,
@@ -350,9 +351,7 @@ class ViserMJModel:
 
 
 def main():
-    iiwa_xml_path = Path(
-        "/home/tylerlum/github_repos/mujoco_menagerie/kuka_iiwa_14/scene.xml"
-    )
+    iiwa_xml_path = get_repo_root_dir() / "assets/mjcf/kuka_iiwa_14/scene.xml"
     assert iiwa_xml_path.exists(), f"IIWA XML path does not exist: {iiwa_xml_path}"
     mj_model = mujoco.MjModel.from_xml_path(str(iiwa_xml_path))
     mj_data = mujoco.MjData(mj_model)

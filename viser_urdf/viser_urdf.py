@@ -25,6 +25,8 @@ import tyro
 import viser
 from viser.extras import ViserUrdf
 
+from isaacgymenvs.utils.utils import get_repo_root_dir
+
 
 def create_robot_control_sliders(
     server: viser.ViserServer, viser_urdf: ViserUrdf
@@ -58,9 +60,7 @@ def create_robot_control_sliders(
 
 
 def main(
-    urdf_path: Path = Path(
-        "/home/tylerlum/github_repos/sapg/assets/urdf/kuka_allegro_description/allegro_touch_sensor.urdf"
-    ),
+    urdf_path: Path = get_repo_root_dir() / "assets/urdf/kuka_allegro_description/allegro_touch_sensor.urdf",
     load_meshes: bool = True,
     load_collision_meshes: bool = False,
 ) -> None:

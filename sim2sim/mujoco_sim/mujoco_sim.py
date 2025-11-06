@@ -7,6 +7,7 @@ from pathlib import Path
 import mujoco
 import mujoco.viewer
 import numpy as np
+from isaacgymenvs.utils.utils import get_repo_root_dir
 
 # ############################################################
 # Constants
@@ -178,18 +179,14 @@ class MujocoSim:
 
     def _init_scene(self) -> None:
         # Robot
-        iiwa_xml_path = Path(
-            "/home/tylerlum/github_repos/mujoco_menagerie/kuka_iiwa_14/scene.xml"
-        )
+        iiwa_xml_path = get_repo_root_dir() / "assets/mjcf/kuka_iiwa_14/scene.xml"
         assert iiwa_xml_path.exists(), f"Robot path does not exist: {iiwa_xml_path}"
 
         # Load mjspec from robot path
         spec = mujoco.MjSpec.from_file(str(iiwa_xml_path))
         spec.option.timestep = self.config.sim_dt
 
-        allegro_xml_path = Path(
-            "/home/tylerlum/github_repos/mujoco_menagerie/wonik_allegro/right_hand_offset.xml"
-        )
+        allegro_xml_path = get_repo_root_dir() / "assets/mjcf/wonik_allegro/right_hand_offset.xml"
         assert allegro_xml_path.exists(), (
             f"Allegro XML path does not exist: {allegro_xml_path}"
         )
@@ -255,17 +252,15 @@ class MujocoSim:
             # Use list of convex decomp meshes for object
             # Use run_coacd.py to generate convex decomp meshes
 
-            # mesh_paths = list(Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects_convex_decomp/hammer_1").glob("decomp_*.obj"))
-            # mesh_paths = list(Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects_convex_decomp/hammer_2").glob("decomp_*.obj"))
+            # mesh_paths = list((get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/hammer_1").glob("decomp_*.obj"))
+            # mesh_paths = list((get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/hammer_2").glob("decomp_*.obj"))
             mesh_paths = list(
-                Path(
-                    "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects_convex_decomp/040_large_marker"
-                ).glob("decomp_*.obj")
+                (get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/040_large_marker").glob("decomp_*.obj")
             )
-            # mesh_paths = list(Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects_convex_decomp/044_flat_screwdriver").glob("decomp_*.obj"))
-            # mesh_paths = list(Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects_convex_decomp/phone").glob("decomp_*.obj"))  # Still sinks into table
-            # mesh_paths = list(Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects_convex_decomp/whiteboard_eraser").glob("decomp_*.obj"))
-            # mesh_paths = list(Path("/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects_convex_decomp/YcbHammer").glob("decomp_*.obj"))
+            # mesh_paths = list((get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/044_flat_screwdriver").glob("decomp_*.obj"))
+            # mesh_paths = list((get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/phone").glob("decomp_*.obj"))  # Still sinks into table
+            # mesh_paths = list((get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/whiteboard_eraser").glob("decomp_*.obj"))
+            # mesh_paths = list((get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/YcbHammer").glob("decomp_*.obj"))
 
             for mesh_path in mesh_paths:
                 assert mesh_path.exists(), f"Mesh file does not exist: {mesh_path}"
