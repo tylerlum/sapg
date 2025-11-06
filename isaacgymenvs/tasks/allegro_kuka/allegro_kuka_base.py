@@ -581,146 +581,6 @@ class AllegroKukaBase(VecTask):
         object_asset_files, object_asset_scales = zip(*files_and_scales)
         need_vhacds = [False] * len(object_asset_files)
 
-        init_state = [0.0, 0, 0.65, 1, 0, 0, 0]
-        # name_to_hammer_dict = {
-        #     "scanned_hammer_1": Hammer(
-        #         file=str(root_dir / "assets/urdf/tyler_objects/hammer_1/hammer_1.urdf"),
-        #         scale=[3.0, 0.5, 0.5],
-        #         need_vhacd=True,
-        #         fixed_trajectory=get_hammer_trajectory(init_state, device=self.device),
-        #     ),
-        #     "scanned_hammer_2": Hammer(
-        #         file=str(root_dir / "assets/urdf/tyler_objects/hammer_2/hammer_2.urdf"),
-        #         scale=[3.0, 0.5, 0.5],
-        #         need_vhacd=True,
-        #         fixed_trajectory=get_hammer_trajectory(init_state, device=self.device),
-        #     ),
-        #     "YcbHammer": Hammer(
-        #         file=str(root_dir / "assets/urdf/tyler_objects/YcbHammer/model.urdf"),
-        #         scale=[3.0, 0.5, 0.5],
-        #         need_vhacd=True,
-        #         fixed_trajectory=get_hammer_trajectory(init_state, device=self.device),
-        #     ),
-        #     "cuboidal_hammer": Hammer(
-        #         file=str(root_dir / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_0-3_0-03_0-02_0-03_0-1_0-02_0-1_0-2.urdf"),
-        #         scale=[3.0, 0.5, 0.5],
-        #         need_vhacd=False,
-        #         fixed_trajectory=get_hammer_trajectory(init_state, device=self.device),
-        #     ),
-        #     "cylindrical_hammer": Hammer(
-        #         file=str(root_dir / "assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0-3_0-015_0-015_0-1_0-1_0-2.urdf"),
-        #         scale=[3.0, 0.5, 0.5],
-        #         need_vhacd=False,
-        #         fixed_trajectory=get_hammer_trajectory(init_state, device=self.device),
-        #     ),
-        #     "cuboidal_hammer_1-25x": Hammer(
-        #         file=str(root_dir / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_0-375_0-0375_0-025_0-0375_0-125_0-025_0-1_0-2.urdf"),
-        #         scale=[3.0, 0.5, 0.5],
-        #         need_vhacd=False,
-        #         fixed_trajectory=get_hammer_trajectory(init_state, device=self.device),
-        #     ),
-        #     "cuboidal_hammer_1-5x": Hammer(
-        #         file=str(root_dir / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_0-44999999999999996_0-045_0-03_0-045_0-15000000000000002_0-03_0-1_0-2.urdf"),
-        #         scale=[3.0, 0.5, 0.5],
-        #         need_vhacd=False,
-        #         fixed_trajectory=get_hammer_trajectory(init_state, device=self.device),
-        #     ),
-        #     "cuboidal_hammer_1-75x": Hammer(
-        #         file=str(root_dir / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_0-525_0-0525_0-035_0-0525_0-17500000000000002_0-035_0-1_0-2.urdf"),
-        #         scale=[3.0, 0.5, 0.5],
-        #         need_vhacd=False,
-        #         fixed_trajectory=get_hammer_trajectory(init_state, device=self.device),
-        #     ),
-        #     "cuboidal_hammer_2x": Hammer(
-        #         file=str(root_dir / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_0-6_0-06_0-04_0-06_0-2_0-04_0-1_0-2.urdf"),
-        #         scale=[3.0, 0.5, 0.5],
-        #         need_vhacd=False,
-        #         fixed_trajectory=get_hammer_trajectory(init_state, device=self.device),
-        #     ),
-        #     # "cuboidal_hammer_4x": Hammer(
-        #     #     file=str(root_dir / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_1-2_0-12_0-08_0-12_0-4_0-08_0-1_0-2.urdf"),
-        #     #     scale=[3.0, 0.5, 0.5],
-        #     #     need_vhacd=False,
-        #     # ),
-        #     "cylindrical_hammer_1-25x": Hammer(
-        #         file=str(root_dir / "assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0-375_0-01875_0-01875_0-125_0-125_0-2.urdf"),
-        #         scale=[3.0, 0.5, 0.5],
-        #         need_vhacd=False,
-        #         fixed_trajectory=get_hammer_trajectory(init_state, device=self.device),
-        #     ),
-        #     "cylindrical_hammer_1-5x": Hammer(
-        #         file=str(root_dir / "assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0-44999999999999996_0-0225_0-0225_0-15000000000000002_0-15000000000000002_0-2.urdf"),
-        #         scale=[3.0, 0.5, 0.5],
-        #         need_vhacd=False,
-        #         fixed_trajectory=get_hammer_trajectory(init_state, device=self.device),
-        #     ),
-        #     "cylindrical_hammer_1-75x": Hammer(
-        #         file=str(root_dir / "assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0-525_0-02625_0-02625_0-17500000000000002_0-17500000000000002_0-2.urdf"),
-        #         scale=[3.0, 0.5, 0.5],
-        #         need_vhacd=False,
-        #         fixed_trajectory=get_hammer_trajectory(init_state, device=self.device),
-        #     ),
-        #     "cylindrical_hammer_2x": Hammer(
-        #         file=str(root_dir / "assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0-6_0-03_0-03_0-2_0-2_0-2.urdf"),
-        #         scale=[3.0, 0.5, 0.5],
-        #         need_vhacd=False,
-        #         fixed_trajectory=get_hammer_trajectory(init_state, device=self.device),
-        #     ),
-        #     # "cylindrical_hammer_4x": Hammer(
-        #     #     file=str(root_dir / "assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_1-2_0-06_0-06_0-4_0-4_0-2.urdf"),
-        #     #     scale=[3.0, 0.5, 0.5],
-        #     #     need_vhacd=False,
-        #     # ),
-        #     "040_large_marker": Hammer(
-        #         file=str(root_dir / "assets/urdf/tyler_objects/040_large_marker/040_large_marker.urdf"),
-        #         scale=[3.0, 0.5, 0.5],
-        #         need_vhacd=True,
-        #         fixed_trajectory=get_marker_trajectory(init_state, device=self.device),
-        #     ),
-        #     "whiteboard_eraser": Hammer(
-        #         file=str(root_dir / "assets/urdf/tyler_objects/whiteboard_eraser/source/model.urdf"),
-        #         scale=[3.0, 0.5, 0.5],
-        #         need_vhacd=True,
-        #         fixed_trajectory=get_eraser_trajectory(init_state, device=self.device),
-        #     ),
-        #     "phone": Hammer(
-        #         file=str(root_dir / "assets/urdf/tyler_objects/phone/model.urdf"),
-        #         scale=[3.0, 0.5, 0.5],
-        #         need_vhacd=True,
-        #         fixed_trajectory=get_phone_trajectory(init_state, device=self.device),
-        #     ),
-        #     "044_flat_screwdriver": Hammer(
-        #         file=str(root_dir / "assets/urdf/tyler_objects/044_flat_screwdriver/044_flat_screwdriver.urdf"),
-        #         scale=[3.0, 0.5, 0.5],
-        #         need_vhacd=True,
-        #         fixed_trajectory=get_screwdriver_trajectory(init_state, device=self.device),
-        #     ),
-        #     "hairbrush": Hammer(
-        #         file=str(root_dir / "assets/urdf/tyler_objects/hairbrush/hairbrush.urdf"),
-        #         scale=[3.0, 0.5, 0.5],
-        #         need_vhacd=True,
-        #         fixed_trajectory=get_hairbrush_trajectory(init_state, device=self.device),
-        #     ),
-        #     "real_flat_screwdriver": Hammer(
-        #         file=str(root_dir / "assets/urdf/tyler_objects/real_flat_screwdriver/real_flat_screwdriver.urdf"),
-        #         scale=[3.0, 0.5, 0.5],
-        #         need_vhacd=True,
-        #         fixed_trajectory=get_screwdriver_trajectory(init_state, device=self.device),
-        #     ),
-        #     "mallet": Hammer(
-        #         file=str(root_dir / "assets/urdf/tyler_objects/mallet/mallet.urdf"),
-        #         scale=[3.0, 0.5, 0.5],
-        #         need_vhacd=True,
-        #         fixed_trajectory=get_hammer_trajectory(init_state, device=self.device),
-        #     ),
-        #     "roller": Hammer(
-        #         file=str(root_dir / "assets/urdf/tyler_objects/roller/roller.urdf"),
-        #         scale=[3.0, 0.5, 0.5],
-        #         need_vhacd=True,
-        #         fixed_trajectory=get_hammer_trajectory(init_state, device=self.device),
-        #     ),
-        # }
-
         object_type = self.cfg["env"]["object_type"]
         known_object_names = set(NAME_TO_OBJECT.keys())
         if object_type in known_object_names:
@@ -768,6 +628,8 @@ class AllegroKukaBase(VecTask):
 
         USE_FIXED_SET_OF_GOAL_STATES = self.cfg["env"]["use_fixed_set_of_goal_states"]
         if USE_FIXED_SET_OF_GOAL_STATES:
+            init_state = [0.0, 0, 0.65, 1, 0, 0, 0]
+
             # Load correct type of trajectory
             # Many objects share a trajectory
             # Some objects don't have a fixed trajectory, so we raise an error
