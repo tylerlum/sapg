@@ -1351,16 +1351,22 @@ class AllegroKukaBase(VecTask):
         self.object_rb_handles = list(range(self.num_hand_arm_bodies, self.num_hand_arm_bodies + object_rb_count))
 
         # Set asset rigid shape properties
-        self.gym.set_asset_rigid_shape_properties(
-            allegro_kuka_asset, self.desired_allegro_kuka_rigid_shape_props(allegro_kuka_asset)
-        )
-        self.gym.set_asset_rigid_shape_properties(
-            table_asset, self.desired_table_rigid_shape_props(table_asset)
-        )
-        for object_asset_idx_to_modify in range(len(object_assets)):
-            self.gym.set_asset_rigid_shape_properties(
-                object_assets[object_asset_idx_to_modify], self.desired_object_rigid_shape_props(object_assets[object_asset_idx_to_modify])
+        MODIFY_ASSET_FRICTIONS = True
+        if MODIFY_ASSET_FRICTIONS:
+            self.set_allegro_kuka_asset_rigid_shape_properties(
+                allegro_kuka_asset=allegro_kuka_asset,
+                friction=0.1,
+                fingertip_friction=1.5,
             )
+            self.set_table_asset_rigid_shape_properties(
+                table_asset=table_asset,
+                friction=0.1,
+            )
+            for object_asset_idx_to_modify in range(len(object_assets)):
+                self.set_object_asset_rigid_shape_properties(
+                    object_asset=object_assets[object_asset_idx_to_modify],
+                    friction=0.1,
+                )
 
         for i in range(self.num_envs):
             # create env instance
@@ -3086,37 +3092,16 @@ class AllegroKukaBase(VecTask):
 
         print(f"{self.num_initial_states} states loaded from file {self.load_states_filename}!")
 
-    def desired_table_rigid_shape_props(self, table_asset: gymapi.Asset) -> List[gymapi.RigidShapeProperties]:
-        rigid_shape_props = self.gym.get_asset_rigid_shape_properties(table_asset)
-        assert_equals(
-            len(rigid_shape_props),
-            self.gym.get_asset_rigid_shape_count(table_asset),
-        )
-        for i in range(len(rigid_shape_props)):
-            rigid_shape_props[i].friction = 0.1
-        return rigid_shape_props
-
-    def desired_object_rigid_shape_props(self, object_asset: gymapi.Asset) -> List[gymapi.RigidShapeProperties]:
-        rigid_shape_props = self.gym.get_asset_rigid_shape_properties(object_asset)
-        assert_equals(
-            len(rigid_shape_props),
-            self.gym.get_asset_rigid_shape_count(object_asset),
-        )
-        for i in range(len(rigid_shape_props)):
-            rigid_shape_props[i].friction = 0.1
-
-        return rigid_shape_props
-
-    def desired_allegro_kuka_rigid_shape_props(self, allegro_kuka_asset: gymapi.Asset) -> List[gymapi.RigidShapeProperties]:
+    def set_allegro_kuka_asset_rigid_shape_properties(self, allegro_kuka_asset: gymapi.Asset, friction: float, fingertip_friction: float):
         rigid_shape_props = self.gym.get_asset_rigid_shape_properties(allegro_kuka_asset)
         assert_equals(
             len(rigid_shape_props),
             self.gym.get_asset_rigid_shape_count(allegro_kuka_asset),
         )
 
-        # Different friction for right robot normal links (low friction) and fingertips (high friction)
+        # Different friction for normal links (low friction) and fingertips (high friction)
         for i in range(len(rigid_shape_props)):
-            rigid_shape_props[i].friction = 0.1
+            rigid_shape_props[i].friction = friction
 
         # Rigid bodies (links) are not the same as rigid shapes (collision geometries)
         # Each rigid body can have >=1 rigid shapes
@@ -3131,7 +3116,26 @@ class AllegroKukaBase(VecTask):
         for name in fingertip_names:
             start, count = rb_name_to_shape_indices[name]
             for i in range(start, start + count):
-                rigid_shape_props[i].friction = 1.5
+                rigid_shape_props[i].friction = fingertip_friction
 
-        return rigid_shape_props
+        self.gym.set_asset_rigid_shape_properties(allegro_kuka_asset, rigid_shape_props)
 
+    def set_table_asset_rigid_shape_properties(self, table_asset: gymapi.Asset, friction: float):
+        rigid_shape_props = self.gym.get_asset_rigid_shape_properties(table_asset)
+        assert_equals(
+            len(rigid_shape_props),
+            self.gym.get_asset_rigid_shape_count(table_asset),
+        )
+        for i in range(len(rigid_shape_props)):
+            rigid_shape_props[i].friction = friction
+        self.gym.set_asset_rigid_shape_properties(table_asset, rigid_shape_props)
+
+    def set_object_asset_rigid_shape_properties(self, object_asset: gymapi.Asset, friction: float):
+        rigid_shape_props = self.gym.get_asset_rigid_shape_properties(object_asset)
+        assert_equals(
+            len(rigid_shape_props),
+            self.gym.get_asset_rigid_shape_count(object_asset),
+        )
+        for i in range(len(rigid_shape_props)):
+            rigid_shape_props[i].friction = friction
+        self.gym.set_asset_rigid_shape_properties(object_asset, rigid_shape_props)
