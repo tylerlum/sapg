@@ -136,6 +136,7 @@ env:
   turn_off_object_vel_obs_slowly: False
 
   use_obs_dropout: False
+  init_tyler_curriculum_scale: 0.0
 
   asset:
     # Whis was the original kuka_allegro asset.

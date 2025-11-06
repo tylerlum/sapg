@@ -33,6 +33,48 @@ def get_hammer_trajectory(object_init_state, device="cuda"):
     #         swing_down_state, swing_up_state, swing_down_state]
     return torch.tensor(trajectory_states, dtype=torch.float32, device=device)
 
+def get_hairbrush_trajectory(object_init_state, device="cuda"):
+    trajectory_states = []
+    # first state is pick up state
+    pick_up_state = object_init_state.copy()
+    pick_up_state[3:7] = R.from_euler('y', 0, degrees=True).as_quat()
+    pick_up_state[2] += 0.2
+
+    # next state rotates -90 degrees around x axis wrt last state
+    rotate_180_state = pick_up_state.copy()
+    rotate_180_state[3:7] = (R.from_quat(pick_up_state[3:7]) * R.from_euler('x', -180, degrees=True)).as_quat()
+
+    trajectory_states = [pick_up_state, rotate_180_state]
+
+    middle_state = rotate_180_state.copy()
+
+    # next state moves forward +y by 0.1
+    move_forward_state = middle_state.copy()
+    move_forward_state[1] += 0.1
+
+    move_half_forward_state = middle_state.copy()
+    move_half_forward_state[1] += 0.05
+
+    # next state moves backward -y by 0.1
+    move_backward_state = middle_state.copy()
+    move_backward_state[1] -= 0.1
+
+    move_half_backward_state = middle_state.copy()
+    move_half_backward_state[1] -= 0.05
+
+    num_moves = 4
+    for _ in range(num_moves):
+        trajectory_states.append(move_half_forward_state)
+        trajectory_states.append(move_forward_state)
+        trajectory_states.append(move_half_forward_state)
+        trajectory_states.append(middle_state)
+        trajectory_states.append(move_half_backward_state)
+        trajectory_states.append(move_backward_state)
+        trajectory_states.append(move_half_backward_state)
+        trajectory_states.append(middle_state)
+
+    return torch.tensor(trajectory_states, dtype=torch.float32, device=device)
+
 def get_screwdriver_trajectory(object_init_state, device="cuda"):
     trajectory_states = []
     # first state is pick up state

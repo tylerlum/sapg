@@ -52,7 +52,8 @@ from isaacgymenvs.tasks.allegro_kuka.generate_cuboids import (
 )
 from isaacgymenvs.utils.torch_jit_utils import *
 from isaacgymenvs.tasks.allegro_kuka.object_trajectories import (
-    get_hammer_trajectory, get_screwdriver_trajectory, get_marker_trajectory, get_eraser_trajectory, get_phone_trajectory)
+    get_hammer_trajectory, get_screwdriver_trajectory, get_marker_trajectory, get_eraser_trajectory, get_phone_trajectory, get_hairbrush_trajectory,
+)
 
 DATETIME_STR = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
@@ -60,6 +61,9 @@ DATETIME_STR = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 # Set to True to visualize the PD target as a blue robot
 VISUALIZE_PD_TARGET_AS_BLUE_ROBOT = False
 
+
+def assert_equals(a, b):
+    assert a == b, f"a: {a}, b: {b}"
 
 class AllegroKukaBase(VecTask):
     def __init__(self, cfg, rl_device, sim_device, graphics_device_id, headless, virtual_screen_capture, force_render):
@@ -481,6 +485,11 @@ class AllegroKukaBase(VecTask):
                 key=gymapi.KEY_T,
                 function=self._toggle_do_not_move_callback,
             ),
+            KeyboardShortcut(
+                name="toggle_debug_viz",
+                key=gymapi.KEY_D,
+                function=self._toggle_debug_viz_callback,
+            ),
         ]
         self.name_to_keyboard_shortcut_dict = {
             keyboard_shortcut.name: keyboard_shortcut
@@ -502,6 +511,11 @@ class AllegroKukaBase(VecTask):
         print("Toggling do not move...")
         self._DO_NOT_MOVE = not self._DO_NOT_MOVE
         print(f"Do not move is now {self._DO_NOT_MOVE}")
+
+    def _toggle_debug_viz_callback(self) -> None:
+        print("Toggling debug viz...")
+        self.debug_viz = not self.debug_viz
+        print(f"Debug viz is now {self.debug_viz}")
 
     ##### KEYBOARD END #####
 
@@ -694,7 +708,7 @@ class AllegroKukaBase(VecTask):
                 file=str(root_dir / "assets/urdf/tyler_objects/hairbrush/hairbrush.urdf"),
                 scale=[3.0, 0.5, 0.5],
                 need_vhacd=True,
-                fixed_trajectory=get_eraser_trajectory(init_state, device=self.device),
+                fixed_trajectory=get_hairbrush_trajectory(init_state, device=self.device),
             ),
             "real_flat_screwdriver": Hammer(
                 file=str(root_dir / "assets/urdf/tyler_objects/real_flat_screwdriver/real_flat_screwdriver.urdf"),
@@ -1335,6 +1349,18 @@ class AllegroKukaBase(VecTask):
 
         # this rely on the fact that objects are added right after the arms in terms of create_actor()
         self.object_rb_handles = list(range(self.num_hand_arm_bodies, self.num_hand_arm_bodies + object_rb_count))
+
+        # Set asset rigid shape properties
+        self.gym.set_asset_rigid_shape_properties(
+            allegro_kuka_asset, self.desired_allegro_kuka_rigid_shape_props(allegro_kuka_asset)
+        )
+        self.gym.set_asset_rigid_shape_properties(
+            table_asset, self.desired_table_rigid_shape_props(table_asset)
+        )
+        for object_asset_idx_to_modify in range(len(object_assets)):
+            self.gym.set_asset_rigid_shape_properties(
+                object_assets[object_asset_idx_to_modify], self.desired_object_rigid_shape_props(object_assets[object_asset_idx_to_modify])
+            )
 
         for i in range(self.num_envs):
             # create env instance
@@ -2390,7 +2416,7 @@ class AllegroKukaBase(VecTask):
             )
 
             self.gym.apply_rigid_body_force_tensors(
-                self.sim, gymtorch.unwrap_tensor(self.rb_forces), None, gymapi.LOCAL_SPACE
+                self.sim, gymtorch.unwrap_tensor(self.rb_forces), None, gymapi.ENV_SPACE
             )
         
         if self.good_reset_boundary > 0:
@@ -2691,6 +2717,26 @@ class AllegroKukaBase(VecTask):
 
                     gymutil.draw_lines(sphere_geom, self.gym, self.viewer, self.envs[i], fingertip_transform)
 
+            for i in range(self.num_envs):
+                rb_forces_cpu = self.rb_forces[i, self.object_rb_handles, :].cpu().numpy().squeeze(axis=0)
+                assert rb_forces_cpu.shape == (3,), f"rb_forces_cpu.shape: {rb_forces_cpu.shape}"
+                object_pos_cpu = self.object_pos[i].cpu().numpy()
+                assert object_pos_cpu.shape == (3,), f"object_pos_cpu.shape: {object_pos_cpu.shape}"
+                start_pos = gymapi.Vec3(*object_pos_cpu)
+                MAX_FORCE_NORM = 2.0
+                MAX_VECTOR_LENGTH = 0.3
+                force_norm = np.linalg.norm(rb_forces_cpu)
+                if force_norm > MAX_FORCE_NORM:
+                    rb_forces_cpu = rb_forces_cpu / force_norm * MAX_FORCE_NORM
+                vector = rb_forces_cpu * MAX_VECTOR_LENGTH / MAX_FORCE_NORM
+                end_pos = start_pos + gymapi.Vec3(*vector)
+                self._draw_debug_line_of_spheres(
+                    env=self.envs[i],
+                    start_pos=start_pos,
+                    end_pos=end_pos,
+                    color=(1, 0, 0),
+                )
+
             # for j in range(self.num_keypoints):
             #     keypoint_pos_cpu = self.obj_keypoint_pos[:, j].cpu().numpy()
                 # goal_keypoint_pos_cpu = self.goal_keypoint_pos[:, j].cpu().numpy()
@@ -2723,6 +2769,9 @@ class AllegroKukaBase(VecTask):
         if not hasattr(self, "_tyler_curriculum_scale"):
             self._tyler_curriculum_scale = 0.0
             self._last_tyler_curriculum_update = time.time()
+            if "init_tyler_curriculum_scale" in self.cfg["env"]:
+                print(f"Initializing _tyler_curriculum_scale to {self.cfg['env']['init_tyler_curriculum_scale']}")
+                self._tyler_curriculum_scale = self.cfg["env"]["init_tyler_curriculum_scale"]
 
         # If gets at least 50% of max consecutive successes and been at least 5 minutes since last update, turn off extra obs more
         mean_successes = self.prev_episode_successes.mean().item()
@@ -2904,6 +2953,7 @@ class AllegroKukaBase(VecTask):
                 end_pos=dir,
                 color=color,
             )
+
     def _draw_debug_line_of_spheres(
         self,
         env,
@@ -2922,14 +2972,15 @@ class AllegroKukaBase(VecTask):
                 color=color,
                 radius=radius,
             )
+
     def _draw_debug_sphere(
         self,
         env,
         position: gymapi.Vec3,
         color: Tuple[float, float, float],
         radius: float = 0.005,
-        num_lats: int = 2,
-        num_lons: int = 2,
+        num_lats: int = 10,
+        num_lons: int = 10,
     ) -> None:
         sphere_geom = gymutil.WireframeSphereGeometry(radius, num_lats, num_lons, color=color)
         gymutil.draw_lines(sphere_geom, self.gym, self.viewer, env, gymapi.Transform(p=position))
@@ -3034,4 +3085,53 @@ class AllegroKukaBase(VecTask):
         self.num_initial_states = len(self.initial_root_state_tensors)
 
         print(f"{self.num_initial_states} states loaded from file {self.load_states_filename}!")
+
+    def desired_table_rigid_shape_props(self, table_asset: gymapi.Asset) -> List[gymapi.RigidShapeProperties]:
+        rigid_shape_props = self.gym.get_asset_rigid_shape_properties(table_asset)
+        assert_equals(
+            len(rigid_shape_props),
+            self.gym.get_asset_rigid_shape_count(table_asset),
+        )
+        for i in range(len(rigid_shape_props)):
+            rigid_shape_props[i].friction = 0.1
+        return rigid_shape_props
+
+    def desired_object_rigid_shape_props(self, object_asset: gymapi.Asset) -> List[gymapi.RigidShapeProperties]:
+        rigid_shape_props = self.gym.get_asset_rigid_shape_properties(object_asset)
+        assert_equals(
+            len(rigid_shape_props),
+            self.gym.get_asset_rigid_shape_count(object_asset),
+        )
+        for i in range(len(rigid_shape_props)):
+            rigid_shape_props[i].friction = 0.1
+
+        return rigid_shape_props
+
+    def desired_allegro_kuka_rigid_shape_props(self, allegro_kuka_asset: gymapi.Asset) -> List[gymapi.RigidShapeProperties]:
+        rigid_shape_props = self.gym.get_asset_rigid_shape_properties(allegro_kuka_asset)
+        assert_equals(
+            len(rigid_shape_props),
+            self.gym.get_asset_rigid_shape_count(allegro_kuka_asset),
+        )
+
+        # Different friction for right robot normal links (low friction) and fingertips (high friction)
+        for i in range(len(rigid_shape_props)):
+            rigid_shape_props[i].friction = 0.1
+
+        # Rigid bodies (links) are not the same as rigid shapes (collision geometries)
+        # Each rigid body can have >=1 rigid shapes
+        rb_names = self.gym.get_asset_rigid_body_names(allegro_kuka_asset)
+        print(f"rb_names = {rb_names}")
+        rb_shape_indices = self.gym.get_asset_rigid_body_shape_indices(allegro_kuka_asset)
+        assert_equals(len(rb_names), len(rb_shape_indices))
+        rb_name_to_shape_indices = {
+            name: (x.start, x.count) for name, x in zip(rb_names, rb_shape_indices)
+        }
+        fingertip_names = self.allegro_fingertips
+        for name in fingertip_names:
+            start, count = rb_name_to_shape_indices[name]
+            for i in range(start, start + count):
+                rigid_shape_props[i].friction = 1.5
+
+        return rigid_shape_props
 
