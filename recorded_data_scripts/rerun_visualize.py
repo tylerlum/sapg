@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 from datetime import timedelta
 from pathlib import Path
 
@@ -99,12 +100,32 @@ def update_joints_array(
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--file_path", type=str, required=True)
+    args = parser.parse_args()
+    file_path = Path(args.file_path)
+
     # ###########
     # Load recorded data
     # ###########
-    file_path = Path(
-        "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-16_09-08-27.npz"
-    )
+    # file_path = Path(
+    #     # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-19_19-43-04.npz"
+    #     # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-19_19-42-41.npz"
+    #     # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-20_14-30-37.npz"
+    #     # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-20_14-32-39.npz"
+    #     # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-27_16-23-09.npz"
+    #     # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-27_16-23-31.npz"
+    #     "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-27_17-18-32.npz"
+    # )
+    assert file_path.exists(), f"File {file_path} does not exist"
+    recorded_data = RecordedData.from_file(file_path)
+
+    # ###########
+    # Load recorded data
+    # ###########
+    # file_path = Path(
+    #     "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-16_09-08-27.npz"
+    # )
     assert file_path.exists(), f"File {file_path} does not exist"
     recorded_data = RecordedData.from_file(file_path)
 
@@ -123,7 +144,7 @@ def main():
 
     # Load assets into rerun
     KUKA_ALLEGRO_URDF_PATH = Path(
-        "/home/tylerlum/github_repos/sapg/assets/urdf/kuka_allegro_description/kuka_allegro_touch_sensor.urdf"
+        "/home/tylerlum/github_repos/sapg/assets/urdf/kuka_allegro_description/iiwa14_real.urdf"
     )
     assert KUKA_ALLEGRO_URDF_PATH.exists(), (
         f"KUKA_ALLEGRO_URDF_PATH not found: {KUKA_ALLEGRO_URDF_PATH}"

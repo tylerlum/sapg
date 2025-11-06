@@ -36,7 +36,6 @@ from os.path import join
 from pathlib import Path
 
 import numpy as np
-import torch
 import random
 import os
 
@@ -86,6 +85,7 @@ def set_np_formatting():
 
 
 def set_seed(seed, torch_deterministic=False, rank=0):
+    import torch
     """ set seed across modules """
     if seed == -1 and torch_deterministic:
         seed = 42 + rank

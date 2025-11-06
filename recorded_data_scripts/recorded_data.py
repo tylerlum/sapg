@@ -87,6 +87,8 @@ class RecordedData:
     observations_array: Optional[np.ndarray] = None
     actions_array: Optional[np.ndarray] = None
 
+    object_name: Optional[str] = None
+
     def __post_init__(self):
         T = self.T
         J = self.J
@@ -148,6 +150,7 @@ class RecordedData:
             robot_joint_pos_targets_array=self.robot_joint_pos_targets_array,
             observations_array=self.observations_array,
             actions_array=self.actions_array,
+            object_name=self.object_name,
         )
 
     @classmethod
@@ -159,10 +162,11 @@ class RecordedData:
             if (
                 isinstance(x, np.ndarray)
                 and x.shape == ()
-                and x.dtype == object
-                and x.item() is None
             ):
-                return None
+                # If 0-D array, just get the item
+                # Handles case of None and string and other types
+                item = x.item()
+                return item
             return x
 
         return cls(
@@ -183,6 +187,7 @@ class RecordedData:
             ),
             observations_array=maybe_none(recorded_data["observations_array"]),
             actions_array=maybe_none(recorded_data["actions_array"]),
+            object_name=maybe_none(recorded_data["object_name"]),
         )
 
     def slice(
@@ -353,6 +358,10 @@ class RecordedData:
             assert len(to_order) == J, (
                 f"Expected to_order to have the same length as from_order, got {len(to_order)} and {len(from_order)}. If you don't want to require all joints, set require_all_joints to False."
             )
+
+        assert set(to_order).issubset(set(from_order)), (
+            f"Expected to_order to be a subset of from_order, got to_order: {to_order} and from_order: {from_order}. Only in to_order: {set(to_order) - set(from_order)}"
+        )
 
         # q is given in the from_order
         joint_name_to_value = {from_order[i]: q[..., i] for i in range(J)}

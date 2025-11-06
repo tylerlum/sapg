@@ -7,6 +7,8 @@
     <default class="iiwa">
       <material specular="0.5" shininess="0.25"/>
       <joint axis="0 0 1"/>
+      <!-- torque = gainprm * pos + (biasprm[0] + biasprm[1] * target + biasprm[2] * vel) -->
+      <!-- kp = 300, kd = 20 -->
       <general gaintype="fixed" biastype="affine" gainprm="300" biasprm="0 -300 -20"/>
       <default class="joint1">
         <joint range="-2.96706 2.96706"/>

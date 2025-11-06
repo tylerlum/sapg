@@ -58,9 +58,9 @@ def main():
     # Set initial camera pose
     @SERVER.on_client_connect
     def _(client: viser.ClientHandle) -> None:
-        client.camera.position = (1, 1, 1)
+        client.camera.position = (0.0, -1.0, 1.03)
         # client.camera.wxyz = (0, 0, 0, 1)
-        client.camera.look_at = (0, 0, 0)
+        client.camera.look_at = (0, 0, 0.53)
 
     # Load assets into viser
     KUKA_ALLEGRO_URDF_PATH = Path(
@@ -71,7 +71,17 @@ def main():
         f"KUKA_ALLEGRO_URDF_PATH not found: {KUKA_ALLEGRO_URDF_PATH}"
     )
     from isaacgymenvs.utils.objects import NAME_TO_OBJECT
-    OBJECT_URDF_PATH = NAME_TO_OBJECT["044_flat_screwdriver"].filepath
+    DEFAULT_OBJECT_NAME = "044_flat_screwdriver"
+    object_name = DEFAULT_OBJECT_NAME
+    if recorded_data.object_name is None:
+        print(f"Using default object name: {DEFAULT_OBJECT_NAME}")
+        object_name = DEFAULT_OBJECT_NAME
+    elif recorded_data.object_name not in NAME_TO_OBJECT:
+        print(f"Object name {recorded_data.object_name} not found in NAME_TO_OBJECT, using default object name: {DEFAULT_OBJECT_NAME}")
+        object_name = DEFAULT_OBJECT_NAME
+    else:
+        object_name = recorded_data.object_name
+    OBJECT_URDF_PATH = NAME_TO_OBJECT[object_name].filepath
     # OBJECT_URDF_PATH = Path(
     #     "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/044_flat_screwdriver/044_flat_screwdriver.urdf"
     # )

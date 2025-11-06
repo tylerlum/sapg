@@ -275,8 +275,9 @@ class ViserVisualizationNode:
         if object_name is None:
             DEFAULT_OBJECT_NAME = "044_flat_screwdriver"
             warn(f"Using default object name: {DEFAULT_OBJECT_NAME}")
+            object_name = DEFAULT_OBJECT_NAME
 
-        object_mesh_path = str(NAME_TO_OBJECT[DEFAULT_OBJECT_NAME].filepath)
+        object_mesh_path = str(NAME_TO_OBJECT[object_name].filepath)
         # object_mesh_path = str(get_repo_root_dir() / "assets/urdf/tyler_objects/040_large_marker/040_large_marker/google_16k/textured_vhacd.obj")
 
         assert isinstance(object_mesh_path, str), (

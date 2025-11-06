@@ -326,6 +326,19 @@ class MujocoSim:
         self.robot_joint_pos_targets = q_targets.copy()
 
     # ############################################################
+    # Setting object position and orientation
+    # ############################################################
+    def set_object_position(self, pos: np.ndarray) -> None:
+        assert pos.shape == (3,), f"pos.shape: {pos.shape}, expected: (3,)"
+        qpos_adr = self.mj_model.joint(name="object_free_joint").qposadr[0]
+        self.mj_data.qpos[qpos_adr:qpos_adr+3] = pos
+
+    def set_object_quat_wxyz(self, quat_wxyz: np.ndarray) -> None:
+        assert quat_wxyz.shape == (4,), f"quat_wxyz.shape: {quat_wxyz.shape}, expected: (4,)"
+        qpos_adr = self.mj_model.joint(name="object_free_joint").qposadr[0]
+        self.mj_data.qpos[qpos_adr+3:qpos_adr+7] = quat_wxyz
+
+    # ############################################################
     # Getting body poses and simulation state
     # ############################################################
     def get_body_pose(self, body_name: str) -> tuple[np.ndarray, np.ndarray]:

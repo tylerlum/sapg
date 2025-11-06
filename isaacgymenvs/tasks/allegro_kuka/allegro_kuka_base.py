@@ -2365,6 +2365,7 @@ class AllegroKukaBase(VecTask):
                     robot_joint_pos_targets_array=self.robot_joint_pos_targets_array[:, ENV_IDX],
                     observations_array=self.observations_array[:, ENV_IDX],
                     actions_array=self.actions_array[:, ENV_IDX],
+                    object_name=self.cfg["env"]["object_type"],
                 )
                 recorded_data.to_file(recorded_data_path)
                 print(f"Saved recorded data to {recorded_data_path}")
