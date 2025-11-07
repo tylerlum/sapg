@@ -115,7 +115,7 @@ class RLPolicyNode:
             "/robot_frame/current_object_pose", PoseStamped, self.object_pose_callback
         )
         self.goal_object_pose_sub = rospy.Subscriber(
-            "/goal_object_pose", Pose, self.goal_object_pose_callback
+            "/robot_frame/goal_object_pose", Pose, self.goal_object_pose_callback
         )
         self.iiwa_joint_state_sub = rospy.Subscriber(
             "/iiwa/joint_states", JointState, self.iiwa_joint_state_callback
@@ -130,11 +130,13 @@ class RLPolicyNode:
         self.num_actions = 23
 
         CONFIG_PATH = Path(
-            "/home/tylerlum/github_repos/sapg/closed_loop_testing/config.yaml"
+            # "/home/tylerlum/github_repos/sapg/closed_loop_testing/config.yaml"
+            "/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-11-05_hairbrush/00_smooth-arm-hand_speed-10_dropout-obs_2025-11-05_05-20-24/runs/00_smooth-arm-hand_speed-10_dropout-obs_2025-11-05_05-20-24/config.yaml"
         )
         assert Path(CONFIG_PATH).exists()
         CHECKPOINT_PATH = Path(
-            "/juno/u/kedia/sapg/train_dir/checkpoints/hammer/absoluteControl_0.5.pth"
+            # "/juno/u/kedia/sapg/train_dir/checkpoints/hammer/absoluteControl_0.5.pth"
+            "/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-11-05_hairbrush/00_smooth-arm-hand_speed-10_dropout-obs_2025-11-05_05-20-24/runs/00_smooth-arm-hand_speed-10_dropout-obs_2025-11-05_05-20-24/last/model.pth"
         )
         assert CHECKPOINT_PATH.exists()
 
@@ -242,12 +244,14 @@ class RLPolicyNode:
             ),
         )
 
-        # print(f"q: {q}")
-        # print(f"qd: {qd}")
-        # print(f"object_pose_W: {object_pose_W}")
-        # print(f"goal_object_pose_W: {goal_object_pose_W}")
-        # print(f"object_scales: {self.object_scales}")
-        # breakpoint()
+        DEBUG = True
+        if DEBUG:
+            print(f"q: {q}")
+            print(f"qd: {qd}")
+            print(f"object_pose_W: {object_pose_W}")
+            print(f"goal_object_pose_W: {goal_object_pose_W}")
+            print(f"object_scales: {self.object_scales}")
+            breakpoint()
 
         return observation, q
 
@@ -298,15 +302,15 @@ class RLPolicyNode:
 
         loop_no_sleep_dts, loop_dts = [], []
 
-        CURRENT_STEP = 0
+        # CURRENT_STEP = 0
         while not rospy.is_shutdown():
-            print(f"Current step: {CURRENT_STEP}")
-            if CURRENT_STEP > 1500:
-                print("Exiting")
-                import sys
+            # print(f"Current step: {CURRENT_STEP}")
+            # if CURRENT_STEP > 1500:
+            #     print("Exiting")
+            #     import sys
 
-                sys.exit(0)
-            CURRENT_STEP += 1
+            #     sys.exit(0)
+            # CURRENT_STEP += 1
 
             start_time = rospy.Time.now()
 
@@ -336,20 +340,25 @@ class RLPolicyNode:
                 # normalized_action = torch.zeros(1, self.num_actions, device=self.device)
                 assert_equals(normalized_action.shape, (1, self.num_actions))
 
+                HAND_MOVING_AVERAGE = 0.1
+                ARM_MOVING_AVERAGE = 0.1
+                HAND_DOF_SPEED_SCALE = 0.5
+                DT = 1 / 60
                 joint_pos_targets = compute_joint_pos_targets(
                     actions=normalized_action,
                     prev_targets=self.prev_targets,
-                    act_moving_average=0.1,
-                    hand_dof_speed_scale=0.5,
-                    dt=1 / 60,
+                    hand_moving_average=HAND_MOVING_AVERAGE,
+                    arm_moving_average=ARM_MOVING_AVERAGE,
+                    hand_dof_speed_scale=HAND_DOF_SPEED_SCALE,
+                    dt=DT,
                 )
                 assert_equals(joint_pos_targets.shape, (1, self.num_actions))
 
                 # Publish the targets
                 self.publish_targets(joint_pos_targets)
-                print(f"CURRENT_STEP: {CURRENT_STEP}")
-                print(f"joint_pos_targets: {joint_pos_targets}")
-                print()
+                # print(f"CURRENT_STEP: {CURRENT_STEP}")
+                # print(f"joint_pos_targets: {joint_pos_targets}")
+                # print()
                 self.prev_targets = joint_pos_targets.clone()
 
             # Sleep to maintain loop rate
@@ -362,10 +371,10 @@ class RLPolicyNode:
             loop_dt = (after_sleep_time - start_time).to_sec()
             loop_dts.append(loop_dt)
 
-            # PRINT_FPS_EVERY_N_SECONDS = 5.0
-            # PRINT_FPS_EVERY_N_STEPS = int(PRINT_FPS_EVERY_N_SECONDS / self.dt)
-            # if len(loop_dts) == PRINT_FPS_EVERY_N_STEPS:
-            if True:
+            PRINT_FPS_EVERY_N_SECONDS = 5.0
+            PRINT_FPS_EVERY_N_STEPS = int(PRINT_FPS_EVERY_N_SECONDS / self.dt)
+            if len(loop_dts) == PRINT_FPS_EVERY_N_STEPS:
+            # if True:
                 loop_dt_array = np.array(loop_dts)
                 loop_no_sleep_dt_array = np.array(loop_no_sleep_dts)
                 fps_array = 1.0 / loop_dt_array
