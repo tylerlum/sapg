@@ -1128,23 +1128,26 @@ class AllegroKukaBase(VecTask):
 
         # this rely on the fact that objects are added right after the arms in terms of create_actor()
         self.object_rb_handles = list(range(self.num_hand_arm_bodies, self.num_hand_arm_bodies + object_rb_count))
+        if self.VISUALIZE_PD_TARGET_AS_BLUE_ROBOT:
+            # Account for the blue robot's additional rigid bodies
+            self.object_rb_handles = list(range(2*self.num_hand_arm_bodies, 2*self.num_hand_arm_bodies + object_rb_count))
 
         # Set asset rigid shape properties (friction)
-        MODIFY_ASSET_FRICTIONS = False
+        MODIFY_ASSET_FRICTIONS = True
         if MODIFY_ASSET_FRICTIONS:
             self.set_allegro_kuka_asset_rigid_shape_properties(
                 allegro_kuka_asset=allegro_kuka_asset,
-                friction=0.1,
+                friction=0.5,
                 fingertip_friction=1.5,
             )
             self.set_table_asset_rigid_shape_properties(
                 table_asset=table_asset,
-                friction=0.1,
+                friction=0.5,
             )
             for object_asset_idx_to_modify in range(len(object_assets)):
                 self.set_object_asset_rigid_shape_properties(
                     object_asset=object_assets[object_asset_idx_to_modify],
-                    friction=0.1,
+                    friction=0.5,
                 )
 
         for i in range(self.num_envs):
