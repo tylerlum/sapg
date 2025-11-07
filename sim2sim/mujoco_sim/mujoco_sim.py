@@ -277,6 +277,13 @@ class MujocoSim:
                 object_geom.type = mujoco.mjtGeom.mjGEOM_MESH
                 object_geom.meshname = mesh.name
 
+        DISABLE_ROBOT_SELF_COLLISION = False
+        if DISABLE_ROBOT_SELF_COLLISION:
+            for geom in spec.geoms:
+                if "iiwa" in geom.name or "palm" in geom.name or "finger" in geom.name:
+                    geom.contype = 0
+                    geom.conaffinity = 0
+
         self.mj_model = spec.compile()
         self.mj_data = mujoco.MjData(self.mj_model)
         self.mj_model.opt.timestep = self.config.sim_dt
