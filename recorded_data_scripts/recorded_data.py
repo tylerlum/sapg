@@ -176,18 +176,18 @@ class RecordedData:
             time_array=recorded_data["time_array"],
             robot_joint_names=recorded_data["robot_joint_names"],
             table_root_states_array=maybe_none(
-                recorded_data["table_root_states_array"]
+                recorded_data["table_root_states_array"] if "table_root_states_array" in recorded_data else None
             ),
-            goal_root_states_array=maybe_none(recorded_data["goal_root_states_array"]),
+            goal_root_states_array=maybe_none(recorded_data["goal_root_states_array"] if "goal_root_states_array" in recorded_data else None),
             robot_joint_velocities_array=maybe_none(
-                recorded_data["robot_joint_velocities_array"]
+                recorded_data["robot_joint_velocities_array"] if "robot_joint_velocities_array" in recorded_data else None
             ),
             robot_joint_pos_targets_array=maybe_none(
-                recorded_data["robot_joint_pos_targets_array"]
+                recorded_data["robot_joint_pos_targets_array"] if "robot_joint_pos_targets_array" in recorded_data else None
             ),
-            observations_array=maybe_none(recorded_data["observations_array"]),
-            actions_array=maybe_none(recorded_data["actions_array"]),
-            object_name=maybe_none(recorded_data["object_name"]),
+            observations_array=maybe_none(recorded_data["observations_array"] if "observations_array" in recorded_data else None),
+            actions_array=maybe_none(recorded_data["actions_array"] if "actions_array" in recorded_data else None),
+            object_name=maybe_none(recorded_data["object_name"] if "object_name" in recorded_data else None),
         )
 
     def slice(
