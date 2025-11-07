@@ -225,6 +225,19 @@ NAME_TO_OBJECT = {
         scale=(3.0, 0.5, 0.5),
         need_vhacd=True,
     ),
+    "hairbrush_modified": Object(
+        filepath=(
+            get_repo_root_dir() / "assets/urdf/tyler_objects/hairbrush_modified/hairbrush_modified.urdf"
+        ),
+        coacd_filepaths=list(
+            (
+                get_repo_root_dir()
+                / "assets/urdf/tyler_objects_convex_decomp/hairbrush_modified"
+            ).glob("decomp_*.obj")
+        ),
+        scale=(3.0, 0.5, 0.5),
+        need_vhacd=True,
+    ),
     "real_flat_screwdriver": Object(
         filepath=(
             get_repo_root_dir()

@@ -640,7 +640,7 @@ class AllegroKukaBase(VecTask):
             )
             if object_type in HAMMER_TRAJECTORY_OBJECTS:
                 self.trajectory_states = get_hammer_trajectory(init_state, device=self.device)
-            elif object_type == "hairbrush":
+            elif object_type in set(["hairbrush", "hairbrush_modified"]):
                 self.trajectory_states = get_hairbrush_trajectory(init_state, device=self.device)
             elif object_type == "screwdriver":
                 self.trajectory_states = get_screwdriver_trajectory(init_state, device=self.device)
