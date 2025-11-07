@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 from pathlib import Path
+import trimesh
+import numpy as np
 from typing import List, Optional, Tuple
 
 from isaacgymenvs.utils.utils import get_repo_root_dir
@@ -30,6 +32,43 @@ class Object:
                 assert coacd_filepath.exists(), (
                     f"COACD file {coacd_filepath} does not exist"
                 )
+
+    def get_object_mesh_path_and_scale(self) -> Tuple[Path, np.ndarray]:
+        from yourdfpy import URDF
+        object_urdf_path = self.filepath
+
+        assert object_urdf_path.exists(), object_urdf_path
+        urdf = URDF.load(str(object_urdf_path))
+
+        mesh_path_and_scale_list = []
+        for link in urdf.robot.links:
+            if len(link.collisions) == 0:
+                continue
+
+            for i, collision_link in enumerate(link.collisions):
+                mesh_path = object_urdf_path.parent / collision_link.geometry.mesh.filename
+                assert mesh_path.exists(), mesh_path
+
+                mesh_scale = (
+                    np.array([1, 1, 1])
+                    if collision_link.geometry.mesh.scale is None
+                    else np.array(collision_link.geometry.mesh.scale)
+                )
+                mesh_path_and_scale_list.append((mesh_path, mesh_scale))
+
+        # Assume urdf has only 1 link with only 1 collision mesh
+        assert len(mesh_path_and_scale_list) == 1, (
+            f"{mesh_path_and_scale_list} has len {len(mesh_path_and_scale_list)}"
+        )
+
+        mesh_path, mesh_scale = mesh_path_and_scale_list[0]
+        return mesh_path, mesh_scale
+
+    def get_object_mesh(self) -> trimesh.Trimesh:
+        mesh_path, mesh_scale = self.get_object_mesh_path_and_scale()
+        mesh = trimesh.load_mesh(str(mesh_path))
+        mesh.apply_scale(mesh_scale)
+        return mesh
 
 
 NAME_TO_OBJECT = {
