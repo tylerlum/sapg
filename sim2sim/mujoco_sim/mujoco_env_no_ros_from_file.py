@@ -122,7 +122,10 @@ def main():
     assert CHECKPOINT_PATH.exists()
 
     RECORDED_DATA_PATH = Path(
-        "/home/tylerlum/github_repos/sapg/recorded_data/2025-11-06_15-54-31.npz"
+        "/home/tylerlum/github_repos/sapg/recorded_data/2025-11-06_17-07-45.npz"  # Fast
+        # "/home/tylerlum/github_repos/sapg/recorded_data/2025-11-06_17-09-47.npz"  # Slow
+        # "/home/tylerlum/github_repos/sapg/recorded_data/2025-11-06_16-07-45.npz"
+        # "/home/tylerlum/github_repos/sapg/recorded_data/2025-11-06_15-54-31.npz"
         # "/home/tylerlum/github_repos/sapg/recorded_data/2025-11-06_15-26-10.npz"
         # "/home/tylerlum/github_repos/sapg/recorded_data/2025-11-06_14-32-48.npz"
         # "/home/tylerlum/github_repos/sapg/recorded_robot_state/2025-11-02_18-48-58_sin_wave_hand_10-0s_1-0s_0-2rad.npz"
