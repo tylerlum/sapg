@@ -27,6 +27,9 @@ pip install \
 # Viser
 pip install viser
 
+# Pytorch kinematics
+pip install pytorch_kinematics
+
 # Mujoco
 pip install mujoco
 
