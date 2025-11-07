@@ -8,19 +8,24 @@
       <material specular="0.5" shininess="0.25"/>
       <joint axis="0 0 1"/>
       <!-- torque = gainprm * pos + (biasprm[0] + biasprm[1] * target + biasprm[2] * vel) -->
-      <!-- kp = 300, kd = 20 -->
+
+      <!-- kp = 300, kd = 20 seems to be the best for stability and matching real -->
       <general gaintype="fixed" biastype="affine" gainprm="300" biasprm="0 -300 -20"/>
+
+      <!-- kp = 2000, kd = 200 (original from Mujoco Menagerie) -->
+      <!-- <general gaintype="fixed" biastype="affine" gainprm="2000" biasprm="0 -2000 -200"/> -->
+
       <default class="joint1">
         <joint range="-2.96706 2.96706"/>
-        <general ctrlrange="-2.96706 2.96706"/>
+        <general ctrlrange="-2.96706 2.96706" forcerange="-300 300"/>
         <default class="joint2">
           <joint range="-2.0944 2.0944"/>
-          <general ctrlrange="-2.0944 2.0944"/>
+          <general ctrlrange="-2.0944 2.0944" forcerange="-300 300"/>
         </default>
       </default>
       <default class="joint3">
         <joint range="-3.05433 3.05433"/>
-        <general ctrlrange="-3.05433 3.05433"/>
+        <general ctrlrange="-3.05433 3.05433" forcerange="-300 300"/>
       </default>
       <default class="visual">
         <geom type="mesh" contype="0" conaffinity="0" group="2" material="gray"/>

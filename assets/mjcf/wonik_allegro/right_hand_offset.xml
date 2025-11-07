@@ -5,8 +5,22 @@
 
   <default>
     <default class="allegro_right">
-      <joint axis="0 1 0" damping="200"/>
-      <position kp="4000"/>
+      <!-- kp = 4000, kd = 200 UNSTABLE -->
+      <!-- <joint axis="0 1 0" damping="200"/> -->
+      <!-- <position kp="4000"/> -->
+
+      <!-- kp = 80, kd = 5 UNSTABLE -->
+      <!-- <joint axis="0 1 0" damping="5.0"/> -->
+      <!-- <position kp="80.0"/> -->
+
+      <!-- kp = 1, kd = 0.1 (original from Mujoco Menagerie)-->
+      <!-- <joint axis="0 1 0" damping="0.1"/> -->
+      <!-- <position kp="1"/> -->
+
+      <!-- kp = 2, kd = 0.2 seems to be the best for stability and matching real -->
+      <joint axis="0 1 0" damping="0.2"/>
+      <position kp="2.0"/>
+
       <geom density="800"/>
 
       <default class="visual">
@@ -73,35 +87,35 @@
 
       <default class="base">
         <joint axis="0 0 1" range="-0.47 0.47"/>
-        <position ctrlrange="-0.47 0.47"/>
+        <position ctrlrange="-0.47 0.47" forcerange="-0.35 0.35"/>
       </default>
       <default class="proximal">
         <joint range="-0.196 1.61"/>
-        <position ctrlrange="-0.196 1.61"/>
+        <position ctrlrange="-0.196 1.61" forcerange="-0.35 0.35"/>
       </default>
       <default class="medial">
         <joint range="-0.174 1.709"/>
-        <position ctrlrange="-0.174 1.709"/>
+        <position ctrlrange="-0.174 1.709" forcerange="-0.35 0.35"/>
       </default>
       <default class="distal">
         <joint range="-0.227 1.618"/>
-        <position ctrlrange="-0.227 1.618"/>
+        <position ctrlrange="-0.227 1.618" forcerange="-0.35 0.35"/>
       </default>
       <default class="thumb_base">
         <joint axis="-1 0 0" range="0.263 1.396"/>
-        <position ctrlrange="0.263 1.396"/>
+        <position ctrlrange="0.263 1.396" forcerange="-0.35 0.35"/>
       </default>
       <default class="thumb_proximal">
         <joint axis="0 0 1" range="-0.105 1.163"/>
-        <position ctrlrange="-0.105 1.163"/>
+        <position ctrlrange="-0.105 1.163" forcerange="-0.35 0.35"/>
       </default>
       <default class="thumb_medial">
         <joint range="-0.189 1.644"/>
-        <position ctrlrange="-0.189 1.644"/>
+        <position ctrlrange="-0.189 1.644" forcerange="-0.35 0.35"/>
       </default>
       <default class="thumb_distal">
         <joint range="-0.162 1.719"/>
-        <position ctrlrange="-0.162 1.719"/>
+        <position ctrlrange="-0.162 1.719" forcerange="-0.35 0.35"/>
       </default>
     </default>
   </default>
