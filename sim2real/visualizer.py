@@ -194,7 +194,7 @@ class ViserVisualizationNode:
             "/robot_frame/current_object_pose", PoseStamped, self.object_pose_callback
         )
         self.goal_object_pose_sub = rospy.Subscriber(
-            "/goal_object_pose", Pose, self.goal_object_pose_callback
+            "/robot_frame/goal_object_pose", Pose, self.goal_object_pose_callback
         )
 
     def initialize_viser(self):
@@ -273,24 +273,25 @@ class ViserVisualizationNode:
         from isaacgymenvs.utils.objects import NAME_TO_OBJECT
         object_name = rospy.get_param("/object_name", None)
         if object_name is None:
-            DEFAULT_OBJECT_NAME = "044_flat_screwdriver"
+            DEFAULT_OBJECT_NAME = "hairbrush_modified"
             warn(f"Using default object name: {DEFAULT_OBJECT_NAME}")
             object_name = DEFAULT_OBJECT_NAME
 
-        object_mesh_path = str(NAME_TO_OBJECT[object_name].filepath)
+        object_mesh = NAME_TO_OBJECT[object_name].get_object_mesh()
+        goal_object_mesh = object_mesh
         # object_mesh_path = str(get_repo_root_dir() / "assets/urdf/tyler_objects/040_large_marker/040_large_marker/google_16k/textured_vhacd.obj")
+        # assert isinstance(object_mesh_path, str), (
+        #     f"object_mesh_path: {object_mesh_path}"
+        # )
+        # info("~" * 80)
+        # info(f"object_mesh_path: {object_mesh_path}")
+        # info("~" * 80 + "\n")
 
-        assert isinstance(object_mesh_path, str), (
-            f"object_mesh_path: {object_mesh_path}"
-        )
-        info("~" * 80)
-        info(f"object_mesh_path: {object_mesh_path}")
-        info("~" * 80 + "\n")
+        # goal_object_mesh_path = object_mesh_path
 
-        goal_object_mesh_path = object_mesh_path
+        # object_mesh = trimesh.load(object_mesh_path)
+        # goal_object_mesh = trimesh.load(goal_object_mesh_path)
 
-        object_mesh = trimesh.load(object_mesh_path)
-        goal_object_mesh = trimesh.load(goal_object_mesh_path)
         self.object_viser = SERVER.scene.add_frame(
             "/object",
             position=FAR_AWAY_OBJECT_POSITION,
