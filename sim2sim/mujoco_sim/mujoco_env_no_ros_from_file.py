@@ -104,7 +104,7 @@ class MujocoEnvNoRos:
 
 def main():
     # Parameters
-    SIM_DT = 1.0 / 2000.0  # Mujoco sim step (needs to be small to get stable physics)
+    SIM_DT = 1.0 / 6_000.0  # Mujoco sim step (needs to be small to get stable physics)
     CONTROL_DT = 1.0 / 60.0  # Control loop frequency (policy loop rate)
     ACT_MOVING_AVERAGE = 0.1
     HAND_DOF_SPEED_SCALE = 0.5
@@ -122,7 +122,8 @@ def main():
     assert CHECKPOINT_PATH.exists()
 
     RECORDED_DATA_PATH = Path(
-        "/home/tylerlum/github_repos/sapg/recorded_data/2025-11-06_15-26-10.npz"
+        "/home/tylerlum/github_repos/sapg/recorded_data/2025-11-06_15-54-31.npz"
+        # "/home/tylerlum/github_repos/sapg/recorded_data/2025-11-06_15-26-10.npz"
         # "/home/tylerlum/github_repos/sapg/recorded_data/2025-11-06_14-32-48.npz"
         # "/home/tylerlum/github_repos/sapg/recorded_robot_state/2025-11-02_18-48-58_sin_wave_hand_10-0s_1-0s_0-2rad.npz"
         # "/home/tylerlum/github_repos/sapg/recorded_robot_state/2025-11-02_18-41-23_sin_wave_arm_10-0s_2-0s_0-2rad.npz"
@@ -137,7 +138,7 @@ def main():
     assert joint_positions_array.shape == (T, N_ACT), f"joint_positions_array.shape: {joint_positions_array.shape}, expected: ({T}, {N_ACT})"
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    sim = MujocoSim(MujocoSimConfig(enable_viewer=True, sim_dt=SIM_DT))
+    sim = MujocoSim(MujocoSimConfig(enable_viewer=True, sim_dt=SIM_DT, object_name="hairbrush"))
     policy = RlPlayer(
         num_observations=N_OBS,
         num_actions=N_ACT,
@@ -234,6 +235,7 @@ def main():
                 robot_joint_names=robot_joint_names,
                 robot_joint_pos_targets_array=joint_pos_targets_array,
                 table_root_states_array=table_root_states_history,
+                object_name=sim.config.object_name,
             )
             # output_path = RECORDED_DATA_PATH.parent / f"{RECORDED_DATA_PATH.stem}_mujoco.npz"
             output_path = RECORDED_DATA_PATH.parent / f"{RECORDED_DATA_PATH.stem}_mujoco_newgains.npz"

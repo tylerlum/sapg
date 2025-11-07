@@ -151,6 +151,7 @@ class MujocoSimConfig:
     enable_viewer: bool
     sim_dt: float = 1.0 / 1000  # Need a high enough frequency to get stable physics
     friction: FrictionConfig = field(default_factory=FrictionConfig)
+    object_name: str = "044_flat_screwdriver"
 
     @property
     def sim_hz(self) -> float:
@@ -253,7 +254,7 @@ class MujocoSim:
             # Use run_coacd.py to generate convex decomp meshes
 
             from isaacgymenvs.utils.objects import NAME_TO_OBJECT
-            object_name = "044_flat_screwdriver"
+            object_name = self.config.object_name
             mesh_paths = NAME_TO_OBJECT[object_name].coacd_filepaths
             assert mesh_paths is not None, f"mesh_paths is None for object_name: {object_name}"
             assert len(mesh_paths) > 0, f"len(mesh_paths) is 0 for object_name: {object_name}"

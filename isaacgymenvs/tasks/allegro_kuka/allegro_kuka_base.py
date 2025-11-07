@@ -460,6 +460,8 @@ class AllegroKukaBase(VecTask):
                 shutil.rmtree(self.eval_summary_dir)
             self.eval_summaries = SummaryWriter(self.eval_summary_dir, flush_secs=3)
 
+        self._init_tyler_curriculum()
+
     ##### KEYBOARD START #####
     def _subscribe_to_keyboard_events(self) -> None:
         from dataclasses import dataclass
@@ -2572,15 +2574,16 @@ class AllegroKukaBase(VecTask):
                 self._draw_transform(transform=object_transform, env_idx=i)
                 # self._draw_transform(transform=goal_transform, env_idx=i)
 
+    def _init_tyler_curriculum(self):
+        self._tyler_curriculum_scale = 0.0
+        self._last_tyler_curriculum_update = time.time()
+        if "init_tyler_curriculum_scale" in self.cfg["env"]:
+            print(f"Initializing _tyler_curriculum_scale to {self.cfg['env']['init_tyler_curriculum_scale']}")
+            self._tyler_curriculum_scale = self.cfg["env"]["init_tyler_curriculum_scale"]
+
     def _update_tyler_curriculum(self):
         # Vary _tyler_curriculum_scale from 0.0 to 1.0 over time
         # 0.0 means easy and 1.0 means hard
-        if not hasattr(self, "_tyler_curriculum_scale"):
-            self._tyler_curriculum_scale = 0.0
-            self._last_tyler_curriculum_update = time.time()
-            if "init_tyler_curriculum_scale" in self.cfg["env"]:
-                print(f"Initializing _tyler_curriculum_scale to {self.cfg['env']['init_tyler_curriculum_scale']}")
-                self._tyler_curriculum_scale = self.cfg["env"]["init_tyler_curriculum_scale"]
 
         # If gets at least 50% of max consecutive successes and been at least 5 minutes since last update, turn off extra obs more
         mean_successes = self.prev_episode_successes.mean().item()
