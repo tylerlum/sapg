@@ -36,7 +36,8 @@ class MujocoEnvNoRos:
         object_scales: np.ndarray,
         chain: pk.Chain,
         palm_serial_chain: pk.SerialChain,
-        act_moving_average: float,
+        hand_moving_average: float,
+        arm_moving_average: float,
         hand_dof_speed_scale: float,
         control_dt: float,
         device: str,
@@ -45,7 +46,8 @@ class MujocoEnvNoRos:
         self.object_scales = object_scales
         self.chain = chain
         self.palm_serial_chain = palm_serial_chain
-        self.act_moving_average = act_moving_average
+        self.hand_moving_average = hand_moving_average
+        self.arm_moving_average = arm_moving_average
         self.hand_dof_speed_scale = hand_dof_speed_scale
         self.control_dt = control_dt
         self.device = device
@@ -91,7 +93,8 @@ class MujocoEnvNoRos:
             prev_targets=torch.from_numpy(self.sim.robot_joint_pos_targets)
             .float()
             .to(self.device)[None],
-            act_moving_average=self.act_moving_average,
+            hand_moving_average=self.hand_moving_average,
+            arm_moving_average=self.arm_moving_average,
             hand_dof_speed_scale=self.hand_dof_speed_scale,
             dt=self.control_dt,
         )
@@ -114,23 +117,27 @@ def main():
     # Parameters
     SIM_DT = 1.0 / 600.0  # Mujoco sim step (needs to be small to get stable physics)
     CONTROL_DT = 1.0 / 60.0  # Control loop frequency (policy loop rate)
-    ACT_MOVING_AVERAGE = 0.1
-    HAND_DOF_SPEED_SCALE = 0.5
-    OBJECT_SCALES = np.array([0.1, 0.035, 0.025]) * 20
+    HAND_MOVING_AVERAGE = 0.1
+    ARM_MOVING_AVERAGE = 0.1
+    HAND_DOF_SPEED_SCALE = 10.0
+    # OBJECT_SCALES = np.array([0.1, 0.035, 0.025]) * 20
+    OBJECT_SCALES = np.array([3.0, 0.5, 0.5])
 
     CONFIG_PATH = Path(
-        "/home/tylerlum/github_repos/sapg/closed_loop_testing/config.yaml"
+        # "/home/tylerlum/github_repos/sapg/closed_loop_testing/config.yaml"
+        "/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-11-05_hairbrush/00_smooth-arm-hand_speed-10_dropout-obs_2025-11-05_05-20-24/runs/00_smooth-arm-hand_speed-10_dropout-obs_2025-11-05_05-20-24/config.yaml"
     )
     assert Path(CONFIG_PATH).exists()
     # CHECKPOINT_PATH = Path("/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-10-22_slow-action-obs-randomize-all_slower-curriculum/00_slowarmhand_slowobs_hammer_2025-10-23_00-48-56/runs/00_slowarmhand_slowobs_hammer_2025-10-23_00-48-56/last/model.pth")
     # CHECKPOINT_PATH = Path("/juno/u/kedia/sapg/train_dir/checkpoints/hammer/absoluteControl_0.5.pth")
     CHECKPOINT_PATH = Path(
-        "/juno/u/kedia/sapg/train_dir/checkpoints/hammer/relativeControl_5.pth"
+        # "/juno/u/kedia/sapg/train_dir/checkpoints/hammer/relativeControl_5.pth"
+        "/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-11-05_hairbrush/00_smooth-arm-hand_speed-10_dropout-obs_2025-11-05_05-20-24/runs/00_smooth-arm-hand_speed-10_dropout-obs_2025-11-05_05-20-24/last/model.pth"
     )
     assert CHECKPOINT_PATH.exists()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    sim = MujocoSim(MujocoSimConfig(enable_viewer=True, sim_dt=SIM_DT))
+    sim = MujocoSim(MujocoSimConfig(enable_viewer=True, sim_dt=SIM_DT, object_name="hairbrush"))
     policy = RlPlayer(
         num_observations=N_OBS,
         num_actions=N_ACT,
@@ -148,7 +155,8 @@ def main():
         object_scales=OBJECT_SCALES,
         chain=chain,
         palm_serial_chain=palm_serial_chain,
-        act_moving_average=ACT_MOVING_AVERAGE,
+        hand_moving_average=HAND_MOVING_AVERAGE,
+        arm_moving_average=ARM_MOVING_AVERAGE,
         hand_dof_speed_scale=HAND_DOF_SPEED_SCALE,
         control_dt=CONTROL_DT,
         device=device,
