@@ -31,17 +31,17 @@ import os
 from collections import deque
 from typing import Callable, Dict, Tuple, Any
 
+from isaacgymenvs.tasks import isaacgym_task_map
 import os
 import gym
 import numpy as np
-import torch
 from rl_games.common import env_configurations, vecenv
 from rl_games.common.algo_observer import AlgoObserver
 from isaacgymenvs.pbt.pbt import PbtAlgoObserver
 
-from isaacgymenvs.tasks import isaacgym_task_map
 from rl_games.common.custom_utils import remove_envs_from_info
 from isaacgymenvs.utils.utils import set_seed, flatten_dict
+import torch  # isort:skip
 
 
 def multi_gpu_get_rank(multi_gpu):

@@ -80,6 +80,7 @@ def preprocess_train_config(cfg, config_dict):
 
 def launch_rlg_hydra(cfg: DictConfig, vec_env=None):
 
+    from isaacgymenvs.utils.rlgames_utils import multi_gpu_get_rank
     import logging
     import os
     from datetime import datetime
@@ -87,7 +88,6 @@ def launch_rlg_hydra(cfg: DictConfig, vec_env=None):
     # noinspection PyUnresolvedReferences
     import isaacgym
     from isaacgymenvs.pbt.pbt import PbtAlgoObserver, initial_pbt_check
-    from isaacgymenvs.utils.rlgames_utils import multi_gpu_get_rank
     from hydra.utils import to_absolute_path
     from isaacgymenvs.tasks import isaacgym_task_map
     import gym
