@@ -122,7 +122,10 @@ def main():
     assert CHECKPOINT_PATH.exists()
 
     RECORDED_DATA_PATH = Path(
-        "/home/tylerlum/github_repos/sapg/recorded_data/2025-11-06_17-07-45.npz"  # Fast
+        # "/home/tylerlum/github_repos/sapg/recorded_data/2025-11-06_17-09-47_None_550.npz"  # Slow sliced
+        # "/home/tylerlum/github_repos/sapg/recorded_robot_state/2025-11-07_13-43-59_slowpolicyopenloop.npz"  # Real world policy open loop
+        "/home/tylerlum/github_repos/sapg/recorded_robot_state/2025-11-07_14-07-41_slowpolicytargets.npz"  # Real world policy targets
+        # "/home/tylerlum/github_repos/sapg/recorded_data/2025-11-06_17-07-45.npz"  # Fast
         # "/home/tylerlum/github_repos/sapg/recorded_data/2025-11-06_17-09-47.npz"  # Slow
         # "/home/tylerlum/github_repos/sapg/recorded_data/2025-11-06_16-07-45.npz"
         # "/home/tylerlum/github_repos/sapg/recorded_data/2025-11-06_15-54-31.npz"
@@ -241,7 +244,7 @@ def main():
                 object_name=sim.config.object_name,
             )
             # output_path = RECORDED_DATA_PATH.parent / f"{RECORDED_DATA_PATH.stem}_mujoco.npz"
-            output_path = RECORDED_DATA_PATH.parent / f"{RECORDED_DATA_PATH.stem}_mujoco_newgains.npz"
+            output_path = RECORDED_DATA_PATH.parent / f"{RECORDED_DATA_PATH.stem}_mujoco.npz"
             output_path.parent.mkdir(parents=True, exist_ok=True)
             print(f"Saving recorded data to {output_path}")
             new_recorded_data.to_file(output_path)

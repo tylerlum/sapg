@@ -274,6 +274,7 @@ class ViserVisualizationNode:
         object_name = rospy.get_param("/object_name", None)
         if object_name is None:
             DEFAULT_OBJECT_NAME = "hairbrush_modified"
+            # DEFAULT_OBJECT_NAME = "scanned_hammer_2"
             warn(f"Using default object name: {DEFAULT_OBJECT_NAME}")
             object_name = DEFAULT_OBJECT_NAME
 

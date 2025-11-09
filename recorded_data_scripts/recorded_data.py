@@ -211,12 +211,13 @@ class RecordedData:
                 else self.time_array[start:end]
             ),
             robot_joint_names=self.robot_joint_names,
-            table_root_states_array=self.table_root_states_array[start:end],
-            goal_root_states_array=self.goal_root_states_array[start:end],
-            robot_joint_velocities_array=self.robot_joint_velocities_array[start:end],
-            robot_joint_pos_targets_array=self.robot_joint_pos_targets_array[start:end],
-            observations_array=self.observations_array[start:end],
-            actions_array=self.actions_array[start:end],
+            table_root_states_array=self.table_root_states_array[start:end] if self.table_root_states_array is not None else None,
+            goal_root_states_array=self.goal_root_states_array[start:end] if self.goal_root_states_array is not None else None,
+            robot_joint_velocities_array=self.robot_joint_velocities_array[start:end] if self.robot_joint_velocities_array is not None else None,
+            robot_joint_pos_targets_array=self.robot_joint_pos_targets_array[start:end] if self.robot_joint_pos_targets_array is not None else None,
+            observations_array=self.observations_array[start:end] if self.observations_array is not None else None,
+            actions_array=self.actions_array[start:end] if self.actions_array is not None else None,
+            object_name=self.object_name,
         )
 
     def __len__(self) -> int:

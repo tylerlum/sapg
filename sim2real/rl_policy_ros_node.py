@@ -244,7 +244,7 @@ class RLPolicyNode:
             ),
         )
 
-        DEBUG = True
+        DEBUG = False
         if DEBUG:
             print(f"q: {q}")
             print(f"qd: {qd}")

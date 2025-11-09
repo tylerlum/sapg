@@ -523,10 +523,12 @@ def plot_values_over_time(
 
 def main():
     filepaths = [
-        Path("/home/tylerlum/github_repos/sapg/recorded_data/2025-10-20_14-32-39.npz"),
-        Path(
-            "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-20_14-32-39_None_310.npz"
-        ),
+        # Path("/home/tylerlum/github_repos/sapg/recorded_data/2025-10-20_14-32-39.npz"),
+        # Path(
+        #     "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-20_14-32-39_None_310.npz"
+        # ),
+        # Path("/home/tylerlum/github_repos/sapg/recorded_data/2025-11-06_17-09-47.npz"),  # Slow
+        Path("/home/tylerlum/github_repos/sapg/recorded_data/2025-11-06_17-09-47_None_550.npz"),  # Slow sliced
     ]
     for filepath in filepaths:
         assert filepath.exists(), f"File {filepath} does not exist"
