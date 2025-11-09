@@ -6,6 +6,7 @@ import sys
 # import sharpa.so from SharpaWaveSDK python folder
 sys.path.insert(0, str(SHARPA_SDK_PATH))
 
+from copy import deepcopy
 import rospy
 from sensor_msgs.msg import JointState
 import numpy as np
@@ -113,8 +114,6 @@ def initialize(hand) -> bool:
         return False
     return True
 
-
-
 class SharpaRosNode:
     def __init__(self):
         rospy.init_node("sharpa_ros_node")
@@ -161,17 +160,30 @@ class SharpaRosNode:
         self.latest_cmd = msg
 
     def publish_joint_states(self):
+        error, angles_deg = self.hand.get_joint_position_degree()
+        if error.code != 0:
+            print(f"Failed to get joint positions: {error.message}")
+            return
+
         joint_states_msg = JointState()
         joint_states_msg.header.stamp = rospy.Time.now()
         joint_states_msg.name = JOINT_NAMES
-        joint_states_msg.position = np.deg2rad(self.hand.get_joint_position_degree()).tolist()
+        joint_states_msg.position = np.deg2rad(angles_deg).tolist()
         self.joint_states_pub.publish(joint_states_msg)
+        print(f"Published joint states: {joint_states_msg.position}")
+        print(f"Angles: {angles_deg}")
 
     def run(self):
         while not rospy.is_shutdown():
+            latest_cmd = deepcopy(self.latest_cmd)
+            if latest_cmd is not None:
+                enable_interpolation_mode = True
+                self.hand.set_joint_position(latest_cmd.position, enable_interpolation_mode)
+
             self.publish_joint_states()
             self.rate.sleep()
 
+    def stop(self):
         print("Sharpa Wave Example - Stop Hand Running Mode")
         self.hand.stop()
         SharpaWaveManager.get_instance().disconnect_all()
@@ -179,7 +191,8 @@ class SharpaRosNode:
 
 def main():
     node = SharpaRosNode()
-    # node.run()
+    node.run()
+    node.stop()
 
 if __name__ == "__main__":
     main()
