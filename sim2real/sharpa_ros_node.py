@@ -1,83 +1,82 @@
 from pathlib import Path
+
 SHARPA_SDK_PATH = Path("/juno/u/tylerlum/Sharpa/SDK/SharpaWaveSDK_4.3.4/python")
 assert SHARPA_SDK_PATH.exists(), f"SHARPA_SDK_PATH: {SHARPA_SDK_PATH} does not exist"
 
 import sys
+
 # import sharpa.so from SharpaWaveSDK python folder
 sys.path.insert(0, str(SHARPA_SDK_PATH))
 
+import time
 from copy import deepcopy
+
+import numpy as np
 import rospy
 from sensor_msgs.msg import JointState
-import numpy as np
-
-import math
-import time
 from sharpa import (
-    SharpaWave,
-    SharpaWaveManager,
     ControlMode,
     ControlSource,
-    HandSide,
-    ErrorCode
+    SharpaWaveManager,
 )
 
 # Joint names (indices 0..21)
 JOINT_NAMES = [
     "Thumb CMC Flexion/Extension",
-    "Thumb CMC Abduction/Adduction", 
+    "Thumb CMC Abduction/Adduction",
     "Thumb MCP Flexion/Extension",
     "Thumb MCP Abduction/Adduction",
     "Thumb DIP Flexion/Extension",
     "Index MCP Flexion/Extension",
     "Index MCP Abduction/Adduction",
-    "Index PIP Flexion/Extension", 
+    "Index PIP Flexion/Extension",
     "Index DIP Flexion/Extension",
     "Middle MCP Flexion/Extension",
     "Middle MCP Abduction/Adduction",
     "Middle PIP Flexion/Extension",
-    "Middle DIP Flexion/Extension", 
+    "Middle DIP Flexion/Extension",
     "Ring MCP Flexion/Extension",
     "Ring MCP Abduction/Adduction",
     "Ring PIP Flexion/Extension",
     "Ring DIP Flexion/Extension",
     "Pinky CMC Flexion/Extension",
     "Pinky MCP Flexion/Extension",
-    "Pinky MCP Abduction/Adduction", 
+    "Pinky MCP Abduction/Adduction",
     "Pinky PIP Flexion/Extension",
     "Pinky DIP Flexion/Extension",
 ]
 
 # Angle ranges (in degrees)
 ANGLE_RANGES = [
-    (0, 50),   # Thumb CMC Flexion/Extension
-    (0, 10),     # Thumb CMC Abduction/Adduction
-    (0, 30),   # Thumb MCP Flexion/Extension
-    (0, 10),     # Thumb MCP Abduction/Adduction
-    (0, 40),     # Thumb DIP Flexion/Extension
-    (0, 20),   # Index MCP Flexion/Extension
-    (-20, 20),   # Index MCP Abduction/Adduction
-    (0, 20),     # Index PIP Flexion/Extension
-    (0, 20),     # Index DIP Flexion/Extension
-    (0, 20),   # Middle MCP Flexion/Extension
-    (-20, 20),   # Middle MCP Abduction/Adduction
-    (0, 20),     # Middle PIP Flexion/Extension
-    (0, 20),     # Middle DIP Flexion/Extension
-    (0, 20),   # Ring MCP Flexion/Extension
-    (-20, 20),   # Ring MCP Abduction/Adduction
-    (0, 20),     # Ring PIP Flexion/Extension
-    (0, 20),     # Ring DIP Flexion/Extension
-    (0, 10),     # Pinky CMC Flexion/Extension
-    (0, 20),   # Pinky MCP Flexion/Extension
-    (-20, 20),   # Pinky MCP Abduction/Adduction
-    (0, 20),     # Pinky PIP Flexion/Extension
-    (0, 20),     # Pinky DIP Flexion/Extension
+    (0, 50),  # Thumb CMC Flexion/Extension
+    (0, 10),  # Thumb CMC Abduction/Adduction
+    (0, 30),  # Thumb MCP Flexion/Extension
+    (0, 10),  # Thumb MCP Abduction/Adduction
+    (0, 40),  # Thumb DIP Flexion/Extension
+    (0, 20),  # Index MCP Flexion/Extension
+    (-20, 20),  # Index MCP Abduction/Adduction
+    (0, 20),  # Index PIP Flexion/Extension
+    (0, 20),  # Index DIP Flexion/Extension
+    (0, 20),  # Middle MCP Flexion/Extension
+    (-20, 20),  # Middle MCP Abduction/Adduction
+    (0, 20),  # Middle PIP Flexion/Extension
+    (0, 20),  # Middle DIP Flexion/Extension
+    (0, 20),  # Ring MCP Flexion/Extension
+    (-20, 20),  # Ring MCP Abduction/Adduction
+    (0, 20),  # Ring PIP Flexion/Extension
+    (0, 20),  # Ring DIP Flexion/Extension
+    (0, 10),  # Pinky CMC Flexion/Extension
+    (0, 20),  # Pinky MCP Flexion/Extension
+    (-20, 20),  # Pinky MCP Abduction/Adduction
+    (0, 20),  # Pinky PIP Flexion/Extension
+    (0, 20),  # Pinky DIP Flexion/Extension
 ]
+
 
 def auto_detect_hand() -> None:
     """Automatically detect device and return device and device serial number"""
     print("Searching for devices...")
-    
+
     try:
         manager = SharpaWaveManager.get_instance()
         time.sleep(1)  # Wait for 1 seconds for device discovery to complete
@@ -93,7 +92,8 @@ def auto_detect_hand() -> None:
     except Exception as e:
         print(f"Failed to connect to device: {str(e)}")
         exit(1)
-    
+
+
 def initialize(hand) -> bool:
     error = hand.set_control_mode(ControlMode.POSITION)
     if error.code != 0:
@@ -113,6 +113,7 @@ def initialize(hand) -> bool:
         print(f"Failed to set control source: {error.message}")
         return False
     return True
+
 
 class SharpaRosNode:
     def __init__(self):
@@ -178,7 +179,9 @@ class SharpaRosNode:
             latest_cmd = deepcopy(self.latest_cmd)
             if latest_cmd is not None:
                 enable_interpolation_mode = True
-                self.hand.set_joint_position(latest_cmd.position, enable_interpolation_mode)
+                self.hand.set_joint_position(
+                    latest_cmd.position, enable_interpolation_mode
+                )
 
             self.publish_joint_states()
             self.rate.sleep()
@@ -189,10 +192,12 @@ class SharpaRosNode:
         SharpaWaveManager.get_instance().disconnect_all()
         print("Sharpa Wave Example - Stopped")
 
+
 def main():
     node = SharpaRosNode()
     node.run()
     node.stop()
+
 
 if __name__ == "__main__":
     main()
