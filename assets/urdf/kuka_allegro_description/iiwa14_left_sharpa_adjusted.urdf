@@ -364,10 +364,10 @@
     </inertial>
     <visual>
       <!-- <origin xyz="-0.0425 -0.0425 0" rpy="0 0 0" /> -->
-      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <origin rpy="0 0 0" xyz="0 0 0.00"/>
       <geometry>
         <!-- <mesh filename="kuka_allegro_description/meshes/mounts/allegro_mount.obj"/> -->
-        <mesh filename="new_allegro_meshes/mount.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="sharpa_mount.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="color_j7"/>
     </visual>
@@ -375,7 +375,7 @@
       <!-- <origin xyz="-0.0425 -0.0425 0" rpy="0 0 0" /> -->
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="kuka_allegro_description/meshes/mounts/allegro_mount.obj"/>
+        <mesh filename="sharpa_mount.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
   </link>
@@ -390,7 +390,7 @@
     <!-- <origin xyz="0.065 0 0.0275" rpy="0 1.57 0" /> -->
     <!-- <origin rpy="0 -1.5708 0.785398" xyz="0.008219 -0.02063 0.08086"/> -->
     <!-- <origin rpy="0 -1.5708 1.5708" xyz="0.01 -0.02063 0.08"/> -->
-    <origin rpy="0 0 -1.5708" xyz="0.0 0.0 0.04"/>
+    <origin rpy="0 0 -1.5708" xyz="0.0 0.0 0.05"/>
     <parent link="allegro_mount"/>
     <child link="left_hand_C_MC"/>
 
