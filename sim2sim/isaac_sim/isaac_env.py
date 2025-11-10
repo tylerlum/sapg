@@ -26,44 +26,46 @@ def create_env(
     cfg = read_cfg_omegaconf(config_path=config_path, device=device)
 
     if merge_with_default_config:
-        # Use this if the config from config path is missing fields
-        # For example, say we recently added a new field "object_friction" to the config
-        # If this wasn't in the config file, this would normally fail
-        # Merging with the default config will add this field with the default value
-        print("Merging with default config")
-
-        # Should be path of the isaacgymenvs/cfg directory relative to this file's directory
-        with initialize(version_base="1.1", config_path="../../isaacgymenvs/cfg"):
-            init_cfg = compose(config_name="config", overrides=["task=AllegroKukaLSTM"])
-
-        # Disable struct mode to allow merging
-        OmegaConf.set_struct(init_cfg, False)
-        OmegaConf.set_struct(cfg, False)
-
-        # Put cfg second to override init_cfg
-        merged_cfg = OmegaConf.merge(init_cfg, cfg)
-        assert isinstance(merged_cfg, DictConfig), (
-            f"Expected DictConfig, got {type(merged_cfg)}"
-        )
-
-        # Print the differences
-        diff = recursive_diff(
-            OmegaConf.to_container(cfg, resolve=True),
-            OmegaConf.to_container(merged_cfg, resolve=True),
-        )
-        print("Changes:")
-        print("-" * 80)
-        for key, change in diff.items():
-            print(f"{key}: {change}")
-
-        cfg = merged_cfg
-
+        cfg = merge_cfg_with_default_config(cfg)
     return create_env_from_cfg(
         cfg=cfg,
         headless=headless,
         enable_viewer_sync_at_start=enable_viewer_sync_at_start,
         episode_length=episode_length,
     )
+
+def merge_cfg_with_default_config(cfg: DictConfig) -> DictConfig:
+    # Use this if the config from config path is missing fields
+    # For example, say we recently added a new field "object_friction" to the config
+    # If this wasn't in the config file, this would normally fail
+    # Merging with the default config will add this field with the default value
+    print("Merging with default config")
+
+    # Should be path of the isaacgymenvs/cfg directory relative to this file's directory
+    with initialize(version_base="1.1", config_path="../../isaacgymenvs/cfg"):
+        init_cfg = compose(config_name="config", overrides=["task=AllegroKukaLSTM"])
+
+    # Disable struct mode to allow merging
+    OmegaConf.set_struct(init_cfg, False)
+    OmegaConf.set_struct(cfg, False)
+
+    # Put cfg second to override init_cfg
+    merged_cfg = OmegaConf.merge(init_cfg, cfg)
+    assert isinstance(merged_cfg, DictConfig), (
+        f"Expected DictConfig, got {type(merged_cfg)}"
+    )
+
+    # Print the differences
+    diff = recursive_diff(
+        OmegaConf.to_container(cfg, resolve=True),
+        OmegaConf.to_container(merged_cfg, resolve=True),
+    )
+    print("Changes:")
+    print("-" * 80)
+    for key, change in diff.items():
+        print(f"{key}: {change}")
+
+    return merged_cfg
 
 
 def create_env_from_cfg(
@@ -83,10 +85,13 @@ def create_env_from_cfg(
     # This is a pretty reasonable assumption because we are typically doing this testing on a workstation with 1 GPU
     cfg.graphics_device_id = 0
 
-    # Modify the config for the task
-    # cfg.task.env.custom.object_friction = 0.5
-    # cfg.task.env.custom.object_mass_scale = 1.0
-    # cfg.task.env.custom.object_inertia_scale = 1.0
+    MODIFY_THINGS_HARDCODED = True
+    if MODIFY_THINGS_HARDCODED:
+        cfg.task.env.asset.kukaAllegro = "urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted.urdf"
+        # cfg.task.env.allegroStiffness = 5.0
+        # cfg.task.env.allegroDamping = 0.1
+        cfg.task.env.allegroStiffness = 5.0
+        cfg.task.env.allegroDamping = 0.25
 
     env = isaacgym_task_map[cfg.task_name](
         cfg=omegaconf_to_dict(cfg.task),
