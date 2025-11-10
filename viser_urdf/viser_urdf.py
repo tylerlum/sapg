@@ -35,6 +35,13 @@ def create_robot_control_sliders(
     when slider moves."""
     slider_handles: list[viser.GuiInputHandle[float]] = []
     initial_config: list[float] = []
+
+    print()
+    print("Actuated joint limits:")
+    for joint_name, (lower, upper) in viser_urdf.get_actuated_joint_limits().items():
+        print(f"joint_name: {joint_name}, lower: {lower}, upper: {upper}")
+    print()
+
     for joint_name, (
         lower,
         upper,
@@ -64,7 +71,7 @@ def main(
         get_repo_root_dir() / "assets/urdf/kuka_allegro_description/iiwa14_real.urdf"
     ),
     load_meshes: bool = True,
-    load_collision_meshes: bool = False,
+    load_collision_meshes: bool = True,
 ) -> None:
     # Start viser server.
     server = viser.ViserServer()
