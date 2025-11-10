@@ -9,7 +9,7 @@ import numpy as np
 from scipy.spatial.transform import Rotation as R
 
 OBSERVATIONS_DIM = 117
-ACTIONS_DIM = 23
+ACTIONS_DIM = 29
 JOINT_NAMES_ISAACGYM = [
     "iiwa7_joint_1",
     "iiwa7_joint_2",
@@ -18,22 +18,28 @@ JOINT_NAMES_ISAACGYM = [
     "iiwa7_joint_5",
     "iiwa7_joint_6",
     "iiwa7_joint_7",
-    "index_joint_0",
-    "index_joint_1",
-    "index_joint_2",
-    "index_joint_3",
-    "middle_joint_0",
-    "middle_joint_1",
-    "middle_joint_2",
-    "middle_joint_3",
-    "ring_joint_0",
-    "ring_joint_1",
-    "ring_joint_2",
-    "ring_joint_3",
-    "thumb_joint_0",
-    "thumb_joint_1",
-    "thumb_joint_2",
-    "thumb_joint_3",
+    "joint_0.0",
+    "joint_1.0",
+    "joint_2.0",
+    "joint_3.0",
+    "joint_4.0",
+    "joint_5.0",
+    "joint_6.0",
+    "joint_7.0",
+    "joint_8.0",
+    "joint_9.0",
+    "joint_10.0",
+    "joint_11.0",
+    "joint_12.0",
+    "joint_13.0",
+    "joint_14.0",
+    "joint_15.0",
+    "joint_16.0",
+    "joint_17.0",
+    "joint_18.0",
+    "joint_19.0",
+    "joint_20.0",
+    "joint_21.0",
 ]
 OBS_NAME_TO_NAMES = {
     "q": [f"{name}_q" for name in JOINT_NAMES_ISAACGYM],
