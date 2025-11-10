@@ -19,6 +19,7 @@ from sharpa import (
     ControlSource,
     SharpaWaveManager,
 )
+from termcolor import colored
 
 # Joint names (indices 0..21)
 JOINT_NAMES = [
@@ -72,6 +73,12 @@ ANGLE_RANGES = [
     (0, 20),  # Pinky DIP Flexion/Extension
 ]
 
+def warn(message: str):
+    print(colored(message, "yellow"))
+
+def info(message: str):
+    print(colored(message, "green"))
+
 
 def auto_detect_hand() -> None:
     """Automatically detect device and return device and device serial number"""
@@ -83,34 +90,34 @@ def auto_detect_hand() -> None:
         while True:
             devices = manager.get_all_device_sn()
             if not devices:
-                print("No available devices found")
+                warn("No available devices found")
                 time.sleep(1)
                 continue
             else:
-                print(f"Device found: {devices[0]}")
+                info(f"Device found: {devices[0]}")
                 return manager.connect(devices[0])
     except Exception as e:
-        print(f"Failed to connect to device: {str(e)}")
+        warn(f"Failed to connect to device: {str(e)}")
         exit(1)
 
 
 def initialize(hand) -> bool:
     error = hand.set_control_mode(ControlMode.POSITION)
     if error.code != 0:
-        print(f"Failed to set control mode: {error.message}")
+        warn(f"Failed to set control mode: {error.message}")
         return False
     error = hand.set_speed_coeff(0.3)
     if error.code != 0:
-        print(f"Failed to set speed coeff: {error.message}")
+        warn(f"Failed to set speed coeff: {error.message}")
         return False
 
     error = hand.set_current_coeff(0.6)
     if error.code != 0:
-        print(f"Failed to set current coeff: {error.message}")
+        warn(f"Failed to set current coeff: {error.message}")
         return False
     error = hand.set_control_source(ControlSource.SDK)
     if error.code != 0:
-        print(f"Failed to set control source: {error.message}")
+        warn(f"Failed to set control source: {error.message}")
         return False
     return True
 
@@ -140,18 +147,18 @@ class SharpaRosNode:
         self._setup_sharpa_wave()
 
     def _setup_sharpa_wave(self):
-        print("Sharpa Wave Example - Starting")
+        info("Sharpa Wave Example - Starting")
         # Try to automatically detect device
         self.hand = auto_detect_hand()
         if self.hand is None:
-            print("Error: No available device found")
+            warn("Error: No available device found")
             exit(1)
-        print("Sharpa Wave Example - Init Hand Running Mode")
+        info("Sharpa Wave Example - Init Hand Running Mode")
         if not initialize(self.hand):
-            print("Error: Failed to initialize hand")
+            warn("Error: Failed to initialize hand")
             exit(1)
 
-        print("Sharpa Wave Example - Run Demo Gestures")
+        info("Sharpa Wave Example - Run Demo Gestures")
         self.hand.start()
 
         enable_interpolation_mode = True
@@ -171,8 +178,11 @@ class SharpaRosNode:
         joint_states_msg.name = JOINT_NAMES
         joint_states_msg.position = np.deg2rad(angles_deg).tolist()
         self.joint_states_pub.publish(joint_states_msg)
-        print(f"Published joint states: {joint_states_msg.position}")
-        print(f"Angles: {angles_deg}")
+
+        DEBUG = False
+        if DEBUG:
+            print(f"Published joint states: {joint_states_msg.position}")
+            print(f"Angles (deg): {angles_deg}")
 
     def run(self):
         while not rospy.is_shutdown():
@@ -187,10 +197,10 @@ class SharpaRosNode:
             self.rate.sleep()
 
     def stop(self):
-        print("Sharpa Wave Example - Stop Hand Running Mode")
+        info("Sharpa Wave Example - Stop Hand Running Mode")
         self.hand.stop()
         SharpaWaveManager.get_instance().disconnect_all()
-        print("Sharpa Wave Example - Stopped")
+        info("Sharpa Wave Example - Stopped")
 
 
 def main():
