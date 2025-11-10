@@ -1007,6 +1007,7 @@ class AllegroKukaBase(VecTask):
         )
 
         asset_options = gymapi.AssetOptions()
+        # asset_options.vhacd_enabled = True  # Should be False so the robot is not complicated to model, but can test
         asset_options.fix_base_link = True
         asset_options.flip_visual_attachments = False
         asset_options.collapse_fixed_joints = True
@@ -1157,7 +1158,6 @@ class AllegroKukaBase(VecTask):
             self.gym.begin_aggregate(env_ptr, max_agg_bodies, max_agg_shapes, True)
 
             allegro_actor = self.gym.create_actor(env_ptr, allegro_kuka_asset, allegro_pose, "allegro", i, -1, 0)
-
             populate_dof_properties(allegro_hand_dof_props, self.dof_params, self.num_arm_dofs, self.num_hand_dofs)
 
             self.gym.set_actor_dof_properties(env_ptr, allegro_actor, allegro_hand_dof_props)
@@ -2199,7 +2199,17 @@ class AllegroKukaBase(VecTask):
             breakpoint()
 
         if joint_pos_targets is not None:
+            HACK_OVERWRITE = False
+            if HACK_OVERWRITE:
+                # SUPER HACK
+                joint_pos_targets[:, 7:] = 0.0
+                joint_pos_targets[:, 7+0] = 1.85
+                joint_pos_targets[:, 7+1] = 0.2
             self.cur_targets[:, :self.num_hand_arm_dofs] = joint_pos_targets.clone()
+
+        # print(f"self.cur_targets: {self.cur_targets[0, 7:]}")
+        # print(f"self.arm_dof_pos: {self.arm_hand_dof_pos[0, 7:]}")
+        # print()
 
         if self._DO_NOT_MOVE:
             self.cur_targets[:, :] = self.prev_targets[:, :]
