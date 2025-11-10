@@ -364,22 +364,22 @@
     </inertial>
     <!-- <visual> -->
       <!-- <origin xyz="-0.0425 -0.0425 0" rpy="0 0 0" /> -->
-      <origin rpy="0 0 0" xyz="0 0 0.00"/>
+      <!-- <origin rpy="0 0 0" xyz="0 0 0.00"/> -->
       <!-- <geometry> -->
         <!-- <mesh filename="kuka_allegro_description/meshes/mounts/allegro_mount.obj"/> -->
         <!-- <mesh filename="sharpa_mount.stl" scale="0.001 0.001 0.001"/> -->
       <!-- </geometry> -->
       <!-- <material name="color_j7"/> -->
     <!-- </visual> -->
-    <collision>
+    <!-- <collision> -->
       <!-- <origin xyz="-0.0425 -0.0425 0" rpy="0 0 0" /> -->
-      <origin rpy="0 0 0" xyz="0 0 0"/>
-      <geometry>
+      <!-- <origin rpy="0 0 0" xyz="0 0 0"/> -->
+      <!-- <geometry> -->
         <!-- <mesh filename="sharpa_mount.stl" scale="0.001 0.001 0.001"/> -->
         <!-- Leave in simple geometry from original allegro mount -->
-        <mesh filename="meshes/mounts/allegro_mount.obj"/>
-      </geometry>
-    </collision>
+        <!-- <mesh filename="meshes/mounts/allegro_mount.obj"/> -->
+      <!-- </geometry> -->
+    <!-- </collision> -->
   </link>
   <!-- <joint name="allegro_mount_joint1" type="fixed">
     
@@ -510,7 +510,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="left_sharpa_meshes/left_thumb_MC.STL" />
+        <mesh filename="left_sharpa_meshes/left_thumb_MC_modified.STL" />
       </geometry>
     </collision>
   </link>
