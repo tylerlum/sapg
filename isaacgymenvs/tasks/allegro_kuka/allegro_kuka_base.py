@@ -3088,8 +3088,8 @@ class AllegroKukaBase(VecTask):
             else:
                 raise ValueError(f"Invalid use_sharpa: {self.use_sharpa}")
 
-        assert set(link_to_adjacent_links.keys()).issubset(rb_names), f"Some links are not in the asset {allegro_kuka_asset}, rb_names: {rb_names}, link_to_adjacent_links: {link_to_adjacent_links}"
-        assert set(sum(link_to_adjacent_links.values(), [])) == set(rb_names), f"Some links are not in the asset {allegro_kuka_asset}, rb_names: {rb_names}, link_to_adjacent_links: {link_to_adjacent_links}"
+        assert set(link_to_adjacent_links.keys()).issubset(rb_names), f"Some links are not in the asset {allegro_kuka_asset}, rb_names: {rb_names}, link_to_adjacent_links: {link_to_adjacent_links}, only in link_to_adjacent_links: {set(link_to_adjacent_links.keys()) - set(rb_names)}, only in rb_names: {set(rb_names) - set(link_to_adjacent_links.keys())}"
+        assert set(sum(link_to_adjacent_links.values(), [])) == set(rb_names), f"Some links are not in the asset {allegro_kuka_asset}, rb_names: {rb_names}, link_to_adjacent_links: {link_to_adjacent_links}, only in link_to_adjacent_links: {set(sum(link_to_adjacent_links.values(), [])) - set(rb_names)}, only in rb_names: {set(rb_names) - set(sum(link_to_adjacent_links.values(), []))}"
 
         no_collision_pairs = set()
         for link, adjacent_links in link_to_adjacent_links.items():
