@@ -3004,7 +3004,93 @@ class AllegroKukaBase(VecTask):
             'thumb_link_2': ['thumb_link_1', 'thumb_link_3'],
             'thumb_link_3': ['thumb_link_2'],
         }
+        if self.use_sharpa:
+            if self.use_right_sharpa:
+                link_to_adjacent_links = {
+                    'iiwa14_link_0': ['iiwa14_link_1'],
+                    'iiwa14_link_1': ['iiwa14_link_0', 'iiwa14_link_2'],
+                    'iiwa14_link_2': ['iiwa14_link_1', 'iiwa14_link_3'],
+                    'iiwa14_link_3': ['iiwa14_link_2', 'iiwa14_link_4'],
+                    'iiwa14_link_4': ['iiwa14_link_3', 'iiwa14_link_5'],
+                    'iiwa14_link_5': ['iiwa14_link_4', 'iiwa14_link_6'],
+                    'iiwa14_link_6': ['iiwa14_link_5', 'iiwa14_link_7'],
+                    'iiwa14_link_7': [
+                        'iiwa14_link_6',
+                        'right_index_MCP_VL',
+                        'right_middle_MCP_VL',
+                        'right_pinky_MC',
+                        'right_ring_MCP_VL',
+                        'right_thumb_CMC_VL',
+                    ],
+                    "right_index_MCP_VL": ["iiwa14_link_7", "right_index_PP"],
+                    "right_index_PP": ["right_index_MCP_VL", "right_index_MP"],
+                    "right_index_MP": ["right_index_PP", "right_index_DP"],
+                    "right_index_DP": ["right_index_MP"],
+                    "right_middle_MCP_VL": ["iiwa14_link_7", "right_middle_PP"],
+                    "right_middle_PP": ["right_middle_MCP_VL", "right_middle_MP"],
+                    "right_middle_MP": ["right_middle_PP", "right_middle_DP"],
+                    "right_middle_DP": ["right_middle_MP"],
+                    "right_pinky_MC": ["iiwa14_link_7", "right_pinky_MCP_VL"],
+                    "right_pinky_MCP_VL": ["right_pinky_MC", "right_pinky_PP"],
+                    "right_pinky_PP": ["right_pinky_MCP_VL", "right_pinky_MP"],
+                    "right_pinky_MP": ["right_pinky_PP", "right_pinky_DP"],
+                    "right_pinky_DP": ["right_pinky_MP"],
+                    "right_ring_MCP_VL": ["iiwa14_link_7", "right_ring_PP"],
+                    "right_ring_PP": ["right_ring_MCP_VL", "right_ring_MP"],
+                    "right_ring_MP": ["right_ring_PP", "right_ring_DP"],
+                    "right_ring_DP": ["right_ring_MP"],
+                    "right_thumb_CMC_VL": ["iiwa14_link_7", "right_thumb_MC"],
+                    "right_thumb_MC": ["right_thumb_CMC_VL", "right_thumb_MCP_VL"],
+                    "right_thumb_MCP_VL": ["right_thumb_MC", "right_thumb_PP"],
+                    "right_thumb_PP": ["right_thumb_MCP_VL", "right_thumb_DP"],
+                    "right_thumb_DP": ["right_thumb_PP"],
+                }
+            elif self.use_left_sharpa:
+                link_to_adjacent_links = {
+                    'iiwa14_link_0': ['iiwa14_link_1'],
+                    'iiwa14_link_1': ['iiwa14_link_0', 'iiwa14_link_2'],
+                    'iiwa14_link_2': ['iiwa14_link_1', 'iiwa14_link_3'],
+                    'iiwa14_link_3': ['iiwa14_link_2', 'iiwa14_link_4'],
+                    'iiwa14_link_4': ['iiwa14_link_3', 'iiwa14_link_5'],
+                    'iiwa14_link_5': ['iiwa14_link_4', 'iiwa14_link_6'],
+                    'iiwa14_link_6': ['iiwa14_link_5', 'iiwa14_link_7'],
+                    'iiwa14_link_7': [
+                        'iiwa14_link_6',
+                        'left_index_MCP_VL',
+                        'left_middle_MCP_VL',
+                        'left_pinky_MC',
+                        'left_ring_MCP_VL',
+                        'left_thumb_CMC_VL',
+                    ],
+                    "left_index_MCP_VL": ["iiwa14_link_7", "left_index_PP"],
+                    "left_index_PP": ["left_index_MCP_VL", "left_index_MP"],
+                    "left_index_MP": ["left_index_PP", "left_index_DP"],
+                    "left_index_DP": ["left_index_MP"],
+                    "left_middle_MCP_VL": ["iiwa14_link_7", "left_middle_PP"],
+                    "left_middle_PP": ["left_middle_MCP_VL", "left_middle_MP"],
+                    "left_middle_MP": ["left_middle_PP", "left_middle_DP"],
+                    "left_middle_DP": ["left_middle_MP"],
+                    "left_pinky_MC": ["iiwa14_link_7", "left_pinky_MCP_VL"],
+                    "left_pinky_MCP_VL": ["left_pinky_MC", "left_pinky_PP"],
+                    "left_pinky_PP": ["left_pinky_MCP_VL", "left_pinky_MP"],
+                    "left_pinky_MP": ["left_pinky_PP", "left_pinky_DP"],
+                    "left_pinky_DP": ["left_pinky_MP"],
+                    "left_ring_MCP_VL": ["iiwa14_link_7", "left_ring_PP"],
+                    "left_ring_PP": ["left_ring_MCP_VL", "left_ring_MP"],
+                    "left_ring_MP": ["left_ring_PP", "left_ring_DP"],
+                    "left_ring_DP": ["left_ring_MP"],
+                    "left_thumb_CMC_VL": ["iiwa14_link_7", "left_thumb_MC"],
+                    "left_thumb_MC": ["left_thumb_CMC_VL", "left_thumb_MCP_VL"],
+                    "left_thumb_MCP_VL": ["left_thumb_MC", "left_thumb_PP"],
+                    "left_thumb_PP": ["left_thumb_MCP_VL", "left_thumb_DP"],
+                    "left_thumb_DP": ["left_thumb_PP"],
+                }
+            else:
+                raise ValueError(f"Invalid use_sharpa: {self.use_sharpa}")
+
         assert set(link_to_adjacent_links.keys()).issubset(rb_names), f"Some links are not in the asset {allegro_kuka_asset}, rb_names: {rb_names}, link_to_adjacent_links: {link_to_adjacent_links}"
+        assert set(sum(link_to_adjacent_links.values(), [])) == set(rb_names), f"Some links are not in the asset {allegro_kuka_asset}, rb_names: {rb_names}, link_to_adjacent_links: {link_to_adjacent_links}"
+
         no_collision_pairs = set()
         for link, adjacent_links in link_to_adjacent_links.items():
             for adjacent_link in adjacent_links:
