@@ -9,7 +9,7 @@ from hydra import compose, initialize
 from omegaconf import DictConfig, OmegaConf
 
 from isaacgymenvs.tasks import isaacgym_task_map
-from isaacgymenvs.utils.reformat import omegaconf_to_dict
+from isaacgymenvs.utils.reformat import omegaconf_to_dict, print_dict
 from sim2real.rl_player_utils import (
     read_cfg_omegaconf,
 )
@@ -100,6 +100,8 @@ def create_env_from_cfg(
             print(f"Evaluating: {eval_str}")
             exec(eval_str)
 
+    print_dict(omegaconf_to_dict(cfg))
+
     # MODIFY_THINGS_HARDCODED = True
     # if MODIFY_THINGS_HARDCODED:
     #     cfg.task.env.asset.kukaAllegro = "urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted.urdf"
@@ -153,8 +155,8 @@ def recursive_diff(cfg1: dict, cfg2: dict, path: str = "") -> dict:
 
 
 def main() -> None:
-    # DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-    DEVICE = "cpu"  # "cpu" faster for single env
+    DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+    # DEVICE = "cpu"  # "cpu" faster for single env, but some bugs with cpu like force sensors not working
     CONFIG_PATH = Path(
         "/home/tylerlum/github_repos/sapg/closed_loop_testing/config.yaml"
     )

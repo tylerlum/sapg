@@ -132,8 +132,7 @@ def launch_rlg_hydra(cfg: DictConfig, vec_env=None):
 
         cfg.checkpoint = to_absolute_path(cfg.checkpoint)
 
-    cfg_dict = omegaconf_to_dict(cfg)
-    print_dict(cfg_dict)
+    print_dict(omegaconf_to_dict(cfg))
 
     # set numpy formatting for printing only
     set_np_formatting()
