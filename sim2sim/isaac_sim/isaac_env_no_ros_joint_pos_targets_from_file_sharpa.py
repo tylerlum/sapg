@@ -92,6 +92,7 @@ def main():
         device=DEVICE,
         episode_length=T*2,  # Make it not reset before finishing the trajectory
         overrides={"task.env.asset.kukaAllegro": "urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted.urdf"},
+        # overrides={"task.env.asset.kukaAllegro": "urdf/kuka_allegro_description/iiwa14_left_sharpa.urdf"},
     )
 
     # Set env state from checkpoint to match things like success_tolerance
