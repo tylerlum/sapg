@@ -100,10 +100,20 @@ class AllegroKukaReorientation(AllegroKukaBase):
         self.goal_object_indices = to_torch(self.goal_object_indices, dtype=torch.long, device=self.device)
 
     def _extra_reset_rules(self, resets):
+        ones = torch.ones_like(self.reset_buf)
+        zeros = torch.zeros_like(self.reset_buf)
+
         # hand far from the object
-        resets = torch.where(
-            self.curr_fingertip_distances.max(dim=-1).values > 1.5, torch.ones_like(self.reset_buf), resets
+        hand_far_from_object = torch.where(
+            self.curr_fingertip_distances.max(dim=-1).values > 1.5, ones, zeros
         )
+        resets = resets | hand_far_from_object
+
+        # Print resets when there is only one environment
+        if self.num_envs == 1 and resets.item():
+            print(f"hand_far_from_object: {hand_far_from_object.item()}")
+            print(f"resets: {resets.item()}")
+
         return resets
 
     def _reset_target(self, env_ids: Tensor, reset_buf_idxs=None, tensor_reset=True) -> None:

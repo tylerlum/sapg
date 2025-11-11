@@ -294,7 +294,7 @@ class AllegroKukaBase(VecTask):
         # volume to sample target position from
         target_volume_origin = np.array([0, 0.05, 0.8], dtype=np.float32)
         target_volume_extent = np.array([[-0.4, 0.4], [-0.05, 0.3], [-0.12, 0.25]], dtype=np.float32)
-        
+
         self.target_volume_origin = torch.from_numpy(target_volume_origin).to(self.device).float()
         self.target_volume_extent = torch.from_numpy(target_volume_extent).to(self.device).float()
 
@@ -1157,7 +1157,12 @@ class AllegroKukaBase(VecTask):
 
             self.gym.begin_aggregate(env_ptr, max_agg_bodies, max_agg_shapes, True)
 
-            allegro_actor = self.gym.create_actor(env_ptr, allegro_kuka_asset, allegro_pose, "allegro", i, -1, 0)
+            collision_group = i  # Each env has a different collision group so they don't collide with each other
+            collision_filter = -1  # -1 = use asset collision filters set in mjcf loader (for URDF, enable all self-collisions)
+                                   # 0 = enable all self-collisions
+                                   # >0 = disable all self-collisions
+            segmentation_id = 0
+            allegro_actor = self.gym.create_actor(env_ptr, allegro_kuka_asset, allegro_pose, "allegro", collision_group, collision_filter, segmentation_id)
             populate_dof_properties(allegro_hand_dof_props, self.dof_params, self.num_arm_dofs, self.num_hand_dofs)
 
             self.gym.set_actor_dof_properties(env_ptr, allegro_actor, allegro_hand_dof_props)
@@ -1407,13 +1412,31 @@ class AllegroKukaBase(VecTask):
         return -1 * kuka_actions_penalty, -1 * allegro_actions_penalty
 
     def _compute_resets(self, is_success):
-        resets = torch.where(self.object_pos[:, 2] < 0.1, torch.ones_like(self.reset_buf), self.reset_buf)  # fall
+        ones = torch.ones_like(self.reset_buf)
+        zeros = torch.zeros_like(self.reset_buf)
+
+        object_z_low = torch.where(self.object_pos[:, 2] < 0.1, ones, zeros)  # fall
         if self.max_consecutive_successes > 0:
             # Reset progress buffer if max_consecutive_successes > 0
             self.progress_buf = torch.where(is_success > 0, torch.zeros_like(self.progress_buf), self.progress_buf)
-            resets = torch.where(self.successes >= self.max_consecutive_successes, torch.ones_like(resets), resets)
-        resets = torch.where(self.progress_buf >= self.max_episode_length - 1, torch.ones_like(resets), resets)
+            max_consecutive_successes_reached = torch.where(self.successes >= self.max_consecutive_successes, ones, zeros)
+
+        max_episode_length_reached = torch.where(self.progress_buf >= self.max_episode_length - 1, ones, zeros)
+
+        resets = self.reset_buf | object_z_low | max_consecutive_successes_reached | max_episode_length_reached
         resets = self._extra_reset_rules(resets)
+
+        # Print resets when there is only one environment
+        if self.num_envs == 1 and resets.item():
+            print("=" * 100)
+            print("REASON FOR RESET:")
+            print(f"object_z_low: {object_z_low.item()}")
+            print(f"max_consecutive_successes_reached: {max_consecutive_successes_reached.item()}")
+            print(f"max_episode_length_reached: {max_episode_length_reached.item()}")
+            print(f"resets: {resets.item()}")
+            print("=" * 100)
+            print(f"self.successes: {self.successes.item()}")
+            print()
         return resets
 
     def _true_objective(self):
@@ -1433,6 +1456,13 @@ class AllegroKukaBase(VecTask):
         is_success = self.near_goal_steps >= self.success_steps
         goal_resets = is_success
         self.successes += is_success
+
+        # Print successes when there is only one environment
+        if self.num_envs == 1 and is_success.item():
+            print("~" * 100)
+            print("IS SUCCESS:")
+            print(f"self.successes: {self.successes.item()}")
+            print("~" * 100)
 
         self.reset_goal_buf[:] = goal_resets
 
