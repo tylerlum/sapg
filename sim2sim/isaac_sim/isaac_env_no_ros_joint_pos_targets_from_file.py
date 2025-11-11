@@ -63,16 +63,19 @@ class IsaacEnvNoRosJointPosTargetsFromFile:
 def main():
     CONTROL_DT = 1.0 / 60.0
     CONFIG_PATH = Path(
-        "/home/tylerlum/github_repos/sapg/closed_loop_testing/config.yaml"
+        "/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-11-05_hairbrush/00_smooth-arm-hand_speed-10_dropout-obs_2025-11-05_05-20-24/runs/00_smooth-arm-hand_speed-10_dropout-obs_2025-11-05_05-20-24/config.yaml"
     )
     assert Path(CONFIG_PATH).exists()
     CHECKPOINT_PATH = Path(
-        "/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-10-22_slow-action-obs-randomize-all_slower-curriculum/00_slowarmhand_slowobs_hammer_2025-10-23_00-48-56/runs/00_slowarmhand_slowobs_hammer_2025-10-23_00-48-56/last/model.pth"
+        "/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-11-05_hairbrush/00_smooth-arm-hand_speed-10_dropout-obs_2025-11-05_05-20-24/runs/00_smooth-arm-hand_speed-10_dropout-obs_2025-11-05_05-20-24/last/model.pth"
     )
     assert CHECKPOINT_PATH.exists()
 
     RECORDED_DATA_PATH = Path(
-        "/home/tylerlum/github_repos/sapg/recorded_robot_state/2025-11-02_18-48-58_sin_wave_hand_10-0s_1-0s_0-2rad.npz"
+        # "/home/tylerlum/github_repos/sapg/recorded_robot_state/2025-11-02_18-48-58_sin_wave_hand_10-0s_1-0s_0-2rad.npz"
+        # "/home/tylerlum/github_repos/sapg/recorded_data/2025-11-06_17-09-47_None_550.npz"  # Slow sliced
+        # "/home/tylerlum/github_repos/sapg/recorded_robot_state/2025-11-07_13-43-59_slowpolicyopenloop.npz"  # Real world policy open loop
+        "/home/tylerlum/github_repos/sapg/recorded_robot_state/2025-11-07_14-07-41_slowpolicytargets.npz"  # Real world policy targets
     )
     assert RECORDED_DATA_PATH.exists()
     recorded_data = RecordedData.from_file(RECORDED_DATA_PATH)
@@ -156,7 +159,7 @@ def main():
                 robot_joint_names=robot_joint_names,
                 robot_joint_pos_targets_array=joint_pos_targets_array,
             )
-            output_path = RECORDED_DATA_PATH.parent / f"{RECORDED_DATA_PATH.stem}_isaac_stiffness4000_damping200_effort350.npz"
+            output_path = RECORDED_DATA_PATH.parent / f"{RECORDED_DATA_PATH.stem}_isaac.npz"
             output_path.parent.mkdir(parents=True, exist_ok=True)
             print(f"Saving recorded data to {output_path}")
             new_recorded_data.to_file(output_path)

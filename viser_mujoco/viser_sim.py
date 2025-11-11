@@ -115,12 +115,12 @@ class ViserMujocoSim:
     ) -> None:
         batch_size, num_bodies = body_xpos.shape[:2]
         assert batch_size == 1, f"batch_size: {batch_size}, expected: 1 for now"
-        assert (
-            body_xpos.shape == (batch_size, num_bodies, 3)
-        ), f"body_xpos.shape: {body_xpos.shape}, expected: ({batch_size}, {num_bodies}, 3)"
-        assert (
-            body_xmat.shape == (batch_size, num_bodies, 3, 3)
-        ), f"body_xmat.shape: {body_xmat.shape}, expected: ({batch_size}, {num_bodies}, 3, 3)"
+        assert body_xpos.shape == (batch_size, num_bodies, 3), (
+            f"body_xpos.shape: {body_xpos.shape}, expected: ({batch_size}, {num_bodies}, 3)"
+        )
+        assert body_xmat.shape == (batch_size, num_bodies, 3, 3), (
+            f"body_xmat.shape: {body_xmat.shape}, expected: ({batch_size}, {num_bodies}, 3, 3)"
+        )
 
         with server.atomic():
             body_xquat = vtf.SO3.from_matrix(body_xmat).wxyz

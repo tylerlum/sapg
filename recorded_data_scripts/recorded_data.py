@@ -35,6 +35,42 @@ JOINT_NAMES_ISAACGYM = [
     "thumb_joint_2",
     "thumb_joint_3",
 ]
+
+USE_SHARPA = False
+if USE_SHARPA:
+    ACTIONS_DIM = 29
+    JOINT_NAMES_ISAACGYM = [
+        "iiwa7_joint_1",
+        "iiwa7_joint_2",
+        "iiwa7_joint_3",
+        "iiwa7_joint_4",
+        "iiwa7_joint_5",
+        "iiwa7_joint_6",
+        "iiwa7_joint_7",
+        "joint_0.0",
+        "joint_1.0",
+        "joint_2.0",
+        "joint_3.0",
+        "joint_4.0",
+        "joint_5.0",
+        "joint_6.0",
+        "joint_7.0",
+        "joint_8.0",
+        "joint_9.0",
+        "joint_10.0",
+        "joint_11.0",
+        "joint_12.0",
+        "joint_13.0",
+        "joint_14.0",
+        "joint_15.0",
+        "joint_16.0",
+        "joint_17.0",
+        "joint_18.0",
+        "joint_19.0",
+        "joint_20.0",
+        "joint_21.0",
+    ]
+
 OBS_NAME_TO_NAMES = {
     "q": [f"{name}_q" for name in JOINT_NAMES_ISAACGYM],
     "qd": [f"{name}_qd" for name in JOINT_NAMES_ISAACGYM],
@@ -86,6 +122,8 @@ class RecordedData:
 
     observations_array: Optional[np.ndarray] = None
     actions_array: Optional[np.ndarray] = None
+
+    object_name: Optional[str] = None
 
     def __post_init__(self):
         T = self.T
@@ -148,6 +186,7 @@ class RecordedData:
             robot_joint_pos_targets_array=self.robot_joint_pos_targets_array,
             observations_array=self.observations_array,
             actions_array=self.actions_array,
+            object_name=self.object_name,
         )
 
     @classmethod
@@ -159,10 +198,11 @@ class RecordedData:
             if (
                 isinstance(x, np.ndarray)
                 and x.shape == ()
-                and x.dtype == object
-                and x.item() is None
             ):
-                return None
+                # If 0-D array, just get the item
+                # Handles case of None and string and other types
+                item = x.item()
+                return item
             return x
 
         return cls(
@@ -172,17 +212,18 @@ class RecordedData:
             time_array=recorded_data["time_array"],
             robot_joint_names=recorded_data["robot_joint_names"],
             table_root_states_array=maybe_none(
-                recorded_data["table_root_states_array"]
+                recorded_data["table_root_states_array"] if "table_root_states_array" in recorded_data else None
             ),
-            goal_root_states_array=maybe_none(recorded_data["goal_root_states_array"]),
+            goal_root_states_array=maybe_none(recorded_data["goal_root_states_array"] if "goal_root_states_array" in recorded_data else None),
             robot_joint_velocities_array=maybe_none(
-                recorded_data["robot_joint_velocities_array"]
+                recorded_data["robot_joint_velocities_array"] if "robot_joint_velocities_array" in recorded_data else None
             ),
             robot_joint_pos_targets_array=maybe_none(
-                recorded_data["robot_joint_pos_targets_array"]
+                recorded_data["robot_joint_pos_targets_array"] if "robot_joint_pos_targets_array" in recorded_data else None
             ),
-            observations_array=maybe_none(recorded_data["observations_array"]),
-            actions_array=maybe_none(recorded_data["actions_array"]),
+            observations_array=maybe_none(recorded_data["observations_array"] if "observations_array" in recorded_data else None),
+            actions_array=maybe_none(recorded_data["actions_array"] if "actions_array" in recorded_data else None),
+            object_name=maybe_none(recorded_data["object_name"] if "object_name" in recorded_data else None),
         )
 
     def slice(
@@ -206,12 +247,13 @@ class RecordedData:
                 else self.time_array[start:end]
             ),
             robot_joint_names=self.robot_joint_names,
-            table_root_states_array=self.table_root_states_array[start:end],
-            goal_root_states_array=self.goal_root_states_array[start:end],
-            robot_joint_velocities_array=self.robot_joint_velocities_array[start:end],
-            robot_joint_pos_targets_array=self.robot_joint_pos_targets_array[start:end],
-            observations_array=self.observations_array[start:end],
-            actions_array=self.actions_array[start:end],
+            table_root_states_array=self.table_root_states_array[start:end] if self.table_root_states_array is not None else None,
+            goal_root_states_array=self.goal_root_states_array[start:end] if self.goal_root_states_array is not None else None,
+            robot_joint_velocities_array=self.robot_joint_velocities_array[start:end] if self.robot_joint_velocities_array is not None else None,
+            robot_joint_pos_targets_array=self.robot_joint_pos_targets_array[start:end] if self.robot_joint_pos_targets_array is not None else None,
+            observations_array=self.observations_array[start:end] if self.observations_array is not None else None,
+            actions_array=self.actions_array[start:end] if self.actions_array is not None else None,
+            object_name=self.object_name,
         )
 
     def __len__(self) -> int:
@@ -353,6 +395,10 @@ class RecordedData:
             assert len(to_order) == J, (
                 f"Expected to_order to have the same length as from_order, got {len(to_order)} and {len(from_order)}. If you don't want to require all joints, set require_all_joints to False."
             )
+
+        assert set(to_order).issubset(set(from_order)), (
+            f"Expected to_order to be a subset of from_order, got to_order: {to_order} and from_order: {from_order}. Only in to_order: {set(to_order) - set(from_order)}"
+        )
 
         # q is given in the from_order
         joint_name_to_value = {from_order[i]: q[..., i] for i in range(J)}

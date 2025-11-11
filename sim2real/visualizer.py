@@ -17,6 +17,8 @@ from sensor_msgs.msg import JointState
 from termcolor import colored
 from viser.extras import ViserUrdf
 
+from isaacgymenvs.utils.utils import get_repo_root_dir
+
 T_W_R = np.eye(4)
 T_W_R[:3, 3] = np.array([0.0, 0.8, 0.0])
 
@@ -192,7 +194,7 @@ class ViserVisualizationNode:
             "/robot_frame/current_object_pose", PoseStamped, self.object_pose_callback
         )
         self.goal_object_pose_sub = rospy.Subscriber(
-            "/goal_object_pose", Pose, self.goal_object_pose_callback
+            "/robot_frame/goal_object_pose", Pose, self.goal_object_pose_callback
         )
 
     def initialize_viser(self):
@@ -200,10 +202,8 @@ class ViserVisualizationNode:
 
         # Create a real robot (simulating real robot) and a command robot (visualizing commands)
         # Load robot URDF with a fixed base
-        robot_urdf_path = Path(
-            # "/home/tylerlum/github_repos/sapg/assets/urdf/kuka_allegro_description/kuka_allegro_touch_sensor.urdf"
-            "/home/tylerlum/github_repos/sapg/assets/urdf/kuka_allegro_description/iiwa14_real.urdf"
-        )
+        robot_urdf_path = get_repo_root_dir() / "assets/urdf/kuka_allegro_description/iiwa14_real.urdf"
+        # robot_urdf_path = get_repo_root_dir() / "assets/urdf/kuka_allegro_description/kuka_allegro_touch_sensor.urdf"
         assert robot_urdf_path.exists(), f"robot_urdf_path not found: {robot_urdf_path}"
 
         SERVER.scene.add_frame(
@@ -238,9 +238,7 @@ class ViserVisualizationNode:
 
         LOAD_TABLE = True
         if LOAD_TABLE:
-            table_urdf_path = Path(
-                "/home/tylerlum/github_repos/sapg/assets/urdf/table_narrow.urdf"
-            )
+            table_urdf_path = get_repo_root_dir() / "assets/urdf/table_narrow.urdf"
             assert table_urdf_path.exists(), (
                 f"table_urdf_path not found: {table_urdf_path}"
             )
@@ -272,25 +270,29 @@ class ViserVisualizationNode:
 
         # Load the object mesh
         FAR_AWAY_OBJECT_POSITION = np.ones(3)
-        object_mesh_path = rospy.get_param("/mesh_file", None)
-        if object_mesh_path is None:
-            DEFAULT_MESH_PATH = Path(
-                # "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/040_large_marker/040_large_marker/google_16k/textured_vhacd.obj"
-                "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/hammer_1/hammer_1.obj"
-            )
-            object_mesh_path = str(DEFAULT_MESH_PATH)
-            warn(f"Using default object mesh: {object_mesh_path}")
-        assert isinstance(object_mesh_path, str), (
-            f"object_mesh_path: {object_mesh_path}"
-        )
-        info("~" * 80)
-        info(f"object_mesh_path: {object_mesh_path}")
-        info("~" * 80 + "\n")
+        from isaacgymenvs.utils.objects import NAME_TO_OBJECT
+        object_name = rospy.get_param("/object_name", None)
+        if object_name is None:
+            DEFAULT_OBJECT_NAME = "hairbrush_modified"
+            # DEFAULT_OBJECT_NAME = "scanned_hammer_2"
+            warn(f"Using default object name: {DEFAULT_OBJECT_NAME}")
+            object_name = DEFAULT_OBJECT_NAME
 
-        goal_object_mesh_path = object_mesh_path
+        object_mesh = NAME_TO_OBJECT[object_name].get_object_mesh()
+        goal_object_mesh = object_mesh
+        # object_mesh_path = str(get_repo_root_dir() / "assets/urdf/tyler_objects/040_large_marker/040_large_marker/google_16k/textured_vhacd.obj")
+        # assert isinstance(object_mesh_path, str), (
+        #     f"object_mesh_path: {object_mesh_path}"
+        # )
+        # info("~" * 80)
+        # info(f"object_mesh_path: {object_mesh_path}")
+        # info("~" * 80 + "\n")
 
-        object_mesh = trimesh.load(object_mesh_path)
-        goal_object_mesh = trimesh.load(goal_object_mesh_path)
+        # goal_object_mesh_path = object_mesh_path
+
+        # object_mesh = trimesh.load(object_mesh_path)
+        # goal_object_mesh = trimesh.load(goal_object_mesh_path)
+
         self.object_viser = SERVER.scene.add_frame(
             "/object",
             position=FAR_AWAY_OBJECT_POSITION,

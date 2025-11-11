@@ -1,10 +1,10 @@
 import time
-from pathlib import Path
 
 import numpy as np
 import viser
 from viser.extras import ViserUrdf
 
+from isaacgymenvs.utils.utils import get_repo_root_dir
 from sim2sim.mujoco_sim.mujoco_sim import INIT_JOINT_POS, MujocoSim, MujocoSimConfig
 from viser_mujoco.viser_sim import ViserMujocoSim
 
@@ -17,11 +17,12 @@ def main():
         position=(0, 0.8, 0),
         wxyz=(1, 0, 0, 0),
     )
+    urdf_path = (
+        get_repo_root_dir() / "assets/urdf/kuka_allegro_description/iiwa14_real.urdf"
+    )
     viser_urdf = ViserUrdf(
         server,
-        urdf_or_path=Path(
-            "/home/tylerlum/github_repos/sapg/assets/urdf/kuka_allegro_description/kuka_allegro_touch_sensor.urdf"
-        ),
+        urdf_or_path=urdf_path,
         load_meshes=True,
         root_node_name="/robot",
     )

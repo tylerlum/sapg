@@ -51,15 +51,21 @@ from isaacgymenvs.tasks.allegro_kuka.generate_cuboids import (
     generate_sticks,
 )
 from isaacgymenvs.utils.torch_jit_utils import *
-from isaacgymenvs.tasks.allegro_kuka.object_trajectories import (
-    get_hammer_trajectory, get_screwdriver_trajectory, get_marker_trajectory, get_eraser_trajectory, get_phone_trajectory)
+from isaacgymenvs.utils.objects import NAME_TO_OBJECT
+from isaacgymenvs.utils.object_trajectories import (
+    get_hammer_trajectory,
+    get_hairbrush_trajectory,
+    get_screwdriver_trajectory,
+    get_marker_trajectory,
+    get_eraser_trajectory,
+    get_phone_trajectory,
+)
 
 DATETIME_STR = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-# VISUALIZE_PD_TARGET_AS_BLUE_ROBOT = False is default
-# Set to True to visualize the PD target as a blue robot
-VISUALIZE_PD_TARGET_AS_BLUE_ROBOT = False
 
+def assert_equals(a, b):
+    assert a == b, f"a: {a}, b: {b}"
 
 class AllegroKukaBase(VecTask):
     def __init__(self, cfg, rl_device, sim_device, graphics_device_id, headless, virtual_screen_capture, force_render):
@@ -326,7 +332,7 @@ class AllegroKukaBase(VecTask):
         self.arm_hand_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, : self.num_hand_arm_dofs]
         self.arm_hand_dof_pos = self.arm_hand_dof_state[..., 0]
         self.arm_hand_dof_vel = self.arm_hand_dof_state[..., 1]
-        if VISUALIZE_PD_TARGET_AS_BLUE_ROBOT:
+        if self.VISUALIZE_PD_TARGET_AS_BLUE_ROBOT:
             self.blue_robot_arm_hand_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, self.num_hand_arm_dofs:]
             self.blue_robot_arm_hand_dof_pos = self.blue_robot_arm_hand_dof_state[..., 0]
             self.blue_robot_arm_hand_dof_vel = self.blue_robot_arm_hand_dof_state[..., 1]
@@ -454,6 +460,8 @@ class AllegroKukaBase(VecTask):
                 shutil.rmtree(self.eval_summary_dir)
             self.eval_summaries = SummaryWriter(self.eval_summary_dir, flush_secs=3)
 
+        self._init_tyler_curriculum()
+
     ##### KEYBOARD START #####
     def _subscribe_to_keyboard_events(self) -> None:
         from dataclasses import dataclass
@@ -481,6 +489,11 @@ class AllegroKukaBase(VecTask):
                 key=gymapi.KEY_T,
                 function=self._toggle_do_not_move_callback,
             ),
+            KeyboardShortcut(
+                name="toggle_debug_viz",
+                key=gymapi.KEY_D,
+                function=self._toggle_debug_viz_callback,
+            ),
         ]
         self.name_to_keyboard_shortcut_dict = {
             keyboard_shortcut.name: keyboard_shortcut
@@ -502,6 +515,11 @@ class AllegroKukaBase(VecTask):
         print("Toggling do not move...")
         self._DO_NOT_MOVE = not self._DO_NOT_MOVE
         print(f"Do not move is now {self._DO_NOT_MOVE}")
+
+    def _toggle_debug_viz_callback(self) -> None:
+        print("Toggling debug viz...")
+        self.debug_viz = not self.debug_viz
+        print(f"Debug viz is now {self.debug_viz}")
 
     ##### KEYBOARD END #####
 
@@ -565,307 +583,81 @@ class AllegroKukaBase(VecTask):
         object_asset_files, object_asset_scales = zip(*files_and_scales)
         need_vhacds = [False] * len(object_asset_files)
 
-        # Hammers
-        from dataclasses import dataclass
-        @dataclass
-        class Hammer:
-            file: str
-            scale: List[float]
-            need_vhacd: bool
-            fixed_trajectory: torch.Tensor
-
-        this_dir = Path(__file__).parent
-        root_dir = this_dir.parent.parent.parent
-        init_state = [0.0, 0, 0.65, 1, 0, 0, 0]
-        name_to_hammer_dict = {
-            "scanned_hammer_1": Hammer(
-                file=str(root_dir / "assets/urdf/tyler_objects/hammer_1/hammer_1.urdf"),
-                scale=[3.0, 0.5, 0.5],
-                need_vhacd=True,
-                fixed_trajectory=get_hammer_trajectory(init_state, device=self.device),
-            ),
-            "scanned_hammer_2": Hammer(
-                file=str(root_dir / "assets/urdf/tyler_objects/hammer_2/hammer_2.urdf"),
-                scale=[3.0, 0.5, 0.5],
-                need_vhacd=True,
-                fixed_trajectory=get_hammer_trajectory(init_state, device=self.device),
-            ),
-            "YcbHammer": Hammer(
-                file=str(root_dir / "assets/urdf/tyler_objects/YcbHammer/model.urdf"),
-                scale=[3.0, 0.5, 0.5],
-                need_vhacd=True,
-                fixed_trajectory=get_hammer_trajectory(init_state, device=self.device),
-            ),
-            "cuboidal_hammer": Hammer(
-                file=str(root_dir / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_0-3_0-03_0-02_0-03_0-1_0-02_0-1_0-2.urdf"),
-                scale=[3.0, 0.5, 0.5],
-                need_vhacd=False,
-                fixed_trajectory=get_hammer_trajectory(init_state, device=self.device),
-            ),
-            "cylindrical_hammer": Hammer(
-                file=str(root_dir / "assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0-3_0-015_0-015_0-1_0-1_0-2.urdf"),
-                scale=[3.0, 0.5, 0.5],
-                need_vhacd=False,
-                fixed_trajectory=get_hammer_trajectory(init_state, device=self.device),
-            ),
-            "cuboidal_hammer_1-25x": Hammer(
-                file=str(root_dir / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_0-375_0-0375_0-025_0-0375_0-125_0-025_0-1_0-2.urdf"),
-                scale=[3.0, 0.5, 0.5],
-                need_vhacd=False,
-                fixed_trajectory=get_hammer_trajectory(init_state, device=self.device),
-            ),
-            "cuboidal_hammer_1-5x": Hammer(
-                file=str(root_dir / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_0-44999999999999996_0-045_0-03_0-045_0-15000000000000002_0-03_0-1_0-2.urdf"),
-                scale=[3.0, 0.5, 0.5],
-                need_vhacd=False,
-                fixed_trajectory=get_hammer_trajectory(init_state, device=self.device),
-            ),
-            "cuboidal_hammer_1-75x": Hammer(
-                file=str(root_dir / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_0-525_0-0525_0-035_0-0525_0-17500000000000002_0-035_0-1_0-2.urdf"),
-                scale=[3.0, 0.5, 0.5],
-                need_vhacd=False,
-                fixed_trajectory=get_hammer_trajectory(init_state, device=self.device),
-            ),
-            "cuboidal_hammer_2x": Hammer(
-                file=str(root_dir / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_0-6_0-06_0-04_0-06_0-2_0-04_0-1_0-2.urdf"),
-                scale=[3.0, 0.5, 0.5],
-                need_vhacd=False,
-                fixed_trajectory=get_hammer_trajectory(init_state, device=self.device),
-            ),
-            # "cuboidal_hammer_4x": Hammer(
-            #     file=str(root_dir / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_1-2_0-12_0-08_0-12_0-4_0-08_0-1_0-2.urdf"),
-            #     scale=[3.0, 0.5, 0.5],
-            #     need_vhacd=False,
-            # ),
-            "cylindrical_hammer_1-25x": Hammer(
-                file=str(root_dir / "assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0-375_0-01875_0-01875_0-125_0-125_0-2.urdf"),
-                scale=[3.0, 0.5, 0.5],
-                need_vhacd=False,
-                fixed_trajectory=get_hammer_trajectory(init_state, device=self.device),
-            ),
-            "cylindrical_hammer_1-5x": Hammer(
-                file=str(root_dir / "assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0-44999999999999996_0-0225_0-0225_0-15000000000000002_0-15000000000000002_0-2.urdf"),
-                scale=[3.0, 0.5, 0.5],
-                need_vhacd=False,
-                fixed_trajectory=get_hammer_trajectory(init_state, device=self.device),
-            ),
-            "cylindrical_hammer_1-75x": Hammer(
-                file=str(root_dir / "assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0-525_0-02625_0-02625_0-17500000000000002_0-17500000000000002_0-2.urdf"),
-                scale=[3.0, 0.5, 0.5],
-                need_vhacd=False,
-                fixed_trajectory=get_hammer_trajectory(init_state, device=self.device),
-            ),
-            "cylindrical_hammer_2x": Hammer(
-                file=str(root_dir / "assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0-6_0-03_0-03_0-2_0-2_0-2.urdf"),
-                scale=[3.0, 0.5, 0.5],
-                need_vhacd=False,
-                fixed_trajectory=get_hammer_trajectory(init_state, device=self.device),
-            ),
-            # "cylindrical_hammer_4x": Hammer(
-            #     file=str(root_dir / "assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_1-2_0-06_0-06_0-4_0-4_0-2.urdf"),
-            #     scale=[3.0, 0.5, 0.5],
-            #     need_vhacd=False,
-            # ),
-            "040_large_marker": Hammer(
-                file=str(root_dir / "assets/urdf/tyler_objects/040_large_marker/040_large_marker.urdf"),
-                scale=[3.0, 0.5, 0.5],
-                need_vhacd=True,
-                fixed_trajectory=get_marker_trajectory(init_state, device=self.device),
-            ),
-            "whiteboard_eraser": Hammer(
-                file=str(root_dir / "assets/urdf/tyler_objects/whiteboard_eraser/source/model.urdf"),
-                scale=[3.0, 0.5, 0.5],
-                need_vhacd=True,
-                fixed_trajectory=get_eraser_trajectory(init_state, device=self.device),
-            ),
-            "phone": Hammer(
-                file=str(root_dir / "assets/urdf/tyler_objects/phone/model.urdf"),
-                scale=[3.0, 0.5, 0.5],
-                need_vhacd=True,
-                fixed_trajectory=get_phone_trajectory(init_state, device=self.device),
-            ),
-            "044_flat_screwdriver": Hammer(
-                file=str(root_dir / "assets/urdf/tyler_objects/044_flat_screwdriver/044_flat_screwdriver.urdf"),
-                scale=[3.0, 0.5, 0.5],
-                need_vhacd=True,
-                fixed_trajectory=get_screwdriver_trajectory(init_state, device=self.device),
-            ),
-            "hairbrush": Hammer(
-                file=str(root_dir / "assets/urdf/tyler_objects/hairbrush/hairbrush.urdf"),
-                scale=[3.0, 0.5, 0.5],
-                need_vhacd=True,
-                fixed_trajectory=get_eraser_trajectory(init_state, device=self.device),
-            ),
-            "real_flat_screwdriver": Hammer(
-                file=str(root_dir / "assets/urdf/tyler_objects/real_flat_screwdriver/real_flat_screwdriver.urdf"),
-                scale=[3.0, 0.5, 0.5],
-                need_vhacd=True,
-                fixed_trajectory=get_screwdriver_trajectory(init_state, device=self.device),
-            ),
-            "mallet": Hammer(
-                file=str(root_dir / "assets/urdf/tyler_objects/mallet/mallet.urdf"),
-                scale=[3.0, 0.5, 0.5],
-                need_vhacd=True,
-                fixed_trajectory=get_hammer_trajectory(init_state, device=self.device),
-            ),
-            "roller": Hammer(
-                file=str(root_dir / "assets/urdf/tyler_objects/roller/roller.urdf"),
-                scale=[3.0, 0.5, 0.5],
-                need_vhacd=True,
-                fixed_trajectory=get_hammer_trajectory(init_state, device=self.device),
-            ),
-        }
-        for hammer in name_to_hammer_dict.values():
-            assert Path(hammer.file).exists(), f"Hammer file {hammer.file} does not exist"
-
         object_type = self.cfg["env"]["object_type"]
-        USE_FIXED_SET_OF_GOAL_STATES = self.cfg["env"]["use_fixed_set_of_goal_states"]
-        if object_type == "scanned_hammer_1":
-            object_asset_files = [name_to_hammer_dict["scanned_hammer_1"].file]
-            object_asset_scales = [name_to_hammer_dict["scanned_hammer_1"].scale]
-            need_vhacds = [name_to_hammer_dict["scanned_hammer_1"].need_vhacd]
-            if USE_FIXED_SET_OF_GOAL_STATES:
-                self.trajectory_states = name_to_hammer_dict["scanned_hammer_1"].fixed_trajectory
-        elif object_type == "scanned_hammer_2":
-            object_asset_files = [name_to_hammer_dict["scanned_hammer_2"].file]
-            object_asset_scales = [name_to_hammer_dict["scanned_hammer_2"].scale]
-            need_vhacds = [name_to_hammer_dict["scanned_hammer_2"].need_vhacd]
-            if USE_FIXED_SET_OF_GOAL_STATES:
-                self.trajectory_states = name_to_hammer_dict["scanned_hammer_2"].fixed_trajectory
-        elif object_type == "YcbHammer":
-            object_asset_files = [name_to_hammer_dict["YcbHammer"].file]
-            object_asset_scales = [name_to_hammer_dict["YcbHammer"].scale]
-            need_vhacds = [name_to_hammer_dict["YcbHammer"].need_vhacd]
-            if USE_FIXED_SET_OF_GOAL_STATES:
-                self.trajectory_states = name_to_hammer_dict["YcbHammer"].fixed_trajectory
-        elif object_type == "cuboidal_hammer":
-            object_asset_files = [name_to_hammer_dict["cuboidal_hammer"].file]
-            object_asset_scales = [name_to_hammer_dict["cuboidal_hammer"].scale]
-            need_vhacds = [name_to_hammer_dict["cuboidal_hammer"].need_vhacd]
-            if USE_FIXED_SET_OF_GOAL_STATES:
-                self.trajectory_states = name_to_hammer_dict["cuboidal_hammer"].fixed_trajectory
-        elif object_type == "cylindrical_hammer":
-            object_asset_files = [name_to_hammer_dict["cylindrical_hammer"].file]
-            object_asset_scales = [name_to_hammer_dict["cylindrical_hammer"].scale]
-            need_vhacds = [name_to_hammer_dict["cylindrical_hammer"].need_vhacd]
-            if USE_FIXED_SET_OF_GOAL_STATES:
-                self.trajectory_states = name_to_hammer_dict["cylindrical_hammer"].fixed_trajectory
-        elif object_type == "cuboidal_hammer_2x":
-            object_asset_files = [name_to_hammer_dict["cuboidal_hammer_2x"].file]
-            object_asset_scales = [name_to_hammer_dict["cuboidal_hammer_2x"].scale]
-            need_vhacds = [name_to_hammer_dict["cuboidal_hammer_2x"].need_vhacd]
-            if USE_FIXED_SET_OF_GOAL_STATES:
-                self.trajectory_states = name_to_hammer_dict["cuboidal_hammer_2x"].fixed_trajectory
-        elif object_type == "cuboidal_hammer_4x":
-            object_asset_files = [name_to_hammer_dict["cuboidal_hammer_4x"].file]
-            object_asset_scales = [name_to_hammer_dict["cuboidal_hammer_4x"].scale]
-            need_vhacds = [name_to_hammer_dict["cuboidal_hammer_4x"].need_vhacd]
-            if USE_FIXED_SET_OF_GOAL_STATES:
-                self.trajectory_states = name_to_hammer_dict["cuboidal_hammer_4x"].fixed_trajectory
-        elif object_type == "cylindrical_hammer_2x":
-            object_asset_files = [name_to_hammer_dict["cylindrical_hammer_2x"].file]
-            object_asset_scales = [name_to_hammer_dict["cylindrical_hammer_2x"].scale]
-            need_vhacds = [name_to_hammer_dict["cylindrical_hammer_2x"].need_vhacd]
-            if USE_FIXED_SET_OF_GOAL_STATES:
-                self.trajectory_states = name_to_hammer_dict["cylindrical_hammer_2x"].fixed_trajectory
-        elif object_type == "cylindrical_hammer_4x":
-            object_asset_files = [name_to_hammer_dict["cylindrical_hammer_4x"].file]
-            object_asset_scales = [name_to_hammer_dict["cylindrical_hammer_4x"].scale]
-            need_vhacds = [name_to_hammer_dict["cylindrical_hammer_4x"].need_vhacd]
-            if USE_FIXED_SET_OF_GOAL_STATES:
-                self.trajectory_states = name_to_hammer_dict["cylindrical_hammer_4x"].fixed_trajectory
-        elif object_type == "040_large_marker":
-            object_asset_files = [name_to_hammer_dict["040_large_marker"].file]
-            object_asset_scales = [name_to_hammer_dict["040_large_marker"].scale]
-            need_vhacds = [name_to_hammer_dict["040_large_marker"].need_vhacd]
-            if USE_FIXED_SET_OF_GOAL_STATES:
-                self.trajectory_states = name_to_hammer_dict["040_large_marker"].fixed_trajectory
-        elif object_type == "whiteboard_eraser":
-            object_asset_files = [name_to_hammer_dict["whiteboard_eraser"].file]
-            object_asset_scales = [name_to_hammer_dict["whiteboard_eraser"].scale]
-            need_vhacds = [name_to_hammer_dict["whiteboard_eraser"].need_vhacd]
-            if USE_FIXED_SET_OF_GOAL_STATES:
-                self.trajectory_states = name_to_hammer_dict["whiteboard_eraser"].fixed_trajectory
-        elif object_type == "phone":
-            object_asset_files = [name_to_hammer_dict["phone"].file]
-            object_asset_scales = [name_to_hammer_dict["phone"].scale]
-            need_vhacds = [name_to_hammer_dict["phone"].need_vhacd]
-            if USE_FIXED_SET_OF_GOAL_STATES:
-                self.trajectory_states = name_to_hammer_dict["phone"].fixed_trajectory
-        elif object_type == "screwdriver":
-            object_asset_files = [name_to_hammer_dict["screwdriver"].file]
-            object_asset_scales = [name_to_hammer_dict["screwdriver"].scale]
-            need_vhacds = [name_to_hammer_dict["screwdriver"].need_vhacd]
-            if USE_FIXED_SET_OF_GOAL_STATES:
-                self.trajectory_states = name_to_hammer_dict["screwdriver"].fixed_trajectory
-        elif object_type == "044_flat_screwdriver":
-            object_asset_files = [name_to_hammer_dict["044_flat_screwdriver"].file]
-            object_asset_scales = [name_to_hammer_dict["044_flat_screwdriver"].scale]
-            need_vhacds = [name_to_hammer_dict["044_flat_screwdriver"].need_vhacd]
-            if USE_FIXED_SET_OF_GOAL_STATES:
-                self.trajectory_states = name_to_hammer_dict["044_flat_screwdriver"].fixed_trajectory
-        elif object_type == "hairbrush":
-            object_asset_files = [name_to_hammer_dict["hairbrush"].file]
-            object_asset_scales = [name_to_hammer_dict["hairbrush"].scale]
-            need_vhacds = [name_to_hammer_dict["hairbrush"].need_vhacd]
-            if USE_FIXED_SET_OF_GOAL_STATES:
-                self.trajectory_states = name_to_hammer_dict["hairbrush"].fixed_trajectory
-        elif object_type == "real_flat_screwdriver":
-            object_asset_files = [name_to_hammer_dict["real_flat_screwdriver"].file]
-            object_asset_scales = [name_to_hammer_dict["real_flat_screwdriver"].scale]
-            need_vhacds = [name_to_hammer_dict["real_flat_screwdriver"].need_vhacd]
-            if USE_FIXED_SET_OF_GOAL_STATES:
-                self.trajectory_states = name_to_hammer_dict["real_flat_screwdriver"].fixed_trajectory
-        elif object_type == "mallet":
-            object_asset_files = [name_to_hammer_dict["mallet"].file]
-            object_asset_scales = [name_to_hammer_dict["mallet"].scale]
-            need_vhacds = [name_to_hammer_dict["mallet"].need_vhacd]
-            if USE_FIXED_SET_OF_GOAL_STATES:
-                self.trajectory_states = name_to_hammer_dict["mallet"].fixed_trajectory
-        elif object_type == "roller":
-            object_asset_files = [name_to_hammer_dict["roller"].file]
-            object_asset_scales = [name_to_hammer_dict["roller"].scale]
-            need_vhacds = [name_to_hammer_dict["roller"].need_vhacd]
-            if USE_FIXED_SET_OF_GOAL_STATES:
-                self.trajectory_states = name_to_hammer_dict["roller"].fixed_trajectory
+        known_object_names = set(NAME_TO_OBJECT.keys())
+        if object_type in known_object_names:
+            # One of known objects
+            obj = NAME_TO_OBJECT[object_type]
+            object_asset_files = [obj.filepath]
+            object_asset_scales = [obj.scale]
+            need_vhacds = [obj.need_vhacd]
+
         elif object_type == "all_hammers":
-            object_asset_files = [hammer.file for hammer in name_to_hammer_dict.values()]
-            object_asset_scales = [hammer.scale for hammer in name_to_hammer_dict.values()]
-            need_vhacds = [hammer.need_vhacd for hammer in name_to_hammer_dict.values()]
-            if USE_FIXED_SET_OF_GOAL_STATES:
-                self.trajectory_states = [hammer.fixed_trajectory for hammer in name_to_hammer_dict.values()]
+            hammer_names = ["scanned_hammer_1", "scanned_hammer_2", "YcbHammer", "cuboidal_hammer", "cylindrical_hammer", "cuboidal_hammer_2x", "cylindrical_hammer_2x"]
+            object_asset_files = [NAME_TO_OBJECT[name].filepath for name in hammer_names]
+            object_asset_scales = [NAME_TO_OBJECT[name].scale for name in hammer_names]
+            need_vhacds = [NAME_TO_OBJECT[name].need_vhacd for name in hammer_names]
+
         elif object_type == "all_cuboidal_hammers":
             cuboidal_hammer_names = ["cuboidal_hammer", "cuboidal_hammer_1-25x", "cuboidal_hammer_1-5x", "cuboidal_hammer_1-75x", "cuboidal_hammer_2x"]
-            object_asset_files = [name_to_hammer_dict[name].file for name in cuboidal_hammer_names]
-            object_asset_scales = [name_to_hammer_dict[name].scale for name in cuboidal_hammer_names]
-            need_vhacds = [name_to_hammer_dict[name].need_vhacd for name in cuboidal_hammer_names]
-            if USE_FIXED_SET_OF_GOAL_STATES:
-                self.trajectory_states = name_to_hammer_dict["cuboidal_hammer"].fixed_trajectory
+            object_asset_files = [NAME_TO_OBJECT[name].filepath for name in cuboidal_hammer_names ]
+            object_asset_scales = [NAME_TO_OBJECT[name].scale for name in cuboidal_hammer_names]
+            need_vhacds = [NAME_TO_OBJECT[name].need_vhacd for name in cuboidal_hammer_names]
+
         elif object_type == "all_cylindrical_hammers":
             cylindrical_hammer_names = ["cylindrical_hammer", "cylindrical_hammer_1-25x", "cylindrical_hammer_1-5x", "cylindrical_hammer_1-75x", "cylindrical_hammer_2x"]
-            object_asset_files = [name_to_hammer_dict[name].file for name in cylindrical_hammer_names]
-            object_asset_scales = [name_to_hammer_dict[name].scale for name in cylindrical_hammer_names]
-            need_vhacds = [name_to_hammer_dict[name].need_vhacd for name in cylindrical_hammer_names]
-            if USE_FIXED_SET_OF_GOAL_STATES:
-                self.trajectory_states = name_to_hammer_dict["cylindrical_hammer"].fixed_trajectory
+            object_asset_files = [NAME_TO_OBJECT[name].filepath for name in cylindrical_hammer_names]
+            object_asset_scales = [NAME_TO_OBJECT[name].scale for name in cylindrical_hammer_names]
+            need_vhacds = [NAME_TO_OBJECT[name].need_vhacd for name in cylindrical_hammer_names]
+
         elif object_type == "all_cuboidal_and_cylindrical_hammers":
             cuboidal_and_cylindrical_hammer_names = ["cuboidal_hammer", "cuboidal_hammer_1-25x", "cuboidal_hammer_1-5x", "cuboidal_hammer_1-75x", "cuboidal_hammer_2x", "cylindrical_hammer", "cylindrical_hammer_1-25x", "cylindrical_hammer_1-5x", "cylindrical_hammer_1-75x", "cylindrical_hammer_2x"]
-            object_asset_files = [name_to_hammer_dict[name].file for name in cuboidal_and_cylindrical_hammer_names]
-            object_asset_scales = [name_to_hammer_dict[name].scale for name in cuboidal_and_cylindrical_hammer_names]
-            need_vhacds = [name_to_hammer_dict[name].need_vhacd for name in cuboidal_and_cylindrical_hammer_names]
-            if USE_FIXED_SET_OF_GOAL_STATES:
-                self.trajectory_states = name_to_hammer_dict["cuboidal_hammer"].fixed_trajectory
+            object_asset_files = [NAME_TO_OBJECT[name].filepath for name in cuboidal_and_cylindrical_hammer_names]
+            object_asset_scales = [NAME_TO_OBJECT[name].scale for name in cuboidal_and_cylindrical_hammer_names]
+            need_vhacds = [NAME_TO_OBJECT[name].need_vhacd for name in cuboidal_and_cylindrical_hammer_names]
+
         elif object_type == "cuboid":
             # Use what was already used before
             pass
+
         elif object_type == "tyler_cuboid_cylinder":
             object_asset_files, object_asset_scales, need_vhacds = self._tyler_cuboid_cylinder(
                 str(Path(tmp_assets_dir) / "tyler_cuboid_cylinder"),
             )
+
         else:
             raise ValueError(f"Unknown object type: {object_type}")
+
+        USE_FIXED_SET_OF_GOAL_STATES = self.cfg["env"]["use_fixed_set_of_goal_states"]
         if USE_FIXED_SET_OF_GOAL_STATES:
+            init_state = [0.0, 0, 0.65, 1, 0, 0, 0]
+
+            # Load correct type of trajectory
+            # Many objects share a trajectory
+            # Some objects don't have a fixed trajectory, so we raise an error
+            HAMMER_TRAJECTORY_OBJECTS = set(
+                ["scanned_hammer_1", "scanned_hammer_2", "YcbHammer", "cuboidal_hammer", "cylindrical_hammer", "cuboidal_hammer_2x", "cylindrical_hammer_2x",]
+            )
+            if object_type in HAMMER_TRAJECTORY_OBJECTS:
+                self.trajectory_states = get_hammer_trajectory(init_state, device=self.device)
+            elif object_type in set(["hairbrush", "hairbrush_modified"]):
+                self.trajectory_states = get_hairbrush_trajectory(init_state, device=self.device)
+            elif object_type == "screwdriver":
+                self.trajectory_states = get_screwdriver_trajectory(init_state, device=self.device)
+            elif object_type == "marker":
+                self.trajectory_states = get_marker_trajectory(init_state, device=self.device)
+            elif object_type == "eraser":
+                self.trajectory_states = get_eraser_trajectory(init_state, device=self.device)
+            elif object_type == "phone":
+                self.trajectory_states = get_phone_trajectory(init_state, device=self.device)
+            elif object_type in ["all_hammers", "all_cuboidal_hammers", "all_cylindrical_hammers", "all_cuboidal_and_cylindrical_hammers"]:
+                self.trajectory_states = get_hammer_trajectory(init_state, device=self.device)
+            else:
+                raise ValueError(f"The following object_type does not have a fixed trajectory: {object_type}, cannot use USE_FIXED_SET_OF_GOAL_STATES with this object type")
+
+            # Set max consecutive successes to the length of the trajectory so we don't run out of goal states
             self.max_consecutive_successes = len(self.trajectory_states)
+
 
         return object_asset_files, object_asset_scales, need_vhacds
 
@@ -1215,6 +1007,7 @@ class AllegroKukaBase(VecTask):
         )
 
         asset_options = gymapi.AssetOptions()
+        # asset_options.vhacd_enabled = True  # Should be False so the robot is not complicated to model, but can test
         asset_options.fix_base_link = True
         asset_options.flip_visual_attachments = False
         asset_options.collapse_fixed_joints = True
@@ -1296,15 +1089,16 @@ class AllegroKukaBase(VecTask):
 
         self.allegro_hands = []
         self.envs = []
-        if VISUALIZE_PD_TARGET_AS_BLUE_ROBOT:
+        if self.VISUALIZE_PD_TARGET_AS_BLUE_ROBOT:
             self.blue_robots = []
+        self.objects = []
 
         object_init_state = []
         
         self.rigid_body_name_to_idx = {}
 
         self.allegro_hand_indices = []
-        if VISUALIZE_PD_TARGET_AS_BLUE_ROBOT:
+        if self.VISUALIZE_PD_TARGET_AS_BLUE_ROBOT:
             self.blue_robot_indices = []
         object_indices = []
         table_indices = []
@@ -1335,6 +1129,27 @@ class AllegroKukaBase(VecTask):
 
         # this rely on the fact that objects are added right after the arms in terms of create_actor()
         self.object_rb_handles = list(range(self.num_hand_arm_bodies, self.num_hand_arm_bodies + object_rb_count))
+        if self.VISUALIZE_PD_TARGET_AS_BLUE_ROBOT:
+            # Account for the blue robot's additional rigid bodies
+            self.object_rb_handles = list(range(2*self.num_hand_arm_bodies, 2*self.num_hand_arm_bodies + object_rb_count))
+
+        # Set asset rigid shape properties (friction)
+        MODIFY_ASSET_FRICTIONS = True
+        if MODIFY_ASSET_FRICTIONS:
+            self.set_allegro_kuka_asset_rigid_shape_properties(
+                allegro_kuka_asset=allegro_kuka_asset,
+                friction=0.5,
+                fingertip_friction=1.5,
+            )
+            self.set_table_asset_rigid_shape_properties(
+                table_asset=table_asset,
+                friction=0.5,
+            )
+            for object_asset_idx_to_modify in range(len(object_assets)):
+                self.set_object_asset_rigid_shape_properties(
+                    object_asset=object_assets[object_asset_idx_to_modify],
+                    friction=0.5,
+                )
 
         for i in range(self.num_envs):
             # create env instance
@@ -1343,7 +1158,6 @@ class AllegroKukaBase(VecTask):
             self.gym.begin_aggregate(env_ptr, max_agg_bodies, max_agg_shapes, True)
 
             allegro_actor = self.gym.create_actor(env_ptr, allegro_kuka_asset, allegro_pose, "allegro", i, -1, 0)
-
             populate_dof_properties(allegro_hand_dof_props, self.dof_params, self.num_arm_dofs, self.num_hand_dofs)
 
             self.gym.set_actor_dof_properties(env_ptr, allegro_actor, allegro_hand_dof_props)
@@ -1361,7 +1175,7 @@ class AllegroKukaBase(VecTask):
                 if self.with_dof_force_sensors:
                     self.gym.enable_actor_dof_force_sensors(env_ptr, allegro_actor)
 
-            if VISUALIZE_PD_TARGET_AS_BLUE_ROBOT:
+            if self.VISUALIZE_PD_TARGET_AS_BLUE_ROBOT:
                 blue_robot_actor = self.gym.create_actor(
                     env_ptr,
                     allegro_kuka_asset,
@@ -1435,6 +1249,30 @@ class AllegroKukaBase(VecTask):
 
             self.envs.append(env_ptr)
             self.allegro_hands.append(allegro_actor)
+            self.objects.append(object_handle)
+
+        # Set mass and inertia of object
+        MODIFY_OBJECT_MASS_AND_INERTIA = False
+        if MODIFY_OBJECT_MASS_AND_INERTIA:
+            original_masses, original_inertias = [], []
+            for env, object in zip(self.envs, self.objects):
+                object_rb_props = self.gym.get_actor_rigid_body_properties(env, object)
+                assert len(object_rb_props) == 1, f"Expected 1 rigid body, got {len(object_rb_props)}"
+                object_rb_prop = object_rb_props[0]
+                original_mass = object_rb_prop.mass
+                original_inertia = (object_rb_prop.inertia.x.x, object_rb_prop.inertia.y.y, object_rb_prop.inertia.z.z)
+                original_masses.append(original_mass)
+                original_inertias.append(original_inertia)
+            print(f"Original masses: {original_masses[0]}")
+            print(f"Original inertias: {original_inertias[0]}")
+            self.set_object_masses_and_inertias(
+                envs=self.envs,
+                objects=self.objects,
+                masses=[0.2] * len(self.objects),
+                inertias=[
+                    (0.001, 0.001, 0.001)
+                ] * len(self.objects),
+            )
 
         # we are not using new mass values after DR when calculating random forces applied to an object,
         # which should be ok as long as the randomization range is not too big
@@ -1455,7 +1293,7 @@ class AllegroKukaBase(VecTask):
         self.allegro_hand_indices = to_torch(self.allegro_hand_indices, dtype=torch.long, device=self.device)
         self.object_indices = to_torch(object_indices, dtype=torch.long, device=self.device)
         self.table_indices = to_torch(table_indices, dtype=torch.long, device=self.device)
-        if VISUALIZE_PD_TARGET_AS_BLUE_ROBOT:
+        if self.VISUALIZE_PD_TARGET_AS_BLUE_ROBOT:
             self.blue_robot_indices = to_torch(self.blue_robot_indices, dtype=torch.long, device=self.device)
 
         self.object_scales = to_torch(object_scales, dtype=torch.float, device=self.device)
@@ -2141,6 +1979,30 @@ class AllegroKukaBase(VecTask):
         if self.randomize and episode_reset:
             self.apply_randomizations(self.randomization_params)
 
+        # Do this before reset_target_pose so that the successes is 0 for the new episode
+        if episode_reset and tensor_reset:
+            self.progress_buf[env_ids] = 0
+            self.reset_buf[env_ids] = 0
+
+            self.prev_episode_successes[env_ids] = self.successes[env_ids]
+            self.successes[env_ids] = 0
+
+            self.prev_episode_true_objective[env_ids] = self.true_objective[env_ids]
+            self.true_objective[env_ids] = 0
+
+            self.prev_episode_closest_keypoint_max_dist[env_ids] = torch.where(self.prev_episode_successes[env_ids] > 0, self.prev_total_episode_closest_keypoint_max_dist[env_ids]/self.prev_episode_successes[env_ids], self.total_episode_closest_keypoint_max_dist[env_ids])
+            self.total_episode_closest_keypoint_max_dist[env_ids] = 0
+            self.prev_total_episode_closest_keypoint_max_dist[env_ids] = 0
+
+            for key in self.rewards_episode.keys():
+                self.rewards_episode[key][env_ids] = 0
+
+            if self.save_states:
+                self.dump_env_states(env_ids)
+
+            self.extras["scalars"] = dict()
+            self.extras["scalars"]["success_tolerance"] = self.success_tolerance
+
         # randomize start object poses
         self.reset_target_pose(env_ids, reset_buf_idxs, tensor_reset=tensor_reset)
 
@@ -2178,7 +2040,7 @@ class AllegroKukaBase(VecTask):
             allegro_pos = self.hand_arm_default_dof_pos + noise_coeff * rand_delta
 
             self.arm_hand_dof_pos[env_ids, :] = allegro_pos
-            if VISUALIZE_PD_TARGET_AS_BLUE_ROBOT:
+            if self.VISUALIZE_PD_TARGET_AS_BLUE_ROBOT:
                 self.blue_robot_arm_hand_dof_pos[env_ids, :] = allegro_pos.clone()
                 self.blue_robot_arm_hand_dof_vel[env_ids, :] = 0.0
 
@@ -2225,29 +2087,6 @@ class AllegroKukaBase(VecTask):
 
         self.deferred_set_dof_state_tensor_indexed([hand_indices])
         self.deferred_set_actor_root_state_tensor_indexed(self._extra_object_indices(env_ids))
-
-        if episode_reset and tensor_reset:
-            self.progress_buf[env_ids] = 0
-            self.reset_buf[env_ids] = 0
-
-            self.prev_episode_successes[env_ids] = self.successes[env_ids]
-            self.successes[env_ids] = 0
-
-            self.prev_episode_true_objective[env_ids] = self.true_objective[env_ids]
-            self.true_objective[env_ids] = 0
-            
-            self.prev_episode_closest_keypoint_max_dist[env_ids] = torch.where(self.prev_episode_successes[env_ids] > 0, self.prev_total_episode_closest_keypoint_max_dist[env_ids]/self.prev_episode_successes[env_ids], self.total_episode_closest_keypoint_max_dist[env_ids])
-            self.total_episode_closest_keypoint_max_dist[env_ids] = 0
-            self.prev_total_episode_closest_keypoint_max_dist[env_ids] = 0
-
-            for key in self.rewards_episode.keys():
-                self.rewards_episode[key][env_ids] = 0
-
-            if self.save_states:
-                self.dump_env_states(env_ids)
-
-            self.extras["scalars"] = dict()
-            self.extras["scalars"]["success_tolerance"] = self.success_tolerance
 
     def pre_physics_step(self, actions, joint_pos_targets: Optional[torch.Tensor] = None):
         PRINT_TIME_SINCE_LAST_STEP = False
@@ -2360,14 +2199,24 @@ class AllegroKukaBase(VecTask):
             breakpoint()
 
         if joint_pos_targets is not None:
+            HACK_OVERWRITE = False
+            if HACK_OVERWRITE:
+                # SUPER HACK
+                joint_pos_targets[:, 7:] = 0.0
+                joint_pos_targets[:, 7+0] = 1.85
+                joint_pos_targets[:, 7+1] = 0.2
             self.cur_targets[:, :self.num_hand_arm_dofs] = joint_pos_targets.clone()
+
+        # print(f"self.cur_targets: {self.cur_targets[0, 7:]}")
+        # print(f"self.arm_dof_pos: {self.arm_hand_dof_pos[0, 7:]}")
+        # print()
 
         if self._DO_NOT_MOVE:
             self.cur_targets[:, :] = self.prev_targets[:, :]
 
         self.prev_targets[:, :] = self.cur_targets[:, :]
 
-        if VISUALIZE_PD_TARGET_AS_BLUE_ROBOT:
+        if self.VISUALIZE_PD_TARGET_AS_BLUE_ROBOT:
             self.cur_targets[:, self.num_hand_arm_dofs:] = self.cur_targets[:, :self.num_hand_arm_dofs].clone()
             self.blue_robot_arm_hand_dof_pos[:] = self.cur_targets[:, self.num_hand_arm_dofs:].clone()
             self.blue_robot_arm_hand_dof_vel[:] = 0.0
@@ -2390,7 +2239,7 @@ class AllegroKukaBase(VecTask):
             )
 
             self.gym.apply_rigid_body_force_tensors(
-                self.sim, gymtorch.unwrap_tensor(self.rb_forces), None, gymapi.LOCAL_SPACE
+                self.sim, gymtorch.unwrap_tensor(self.rb_forces), None, gymapi.ENV_SPACE
             )
         
         if self.good_reset_boundary > 0:
@@ -2531,6 +2380,7 @@ class AllegroKukaBase(VecTask):
                     robot_joint_pos_targets_array=self.robot_joint_pos_targets_array[:, ENV_IDX],
                     observations_array=self.observations_array[:, ENV_IDX],
                     actions_array=self.actions_array[:, ENV_IDX],
+                    object_name=self.cfg["env"]["object_type"],
                 )
                 recorded_data.to_file(recorded_data_path)
                 print(f"Saved recorded data to {recorded_data_path}")
@@ -2691,6 +2541,26 @@ class AllegroKukaBase(VecTask):
 
                     gymutil.draw_lines(sphere_geom, self.gym, self.viewer, self.envs[i], fingertip_transform)
 
+            for i in range(self.num_envs):
+                rb_forces_cpu = self.rb_forces[i, self.object_rb_handles, :].cpu().numpy().squeeze(axis=0)
+                assert rb_forces_cpu.shape == (3,), f"rb_forces_cpu.shape: {rb_forces_cpu.shape}"
+                object_pos_cpu = self.object_pos[i].cpu().numpy()
+                assert object_pos_cpu.shape == (3,), f"object_pos_cpu.shape: {object_pos_cpu.shape}"
+                start_pos = gymapi.Vec3(*object_pos_cpu)
+                MAX_FORCE_NORM = 2.0
+                MAX_VECTOR_LENGTH = 0.3
+                force_norm = np.linalg.norm(rb_forces_cpu)
+                if force_norm > MAX_FORCE_NORM:
+                    rb_forces_cpu = rb_forces_cpu / force_norm * MAX_FORCE_NORM
+                vector = rb_forces_cpu * MAX_VECTOR_LENGTH / MAX_FORCE_NORM
+                end_pos = start_pos + gymapi.Vec3(*vector)
+                self._draw_debug_line_of_spheres(
+                    env=self.envs[i],
+                    start_pos=start_pos,
+                    end_pos=end_pos,
+                    color=(1, 0, 0),
+                )
+
             # for j in range(self.num_keypoints):
             #     keypoint_pos_cpu = self.obj_keypoint_pos[:, j].cpu().numpy()
                 # goal_keypoint_pos_cpu = self.goal_keypoint_pos[:, j].cpu().numpy()
@@ -2717,12 +2587,16 @@ class AllegroKukaBase(VecTask):
                 self._draw_transform(transform=object_transform, env_idx=i)
                 # self._draw_transform(transform=goal_transform, env_idx=i)
 
+    def _init_tyler_curriculum(self):
+        self._tyler_curriculum_scale = 0.0
+        self._last_tyler_curriculum_update = time.time()
+        if "init_tyler_curriculum_scale" in self.cfg["env"]:
+            print(f"Initializing _tyler_curriculum_scale to {self.cfg['env']['init_tyler_curriculum_scale']}")
+            self._tyler_curriculum_scale = self.cfg["env"]["init_tyler_curriculum_scale"]
+
     def _update_tyler_curriculum(self):
         # Vary _tyler_curriculum_scale from 0.0 to 1.0 over time
         # 0.0 means easy and 1.0 means hard
-        if not hasattr(self, "_tyler_curriculum_scale"):
-            self._tyler_curriculum_scale = 0.0
-            self._last_tyler_curriculum_update = time.time()
 
         # If gets at least 50% of max consecutive successes and been at least 5 minutes since last update, turn off extra obs more
         mean_successes = self.prev_episode_successes.mean().item()
@@ -2904,6 +2778,7 @@ class AllegroKukaBase(VecTask):
                 end_pos=dir,
                 color=color,
             )
+
     def _draw_debug_line_of_spheres(
         self,
         env,
@@ -2922,14 +2797,15 @@ class AllegroKukaBase(VecTask):
                 color=color,
                 radius=radius,
             )
+
     def _draw_debug_sphere(
         self,
         env,
         position: gymapi.Vec3,
         color: Tuple[float, float, float],
         radius: float = 0.005,
-        num_lats: int = 2,
-        num_lons: int = 2,
+        num_lats: int = 10,
+        num_lons: int = 10,
     ) -> None:
         sphere_geom = gymutil.WireframeSphereGeometry(radius, num_lats, num_lons, color=color)
         gymutil.draw_lines(sphere_geom, self.gym, self.viewer, env, gymapi.Transform(p=position))
@@ -3035,3 +2911,68 @@ class AllegroKukaBase(VecTask):
 
         print(f"{self.num_initial_states} states loaded from file {self.load_states_filename}!")
 
+    def set_allegro_kuka_asset_rigid_shape_properties(self, allegro_kuka_asset: gymapi.Asset, friction: float, fingertip_friction: float):
+        rigid_shape_props = self.gym.get_asset_rigid_shape_properties(allegro_kuka_asset)
+        assert_equals(
+            len(rigid_shape_props),
+            self.gym.get_asset_rigid_shape_count(allegro_kuka_asset),
+        )
+
+        # Different friction for normal links (low friction) and fingertips (high friction)
+        for i in range(len(rigid_shape_props)):
+            rigid_shape_props[i].friction = friction
+
+        # Rigid bodies (links) are not the same as rigid shapes (collision geometries)
+        # Each rigid body can have >=1 rigid shapes
+        rb_names = self.gym.get_asset_rigid_body_names(allegro_kuka_asset)
+        print(f"rb_names = {rb_names}")
+        rb_shape_indices = self.gym.get_asset_rigid_body_shape_indices(allegro_kuka_asset)
+        assert_equals(len(rb_names), len(rb_shape_indices))
+        rb_name_to_shape_indices = {
+            name: (x.start, x.count) for name, x in zip(rb_names, rb_shape_indices)
+        }
+        fingertip_names = self.allegro_fingertips
+        for name in fingertip_names:
+            start, count = rb_name_to_shape_indices[name]
+            for i in range(start, start + count):
+                rigid_shape_props[i].friction = fingertip_friction
+
+        self.gym.set_asset_rigid_shape_properties(allegro_kuka_asset, rigid_shape_props)
+
+    def set_table_asset_rigid_shape_properties(self, table_asset: gymapi.Asset, friction: float):
+        rigid_shape_props = self.gym.get_asset_rigid_shape_properties(table_asset)
+        assert_equals(
+            len(rigid_shape_props),
+            self.gym.get_asset_rigid_shape_count(table_asset),
+        )
+        for i in range(len(rigid_shape_props)):
+            rigid_shape_props[i].friction = friction
+        self.gym.set_asset_rigid_shape_properties(table_asset, rigid_shape_props)
+
+    def set_object_asset_rigid_shape_properties(self, object_asset: gymapi.Asset, friction: float):
+        rigid_shape_props = self.gym.get_asset_rigid_shape_properties(object_asset)
+        assert_equals(
+            len(rigid_shape_props),
+            self.gym.get_asset_rigid_shape_count(object_asset),
+        )
+        for i in range(len(rigid_shape_props)):
+            rigid_shape_props[i].friction = friction
+        self.gym.set_asset_rigid_shape_properties(object_asset, rigid_shape_props)
+
+    def set_object_masses_and_inertias(self, envs: List[gymapi.Env], objects: List[int], masses: List[float], inertias: List[Tuple[float, float, float]]):
+        for env, object, mass, inertia in zip(envs, objects, masses, inertias):
+            object_rb_props = self.gym.get_actor_rigid_body_properties(env, object)
+            OBJECT_NUM_RIGID_BODIES = 1
+            assert_equals(len(object_rb_props), OBJECT_NUM_RIGID_BODIES)
+            for i in range(OBJECT_NUM_RIGID_BODIES):
+                object_rb_props[i].mass = mass
+                object_rb_props[i].inertia.x.x = inertia[0]
+                object_rb_props[i].inertia.y.y = inertia[1]
+                object_rb_props[i].inertia.z.z = inertia[2]
+            self.gym.set_actor_rigid_body_properties(env, object, object_rb_props)
+
+    @property
+    def VISUALIZE_PD_TARGET_AS_BLUE_ROBOT(self) -> bool:
+        if "VISUALIZE_PD_TARGET_AS_BLUE_ROBOT" in self.cfg["env"]:
+            return self.cfg["env"]["VISUALIZE_PD_TARGET_AS_BLUE_ROBOT"]
+        return False

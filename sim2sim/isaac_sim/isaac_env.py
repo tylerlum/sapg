@@ -2,7 +2,7 @@
 from isaacgymenvs.tasks.allegro_kuka.allegro_kuka_base import AllegroKukaBase  # isort:skip
 
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Dict, Any
 
 import torch
 from hydra import compose, initialize
@@ -22,48 +22,52 @@ def create_env(
     enable_viewer_sync_at_start: bool = True,
     merge_with_default_config: bool = True,
     episode_length: Optional[int] = None,
+    overrides: Optional[Dict[str, Any]] = None,
 ) -> AllegroKukaBase:
     cfg = read_cfg_omegaconf(config_path=config_path, device=device)
 
     if merge_with_default_config:
-        # Use this if the config from config path is missing fields
-        # For example, say we recently added a new field "object_friction" to the config
-        # If this wasn't in the config file, this would normally fail
-        # Merging with the default config will add this field with the default value
-        print("Merging with default config")
-
-        # Should be path of the isaacgymenvs/cfg directory relative to this file's directory
-        with initialize(version_base="1.1", config_path="../../isaacgymenvs/cfg"):
-            init_cfg = compose(config_name="config", overrides=["task=AllegroKukaLSTM"])
-
-        # Disable struct mode to allow merging
-        OmegaConf.set_struct(init_cfg, False)
-        OmegaConf.set_struct(cfg, False)
-
-        # Put cfg second to override init_cfg
-        merged_cfg = OmegaConf.merge(init_cfg, cfg)
-        assert isinstance(merged_cfg, DictConfig), (
-            f"Expected DictConfig, got {type(merged_cfg)}"
-        )
-
-        # Print the differences
-        diff = recursive_diff(
-            OmegaConf.to_container(cfg, resolve=True),
-            OmegaConf.to_container(merged_cfg, resolve=True),
-        )
-        print("Changes:")
-        print("-" * 80)
-        for key, change in diff.items():
-            print(f"{key}: {change}")
-
-        cfg = merged_cfg
-
+        cfg = merge_cfg_with_default_config(cfg)
     return create_env_from_cfg(
         cfg=cfg,
         headless=headless,
         enable_viewer_sync_at_start=enable_viewer_sync_at_start,
         episode_length=episode_length,
+        overrides=overrides,
     )
+
+def merge_cfg_with_default_config(cfg: DictConfig) -> DictConfig:
+    # Use this if the config from config path is missing fields
+    # For example, say we recently added a new field "object_friction" to the config
+    # If this wasn't in the config file, this would normally fail
+    # Merging with the default config will add this field with the default value
+    print("Merging with default config")
+
+    # Should be path of the isaacgymenvs/cfg directory relative to this file's directory
+    with initialize(version_base="1.1", config_path="../../isaacgymenvs/cfg"):
+        init_cfg = compose(config_name="config", overrides=["task=AllegroKukaLSTM"])
+
+    # Disable struct mode to allow merging
+    OmegaConf.set_struct(init_cfg, False)
+    OmegaConf.set_struct(cfg, False)
+
+    # Put cfg second to override init_cfg
+    merged_cfg = OmegaConf.merge(init_cfg, cfg)
+    assert isinstance(merged_cfg, DictConfig), (
+        f"Expected DictConfig, got {type(merged_cfg)}"
+    )
+
+    # Print the differences
+    diff = recursive_diff(
+        OmegaConf.to_container(cfg, resolve=True),
+        OmegaConf.to_container(merged_cfg, resolve=True),
+    )
+    print("Changes:")
+    print("-" * 80)
+    for key, change in diff.items():
+        print(f"{key}: {change}")
+
+    return merged_cfg
 
 
 def create_env_from_cfg(
@@ -71,6 +75,7 @@ def create_env_from_cfg(
     headless: bool = False,
     enable_viewer_sync_at_start: bool = True,
     episode_length: Optional[int] = None,
+    overrides: Optional[Dict[str, Any]] = None,
 ) -> AllegroKukaBase:
     # Modify the config
     cfg.headless = headless
@@ -84,9 +89,24 @@ def create_env_from_cfg(
     cfg.graphics_device_id = 0
 
     # Modify the config for the task
-    # cfg.task.env.custom.object_friction = 0.5
-    # cfg.task.env.custom.object_mass_scale = 1.0
-    # cfg.task.env.custom.object_inertia_scale = 1.0
+    if overrides is not None:
+        # Example: overrides = {"task.env.asset.kukaAllegro": "urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted.urdf"}
+        for key, value in overrides.items():
+            if isinstance(value, str):
+                value = f'"{value}"'
+            else:
+                value = str(value)
+            eval_str = f"cfg.{key} = {value}"
+            print(f"Evaluating: {eval_str}")
+            exec(eval_str)
+
+    # MODIFY_THINGS_HARDCODED = True
+    # if MODIFY_THINGS_HARDCODED:
+    #     cfg.task.env.asset.kukaAllegro = "urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted.urdf"
+    #     # cfg.task.env.allegroStiffness = 5.0
+    #     # cfg.task.env.allegroDamping = 0.1
+    #     cfg.task.env.allegroStiffness = 5.0
+    #     cfg.task.env.allegroDamping = 0.25
 
     env = isaacgym_task_map[cfg.task_name](
         cfg=omegaconf_to_dict(cfg.task),

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import time
 from pathlib import Path
 
@@ -27,18 +28,23 @@ def xyzw_to_wxyz(xyzw: np.ndarray) -> np.ndarray:
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--file_path", type=str, required=True)
+    args = parser.parse_args()
+    file_path = Path(args.file_path)
+
     # ###########
     # Load recorded data
     # ###########
-    file_path = Path(
-        # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-19_19-43-04.npz"
-        # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-19_19-42-41.npz"
-        # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-20_14-30-37.npz"
-        # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-20_14-32-39.npz"
-        # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-27_16-23-09.npz"
-        # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-27_16-23-31.npz"
-        "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-27_17-18-32.npz"
-    )
+    # file_path = Path(
+    #     # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-19_19-43-04.npz"
+    #     # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-19_19-42-41.npz"
+    #     # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-20_14-30-37.npz"
+    #     # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-20_14-32-39.npz"
+    #     # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-27_16-23-09.npz"
+    #     # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-27_16-23-31.npz"
+    #     "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-27_17-18-32.npz"
+    # )
     assert file_path.exists(), f"File {file_path} does not exist"
     recorded_data = RecordedData.from_file(file_path)
 
@@ -52,9 +58,9 @@ def main():
     # Set initial camera pose
     @SERVER.on_client_connect
     def _(client: viser.ClientHandle) -> None:
-        client.camera.position = (1, 1, 1)
+        client.camera.position = (0.0, -1.0, 1.03)
         # client.camera.wxyz = (0, 0, 0, 1)
-        client.camera.look_at = (0, 0, 0)
+        client.camera.look_at = (0, 0, 0.53)
 
     # Load assets into viser
     KUKA_ALLEGRO_URDF_PATH = Path(
@@ -64,12 +70,21 @@ def main():
     assert KUKA_ALLEGRO_URDF_PATH.exists(), (
         f"KUKA_ALLEGRO_URDF_PATH not found: {KUKA_ALLEGRO_URDF_PATH}"
     )
-    OBJECT_URDF_PATH = Path(
-        # "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/044_flat_screwdriver/044_flat_screwdriver.urdf"
-        # "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/phone/model.urdf"
-        # "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/040_large_marker/040_large_marker.urdf"
-        "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/hammer_1/hammer_1.urdf"
-    )
+    from isaacgymenvs.utils.objects import NAME_TO_OBJECT
+    DEFAULT_OBJECT_NAME = "044_flat_screwdriver"
+    object_name = DEFAULT_OBJECT_NAME
+    if recorded_data.object_name is None:
+        print(f"Using default object name: {DEFAULT_OBJECT_NAME}")
+        object_name = DEFAULT_OBJECT_NAME
+    elif recorded_data.object_name not in NAME_TO_OBJECT:
+        print(f"Object name {recorded_data.object_name} not found in NAME_TO_OBJECT, using default object name: {DEFAULT_OBJECT_NAME}")
+        object_name = DEFAULT_OBJECT_NAME
+    else:
+        object_name = recorded_data.object_name
+    OBJECT_URDF_PATH = NAME_TO_OBJECT[object_name].filepath
+    # OBJECT_URDF_PATH = Path(
+    #     "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/044_flat_screwdriver/044_flat_screwdriver.urdf"
+    # )
     assert OBJECT_URDF_PATH.exists(), f"OBJECT_URDF_PATH not found: {OBJECT_URDF_PATH}"
     ALLEGRO_URDF_PATH = Path(
         "/home/tylerlum/github_repos/sapg/assets/urdf/kuka_allegro_description/allegro_touch_sensor.urdf"
@@ -89,6 +104,16 @@ def main():
     kuka_allegro_viser = ViserUrdf(
         SERVER, KUKA_ALLEGRO_URDF_PATH, root_node_name="/robot/state"
     )
+
+    # Target robot
+    if recorded_data.robot_joint_pos_targets_array is not None:
+        target_kuka_allegro_frame = SERVER.scene.add_frame(
+            "/target_robot/state", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS
+        )
+        BLUE_RGBA = (0, 0, 255, 0.5)
+        target_kuka_allegro_viser = ViserUrdf(
+            SERVER, KUKA_ALLEGRO_URDF_PATH, root_node_name="/target_robot/state", mesh_color_override=BLUE_RGBA
+        )
 
     # Object
     object_frame = SERVER.scene.add_frame(
@@ -237,6 +262,14 @@ def main():
             to_order=kuka_allegro_viser_joint_names,
         )
         kuka_allegro_viser.update_cfg(kuka_allegro_joint_pos_viser_order)
+
+        # Target robot
+        if recorded_data.robot_joint_pos_targets_array is not None:
+            robot_joint_pos_target = recorded_data.robot_joint_pos_targets_array[FRAME_IDX]
+            target_kuka_allegro_frame.position = robot_root_state[:3]
+            target_kuka_allegro_frame.wxyz = xyzw_to_wxyz(robot_root_state[3:7])
+            target_kuka_allegro_joint_pos_viser_order = robot_joint_pos_target
+            target_kuka_allegro_viser.update_cfg(target_kuka_allegro_joint_pos_viser_order)
 
         # Object
         object_frame.position = object_root_state[:3]

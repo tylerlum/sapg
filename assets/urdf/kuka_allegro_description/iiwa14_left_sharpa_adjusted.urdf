@@ -362,22 +362,24 @@
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <inertia ixx="1e-4" ixy="0" ixz="0" iyy="1e-4" iyz="0" izz="1e-4"/>
     </inertial>
-    <visual>
+    <!-- <visual> -->
       <!-- <origin xyz="-0.0425 -0.0425 0" rpy="0 0 0" /> -->
-      <origin rpy="0 0 0" xyz="0 0 0.00"/>
-      <geometry>
+      <!-- <origin rpy="0 0 0" xyz="0 0 0.00"/> -->
+      <!-- <geometry> -->
         <!-- <mesh filename="kuka_allegro_description/meshes/mounts/allegro_mount.obj"/> -->
-        <mesh filename="sharpa_mount.stl" scale="0.001 0.001 0.001"/>
-      </geometry>
-      <material name="color_j7"/>
-    </visual>
-    <collision>
+        <!-- <mesh filename="sharpa_mount.stl" scale="0.001 0.001 0.001"/> -->
+      <!-- </geometry> -->
+      <!-- <material name="color_j7"/> -->
+    <!-- </visual> -->
+    <!-- <collision> -->
       <!-- <origin xyz="-0.0425 -0.0425 0" rpy="0 0 0" /> -->
-      <origin rpy="0 0 0" xyz="0 0 0"/>
-      <geometry>
-        <mesh filename="sharpa_mount.stl" scale="0.001 0.001 0.001"/>
-      </geometry>
-    </collision>
+      <!-- <origin rpy="0 0 0" xyz="0 0 0"/> -->
+      <!-- <geometry> -->
+        <!-- <mesh filename="sharpa_mount.stl" scale="0.001 0.001 0.001"/> -->
+        <!-- Leave in simple geometry from original allegro mount -->
+        <!-- <mesh filename="meshes/mounts/allegro_mount.obj"/> -->
+      <!-- </geometry> -->
+    <!-- </collision> -->
   </link>
   <!-- <joint name="allegro_mount_joint1" type="fixed">
     
@@ -464,7 +466,7 @@
     </visual>
 
   </link>
-  <joint name="left_thumb_CMC_FE" type="revolute">
+  <joint name="left_1_thumb_CMC_FE" type="revolute">
     <origin
       xyz="0.01 -0.026 0.0212"
       rpy="0 0 -1.5708"
@@ -508,7 +510,7 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="left_sharpa_meshes/left_thumb_MC.STL" />
+        <mesh filename="left_sharpa_meshes/left_thumb_MC_modified.STL" />
       </geometry>
     </collision>
   </link>
@@ -769,7 +771,7 @@
     </collision>
 
   </link>
-  <joint name="left_index_MCP_FE" type="revolute">
+  <joint name="left_2_index_MCP_FE" type="revolute">
     <origin
       xyz="0.001 -0.0303 0.0957"
       rpy="0 -1.5708 -1.5708"
@@ -1034,7 +1036,7 @@
       </geometry>
     </collision>
   </link>
-  <joint name="left_middle_MCP_FE" type="revolute">
+  <joint name="left_3_middle_MCP_FE" type="revolute">
     <origin
       xyz="0 -0.01 0.0987"
       rpy="0 -1.5708 -1.5708"
@@ -1299,7 +1301,7 @@
       </geometry>
     </collision>
   </link>
-  <joint name="left_ring_MCP_FE" type="revolute">
+  <joint name="left_4_ring_MCP_FE" type="revolute">
     <origin
       xyz="0.0015 0.0103 0.0927"
       rpy="0 -1.5708 -1.5708"
@@ -1564,7 +1566,7 @@
       </geometry>
     </collision>
   </link>
-  <joint name="left_pinky_CMC" type="revolute">
+  <joint name="left_5_pinky_CMC" type="revolute">
     <origin
       xyz="0.01136 0.0263 0.0867"
       rpy="-3.1416 0 3.1416"
