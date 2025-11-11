@@ -165,6 +165,7 @@ class AllegroKukaBase(VecTask):
         self.with_dof_force_sensors = False
         # create fingertip force-torque sensors
         self.with_fingertip_force_sensors = False
+        self.with_table_force_sensor = True
 
         if self.reset_time > 0.0:
             self.max_episode_length = int(round(self.reset_time / (self.control_freq_inv * self.sim_params.dt)))
@@ -304,11 +305,13 @@ class AllegroKukaBase(VecTask):
         rigid_body_tensor = self.gym.acquire_rigid_body_state_tensor(self.sim)
 
         if self.obs_type == "full_state":
-            if self.with_fingertip_force_sensors:
+            if self.with_fingertip_force_sensors or self.with_table_force_sensor:
                 sensor_tensor = self.gym.acquire_force_sensor_tensor(self.sim)
-                self.vec_sensor_tensor = gymtorch.wrap_tensor(sensor_tensor).view(
-                    self.num_envs, self.num_allegro_fingertips * 6
+                self.force_sensor_tensor = gymtorch.wrap_tensor(sensor_tensor).view(
+                    # self.num_envs, self.num_allegro_fingertips * 6
+                    self.num_envs, -1, 6
                 )
+                print(f"force_sensor_tensor: {self.force_sensor_tensor.shape}")
 
             if self.with_dof_force_sensors:
                 dof_force_tensor = self.gym.acquire_dof_force_tensor(self.sim)
@@ -1044,8 +1047,6 @@ class AllegroKukaBase(VecTask):
 
         self.arm_hand_dof_lower_limits = []
         self.arm_hand_dof_upper_limits = []
-        self.allegro_sensors = []
-        allegro_sensor_pose = gymapi.Transform()
 
         for i in range(self.num_hand_arm_dofs):
             self.arm_hand_dof_lower_limits.append(allegro_hand_dof_props["lower"][i])
@@ -1064,9 +1065,18 @@ class AllegroKukaBase(VecTask):
 
         # load auxiliary objects
         table_asset_options = gymapi.AssetOptions()
-        table_asset_options.disable_gravity = False
+        table_asset_options.disable_gravity = True
         table_asset_options.fix_base_link = True
         table_asset = self.gym.load_asset(self.sim, asset_root, self.asset_files_dict["table"], table_asset_options)
+
+        if self.with_table_force_sensor:
+            table_sensor_pose = gymapi.Transform()
+            table_sensor_props = gymapi.ForceSensorProperties()
+            # If both enable_constraint_solver_forces=False and enable_forward_dynamics_forces=False, always will have a force of 0.0
+            table_sensor_props.enable_constraint_solver_forces = True  # Defaults True, keep True to get constraint forces to get contact forces
+            table_sensor_props.enable_forward_dynamics_forces = True  # Defaults True, but set to False to avoid gravity being part of this force. Can be True if have disable_gravity=True for the table
+            table_sensor_props.use_world_frame = True
+            self.table_sensor_idx = self.gym.create_asset_force_sensor(asset=table_asset, body_idx=0, local_pose=table_sensor_pose, props=table_sensor_props)
 
         table_pose = gymapi.Transform()
         table_pose.p = gymapi.Vec3()
@@ -1117,6 +1127,12 @@ class AllegroKukaBase(VecTask):
         self.allegro_fingertip_handles = [
             self.gym.find_asset_rigid_body_index(allegro_kuka_asset, name) for name in self.allegro_fingertips
         ]
+
+        if self.with_fingertip_force_sensors:
+            allegro_sensor_pose = gymapi.Transform()
+            self.allegro_finger_sensor_idxs = [
+                self.gym.create_asset_force_sensor(asset=allegro_kuka_asset, body_idx=ft_handle, local_pose=allegro_sensor_pose) for ft_handle in self.allegro_fingertip_handles
+            ]
 
         if has_iiwa14:
             self.robot_name = "iiwa14"
@@ -1172,11 +1188,6 @@ class AllegroKukaBase(VecTask):
                 self.rigid_body_name_to_idx["allegro/" + name] = self.gym.find_actor_rigid_body_index(env_ptr, allegro_actor, name, gymapi.DOMAIN_ENV)
 
             if self.obs_type == "full_state":
-                if self.with_fingertip_force_sensors:
-                    for ft_handle in self.allegro_fingertip_handles:
-                        env_sensors = [self.gym.create_force_sensor(env_ptr, ft_handle, allegro_sensor_pose)]
-                        self.allegro_sensors.append(env_sensors)
-
                 if self.with_dof_force_sensors:
                     self.gym.enable_actor_dof_force_sensors(env_ptr, allegro_actor)
 
@@ -1594,10 +1605,21 @@ class AllegroKukaBase(VecTask):
         self.gym.refresh_rigid_body_state_tensor(self.sim)
 
         if self.obs_type == "full_state":
-            if self.with_fingertip_force_sensors:
+            if self.with_fingertip_force_sensors or self.with_table_force_sensor:
                 self.gym.refresh_force_sensor_tensor(self.sim)
             if self.with_dof_force_sensors:
                 self.gym.refresh_dof_force_tensor(self.sim)
+
+        if self.with_table_force_sensor:
+            self.table_sensor_forces = self.force_sensor_tensor[:, self.table_sensor_idx, :]
+            assert self.table_sensor_forces.shape == (self.num_envs, 6)
+            force_mag = self.table_sensor_forces[:, :3].norm(dim=-1).item()
+            torque_mag = self.table_sensor_forces[:, 3:6].norm(dim=-1).item()
+            print(f"table_sensor_forces: {force_mag}, {torque_mag}")
+
+        if self.with_fingertip_force_sensors:
+            raise NotImplementedError("Fingertip force sensors are not implemented yet, be careful about indexing")
+            self.allegro_finger_sensor_forces = self.force_sensor_tensor[:, self.allegro_finger_sensor_idxs, :]
 
         self.object_state = self.root_state_tensor[self.object_indices, 0:13]
         self.object_pose = self.root_state_tensor[self.object_indices, 0:7]
