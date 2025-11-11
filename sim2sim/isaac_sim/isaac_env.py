@@ -2,7 +2,7 @@
 from isaacgymenvs.tasks.allegro_kuka.allegro_kuka_base import AllegroKukaBase  # isort:skip
 
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Dict, Any
 
 import torch
 from hydra import compose, initialize
@@ -22,6 +22,7 @@ def create_env(
     enable_viewer_sync_at_start: bool = True,
     merge_with_default_config: bool = True,
     episode_length: Optional[int] = None,
+    overrides: Optional[Dict[str, Any]] = None,
 ) -> AllegroKukaBase:
     cfg = read_cfg_omegaconf(config_path=config_path, device=device)
 
@@ -32,6 +33,7 @@ def create_env(
         headless=headless,
         enable_viewer_sync_at_start=enable_viewer_sync_at_start,
         episode_length=episode_length,
+        overrides=overrides,
     )
 
 def merge_cfg_with_default_config(cfg: DictConfig) -> DictConfig:
@@ -73,6 +75,7 @@ def create_env_from_cfg(
     headless: bool = False,
     enable_viewer_sync_at_start: bool = True,
     episode_length: Optional[int] = None,
+    overrides: Optional[Dict[str, Any]] = None,
 ) -> AllegroKukaBase:
     # Modify the config
     cfg.headless = headless
@@ -85,13 +88,25 @@ def create_env_from_cfg(
     # This is a pretty reasonable assumption because we are typically doing this testing on a workstation with 1 GPU
     cfg.graphics_device_id = 0
 
-    MODIFY_THINGS_HARDCODED = True
-    if MODIFY_THINGS_HARDCODED:
-        cfg.task.env.asset.kukaAllegro = "urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted.urdf"
-        # cfg.task.env.allegroStiffness = 5.0
-        # cfg.task.env.allegroDamping = 0.1
-        cfg.task.env.allegroStiffness = 5.0
-        cfg.task.env.allegroDamping = 0.25
+    # Modify the config for the task
+    if overrides is not None:
+        # Example: overrides = {"task.env.asset.kukaAllegro": "urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted.urdf"}
+        for key, value in overrides.items():
+            if isinstance(value, str):
+                value = f'"{value}"'
+            else:
+                value = str(value)
+            eval_str = f"cfg.{key} = {value}"
+            print(f"Evaluating: {eval_str}")
+            exec(eval_str)
+
+    # MODIFY_THINGS_HARDCODED = True
+    # if MODIFY_THINGS_HARDCODED:
+    #     cfg.task.env.asset.kukaAllegro = "urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted.urdf"
+    #     # cfg.task.env.allegroStiffness = 5.0
+    #     # cfg.task.env.allegroDamping = 0.1
+    #     cfg.task.env.allegroStiffness = 5.0
+    #     cfg.task.env.allegroDamping = 0.25
 
     env = isaacgym_task_map[cfg.task_name](
         cfg=omegaconf_to_dict(cfg.task),
