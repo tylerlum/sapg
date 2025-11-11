@@ -2967,6 +2967,69 @@ class AllegroKukaBase(VecTask):
             for i in range(start, start + count):
                 rigid_shape_props[i].friction = fingertip_friction
 
+        # Turn off self-collisions for adjacent links
+        link_to_adjacent_links = {
+            'iiwa14_link_0': ['iiwa14_link_1'],
+            'iiwa14_link_1': ['iiwa14_link_0', 'iiwa14_link_2'],
+            'iiwa14_link_2': ['iiwa14_link_1', 'iiwa14_link_3'],
+            'iiwa14_link_3': ['iiwa14_link_2', 'iiwa14_link_4'],
+            'iiwa14_link_4': ['iiwa14_link_3', 'iiwa14_link_5'],
+            'iiwa14_link_5': ['iiwa14_link_4', 'iiwa14_link_6'],
+            'iiwa14_link_6': ['iiwa14_link_5', 'iiwa14_link_7'],
+            'iiwa14_link_7': [
+                'iiwa14_link_6',
+                'index_link_0',
+                'middle_link_0',
+                'ring_link_0',
+                'thumb_link_0'
+            ],
+
+            'index_link_0': ['iiwa14_link_7', 'index_link_1'],
+            'index_link_1': ['index_link_0', 'index_link_2'],
+            'index_link_2': ['index_link_1', 'index_link_3'],
+            'index_link_3': ['index_link_2'],
+
+            'middle_link_0': ['iiwa14_link_7', 'middle_link_1'],
+            'middle_link_1': ['middle_link_0', 'middle_link_2'],
+            'middle_link_2': ['middle_link_1', 'middle_link_3'],
+            'middle_link_3': ['middle_link_2'],
+
+            'ring_link_0': ['iiwa14_link_7', 'ring_link_1'],
+            'ring_link_1': ['ring_link_0', 'ring_link_2'],
+            'ring_link_2': ['ring_link_1', 'ring_link_3'],
+            'ring_link_3': ['ring_link_2'],
+
+            'thumb_link_0': ['iiwa14_link_7', 'thumb_link_1'],
+            'thumb_link_1': ['thumb_link_0', 'thumb_link_2'],
+            'thumb_link_2': ['thumb_link_1', 'thumb_link_3'],
+            'thumb_link_3': ['thumb_link_2'],
+        }
+        assert set(link_to_adjacent_links.keys()).issubset(rb_names), f"Some links are not in the asset {allegro_kuka_asset}, rb_names: {rb_names}, link_to_adjacent_links: {link_to_adjacent_links}"
+        no_collision_pairs = set()
+        for link, adjacent_links in link_to_adjacent_links.items():
+            for adjacent_link in adjacent_links:
+                no_collision_pairs.add(tuple(sorted((link, adjacent_link))))
+        no_collision_pairs = sorted(list(no_collision_pairs))
+
+        # Set collision_filters
+        # collision if (filterA & filterB) == 0
+        # Assign unique bit per link (up to 32 bits)
+        link_bitmask = {name: 1 << i for i, name in enumerate(rb_names)}
+
+        # For each no-collision pair, share bits so they don't collide
+        for a, b in no_collision_pairs:
+            bit_a = link_bitmask[a]
+            bit_b = link_bitmask[b]
+            # Add b's bit to a, and a's bit to b → ensures (filterA & filterB) != 0
+            link_bitmask[a] |= bit_b
+            link_bitmask[b] |= bit_a
+
+        # Update filters on shapes again
+        for name, (start, count) in rb_name_to_shape_indices.items():
+            bit = link_bitmask[name]
+            for i in range(start, start + count):
+                rigid_shape_props[i].filter = bit
+
         self.gym.set_asset_rigid_shape_properties(allegro_kuka_asset, rigid_shape_props)
 
     def set_table_asset_rigid_shape_properties(self, table_asset: gymapi.Asset, friction: float):
