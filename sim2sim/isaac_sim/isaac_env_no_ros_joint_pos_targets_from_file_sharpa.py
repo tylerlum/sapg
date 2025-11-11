@@ -84,14 +84,18 @@ def main():
     T = joint_pos_targets_array.shape[0]
     assert joint_pos_targets_array.shape == (T, N_ACT), f"joint_pos_targets_array.shape: {joint_pos_targets_array.shape}, expected: ({T}, {N_ACT})"
 
-    # DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-    DEVICE = "cpu"  # "cpu" faster for single env
+    DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+    # DEVICE = "cpu"  # "cpu" faster for single env, but some bugs with cpu like force sensors not working
     env = create_env(
         config_path=str(CONFIG_PATH),
         headless=False,
         device=DEVICE,
         episode_length=T*2,  # Make it not reset before finishing the trajectory
-        overrides={"task.env.asset.kukaAllegro": "urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted.urdf"},
+        overrides={
+            "task.env.asset.kukaAllegro": "urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted.urdf",
+            "task.task.randomize": False,
+            "task.env.VISUALIZE_PD_TARGET_AS_BLUE_ROBOT": True,
+        },
         # overrides={"task.env.asset.kukaAllegro": "urdf/kuka_allegro_description/iiwa14_left_sharpa.urdf"},
     )
 
