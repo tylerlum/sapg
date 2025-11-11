@@ -312,12 +312,16 @@ class AllegroKukaBase(VecTask):
                     self.num_envs, -1, 6
                 )
                 print(f"force_sensor_tensor: {self.force_sensor_tensor.shape}")
+                self.gym.refresh_force_sensor_tensor(self.sim)
+                if self.device == "cpu":
+                    raise ValueError("Force sensors not supported on CPU, they only gives 0s on CPU")
 
             if self.with_dof_force_sensors:
                 dof_force_tensor = self.gym.acquire_dof_force_tensor(self.sim)
                 self.dof_force_tensor = gymtorch.wrap_tensor(dof_force_tensor).view(
                     self.num_envs, self.num_hand_arm_dofs
                 )
+                self.gym.refresh_dof_force_tensor(self.sim)
 
         self.gym.refresh_actor_root_state_tensor(self.sim)
         self.gym.refresh_dof_state_tensor(self.sim)
@@ -523,6 +527,8 @@ class AllegroKukaBase(VecTask):
         print("Toggling debug viz...")
         self.debug_viz = not self.debug_viz
         print(f"Debug viz is now {self.debug_viz}")
+        if not self.debug_viz:
+            self.gym.clear_lines(self.viewer)
 
     ##### KEYBOARD END #####
 
@@ -1074,9 +1080,11 @@ class AllegroKukaBase(VecTask):
             table_sensor_props = gymapi.ForceSensorProperties()
             # If both enable_constraint_solver_forces=False and enable_forward_dynamics_forces=False, always will have a force of 0.0
             table_sensor_props.enable_constraint_solver_forces = True  # Defaults True, keep True to get constraint forces to get contact forces
-            table_sensor_props.enable_forward_dynamics_forces = True  # Defaults True, but set to False to avoid gravity being part of this force. Can be True if have disable_gravity=True for the table
+            table_sensor_props.enable_forward_dynamics_forces = False  # Defaults True, but set to False to avoid gravity being part of this force. Can be True if have disable_gravity=True for the table
             table_sensor_props.use_world_frame = True
             self.table_sensor_idx = self.gym.create_asset_force_sensor(asset=table_asset, body_idx=0, local_pose=table_sensor_pose, props=table_sensor_props)
+            if self.table_sensor_idx == -1:
+                raise ValueError("Failed to create table force sensor")
 
         table_pose = gymapi.Transform()
         table_pose.p = gymapi.Vec3()
@@ -1611,11 +1619,16 @@ class AllegroKukaBase(VecTask):
                 self.gym.refresh_dof_force_tensor(self.sim)
 
         if self.with_table_force_sensor:
+            print(f"self.force_sensor_tensor.shape: {self.force_sensor_tensor.shape}")
             self.table_sensor_forces = self.force_sensor_tensor[:, self.table_sensor_idx, :]
+            if not hasattr(self, "table_sensor_forces_smoothed"):
+                self.table_sensor_forces_smoothed = torch.zeros_like(self.table_sensor_forces)
+            ALPHA = 0.1  # 1 = no smoothing, 0 = no updates
+            self.table_sensor_forces_smoothed = self.table_sensor_forces_smoothed * (1 - ALPHA) + self.table_sensor_forces * ALPHA
             assert self.table_sensor_forces.shape == (self.num_envs, 6)
             force_mag = self.table_sensor_forces[:, :3].norm(dim=-1).item()
             torque_mag = self.table_sensor_forces[:, 3:6].norm(dim=-1).item()
-            print(f"table_sensor_forces: {force_mag}, {torque_mag}")
+            print(f"table_sensor_forces: {np.round(force_mag, 2)}, {np.round(torque_mag, 2)}")
 
         if self.with_fingertip_force_sensors:
             raise NotImplementedError("Fingertip force sensors are not implemented yet, be careful about indexing")
@@ -2308,38 +2321,63 @@ class AllegroKukaBase(VecTask):
                 self.sim, None, gymtorch.unwrap_tensor(self.action_torques), gymapi.ENV_SPACE
             )
 
-        USE_LIVE_PLOTTER = False
+        USE_LIVE_PLOTTER = True
         if USE_LIVE_PLOTTER:
             if not hasattr(self, "live_plotter"):
                 from live_plotter import FastLivePlotter
                 self.live_plotter = FastLivePlotter(
-                    n_plots=len(self.joint_names),
-                    titles=self.joint_names,
-                    xlabels=["idx"] * len(self.joint_names),
-                    ylabels=["joint pos"] * len(self.joint_names),
-                    ylims=[(self.joint_lower_limits[i], self.joint_upper_limits[i]) for i in range(len(self.joint_names))],
-                    legends=[["pos", "target"]] * len(self.joint_names),
+                    n_plots=1,
+                    titles=["Table Force"],
+                    xlabels=["idx"],
+                    ylabels=["force"],
+                    # ylims=[(self.joint_lower_limits[0], self.joint_upper_limits[0])],
+                    legends=[["raw", "smoothed"]],
                 )
-                self.joint_pos_history = []
-                self.joint_target_history = []
+                self.table_force_history = []
+                self.table_force_smoothed_history = []
+                # self.live_plotter = FastLivePlotter(
+                #     n_plots=len(self.joint_names),
+                #     titles=self.joint_names,
+                #     xlabels=["idx"] * len(self.joint_names),
+                #     ylabels=["joint pos"] * len(self.joint_names),
+                #     ylims=[(self.joint_lower_limits[i], self.joint_upper_limits[i]) for i in range(len(self.joint_names))],
+                #     legends=[["pos", "target"]] * len(self.joint_names),
+                # )
+                # self.joint_pos_history = []
+                # self.joint_target_history = []
+
+            # ENV_IDX = 0
+            # joint_pos = self.arm_hand_dof_pos[ENV_IDX].cpu().numpy().copy()
+            # joint_target = self.cur_targets[ENV_IDX].cpu().numpy().copy()
+            # assert joint_pos.shape == joint_target.shape == (len(self.joint_names),), f"{joint_pos.shape} != {joint_target.shape} != {len(self.joint_names)}"
+            # self.joint_pos_history.append(joint_pos)
+            # self.joint_target_history.append(joint_target)
+            # joint_pos_history = np.stack(self.joint_pos_history, axis=0)
+            # joint_target_history = np.stack(self.joint_target_history, axis=0)
+            # joint_pos_and_target_history = np.stack([joint_pos_history, joint_target_history], axis=-1)
+            # assert joint_pos_and_target_history.shape == (len(self.joint_pos_history), len(self.joint_names), 2), f"{joint_pos_and_target_history.shape} != ({len(self.joint_pos_history)}, {len(self.joint_names)}, 2)"
+
+            # # Should be (N, 2)
+            # self.live_plotter.plot(
+            #     y_data_list=[
+            #         joint_pos_and_target_history[:, i, :] for i in range(len(self.joint_names))
+            #     ]
+            # )
 
             ENV_IDX = 0
-            joint_pos = self.arm_hand_dof_pos[ENV_IDX].cpu().numpy().copy()
-            joint_target = self.cur_targets[ENV_IDX].cpu().numpy().copy()
-            assert joint_pos.shape == joint_target.shape == (len(self.joint_names),), f"{joint_pos.shape} != {joint_target.shape} != {len(self.joint_names)}"
-            self.joint_pos_history.append(joint_pos)
-            self.joint_target_history.append(joint_target)
-            joint_pos_history = np.stack(self.joint_pos_history, axis=0)
-            joint_target_history = np.stack(self.joint_target_history, axis=0)
-            joint_pos_and_target_history = np.stack([joint_pos_history, joint_target_history], axis=-1)
-            assert joint_pos_and_target_history.shape == (len(self.joint_pos_history), len(self.joint_names), 2), f"{joint_pos_and_target_history.shape} != ({len(self.joint_pos_history)}, {len(self.joint_names)}, 2)"
-
-            # Should be (N, 2)
-            self.live_plotter.plot(
-                y_data_list=[
-                    joint_pos_and_target_history[:, i, :] for i in range(len(self.joint_names))
-                ]
-            )
+            if hasattr(self, "table_sensor_forces"):
+                table_force = self.table_sensor_forces[ENV_IDX, :3].norm(dim=-1).item()
+                table_force_smoothed = self.table_sensor_forces_smoothed[ENV_IDX, :3].norm(dim=-1).item()
+                self.table_force_history.append(table_force)
+                self.table_force_smoothed_history.append(table_force_smoothed)
+                self.live_plotter.plot(
+                    y_data_list=[
+                        np.stack([
+                            np.array(self.table_force_history),
+                            np.array(self.table_force_smoothed_history),
+                        ], axis=-1),
+                    ]
+                )
 
         RECORD_DATA = self.cfg["env"]["record_data"]
         if RECORD_DATA:
