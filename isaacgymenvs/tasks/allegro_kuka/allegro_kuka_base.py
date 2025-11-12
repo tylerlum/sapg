@@ -2166,6 +2166,7 @@ class AllegroKukaBase(VecTask):
             self.extras["scalars"]["success_tolerance"] = self.success_tolerance
 
             if self.with_table_force_sensor:
+                self.extras["max_table_sensor_force_norm_smoothed"] = self.max_table_sensor_force_norm_smoothed.mean().item()
                 self.table_sensor_forces_raw[env_ids, :] = 0
                 self.table_sensor_forces_smoothed[env_ids, :] = 0
                 self.max_table_sensor_force_norm_smoothed[env_ids] = 0
