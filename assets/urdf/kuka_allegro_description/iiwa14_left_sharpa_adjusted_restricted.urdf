@@ -510,7 +510,8 @@
         rpy="0 0 0"
       />
       <geometry>
-        <mesh filename="left_sharpa_meshes/left_thumb_MC_modified.STL" />
+        <!-- <mesh filename="left_sharpa_meshes/left_thumb_MC_modified.STL" /> -->
+        <mesh filename="left_sharpa_meshes/left_thumb_MC.STL" />
       </geometry>
     </collision>
   </link>
