@@ -1179,6 +1179,13 @@ class AllegroKukaBase(VecTask):
                     object_asset=object_assets[object_asset_idx_to_modify],
                     friction=0.5,
                 )
+        else:
+            # Still run this because it sets the collision filters to avoid self-collisions between adjacent links
+            self.set_allegro_kuka_asset_rigid_shape_properties(
+                allegro_kuka_asset=allegro_kuka_asset,
+                friction=None,
+                fingertip_friction=None,
+            )
 
         for i in range(self.num_envs):
             # create env instance
@@ -3106,7 +3113,7 @@ class AllegroKukaBase(VecTask):
 
         print(f"{self.num_initial_states} states loaded from file {self.load_states_filename}!")
 
-    def set_allegro_kuka_asset_rigid_shape_properties(self, allegro_kuka_asset: gymapi.Asset, friction: float, fingertip_friction: float):
+    def set_allegro_kuka_asset_rigid_shape_properties(self, allegro_kuka_asset: gymapi.Asset, friction: Optional[float], fingertip_friction: Optional[float]):
         rigid_shape_props = self.gym.get_asset_rigid_shape_properties(allegro_kuka_asset)
         assert_equals(
             len(rigid_shape_props),
@@ -3115,7 +3122,8 @@ class AllegroKukaBase(VecTask):
 
         # Different friction for normal links (low friction) and fingertips (high friction)
         for i in range(len(rigid_shape_props)):
-            rigid_shape_props[i].friction = friction
+            if friction is not None:
+                rigid_shape_props[i].friction = friction
 
         # Rigid bodies (links) are not the same as rigid shapes (collision geometries)
         # Each rigid body can have >=1 rigid shapes
@@ -3130,126 +3138,21 @@ class AllegroKukaBase(VecTask):
         for name in fingertip_names:
             start, count = rb_name_to_shape_indices[name]
             for i in range(start, start + count):
-                rigid_shape_props[i].friction = fingertip_friction
+                if fingertip_friction is not None:
+                    rigid_shape_props[i].friction = fingertip_friction
 
         # Turn off self-collisions for adjacent links
-        link_to_adjacent_links = {
-            'iiwa14_link_0': ['iiwa14_link_1'],
-            'iiwa14_link_1': ['iiwa14_link_0', 'iiwa14_link_2'],
-            'iiwa14_link_2': ['iiwa14_link_1', 'iiwa14_link_3'],
-            'iiwa14_link_3': ['iiwa14_link_2', 'iiwa14_link_4'],
-            'iiwa14_link_4': ['iiwa14_link_3', 'iiwa14_link_5'],
-            'iiwa14_link_5': ['iiwa14_link_4', 'iiwa14_link_6'],
-            'iiwa14_link_6': ['iiwa14_link_5', 'iiwa14_link_7'],
-            'iiwa14_link_7': [
-                'iiwa14_link_6',
-                'index_link_0',
-                'middle_link_0',
-                'ring_link_0',
-                'thumb_link_0'
-            ],
-
-            'index_link_0': ['iiwa14_link_7', 'index_link_1'],
-            'index_link_1': ['index_link_0', 'index_link_2'],
-            'index_link_2': ['index_link_1', 'index_link_3'],
-            'index_link_3': ['index_link_2'],
-
-            'middle_link_0': ['iiwa14_link_7', 'middle_link_1'],
-            'middle_link_1': ['middle_link_0', 'middle_link_2'],
-            'middle_link_2': ['middle_link_1', 'middle_link_3'],
-            'middle_link_3': ['middle_link_2'],
-
-            'ring_link_0': ['iiwa14_link_7', 'ring_link_1'],
-            'ring_link_1': ['ring_link_0', 'ring_link_2'],
-            'ring_link_2': ['ring_link_1', 'ring_link_3'],
-            'ring_link_3': ['ring_link_2'],
-
-            'thumb_link_0': ['iiwa14_link_7', 'thumb_link_1'],
-            'thumb_link_1': ['thumb_link_0', 'thumb_link_2'],
-            'thumb_link_2': ['thumb_link_1', 'thumb_link_3'],
-            'thumb_link_3': ['thumb_link_2'],
-        }
+        from isaacgymenvs.tasks.allegro_kuka.adjacent_links import (
+            IIWA14_REAL_ALLEGRO_LINK_TO_ADJACENT_LINKS,
+            RIGHT_SHARPA_ALLEGRO_LINK_TO_ADJACENT_LINKS,
+            LEFT_SHARPA_ALLEGRO_LINK_TO_ADJACENT_LINKS,
+        )
+        link_to_adjacent_links = IIWA14_REAL_ALLEGRO_LINK_TO_ADJACENT_LINKS
         if self.use_sharpa:
             if self.use_right_sharpa:
-                link_to_adjacent_links = {
-                    'iiwa14_link_0': ['iiwa14_link_1'],
-                    'iiwa14_link_1': ['iiwa14_link_0', 'iiwa14_link_2'],
-                    'iiwa14_link_2': ['iiwa14_link_1', 'iiwa14_link_3'],
-                    'iiwa14_link_3': ['iiwa14_link_2', 'iiwa14_link_4'],
-                    'iiwa14_link_4': ['iiwa14_link_3', 'iiwa14_link_5'],
-                    'iiwa14_link_5': ['iiwa14_link_4', 'iiwa14_link_6'],
-                    'iiwa14_link_6': ['iiwa14_link_5', 'iiwa14_link_7'],
-                    'iiwa14_link_7': [
-                        'iiwa14_link_6',
-                        'right_index_MCP_VL',
-                        'right_middle_MCP_VL',
-                        'right_pinky_MC',
-                        'right_ring_MCP_VL',
-                        'right_thumb_CMC_VL',
-                    ],
-                    "right_index_MCP_VL": ["iiwa14_link_7", "right_index_PP"],
-                    "right_index_PP": ["right_index_MCP_VL", "right_index_MP"],
-                    "right_index_MP": ["right_index_PP", "right_index_DP"],
-                    "right_index_DP": ["right_index_MP"],
-                    "right_middle_MCP_VL": ["iiwa14_link_7", "right_middle_PP"],
-                    "right_middle_PP": ["right_middle_MCP_VL", "right_middle_MP"],
-                    "right_middle_MP": ["right_middle_PP", "right_middle_DP"],
-                    "right_middle_DP": ["right_middle_MP"],
-                    "right_pinky_MC": ["iiwa14_link_7", "right_pinky_MCP_VL"],
-                    "right_pinky_MCP_VL": ["right_pinky_MC", "right_pinky_PP"],
-                    "right_pinky_PP": ["right_pinky_MCP_VL", "right_pinky_MP"],
-                    "right_pinky_MP": ["right_pinky_PP", "right_pinky_DP"],
-                    "right_pinky_DP": ["right_pinky_MP"],
-                    "right_ring_MCP_VL": ["iiwa14_link_7", "right_ring_PP"],
-                    "right_ring_PP": ["right_ring_MCP_VL", "right_ring_MP"],
-                    "right_ring_MP": ["right_ring_PP", "right_ring_DP"],
-                    "right_ring_DP": ["right_ring_MP"],
-                    "right_thumb_CMC_VL": ["iiwa14_link_7", "right_thumb_MC"],
-                    "right_thumb_MC": ["right_thumb_CMC_VL", "right_thumb_MCP_VL"],
-                    "right_thumb_MCP_VL": ["right_thumb_MC", "right_thumb_PP"],
-                    "right_thumb_PP": ["right_thumb_MCP_VL", "right_thumb_DP"],
-                    "right_thumb_DP": ["right_thumb_PP"],
-                }
+                link_to_adjacent_links = RIGHT_SHARPA_ALLEGRO_LINK_TO_ADJACENT_LINKS
             elif self.use_left_sharpa:
-                link_to_adjacent_links = {
-                    'iiwa14_link_0': ['iiwa14_link_1'],
-                    'iiwa14_link_1': ['iiwa14_link_0', 'iiwa14_link_2'],
-                    'iiwa14_link_2': ['iiwa14_link_1', 'iiwa14_link_3'],
-                    'iiwa14_link_3': ['iiwa14_link_2', 'iiwa14_link_4'],
-                    'iiwa14_link_4': ['iiwa14_link_3', 'iiwa14_link_5'],
-                    'iiwa14_link_5': ['iiwa14_link_4', 'iiwa14_link_6'],
-                    'iiwa14_link_6': ['iiwa14_link_5', 'iiwa14_link_7'],
-                    'iiwa14_link_7': [
-                        'iiwa14_link_6',
-                        'left_index_MCP_VL',
-                        'left_middle_MCP_VL',
-                        'left_pinky_MC',
-                        'left_ring_MCP_VL',
-                        'left_thumb_CMC_VL',
-                    ],
-                    "left_index_MCP_VL": ["iiwa14_link_7", "left_index_PP"],
-                    "left_index_PP": ["left_index_MCP_VL", "left_index_MP"],
-                    "left_index_MP": ["left_index_PP", "left_index_DP"],
-                    "left_index_DP": ["left_index_MP"],
-                    "left_middle_MCP_VL": ["iiwa14_link_7", "left_middle_PP"],
-                    "left_middle_PP": ["left_middle_MCP_VL", "left_middle_MP"],
-                    "left_middle_MP": ["left_middle_PP", "left_middle_DP"],
-                    "left_middle_DP": ["left_middle_MP"],
-                    "left_pinky_MC": ["iiwa14_link_7", "left_pinky_MCP_VL"],
-                    "left_pinky_MCP_VL": ["left_pinky_MC", "left_pinky_PP"],
-                    "left_pinky_PP": ["left_pinky_MCP_VL", "left_pinky_MP"],
-                    "left_pinky_MP": ["left_pinky_PP", "left_pinky_DP"],
-                    "left_pinky_DP": ["left_pinky_MP"],
-                    "left_ring_MCP_VL": ["iiwa14_link_7", "left_ring_PP"],
-                    "left_ring_PP": ["left_ring_MCP_VL", "left_ring_MP"],
-                    "left_ring_MP": ["left_ring_PP", "left_ring_DP"],
-                    "left_ring_DP": ["left_ring_MP"],
-                    "left_thumb_CMC_VL": ["iiwa14_link_7", "left_thumb_MC"],
-                    "left_thumb_MC": ["left_thumb_CMC_VL", "left_thumb_MCP_VL"],
-                    "left_thumb_MCP_VL": ["left_thumb_MC", "left_thumb_PP"],
-                    "left_thumb_PP": ["left_thumb_MCP_VL", "left_thumb_DP"],
-                    "left_thumb_DP": ["left_thumb_PP"],
-                }
+                link_to_adjacent_links = LEFT_SHARPA_ALLEGRO_LINK_TO_ADJACENT_LINKS
             else:
                 raise ValueError(f"Invalid use_sharpa: {self.use_sharpa}")
 
