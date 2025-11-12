@@ -1455,7 +1455,12 @@ class AllegroKukaBase(VecTask):
         else:
             table_force_too_high = zeros
 
-        resets = self.reset_buf | object_z_low | max_consecutive_successes_reached | max_episode_length_reached | table_force_too_high
+        # hand far from the object
+        hand_far_from_object = torch.where(
+            self.curr_fingertip_distances.max(dim=-1).values > 1.5, ones, zeros
+        )
+
+        resets = self.reset_buf | object_z_low | max_consecutive_successes_reached | max_episode_length_reached | table_force_too_high | hand_far_from_object
         resets = self._extra_reset_rules(resets)
 
         # Print resets when there is only one environment
@@ -1466,10 +1471,63 @@ class AllegroKukaBase(VecTask):
             print(f"max_consecutive_successes_reached: {max_consecutive_successes_reached.item()}")
             print(f"max_episode_length_reached: {max_episode_length_reached.item()}")
             print(f"table_force_too_high: {table_force_too_high.item()}")
+            print(f"hand_far_from_object: {hand_far_from_object.item()}")
             print(f"resets: {resets.item()}")
             print("=" * 100)
             print(f"self.successes: {self.successes.item()}")
             print()
+
+        # Keep track of reasons for reset
+        from collections import deque, Counter
+        if not hasattr(self, "reset_reason_history"):
+            MAX_HISTORY_LENGTH = 4096
+            self.reset_reason_history = deque(maxlen=MAX_HISTORY_LENGTH)
+            self.reset_reason_counts = {
+                "object_z_low": 0,
+                "max_consecutive_successes_reached": 0,
+                "max_episode_length_reached": 0,
+                "table_force_too_high": 0,
+                "hand_far_from_object": 0,
+            }
+        # Get current counts
+        current_reset_reason_counts = {
+            "object_z_low": object_z_low.sum().item(),
+            "max_consecutive_successes_reached": max_consecutive_successes_reached.sum().item(),
+            "max_episode_length_reached": max_episode_length_reached.sum().item(),
+            "table_force_too_high": table_force_too_high.sum().item(),
+            "hand_far_from_object": hand_far_from_object.sum().item(),
+        }
+        # Update counts
+        for reason, count in current_reset_reason_counts.items():
+            self.reset_reason_counts[reason] += count
+        for reason, count in current_reset_reason_counts.items():
+            self.reset_reason_history.extend([reason] * count)
+        recent_reset_reason_counts = Counter(self.reset_reason_history)
+
+        PRINT = False
+        if PRINT:
+            current_total = sum(current_reset_reason_counts.values())
+            if current_total > 0:
+                print(f"{current_total} resets in the last step!")
+                print()
+
+                total = sum(self.reset_reason_counts.values())
+                print("Across all time:")
+                print("-" * 100)
+                for reason, count in self.reset_reason_counts.items():
+                    if count > 0:
+                        print(f"Reset reason: {reason} {count}/{total} ({count / total:.1%})")
+                print()
+
+                recent_total = sum(recent_reset_reason_counts.values())
+                print("Recent:")
+                print("-" * 100)
+                for reason, count in recent_reset_reason_counts.items():
+                    if count > 0:
+                        print(f"Reset reason: {reason} {count}/{recent_total} ({count / recent_total:.1%})")
+                print()
+                print()
+
         return resets
 
     def _true_objective(self):
