@@ -165,7 +165,7 @@ class AllegroKukaBase(VecTask):
         self.with_dof_force_sensors = False
         # create fingertip force-torque sensors
         self.with_fingertip_force_sensors = False
-        self.with_table_force_sensor = True
+        self.with_table_force_sensor = False
 
         if self.reset_time > 0.0:
             self.max_episode_length = int(round(self.reset_time / (self.control_freq_inv * self.sim_params.dt)))
@@ -466,6 +466,11 @@ class AllegroKukaBase(VecTask):
 
                 shutil.rmtree(self.eval_summary_dir)
             self.eval_summaries = SummaryWriter(self.eval_summary_dir, flush_secs=3)
+
+        if self.with_table_force_sensor:
+            self.table_sensor_forces_raw = torch.zeros((self.num_envs, 6), dtype=torch.float, device=self.device)
+            self.table_sensor_forces_smoothed = torch.zeros((self.num_envs, 6), dtype=torch.float, device=self.device)
+            self.max_table_sensor_force_norm_smoothed = torch.zeros((self.num_envs), dtype=torch.float, device=self.device)
 
         self._init_tyler_curriculum()
 
@@ -1439,10 +1444,18 @@ class AllegroKukaBase(VecTask):
             # Reset progress buffer if max_consecutive_successes > 0
             self.progress_buf = torch.where(is_success > 0, torch.zeros_like(self.progress_buf), self.progress_buf)
             max_consecutive_successes_reached = torch.where(self.successes >= self.max_consecutive_successes, ones, zeros)
+        else:
+            max_consecutive_successes_reached = zeros
 
         max_episode_length_reached = torch.where(self.progress_buf >= self.max_episode_length - 1, ones, zeros)
 
-        resets = self.reset_buf | object_z_low | max_consecutive_successes_reached | max_episode_length_reached
+        if self.with_table_force_sensor:
+            TABLE_FORCE_THRESHOLD = 100.0
+            table_force_too_high = torch.where(self.max_table_sensor_force_norm_smoothed > TABLE_FORCE_THRESHOLD, ones, zeros)
+        else:
+            table_force_too_high = zeros
+
+        resets = self.reset_buf | object_z_low | max_consecutive_successes_reached | max_episode_length_reached | table_force_too_high
         resets = self._extra_reset_rules(resets)
 
         # Print resets when there is only one environment
@@ -1452,6 +1465,7 @@ class AllegroKukaBase(VecTask):
             print(f"object_z_low: {object_z_low.item()}")
             print(f"max_consecutive_successes_reached: {max_consecutive_successes_reached.item()}")
             print(f"max_episode_length_reached: {max_episode_length_reached.item()}")
+            print(f"table_force_too_high: {table_force_too_high.item()}")
             print(f"resets: {resets.item()}")
             print("=" * 100)
             print(f"self.successes: {self.successes.item()}")
@@ -1619,16 +1633,21 @@ class AllegroKukaBase(VecTask):
                 self.gym.refresh_dof_force_tensor(self.sim)
 
         if self.with_table_force_sensor:
-            print(f"self.force_sensor_tensor.shape: {self.force_sensor_tensor.shape}")
-            self.table_sensor_forces = self.force_sensor_tensor[:, self.table_sensor_idx, :]
-            if not hasattr(self, "table_sensor_forces_smoothed"):
-                self.table_sensor_forces_smoothed = torch.zeros_like(self.table_sensor_forces)
-            ALPHA = 0.1  # 1 = no smoothing, 0 = no updates
-            self.table_sensor_forces_smoothed = self.table_sensor_forces_smoothed * (1 - ALPHA) + self.table_sensor_forces * ALPHA
-            assert self.table_sensor_forces.shape == (self.num_envs, 6)
-            force_mag = self.table_sensor_forces[:, :3].norm(dim=-1).item()
-            torque_mag = self.table_sensor_forces[:, 3:6].norm(dim=-1).item()
-            print(f"table_sensor_forces: {np.round(force_mag, 2)}, {np.round(torque_mag, 2)}")
+            self.table_sensor_forces_raw = self.force_sensor_tensor[:, self.table_sensor_idx, :]
+
+            # Smooth the force because the signal can be spikey, and we don't want to make decisions based on spikey signals
+            TABLE_SENSOR_FORCE_SMOOTHING_ALPHA = 0.1  # 1 = no smoothing, 0 = no updates
+            self.table_sensor_forces_smoothed = self.interpolate(
+                init=self.table_sensor_forces_smoothed,
+                final=self.table_sensor_forces_raw,
+                alpha=TABLE_SENSOR_FORCE_SMOOTHING_ALPHA,
+            )
+            table_sensor_force_norm_smoothed = self.table_sensor_forces_smoothed[:, :3].norm(dim=-1)
+            self.max_table_sensor_force_norm_smoothed = torch.where(
+                table_sensor_force_norm_smoothed > self.max_table_sensor_force_norm_smoothed,
+                table_sensor_force_norm_smoothed,
+                self.max_table_sensor_force_norm_smoothed,
+            )
 
         if self.with_fingertip_force_sensors:
             raise NotImplementedError("Fingertip force sensors are not implemented yet, be careful about indexing")
@@ -2068,6 +2087,11 @@ class AllegroKukaBase(VecTask):
             self.extras["scalars"] = dict()
             self.extras["scalars"]["success_tolerance"] = self.success_tolerance
 
+            if self.with_table_force_sensor:
+                self.table_sensor_forces_raw[env_ids, :] = 0
+                self.table_sensor_forces_smoothed[env_ids, :] = 0
+                self.max_table_sensor_force_norm_smoothed[env_ids] = 0
+
         # randomize start object poses
         self.reset_target_pose(env_ids, reset_buf_idxs, tensor_reset=tensor_reset)
 
@@ -2325,16 +2349,21 @@ class AllegroKukaBase(VecTask):
         if USE_LIVE_PLOTTER:
             if not hasattr(self, "live_plotter"):
                 from live_plotter import FastLivePlotter
+
+                # Plot table force raw and smoothed
                 self.live_plotter = FastLivePlotter(
                     n_plots=1,
                     titles=["Table Force"],
                     xlabels=["idx"],
                     ylabels=["force"],
                     # ylims=[(self.joint_lower_limits[0], self.joint_upper_limits[0])],
-                    legends=[["raw", "smoothed"]],
+                    legends=[["raw", "smoothed", "max smoothed"]],
                 )
-                self.table_force_history = []
+                self.table_force_raw_history = []
                 self.table_force_smoothed_history = []
+                self.max_table_sensor_force_norm_smoothed_history = []
+
+                # Plot joint pos and target
                 # self.live_plotter = FastLivePlotter(
                 #     n_plots=len(self.joint_names),
                 #     titles=self.joint_names,
@@ -2346,6 +2375,27 @@ class AllegroKukaBase(VecTask):
                 # self.joint_pos_history = []
                 # self.joint_target_history = []
 
+            # Plot table force raw and smoothed
+            ENV_IDX = 0
+            if self.with_table_force_sensor:
+                table_force = self.table_sensor_forces_raw[ENV_IDX, :3].norm(dim=-1).item()
+                table_force_smoothed = self.table_sensor_forces_smoothed[ENV_IDX, :3].norm(dim=-1).item()
+                max_table_sensor_force_norm_smoothed = self.max_table_sensor_force_norm_smoothed[ENV_IDX].item()
+                self.table_force_raw_history.append(table_force)
+                self.table_force_smoothed_history.append(table_force_smoothed)
+                self.max_table_sensor_force_norm_smoothed_history.append(max_table_sensor_force_norm_smoothed)
+                # Should be (N, 2)
+                self.live_plotter.plot(
+                    y_data_list=[
+                        np.stack([
+                            np.array(self.table_force_raw_history),
+                            np.array(self.table_force_smoothed_history),
+                            np.array(self.max_table_sensor_force_norm_smoothed_history),
+                        ], axis=-1),
+                    ]
+                )
+
+            # Plot joint pos and target
             # ENV_IDX = 0
             # joint_pos = self.arm_hand_dof_pos[ENV_IDX].cpu().numpy().copy()
             # joint_target = self.cur_targets[ENV_IDX].cpu().numpy().copy()
@@ -2356,28 +2406,12 @@ class AllegroKukaBase(VecTask):
             # joint_target_history = np.stack(self.joint_target_history, axis=0)
             # joint_pos_and_target_history = np.stack([joint_pos_history, joint_target_history], axis=-1)
             # assert joint_pos_and_target_history.shape == (len(self.joint_pos_history), len(self.joint_names), 2), f"{joint_pos_and_target_history.shape} != ({len(self.joint_pos_history)}, {len(self.joint_names)}, 2)"
-
             # # Should be (N, 2)
             # self.live_plotter.plot(
             #     y_data_list=[
             #         joint_pos_and_target_history[:, i, :] for i in range(len(self.joint_names))
             #     ]
             # )
-
-            ENV_IDX = 0
-            if hasattr(self, "table_sensor_forces"):
-                table_force = self.table_sensor_forces[ENV_IDX, :3].norm(dim=-1).item()
-                table_force_smoothed = self.table_sensor_forces_smoothed[ENV_IDX, :3].norm(dim=-1).item()
-                self.table_force_history.append(table_force)
-                self.table_force_smoothed_history.append(table_force_smoothed)
-                self.live_plotter.plot(
-                    y_data_list=[
-                        np.stack([
-                            np.array(self.table_force_history),
-                            np.array(self.table_force_smoothed_history),
-                        ], axis=-1),
-                    ]
-                )
 
         RECORD_DATA = self.cfg["env"]["record_data"]
         if RECORD_DATA:
