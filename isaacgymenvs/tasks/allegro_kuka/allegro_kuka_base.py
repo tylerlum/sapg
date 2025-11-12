@@ -2345,7 +2345,7 @@ class AllegroKukaBase(VecTask):
                 self.sim, None, gymtorch.unwrap_tensor(self.action_torques), gymapi.ENV_SPACE
             )
 
-        USE_LIVE_PLOTTER = True
+        USE_LIVE_PLOTTER = False
         if USE_LIVE_PLOTTER:
             if not hasattr(self, "live_plotter"):
                 from live_plotter import FastLivePlotter
