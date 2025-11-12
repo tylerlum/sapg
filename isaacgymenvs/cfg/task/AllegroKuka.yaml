@@ -25,7 +25,10 @@ env:
 
   stiffnessScale: 1.0
   forceLimitScale: 1.0
-  useRelativeControl: False
+  # useRelativeControl: False
+  useHandRelativeControl: False
+  useArmRelativeControl: False
+  tableHeight: 0.38
   dofSpeedScale: 10.0  # often set to 1.0
   handMovingAverage: 1.0  # often set to 0.1
   armMovingAverage: 1.0  # often set to 0.1

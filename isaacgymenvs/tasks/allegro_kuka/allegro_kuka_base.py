@@ -134,7 +134,10 @@ class AllegroKukaBase(VecTask):
         self.force_decay = self.cfg["env"].get("forceDecay", 0.99)
         self.force_decay_interval = self.cfg["env"].get("forceDecayInterval", 0.08)
 
-        self.use_relative_control = self.cfg["env"]["useRelativeControl"]
+        # self.use_relative_control = self.cfg["env"]["useRelativeControl"]
+        self.use_hand_relative_control = self.cfg["env"]["useHandRelativeControl"]
+        self.use_arm_relative_control = self.cfg["env"]["useArmRelativeControl"]
+        self.table_height = self.cfg["env"]["tableHeight"]
 
         self.debug_viz = self.cfg["env"]["enableDebugVis"]
 
@@ -285,13 +288,6 @@ class AllegroKukaBase(VecTask):
         self._initialize_camera_sensor(cam_pos=cam_pos, cam_target=cam_target)
         self._modify_render_settings_if_headless()
 
-        # volume to sample target position from
-        target_volume_origin = np.array([0, 0.05, 0.8], dtype=np.float32)
-        target_volume_extent = np.array([[-0.4, 0.4], [-0.05, 0.3], [-0.12, 0.25]], dtype=np.float32)
-        
-        self.target_volume_origin = torch.from_numpy(target_volume_origin).to(self.device).float()
-        self.target_volume_extent = torch.from_numpy(target_volume_extent).to(self.device).float()
-
         # get gym GPU state tensors
         actor_root_state_tensor = self.gym.acquire_actor_root_state_tensor(self.sim)
         dof_state_tensor = self.gym.acquire_dof_state_tensor(self.sim)
@@ -321,6 +317,8 @@ class AllegroKukaBase(VecTask):
 
         desired_kuka_pos = torch.tensor([-1.571, 1.571, -0.000, 1.376, -0.000, 1.485, 2.358])  # pose v1
         # desired_kuka_pos = torch.tensor([-2.135, 0.843, 1.786, -0.903, -2.262, 1.301, -2.791])  # pose v2
+        if self.use_sharpa:
+            desired_kuka_pos = torch.tensor([-1.571, 1.571, -0.000, 1.376, -0.000, 1.485, 1.309])
         self.hand_arm_default_dof_pos[:7] = desired_kuka_pos
 
         self.arm_hand_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, : self.num_hand_arm_dofs]
@@ -1278,9 +1276,16 @@ class AllegroKukaBase(VecTask):
         table_pose = gymapi.Transform()
         table_pose.p = gymapi.Vec3()
         table_pose.p.x = allegro_pose.p.x
-        table_pose_dy, table_pose_dz = -0.8, 0.38
+        table_pose_dy, table_pose_dz = -0.8, self.table_height
         table_pose.p.y = allegro_pose.p.y + table_pose_dy
         table_pose.p.z = allegro_pose.p.z + table_pose_dz
+
+        # volume to sample target position from
+        target_volume_origin = np.array([0, 0.05, self.table_height+0.42], dtype=np.float32)
+        target_volume_extent = np.array([[-0.4, 0.4], [-0.05, 0.3], [-0.12, 0.25]], dtype=np.float32)
+        
+        self.target_volume_origin = torch.from_numpy(target_volume_origin).to(self.device).float()
+        self.target_volume_extent = torch.from_numpy(target_volume_extent).to(self.device).float()
 
         table_rb_count = self.gym.get_asset_rigid_body_count(table_asset)
         table_shapes_count = self.gym.get_asset_rigid_shape_count(table_asset)
@@ -2294,41 +2299,34 @@ class AllegroKukaBase(VecTask):
 
         self.set_actor_root_state_tensor_indexed()
 
-        if self.use_relative_control:
+        if self.use_arm_relative_control:
             # arm relative to current position
-            targets = self.arm_hand_dof_pos[:, :7] + self.hand_dof_speed_scale * self.dt * self.actions[:, :7]
-            self.cur_targets[:, :7] = tensor_clamp(
-                targets, self.arm_hand_dof_lower_limits[:7], self.arm_hand_dof_upper_limits[:7]
-            )
+            self.cur_targets[:, :7] = self.arm_hand_dof_pos[:, :7] + self.hand_dof_speed_scale * self.dt * self.actions[:, :7]
         else:
             # arm relative to previous target
-            targets = self.prev_targets[:, :7] + self.hand_dof_speed_scale * self.dt * self.actions[:, :7]
-            self.cur_targets[:, :7] = tensor_clamp(
-                targets, self.arm_hand_dof_lower_limits[:7], self.arm_hand_dof_upper_limits[:7]
+            self.cur_targets[:, :7] = self.prev_targets[:, :7] + self.hand_dof_speed_scale * self.dt * self.actions[:, :7]
+        
+        if self.use_hand_relative_control:
+            # hand relative to current position
+            self.cur_targets[:, 7:] = self.arm_hand_dof_pos[:, 7:] + self.hand_dof_speed_scale * self.dt * self.actions[:, 7:]
+        else:
+            # hand position set absolute
+            self.cur_targets[:, 7 : self.num_hand_arm_dofs] = scale(
+                actions[:, 7 : self.num_hand_arm_dofs],
+                self.arm_hand_dof_lower_limits[7:],
+                self.arm_hand_dof_upper_limits[7:],
             )
-
-        # Smooth arm
+        self.cur_targets = tensor_clamp(
+            self.cur_targets, self.arm_hand_dof_lower_limits, self.arm_hand_dof_upper_limits
+            )
         self.cur_targets[:, :7] = (
             self.arm_moving_average * self.cur_targets[:, :7]
             + (1.0 - self.arm_moving_average) * self.prev_targets[:, :7]
         )
-
-        # hand
-        self.cur_targets[:, 7 : self.num_hand_arm_dofs] = scale(
-            actions[:, 7 : self.num_hand_arm_dofs],
-            self.arm_hand_dof_lower_limits[7 : self.num_hand_arm_dofs],
-            self.arm_hand_dof_upper_limits[7 : self.num_hand_arm_dofs],
+        self.cur_targets[:, 7:] = (
+            self.hand_moving_average * self.cur_targets[:, 7:]
+            + (1.0 - self.hand_moving_average) * self.prev_targets[:, 7:]
         )
-        self.cur_targets[:, 7 : self.num_hand_arm_dofs] = (
-            self.hand_moving_average * self.cur_targets[:, 7 : self.num_hand_arm_dofs]
-            + (1.0 - self.hand_moving_average) * self.prev_targets[:, 7 : self.num_hand_arm_dofs]
-        )
-        self.cur_targets[:, 7 : self.num_hand_arm_dofs] = tensor_clamp(
-            self.cur_targets[:, 7 : self.num_hand_arm_dofs],
-            self.arm_hand_dof_lower_limits[7 : self.num_hand_arm_dofs],
-            self.arm_hand_dof_upper_limits[7 : self.num_hand_arm_dofs],
-        )
-
         # Default CHECK_WITH_COMPUTED_JOINT_POS_TARGETS = False
         # Set to True to check if the computed joint pos targets are correct
         CHECK_WITH_COMPUTED_JOINT_POS_TARGETS = False
@@ -2365,7 +2363,7 @@ class AllegroKukaBase(VecTask):
         if self._DO_NOT_MOVE:
             self.cur_targets[:, :] = self.prev_targets[:, :]
 
-        self.prev_targets[:, :] = self.cur_targets[:, :]
+        self.prev_targets[:, :] = self.cur_targets[:, :].clone()
 
         if VISUALIZE_PD_TARGET_AS_BLUE_ROBOT:
             self.cur_targets[:, self.num_hand_arm_dofs:] = self.cur_targets[:, :self.num_hand_arm_dofs].clone()
