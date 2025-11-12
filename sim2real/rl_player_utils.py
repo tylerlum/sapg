@@ -82,6 +82,12 @@ def read_cfg_omegaconf(config_path: str, device: Optional[str] = None) -> DictCo
             # NEW
             omegaconf_cfg.rl_device = device
             omegaconf_cfg.sim_device = device
+        if device == "cpu":
+            omegaconf_cfg.task.sim.use_gpu_pipeline = False
+            omegaconf_cfg.task.sim.physx.use_gpu = False
+        else:
+            omegaconf_cfg.task.sim.use_gpu_pipeline = True
+            omegaconf_cfg.task.sim.physx.use_gpu = True
 
     print("-" * 80)
     print("CONFIGURATION")

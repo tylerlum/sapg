@@ -112,6 +112,8 @@ def main():
     observation = isaac_env_no_ros_joint_pos_targets_from_file.reset()
     joint_pos_history = []
     # joint_pos_history.append(isaac_env_no_ros_joint_pos_targets_from_file.env.arm_hand_dof_pos.clone().cpu().numpy()[0])
+    joint_pos_targets_array[:, :] = joint_pos_targets_array[0, :]
+    joint_pos_targets_array[:, 1] += np.linspace(0, 1.0, T)
 
     idx = 0
     while True:
@@ -175,9 +177,9 @@ def main():
             )
             output_path = RECORDED_DATA_PATH.parent / f"{RECORDED_DATA_PATH.stem}_isaac.npz"
             output_path.parent.mkdir(parents=True, exist_ok=True)
-            print(f"Saving recorded data to {output_path}")
-            new_recorded_data.to_file(output_path)
-            print(f"Saved recorded data to {output_path}")
+            # print(f"Saving recorded data to {output_path}")
+            # new_recorded_data.to_file(output_path)
+            # print(f"Saved recorded data to {output_path}")
             breakpoint()
         if done.item():
             # idx = 0
