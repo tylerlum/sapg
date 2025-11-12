@@ -190,11 +190,11 @@ task:
 
     actor_params:
       allegro:
-        scale:
-          range: [0.7, 1.3]
-          operation: "scaling"
-          distribution: "uniform"
-          setup_only: True # Property will only be randomized once before simulation is started. See Domain Randomization Documentation for more info.
+        # scale:
+        #   range: [0.7, 1.3]
+        #   operation: "scaling"
+        #   distribution: "uniform"
+        #   setup_only: True # Property will only be randomized once before simulation is started. See Domain Randomization Documentation for more info.
         color: True
         dof_properties:
           damping:
@@ -245,11 +245,11 @@ task:
             operation: "additive"
             distribution: "uniform"
       object:
-        scale:
-          range: [0.7, 1.3]
-          operation: "scaling"
-          distribution: "uniform"
-          setup_only: True # Property will only be randomized once before simulation is started. See Domain Randomization Documentation for more info.
+        # scale:
+        #   range: [0.7, 1.3]
+        #   operation: "scaling"
+        #   distribution: "uniform"
+        #   setup_only: True # Property will only be randomized once before simulation is started. See Domain Randomization Documentation for more info.
         rigid_body_properties:
           mass:
             range: [0.7, 1.3] # after fixing the API expand it even more
