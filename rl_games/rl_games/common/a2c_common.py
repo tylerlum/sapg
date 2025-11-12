@@ -740,9 +740,16 @@ class A2CBase(BaseAlgorithm):
             env_state = weights.get('env_state', None)
             self.vec_env.set_env_state(env_state)
 
+        # Skip loading if the shapes don't match
+        SKIP = "current_rewards" not in weights or weights["current_rewards"].shape[0] != self.num_actors
+        if SKIP:
+            print("Skipping loading of many things in a2c_common.set_full_state_weights because the shapes don't match")
+            print(f"self.num_actors = {self.num_actors}, weights['current_rewards'].shape = {weights['current_rewards'].shape if 'current_rewards' in weights else 'not in weights'}")
+
         for key in ['rnn_states', 'dones', 'obs', 'current_rewards', 'current_shaped_rewards', 'current_lengths']:
             if key in weights:
-                setattr(self, key, weights[key])
+                if not SKIP:
+                    setattr(self, key, weights[key])
         
         if self.intr_reward_model is not None:
             if 'intr_reward_model' in weights:
