@@ -2769,18 +2769,18 @@ class AllegroKukaBase(VecTask):
                     color=(1, 0, 0),
                 )
 
-            # for j in range(self.num_keypoints):
-            #     keypoint_pos_cpu = self.obj_keypoint_pos[:, j].cpu().numpy()
-                # goal_keypoint_pos_cpu = self.goal_keypoint_pos[:, j].cpu().numpy()
+            for j in range(self.num_keypoints):
+                keypoint_pos_cpu = self.obj_keypoint_pos[:, j].cpu().numpy()
+                goal_keypoint_pos_cpu = self.goal_keypoint_pos[:, j].cpu().numpy()
 
-                # for i in range(self.num_envs):
-                #     keypoint_transform = gymapi.Transform()
-                #     keypoint_transform.p = gymapi.Vec3(*keypoint_pos_cpu[i])
-                #     gymutil.draw_lines(sphere_geom, self.gym, self.viewer, self.envs[i], keypoint_transform)
+                for i in range(self.num_envs):
+                    keypoint_transform = gymapi.Transform()
+                    keypoint_transform.p = gymapi.Vec3(*keypoint_pos_cpu[i])
+                    gymutil.draw_lines(sphere_geom, self.gym, self.viewer, self.envs[i], keypoint_transform)
 
-                    # goal_keypoint_transform = gymapi.Transform()
-                    # goal_keypoint_transform.p = gymapi.Vec3(*goal_keypoint_pos_cpu[i])
-                    # gymutil.draw_lines(sphere_geom, self.gym, self.viewer, self.envs[i], goal_keypoint_transform)
+                    goal_keypoint_transform = gymapi.Transform()
+                    goal_keypoint_transform.p = gymapi.Vec3(*goal_keypoint_pos_cpu[i])
+                    gymutil.draw_lines(sphere_geom, self.gym, self.viewer, self.envs[i], goal_keypoint_transform)
 
             # Visualize object and goal pose
             for i in range(self.num_envs):

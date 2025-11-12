@@ -93,7 +93,7 @@ NAME_TO_OBJECT = {
                 get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/hammer_2"
             ).glob("decomp_*.obj")
         ),
-        scale=(3.0, 0.5, 0.5),
+        scale=(3.0, 0.25, 0.2),
         need_vhacd=True,
     ),
     "YcbHammer": Object(
