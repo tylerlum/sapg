@@ -885,6 +885,10 @@ class VecTask(Env):
 
         if self.first_randomization and hasattr(self, "_scales"):
             # Print the scales for each actor on first randomization
-            print(f"Scales: {self._scales}")
+            print("=" * 100)
+            print("Randomizing scales")
+            for actor, scales in self._scales.items():
+                print(f"{actor}: {scales}")
+            print("=" * 100)
 
         self.first_randomization = False
