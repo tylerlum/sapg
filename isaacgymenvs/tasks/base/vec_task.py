@@ -806,6 +806,16 @@ class VecTask(Env):
                         continue
 
                     if prop_name == 'scale':
+                        # Store scales
+                        # self._scales = {
+                        #     "actor_name": [scale_1, scale_2, ...],
+                        #     "actor_name_2": [scale_1, scale_2, ...],
+                        # }
+                        if not hasattr(self, "_scales"):
+                            self._scales = {}
+                        if actor not in self._scales:
+                            self._scales[actor] = [1.0 for _ in range(self.num_envs)]
+
                         setup_only = prop_attrs.get('setup_only', False)
                         if (setup_only and not self.sim_initialized) or not setup_only:
                             attr_randomization_params = prop_attrs
@@ -817,6 +827,9 @@ class VecTask(Env):
                             elif attr_randomization_params['operation'] == 'additive':
                                 new_scale = og_scale + sample
                             self.gym.set_actor_scale(env, handle, new_scale)
+
+                            # Store the new scale
+                            self._scales[actor][env_id] = new_scale
                         continue
 
                     prop = param_getters_map[prop_name](env, handle)
@@ -869,5 +882,9 @@ class VecTask(Env):
                               'extern_offset', extern_offsets[env_id],
                               'vs extern_sample.shape', extern_sample.shape)
                         raise Exception("Invalid extern_sample size")
+
+        if self.first_randomization and hasattr(self, "_scales"):
+            # Print the scales for each actor on first randomization
+            print(f"Scales: {self._scales}")
 
         self.first_randomization = False

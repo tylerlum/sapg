@@ -805,6 +805,11 @@ class AllegroKukaBase(VecTask):
         self._create_ground_plane()
         self._create_envs(self.num_envs, self.cfg["env"]["envSpacing"], int(np.sqrt(self.num_envs)))
 
+        # If randomizing, apply once immediately on startup before the first sim step
+        # Necessary for setup_only=True properties
+        if self.randomize:
+            self.apply_randomizations(self.randomization_params)
+
     def _create_ground_plane(self):
         plane_params = gymapi.PlaneParams()
         plane_params.normal = gymapi.Vec3(0.0, 0.0, 1.0)
