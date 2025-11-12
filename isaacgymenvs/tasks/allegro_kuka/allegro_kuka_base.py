@@ -1479,16 +1479,22 @@ class AllegroKukaBase(VecTask):
 
         # Keep track of reasons for reset
         from collections import deque, Counter
-        if not hasattr(self, "reset_reason_history"):
+        if not hasattr(self, "recent_reset_reason_history"):
             MAX_HISTORY_LENGTH = 4096
-            self.reset_reason_history = deque(maxlen=MAX_HISTORY_LENGTH)
-            self.reset_reason_counts = {
+            self.recent_reset_reason_history = deque(maxlen=MAX_HISTORY_LENGTH)
+            self.cumulative_reset_reason_counts = {
                 "object_z_low": 0,
                 "max_consecutive_successes_reached": 0,
                 "max_episode_length_reached": 0,
                 "table_force_too_high": 0,
                 "hand_far_from_object": 0,
             }
+        # Current means this recent step (across all environments)
+        # Recent means the last MAX_HISTORY_LENGTH resets
+        # Cumulative means across all time
+        # Use a deque to keep track of recent (FIFO) and use Counter on it to get the counts
+        # Use a dict to keep track of cumulative counts so that memory is not a problem indefinitely
+
         # Get current counts
         current_reset_reason_counts = {
             "object_z_low": object_z_low.sum().item(),
@@ -1497,12 +1503,19 @@ class AllegroKukaBase(VecTask):
             "table_force_too_high": table_force_too_high.sum().item(),
             "hand_far_from_object": hand_far_from_object.sum().item(),
         }
+
         # Update counts
         for reason, count in current_reset_reason_counts.items():
-            self.reset_reason_counts[reason] += count
+            self.cumulative_reset_reason_counts[reason] += count
         for reason, count in current_reset_reason_counts.items():
-            self.reset_reason_history.extend([reason] * count)
-        recent_reset_reason_counts = Counter(self.reset_reason_history)
+            self.recent_reset_reason_history.extend([reason] * count)
+        recent_reset_reason_counts = Counter(self.recent_reset_reason_history)
+
+        # We log the recent counts (fractions of all recent resets)
+        # We don't want cumulative because it is affected too much by the past (we want to see how well the policy is doing now)
+        recent_total = sum(recent_reset_reason_counts.values())
+        for reason, count in recent_reset_reason_counts.items():
+            self.extras[f"reset/{reason}"] = count / recent_total if recent_total > 0 else 0
 
         PRINT = False
         if PRINT:
@@ -1511,12 +1524,12 @@ class AllegroKukaBase(VecTask):
                 print(f"{current_total} resets in the last step!")
                 print()
 
-                total = sum(self.reset_reason_counts.values())
+                cumulative_total = sum(self.cumulative_reset_reason_counts.values())
                 print("Across all time:")
                 print("-" * 100)
-                for reason, count in self.reset_reason_counts.items():
+                for reason, count in self.cumulative_reset_reason_counts.items():
                     if count > 0:
-                        print(f"Reset reason: {reason} {count}/{total} ({count / total:.1%})")
+                        print(f"Reset reason: {reason} {count}/{cumulative_total} ({count / cumulative_total:.1%})")
                 print()
 
                 recent_total = sum(recent_reset_reason_counts.values())
