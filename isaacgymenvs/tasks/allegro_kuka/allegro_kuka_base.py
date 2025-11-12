@@ -165,7 +165,7 @@ class AllegroKukaBase(VecTask):
         self.with_dof_force_sensors = False
         # create fingertip force-torque sensors
         self.with_fingertip_force_sensors = False
-        self.with_table_force_sensor = False
+        self.with_table_force_sensor = self.cfg["env"]["withTableForceSensor"]
 
         if self.reset_time > 0.0:
             self.max_episode_length = int(round(self.reset_time / (self.control_freq_inv * self.sim_params.dt)))
