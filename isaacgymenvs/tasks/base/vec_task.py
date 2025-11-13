@@ -660,6 +660,8 @@ class VecTask(Env):
         if self.first_randomization:
             do_nonenv_randomize = True
             env_ids = list(range(self.num_envs))
+            print("Starting first randomization, this may take a while...")
+            first_randomization_start_time = time.time()
         else:
             do_nonenv_randomize = (self.last_step - self.last_rand_step) >= rand_freq
             rand_envs = torch.where(self.randomize_buf >= rand_freq, torch.ones_like(self.randomize_buf), torch.zeros_like(self.randomize_buf))
@@ -890,5 +892,8 @@ class VecTask(Env):
             for actor, scales in self._scales.items():
                 print(f"{actor}: {scales}")
             print("=" * 100)
+
+        if self.first_randomization:
+            print(f"First randomization took {time.time() - first_randomization_start_time} seconds")
 
         self.first_randomization = False
