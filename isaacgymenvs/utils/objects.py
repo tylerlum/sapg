@@ -108,6 +108,18 @@ NAME_TO_OBJECT = {
         scale=(3.0, 0.25, 0.2),
         need_vhacd=False,
     ),
+    "scanned_hammer_2_coacd2": Object(
+        filepath=(
+            get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/hammer_2_2pieces/hammer_2.urdf"
+        ),
+        coacd_filepaths=list(
+            (
+                get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/hammer_2_2pieces"
+            ).glob("decomp_*.obj")
+        ),
+        scale=(3.0, 0.25, 0.2),
+        need_vhacd=False,
+    ),
     "YcbHammer": Object(
         filepath=(
             get_repo_root_dir() / "assets/urdf/tyler_objects/YcbHammer/model.urdf"

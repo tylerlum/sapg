@@ -609,7 +609,7 @@ class AllegroKukaBase(VecTask):
             need_vhacds = [obj.need_vhacd]
 
         elif object_type == "all_hammers":
-            hammer_names = ["scanned_hammer_1", "scanned_hammer_2", "scanned_hammer_2_coacd", "YcbHammer", "cuboidal_hammer", "cylindrical_hammer", "cuboidal_hammer_2x", "cylindrical_hammer_2x"]
+            hammer_names = ["scanned_hammer_1", "scanned_hammer_2", "scanned_hammer_2_coacd", "scanned_hammer_2_coacd2", "YcbHammer", "cuboidal_hammer", "cylindrical_hammer", "cuboidal_hammer_2x", "cylindrical_hammer_2x"]
             object_asset_files = [NAME_TO_OBJECT[name].filepath for name in hammer_names]
             object_asset_scales = [NAME_TO_OBJECT[name].scale for name in hammer_names]
             need_vhacds = [NAME_TO_OBJECT[name].need_vhacd for name in hammer_names]
@@ -652,7 +652,7 @@ class AllegroKukaBase(VecTask):
             # Many objects share a trajectory
             # Some objects don't have a fixed trajectory, so we raise an error
             HAMMER_TRAJECTORY_OBJECTS = set(
-                ["scanned_hammer_1", "scanned_hammer_2", "scanned_hammer_2_coacd", "YcbHammer", "cuboidal_hammer", "cylindrical_hammer", "cuboidal_hammer_2x", "cylindrical_hammer_2x",]
+                ["scanned_hammer_1", "scanned_hammer_2", "scanned_hammer_2_coacd", "scanned_hammer_2_coacd2", "YcbHammer", "cuboidal_hammer", "cylindrical_hammer", "cuboidal_hammer_2x", "cylindrical_hammer_2x",]
             )
             if object_type in HAMMER_TRAJECTORY_OBJECTS:
                 self.trajectory_states = get_hammer_trajectory(init_state, device=self.device)
