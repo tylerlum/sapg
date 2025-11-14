@@ -1474,7 +1474,23 @@ class AllegroKukaBase(VecTask):
             self.curr_fingertip_distances.max(dim=-1).values > 1.5, ones, zeros
         )
 
-        resets = self.reset_buf | object_z_low | max_consecutive_successes_reached | max_episode_length_reached | table_force_too_high | hand_far_from_object
+        # Reset when dropped
+        # Dropped means the object was lifted and then dropped back down to the table
+        if self.cfg["env"]["resetWhenDropped"]:
+            # As of right now:
+            # - table center is at 0.38m and is 0.3m tall, so its surface is at 0.38m + 0.15m = 0.53m
+            # - object init state is at 0.63m (table height 0.38m + object relative to table height 0.25m) with +/-0.02m variation
+            # - The goal states are sampled in 0.8m + [-0.12m, 0.25m] = [0.68m, 1.05m]
+            # - Right now, liftedBonusThreshold is 0.15m, so the object is lifted if it is at least 0.15m - 0.05m above init state, which is 0.73m
+            # - We don't want it to flicker between first lifted then suddenly dropped if it slightly goes down, so we need hysteresis here
+            # - Thus, we choose a threshold of object init state at 0.63m, so there is 0.1m gap below lifted threshold and 0.05m gap below goal states
+            # - And there is 0.1 gap above the table surface, so dropping the object on the table will be detected as dropped
+            dropped_z = self.object_init_state[:, 2]
+            dropped = torch.where(self.object_pos[:, 2] < dropped_z, ones, zeros) * self.lifted_object
+        else:
+            dropped = zeros
+
+        resets = self.reset_buf | object_z_low | max_consecutive_successes_reached | max_episode_length_reached | table_force_too_high | hand_far_from_object | dropped
         resets = self._extra_reset_rules(resets)
 
         # Print resets when there is only one environment
@@ -1486,6 +1502,7 @@ class AllegroKukaBase(VecTask):
             print(f"max_episode_length_reached: {max_episode_length_reached.item()}")
             print(f"table_force_too_high: {table_force_too_high.item()}")
             print(f"hand_far_from_object: {hand_far_from_object.item()}")
+            print(f"dropped: {dropped.item()}")
             print(f"resets: {resets.item()}")
             print("=" * 100)
             print(f"self.successes: {self.successes.item()}")
@@ -1502,6 +1519,7 @@ class AllegroKukaBase(VecTask):
                 "max_episode_length_reached": 0,
                 "table_force_too_high": 0,
                 "hand_far_from_object": 0,
+                "dropped": 0,
             }
         # Current means this recent step (across all environments)
         # Recent means the last MAX_HISTORY_LENGTH resets
@@ -1516,6 +1534,7 @@ class AllegroKukaBase(VecTask):
             "max_episode_length_reached": max_episode_length_reached.sum().item(),
             "table_force_too_high": table_force_too_high.sum().item(),
             "hand_far_from_object": hand_far_from_object.sum().item(),
+            "dropped": dropped.sum().item(),
         }
 
         # Update counts
