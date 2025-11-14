@@ -53,6 +53,7 @@ from isaacgymenvs.tasks.allegro_kuka.generate_cuboids import (
 from isaacgymenvs.utils.torch_jit_utils import *
 from isaacgymenvs.utils.objects import NAME_TO_OBJECT
 from isaacgymenvs.utils.object_trajectories import (
+    get_cuboid_trajectory,
     get_hammer_trajectory,
     get_hairbrush_trajectory,
     get_screwdriver_trajectory,
@@ -668,6 +669,8 @@ class AllegroKukaBase(VecTask):
                 self.trajectory_states = get_phone_trajectory(init_state, device=self.device)
             elif object_type in ["all_hammers", "all_cuboidal_hammers", "all_cylindrical_hammers", "all_cuboidal_and_cylindrical_hammers"]:
                 self.trajectory_states = get_hammer_trajectory(init_state, device=self.device)
+            elif object_type == "cuboid":
+                self.trajectory_states = get_cuboid_trajectory(init_state, device=self.device)
             else:
                 raise ValueError(f"The following object_type does not have a fixed trajectory: {object_type}, cannot use USE_FIXED_SET_OF_GOAL_STATES with this object type")
 

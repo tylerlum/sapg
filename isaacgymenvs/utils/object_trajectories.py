@@ -3,6 +3,15 @@ import torch
 from scipy.spatial.transform import Rotation as R
 
 
+def get_cuboid_trajectory(object_init_state, device="cuda"):
+    trajectory_states = []
+    # first state is pick up state
+    pick_up_state = object_init_state.copy()
+    pick_up_state[3:7] = R.from_euler("y", 0, degrees=True).as_quat()
+    pick_up_state[2] += 0.2
+    trajectory_states = [pick_up_state]
+    return torch.tensor(trajectory_states, dtype=torch.float32, device=device)
+
 def get_hammer_trajectory(object_init_state, device="cuda"):
     trajectory_states = []
     # first state is pick up state
