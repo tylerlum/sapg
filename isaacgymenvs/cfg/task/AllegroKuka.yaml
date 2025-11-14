@@ -1,6 +1,6 @@
 defaults:
   - _self_
-  - env: reorientation
+  - env: pose_reaching
 
 name: AllegroKuka
 
