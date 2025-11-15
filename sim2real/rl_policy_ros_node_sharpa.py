@@ -15,13 +15,74 @@ from scipy.spatial.transform import Rotation as R
 from sensor_msgs.msg import JointState
 from termcolor import colored
 
-from isaacgymenvs.utils.observation_action_utils import (
+from isaacgymenvs.utils.observation_action_utils_sharpa import (
     compute_joint_pos_targets,
     compute_observation,
 )
 
 T_W_R = np.eye(4)
 T_W_R[:3, 3] = np.array([0.0, 0.8, 0.0])
+
+BETWEEN_JOINT_ORDER = [
+    'iiwa14_joint_1', 'iiwa14_joint_2', 'iiwa14_joint_3', 'iiwa14_joint_4', 'iiwa14_joint_5', 'iiwa14_joint_6', 'iiwa14_joint_7',
+    'left_index_MCP_FE', 'left_index_MCP_AA', 'left_index_PIP', 'left_index_DIP',
+    'left_middle_MCP_FE', 'left_middle_MCP_AA', 'left_middle_PIP', 'left_middle_DIP',
+    'left_pinky_CMC', 'left_pinky_MCP_FE', 'left_pinky_MCP_AA', 'left_pinky_PIP', 'left_pinky_DIP',
+    'left_ring_MCP_FE', 'left_ring_MCP_AA', 'left_ring_PIP', 'left_ring_DIP',
+    'left_thumb_CMC_FE', 'left_thumb_CMC_AA', 'left_thumb_MCP_FE', 'left_thumb_MCP_AA', 'left_thumb_IP',
+]
+
+ADJUSTED_JOINT_ORDER = [
+    'iiwa14_joint_1', 'iiwa14_joint_2', 'iiwa14_joint_3', 'iiwa14_joint_4', 'iiwa14_joint_5', 'iiwa14_joint_6', 'iiwa14_joint_7',
+    'left_thumb_CMC_FE', 'left_thumb_CMC_AA', 'left_thumb_MCP_FE', 'left_thumb_MCP_AA', 'left_thumb_IP',
+    'left_index_MCP_FE', 'left_index_MCP_AA', 'left_index_PIP', 'left_index_DIP',
+    'left_middle_MCP_FE', 'left_middle_MCP_AA', 'left_middle_PIP', 'left_middle_DIP',
+    'left_ring_MCP_FE', 'left_ring_MCP_AA', 'left_ring_PIP', 'left_ring_DIP',
+    'left_pinky_CMC', 'left_pinky_MCP_FE', 'left_pinky_MCP_AA', 'left_pinky_PIP', 'left_pinky_DIP',
+]
+def change_joint_order(
+    q: np.ndarray,
+    from_order: list[str],
+    to_order: list[str],
+) -> np.ndarray:
+    J = len(from_order)
+    assert len(to_order) == J, (
+        f"Expected to_order to have the same length as from_order, got {len(to_order)} and {len(from_order)}"
+    )
+    assert q.shape == (J,), (
+        f"Expected q to have length {J}, got {q.shape}"
+    )
+
+    assert set(to_order) == set(from_order), (
+        f"Expected to_order to be the same as from_order, got to_order: {to_order} and from_order: {from_order}. Only in to_order: {set(to_order) - set(from_order)}"
+    )
+
+    # q is given in the from_order
+    joint_name_to_value = {from_order[i]: q[i] for i in range(J)}
+    new_q = np.array([joint_name_to_value[name] for name in to_order])
+
+    assert new_q.shape == (len(to_order),), (
+        f"Expected new_q to be {len(to_order)}, got {new_q.shape}"
+    )
+    return new_q
+
+
+
+def adjusted_to_between(q: np.ndarray) -> np.ndarray:
+    return change_joint_order(
+        q=q,
+        from_order=ADJUSTED_JOINT_ORDER,
+        to_order=BETWEEN_JOINT_ORDER,
+    )
+
+
+def between_to_adjusted(q: np.ndarray) -> np.ndarray:
+    return change_joint_order(
+        q=q,
+        from_order=BETWEEN_JOINT_ORDER,
+        to_order=ADJUSTED_JOINT_ORDER,
+    )
+
 
 
 def warn(message: str):
@@ -91,21 +152,21 @@ def T_to_pos_quat_xyzw(T: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
 class RLPolicyNode:
     def __init__(self):
         # Initialize the ROS node
-        rospy.init_node("rl_policy_node")
+        rospy.init_node("rl_policy_node_sharpa")
 
-        # Publisher for iiwa and allegro joint commands
+        # Publisher for iiwa and sharpa joint commands
         self.iiwa_joint_cmd_pub = rospy.Publisher(
             "/iiwa/joint_cmd", JointState, queue_size=10
         )
-        self.allegro_joint_cmd_pub = rospy.Publisher(
-            "/allegroHand_0/joint_cmd", JointState, queue_size=10
+        self.sharpa_joint_cmd_pub = rospy.Publisher(
+            "/sharpa/joint_cmd", JointState, queue_size=10
         )
 
         # Variables to store the latest messages
         self.object_pose_msg = None
         self.goal_object_pose_msg = None
         self.iiwa_joint_state_msg = None
-        self.allegro_joint_state_msg = None
+        self.sharpa_joint_state_msg = None
 
         # Subscribers
         self.object_pose_sub = rospy.Subscriber(
@@ -117,23 +178,26 @@ class RLPolicyNode:
         self.iiwa_joint_state_sub = rospy.Subscriber(
             "/iiwa/joint_states", JointState, self.iiwa_joint_state_callback
         )
-        self.allegro_joint_state_sub = rospy.Subscriber(
-            "/allegroHand_0/joint_states", JointState, self.allegro_joint_state_callback
+        self.sharpa_joint_state_sub = rospy.Subscriber(
+            "/sharpa/joint_states", JointState, self.sharpa_joint_state_callback
         )
 
         # RL Player setup
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.num_observations = 117  # Update this number based on actual dimensions
-        self.num_actions = 23
+        self.num_observations = 133  # Update this number based on actual dimensions
+        self.num_actions = 29
 
         CONFIG_PATH = Path(
             # "/home/tylerlum/github_repos/sapg/closed_loop_testing/config.yaml"
-            "/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-11-05_hairbrush/00_smooth-arm-hand_speed-10_dropout-obs_2025-11-05_05-20-24/runs/00_smooth-arm-hand_speed-10_dropout-obs_2025-11-05_05-20-24/config.yaml"
+            # "/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-11-05_hairbrush/00_smooth-arm-hand_speed-10_dropout-obs_2025-11-05_05-20-24/runs/00_smooth-arm-hand_speed-10_dropout-obs_2025-11-05_05-20-24/config.yaml"
+            "/home/tylerlum/github_repos/sapg/closed_loop_testing_sharpa/config.yaml"
         )
         assert Path(CONFIG_PATH).exists()
         CHECKPOINT_PATH = Path(
-            # "/juno/u/kedia/sapg/train_dir/checkpoints/hammer/absoluteControl_0.5.pth"
-            "/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-11-05_hairbrush/00_smooth-arm-hand_speed-10_dropout-obs_2025-11-05_05-20-24/runs/00_smooth-arm-hand_speed-10_dropout-obs_2025-11-05_05-20-24/last/model.pth"
+            # Fast
+            # "/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-11-12_sharpa_hammer_2_coacd/00_CUBOID_obs-curriculum_thresh0-1_local_2025-11-14_00-04-24/runs/00_CUBOID_obs-curriculum_thresh0-1_local_2025-11-14_00-04-24/last/model.pth"
+            # Slow
+            "/juno/u/kedia/sapg/train_dir/checkpoints/SLOW_CUBOID/model.pth"
         )
         assert CHECKPOINT_PATH.exists()
 
@@ -153,7 +217,7 @@ class RLPolicyNode:
 
         # Set up chain and palm_serial_chain
         asset_root = Path(__file__).parent / "../assets"
-        urdf_path = asset_root / "urdf/kuka_allegro_description/iiwa14_real.urdf"
+        urdf_path = asset_root / "urdf/kuka_allegro_description/iiwa14_left_sharpa_between.urdf"
         assert urdf_path.exists(), f"URDF file {urdf_path} does not exist"
         self.chain = pk.build_chain_from_urdf(
             open(urdf_path).read(),
@@ -174,25 +238,25 @@ class RLPolicyNode:
     def iiwa_joint_state_callback(self, msg: JointState):
         self.iiwa_joint_state_msg = msg
 
-    def allegro_joint_state_callback(self, msg: JointState):
-        self.allegro_joint_state_msg = msg
+    def sharpa_joint_state_callback(self, msg: JointState):
+        self.sharpa_joint_state_msg = msg
 
     def create_observation(self) -> Tuple[Optional[torch.Tensor], Optional[np.ndarray]]:
         # Ensure all messages are received before processing
         if (
             self.iiwa_joint_state_msg is None
-            or self.allegro_joint_state_msg is None
+            or self.sharpa_joint_state_msg is None
             or self.object_pose_msg is None
             or self.goal_object_pose_msg is None
         ):
             warn_every(
-                f"Waiting for all messages to be received... iiwa_joint_state_msg: {var_to_is_none_str(self.iiwa_joint_state_msg)}, allegro_joint_state_msg: {var_to_is_none_str(self.allegro_joint_state_msg)}, object_pose_msg: {var_to_is_none_str(self.object_pose_msg)}, goal_object_pose_msg: {var_to_is_none_str(self.goal_object_pose_msg)}",
+                f"Waiting for all messages to be received... iiwa_joint_state_msg: {var_to_is_none_str(self.iiwa_joint_state_msg)}, sharpa_joint_state_msg: {var_to_is_none_str(self.sharpa_joint_state_msg)}, object_pose_msg: {var_to_is_none_str(self.object_pose_msg)}, goal_object_pose_msg: {var_to_is_none_str(self.goal_object_pose_msg)}",
                 n_seconds=1.0,
             )
             return None, None
 
         iiwa_joint_state_msg = copy.copy(self.iiwa_joint_state_msg)
-        allegro_joint_state_msg = copy.copy(self.allegro_joint_state_msg)
+        sharpa_joint_state_msg = copy.copy(self.sharpa_joint_state_msg)
         object_pose_msg = copy.copy(self.object_pose_msg)
         goal_object_pose_msg = copy.copy(self.goal_object_pose_msg)
 
@@ -200,8 +264,8 @@ class RLPolicyNode:
         iiwa_position = np.array(iiwa_joint_state_msg.position)
         iiwa_velocity = np.array(iiwa_joint_state_msg.velocity)
 
-        allegro_position = np.array(allegro_joint_state_msg.position)
-        allegro_velocity = np.array(allegro_joint_state_msg.velocity)
+        sharpa_position = np.array(sharpa_joint_state_msg.position)
+        sharpa_velocity = np.array(sharpa_joint_state_msg.velocity)
 
         T_R_O = pose_msg_to_T(object_pose_msg)
         T_R_G = pose_msg_to_T(goal_object_pose_msg)
@@ -217,12 +281,20 @@ class RLPolicyNode:
             [goal_object_pos_W, goal_object_quat_xyzw_W]
         )
 
-        q = np.concatenate([iiwa_position, allegro_position])
-        qd = np.concatenate([iiwa_velocity, allegro_velocity])
+        q = np.concatenate([iiwa_position, sharpa_position])
+        qd = np.concatenate([iiwa_velocity, sharpa_velocity])
+
+        # HACK: Rearrange joint order
+        q_between = adjusted_to_between(
+            q=q,
+        )
+        qd_between = adjusted_to_between(
+            q=qd,
+        )
 
         observation = compute_observation(
-            q=torch.from_numpy(q).float().to(self.device)[None],
-            qd=torch.from_numpy(qd).float().to(self.device)[None],
+            q=torch.from_numpy(q_between).float().to(self.device)[None],
+            qd=torch.from_numpy(qd_between).float().to(self.device)[None],
             object_pose=torch.from_numpy(object_pose_W).float().to(self.device)[None],
             goal_object_pose=torch.from_numpy(goal_object_pose_W)
             .float()
@@ -248,13 +320,20 @@ class RLPolicyNode:
             print(f"object_pose_W: {object_pose_W}")
             print(f"goal_object_pose_W: {goal_object_pose_W}")
             print(f"object_scales: {self.object_scales}")
+            print(f"q_between: {q_between}")
+            print(f"qd_between: {qd_between}")
             breakpoint()
 
-        return observation, q
+        return observation, q_between
 
     def publish_targets(self, joint_pos_targets: torch.Tensor):
         assert_equals(joint_pos_targets.shape, (1, self.num_actions))
         joint_pos_targets = joint_pos_targets.squeeze(dim=0)
+        joint_pos_targets = joint_pos_targets.cpu().numpy()
+
+        q_adjusted = between_to_adjusted(
+            q=joint_pos_targets,
+        )
 
         iiwa_msg = JointState()
         iiwa_msg.header.stamp = rospy.Time.now()
@@ -268,12 +347,12 @@ class RLPolicyNode:
             "iiwa_joint_6",
             "iiwa_joint_7",
         ]
-        iiwa_msg.position = joint_pos_targets[:7].cpu().numpy().tolist()
+        iiwa_msg.position = q_adjusted[:7].tolist()
         self.iiwa_joint_cmd_pub.publish(iiwa_msg)
-        allegro_msg = JointState()
-        allegro_msg.header.stamp = rospy.Time.now()
-        allegro_msg.header.frame_id = ""
-        allegro_msg.name = [
+        sharpa_msg = JointState()
+        sharpa_msg.header.stamp = rospy.Time.now()
+        sharpa_msg.header.frame_id = ""
+        sharpa_msg.name = [
             "joint_0.0",
             "joint_1.0",
             "joint_2.0",
@@ -290,9 +369,15 @@ class RLPolicyNode:
             "joint_13.0",
             "joint_14.0",
             "joint_15.0",
+            "joint_16.0",
+            "joint_17.0",
+            "joint_18.0",
+            "joint_19.0",
+            "joint_20.0",
+            "joint_21.0",
         ]
-        allegro_msg.position = joint_pos_targets[7:].cpu().numpy().tolist()
-        self.allegro_joint_cmd_pub.publish(allegro_msg)
+        sharpa_msg.position = q_adjusted[7:].tolist()
+        self.sharpa_joint_cmd_pub.publish(sharpa_msg)
 
     def run(self):
         first_observations_received = False
@@ -312,9 +397,9 @@ class RLPolicyNode:
             start_time = rospy.Time.now()
 
             # Create observation from the latest messages
-            obs, q = self.create_observation()
+            obs, q_between = self.create_observation()
 
-            if obs is not None and q is not None:
+            if obs is not None and q_between is not None:
                 if not first_observations_received:
                     info("=" * 100)
                     info("First observations received, starting to publish sim state")
@@ -322,9 +407,7 @@ class RLPolicyNode:
                     first_observations_received = True
 
                 if self.prev_targets is None:
-                    self.prev_targets = (
-                        torch.from_numpy(q).float().to(self.device)[None]
-                    )
+                    self.prev_targets = torch.from_numpy(q_between).float().to(self.device)[None]
 
                 assert_equals(obs.shape, (1, self.num_observations))
 
@@ -338,8 +421,8 @@ class RLPolicyNode:
                 assert_equals(normalized_action.shape, (1, self.num_actions))
 
                 HAND_MOVING_AVERAGE = 0.1
-                ARM_MOVING_AVERAGE = 0.1
-                HAND_DOF_SPEED_SCALE = 0.5
+                ARM_MOVING_AVERAGE = 0.01
+                HAND_DOF_SPEED_SCALE = 5.0
                 DT = 1 / 60
                 joint_pos_targets = compute_joint_pos_targets(
                     actions=normalized_action,
@@ -394,7 +477,8 @@ class RLPolicyNode:
     @property
     def object_scales(self) -> np.ndarray:
         # object_scales = np.array([0.1, 0.035, 0.025]) * 20
-        object_scales = np.array([3.0, 0.5, 0.5])
+        # object_scales = np.array([3.0, 0.5, 0.5])
+        object_scales = np.array([4.0, 0.75, 1.0])
         return object_scales
 
 
