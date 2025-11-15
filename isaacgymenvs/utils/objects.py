@@ -72,6 +72,14 @@ class Object:
 
 
 NAME_TO_OBJECT = {
+    "blue_cuboid": Object(
+        filepath=(
+            get_repo_root_dir() / "assets/urdf/tyler_objects/blue_cuboid/blue_cuboid.urdf"
+        ),
+        coacd_filepaths=None,
+        scale=(4.0, 0.75, 1.0),
+        need_vhacd=False,
+    ),
     "scanned_hammer_1": Object(
         filepath=(
             get_repo_root_dir() / "assets/urdf/tyler_objects/hammer_1/hammer_1.urdf"
