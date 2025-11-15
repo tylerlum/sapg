@@ -80,6 +80,14 @@ NAME_TO_OBJECT = {
         scale=(4.0, 0.75, 1.0),
         need_vhacd=False,
     ),
+    "blue_cuboid_thick": Object(
+        filepath=(
+            get_repo_root_dir() / "assets/urdf/tyler_objects/blue_cuboid_thick/blue_cuboid_thick.urdf"
+        ),
+        coacd_filepaths=None,
+        scale=(3.0, 2.0, 1.25),
+        need_vhacd=False,
+    ),
     "scanned_hammer_1": Object(
         filepath=(
             get_repo_root_dir() / "assets/urdf/tyler_objects/hammer_1/hammer_1.urdf"

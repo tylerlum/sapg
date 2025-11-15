@@ -236,7 +236,7 @@ def launch_rlg_hydra(cfg: DictConfig, vec_env=None):
             with open(os.path.join(experiment_dir, 'cmd.txt'), 'w') as f:
                 f.write(' '.join(sys.argv))
 
-    FORCE_SAVE = True
+    FORCE_SAVE = False
     if FORCE_SAVE:
         breakpoint()
         save_dir = "/home/tylerlum/github_repos/sapg/closed_loop_testing_sharpa"
