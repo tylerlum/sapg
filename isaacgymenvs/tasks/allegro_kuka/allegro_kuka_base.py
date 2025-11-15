@@ -42,7 +42,8 @@ from isaacgym import gymapi, gymtorch, gymutil
 from torch import Tensor
 
 from isaacgymenvs.tasks.allegro_kuka.allegro_kuka_utils import DofParameters, populate_dof_properties
-from isaacgymenvs.utils.observation_action_utils import compute_observation, OBS_NAMES, compute_joint_pos_targets, create_chain_and_serial_chain
+from isaacgymenvs.utils.observation_action_utils_sharpa import compute_observation, OBS_NAMES, compute_joint_pos_targets, create_chain_and_serial_chain
+
 from isaacgymenvs.tasks.base.vec_task import VecTask
 from isaacgymenvs.tasks.allegro_kuka.generate_cuboids import (
     generate_big_cuboids,
@@ -1950,12 +1951,12 @@ class AllegroKukaBase(VecTask):
 
         # Default CHECK_WITH_COMPUTED_OBS = False
         # Set to True to check if the observations are computed correctly
-        CHECK_WITH_COMPUTED_OBS = False
+        CHECK_WITH_COMPUTED_OBS = True
         if CHECK_WITH_COMPUTED_OBS:
             import pytorch_kinematics as pk
             # Create chain and palm_serial_chain from URDF
             if not hasattr(self, "chain") or not hasattr(self, "palm_serial_chain"):
-                self.chain, self.palm_serial_chain = create_chain_and_serial_chain(device=self.device, robot_name=self.robot_name)
+                self.chain, self.palm_serial_chain = create_chain_and_serial_chain(device=self.device, robot_name="iiwa14_left_sharpa_between")
 
             computed_obs = compute_observation(
                 q=self.arm_hand_dof_pos,
@@ -2222,6 +2223,7 @@ class AllegroKukaBase(VecTask):
 
         # reset allegro hand
         if len(env_ids) > 0 and reset_buf_idxs is None and tensor_reset:
+            print("IN RESET")
             delta_max = self.arm_hand_dof_upper_limits - self.hand_arm_default_dof_pos
             delta_min = self.arm_hand_dof_lower_limits - self.hand_arm_default_dof_pos
 
@@ -2286,7 +2288,16 @@ class AllegroKukaBase(VecTask):
         self.deferred_set_actor_root_state_tensor_indexed(self._extra_object_indices(env_ids))
 
     def pre_physics_step(self, actions, joint_pos_targets: Optional[torch.Tensor] = None):
-        PRINT_TIME_SINCE_LAST_STEP = False
+        # print(f"joint_names = {self.joint_names}")
+        # print(f"self.joint_lower_limits = {self.joint_lower_limits}")
+        # print(f"self.joint_upper_limits = {self.joint_upper_limits}")
+        # print(f"self.arm_hand_dof_lower_limits = {self.arm_hand_dof_lower_limits}")
+        # print(f"self.arm_hand_dof_upper_limits = {self.arm_hand_dof_upper_limits}")
+        # print(f"self.full_state_size = {self.full_state_size}")
+        # print(f"self.object_rb_masses = {self.object_rb_masses}")
+        # breakpoint()
+
+        PRINT_TIME_SINCE_LAST_STEP = True
         if PRINT_TIME_SINCE_LAST_STEP:
             if not hasattr(self, "last_time"):
                 self.last_time = time.time()
@@ -2367,7 +2378,7 @@ class AllegroKukaBase(VecTask):
 
         # Default CHECK_WITH_COMPUTED_JOINT_POS_TARGETS = False
         # Set to True to check if the computed joint pos targets are correct
-        CHECK_WITH_COMPUTED_JOINT_POS_TARGETS = False
+        CHECK_WITH_COMPUTED_JOINT_POS_TARGETS = True
         if CHECK_WITH_COMPUTED_JOINT_POS_TARGETS:
             computed_joint_pos_targets = compute_joint_pos_targets(
                 actions=self.actions,
