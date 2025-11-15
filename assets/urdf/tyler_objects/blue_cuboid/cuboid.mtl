@@ -4,3 +4,4 @@ Kd 0.639 0.847 0.882
 Ks 0.000 0.000 0.000
 d 1.0
 illum 2
+map_Kd cuboid_color.png
