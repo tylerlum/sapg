@@ -268,7 +268,6 @@ def compute_observation(
     for k, v in obs_dict.items():
         assert v.ndim == 2, f"v.ndim: {v.ndim}, expected: 2 for key: {k}: {v.shape}"
         assert v.shape[0] == N, f"v.shape[0]: {v.shape[0]}, expected: {N} for key: {k}"
-    breakpoint()
     for name, names in OBS_NAME_TO_NAMES.items():
         assert name in obs_dict, f"name: {name} not in obs_dict"
         assert obs_dict[name].shape[1] == len(names), (

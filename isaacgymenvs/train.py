@@ -236,10 +236,10 @@ def launch_rlg_hydra(cfg: DictConfig, vec_env=None):
             with open(os.path.join(experiment_dir, 'cmd.txt'), 'w') as f:
                 f.write(' '.join(sys.argv))
 
-    FORCE_SAVE = False
+    FORCE_SAVE = True
     if FORCE_SAVE:
         breakpoint()
-        save_dir = "/home/tylerlum/github_repos/sapg/closed_loop_testing"
+        save_dir = "/home/tylerlum/github_repos/sapg/closed_loop_testing_sharpa"
         os.makedirs(save_dir, exist_ok=True)
         with open(os.path.join(save_dir, 'config.yaml'), 'w') as f:
             f.write(OmegaConf.to_yaml(cfg))
