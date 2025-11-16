@@ -10,7 +10,7 @@ import rospy
 from sensor_msgs.msg import JointState
 from termcolor import colored
 
-from recorded_data_scripts.recorded_data import RecordedData
+from recorded_data_scripts.recorded_data_sharpa import RecordedData
 
 
 def warn(message: str):

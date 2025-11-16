@@ -18,6 +18,8 @@ from termcolor import colored
 from isaacgymenvs.utils.observation_action_utils_sharpa import (
     compute_joint_pos_targets,
     compute_observation,
+    Q_LOWER_LIMITS_restricted_np as Q_LOWER_LIMITS_np_between,
+    Q_UPPER_LIMITS_restricted_np as Q_UPPER_LIMITS_np_between,
 )
 
 T_W_R = np.eye(4)
@@ -434,6 +436,13 @@ class RLPolicyNode:
                 )
                 assert_equals(joint_pos_targets.shape, (1, self.num_actions))
 
+                # Clamp
+                joint_pos_targets = torch.clip(
+                    joint_pos_targets,
+                    min=torch.from_numpy(Q_LOWER_LIMITS_np_between).float().to(self.device)[None],
+                    max=torch.from_numpy(Q_UPPER_LIMITS_np_between).float().to(self.device)[None],
+                )
+
                 # Publish the targets
                 self.publish_targets(joint_pos_targets)
                 # print(f"CURRENT_STEP: {CURRENT_STEP}")
@@ -479,6 +488,7 @@ class RLPolicyNode:
         # object_scales = np.array([0.1, 0.035, 0.025]) * 20
         # object_scales = np.array([3.0, 0.5, 0.5])
         object_scales = np.array([4.0, 0.75, 1.0])
+        # object_scales = np.array([4.0, 0.75, 1.0]) * 1.25
         return object_scales
 
 

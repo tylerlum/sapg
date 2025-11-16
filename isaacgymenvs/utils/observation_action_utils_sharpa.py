@@ -17,7 +17,12 @@ from isaacgymenvs.utils.torch_jit_utils import (
 
 # Constants
 JOINT_NAMES_ISAACGYM = [
-    'iiwa14_joint_1', 'iiwa14_joint_2', 'iiwa14_joint_3', 'iiwa14_joint_4', 'iiwa14_joint_5', 'iiwa14_joint_6', 'iiwa14_joint_7', 'left_index_MCP_FE', 'left_index_MCP_AA', 'left_index_PIP', 'left_index_DIP', 'left_middle_MCP_FE', 'left_middle_MCP_AA', 'left_middle_PIP', 'left_middle_DIP', 'left_pinky_CMC', 'left_pinky_MCP_FE', 'left_pinky_MCP_AA', 'left_pinky_PIP', 'left_pinky_DIP', 'left_ring_MCP_FE', 'left_ring_MCP_AA', 'left_ring_PIP', 'left_ring_DIP', 'left_thumb_CMC_FE', 'left_thumb_CMC_AA', 'left_thumb_MCP_FE', 'left_thumb_MCP_AA', 'left_thumb_IP'
+    'iiwa14_joint_1', 'iiwa14_joint_2', 'iiwa14_joint_3', 'iiwa14_joint_4', 'iiwa14_joint_5', 'iiwa14_joint_6', 'iiwa14_joint_7',
+    'left_index_MCP_FE', 'left_index_MCP_AA', 'left_index_PIP', 'left_index_DIP',
+    'left_middle_MCP_FE', 'left_middle_MCP_AA', 'left_middle_PIP', 'left_middle_DIP',
+    'left_pinky_CMC', 'left_pinky_MCP_FE', 'left_pinky_MCP_AA', 'left_pinky_PIP', 'left_pinky_DIP',
+    'left_ring_MCP_FE', 'left_ring_MCP_AA', 'left_ring_PIP', 'left_ring_DIP',
+    'left_thumb_CMC_FE', 'left_thumb_CMC_AA', 'left_thumb_MCP_FE', 'left_thumb_MCP_AA', 'left_thumb_IP',
 ]
 
 assert len(JOINT_NAMES_ISAACGYM) == 29, (
@@ -36,6 +41,13 @@ Q_UPPER_LIMITS_np = np.array( [2.9671, 2.0944, 2.9671, 2.0944, 2.9671, 2.0944, 3
 assert Q_LOWER_LIMITS_np.shape == (29,), f"Q_LOWER_LIMITS_np.shape: {Q_LOWER_LIMITS_np.shape}, expected: (29,)"
 assert Q_UPPER_LIMITS_np.shape == (29,), f"Q_UPPER_LIMITS_np.shape: {Q_UPPER_LIMITS_np.shape}, expected: (29,)"
 
+Q_LOWER_LIMITS_restricted_np = Q_LOWER_LIMITS_np.copy()
+Q_LOWER_LIMITS_restricted_np[:7] += np.deg2rad(10.0)
+
+Q_UPPER_LIMITS_restricted_np = Q_UPPER_LIMITS_np.copy()
+Q_UPPER_LIMITS_restricted_np[:7] -= np.deg2rad(10.0)
+assert Q_LOWER_LIMITS_restricted_np.shape == (29,), f"Q_LOWER_LIMITS_restricted_np.shape: {Q_LOWER_LIMITS_restricted_np.shape}, expected: (29,)"
+assert Q_UPPER_LIMITS_restricted_np.shape == (29,), f"Q_UPPER_LIMITS_restricted_np.shape: {Q_UPPER_LIMITS_restricted_np.shape}, expected: (29,)"
 
 OBS_NAME_TO_NAMES = {
     "q": [f"{name}_q" for name in JOINT_NAMES_ISAACGYM],
