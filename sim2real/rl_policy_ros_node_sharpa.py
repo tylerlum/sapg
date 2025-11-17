@@ -25,65 +25,71 @@ from isaacgymenvs.utils.observation_action_utils_sharpa import (
 T_W_R = np.eye(4)
 T_W_R[:3, 3] = np.array([0.0, 0.8, 0.0])
 
-BETWEEN_JOINT_ORDER = [
-    'iiwa14_joint_1', 'iiwa14_joint_2', 'iiwa14_joint_3', 'iiwa14_joint_4', 'iiwa14_joint_5', 'iiwa14_joint_6', 'iiwa14_joint_7',
-    'left_index_MCP_FE', 'left_index_MCP_AA', 'left_index_PIP', 'left_index_DIP',
-    'left_middle_MCP_FE', 'left_middle_MCP_AA', 'left_middle_PIP', 'left_middle_DIP',
-    'left_pinky_CMC', 'left_pinky_MCP_FE', 'left_pinky_MCP_AA', 'left_pinky_PIP', 'left_pinky_DIP',
-    'left_ring_MCP_FE', 'left_ring_MCP_AA', 'left_ring_PIP', 'left_ring_DIP',
-    'left_thumb_CMC_FE', 'left_thumb_CMC_AA', 'left_thumb_MCP_FE', 'left_thumb_MCP_AA', 'left_thumb_IP',
-]
-
-ADJUSTED_JOINT_ORDER = [
-    'iiwa14_joint_1', 'iiwa14_joint_2', 'iiwa14_joint_3', 'iiwa14_joint_4', 'iiwa14_joint_5', 'iiwa14_joint_6', 'iiwa14_joint_7',
-    'left_thumb_CMC_FE', 'left_thumb_CMC_AA', 'left_thumb_MCP_FE', 'left_thumb_MCP_AA', 'left_thumb_IP',
-    'left_index_MCP_FE', 'left_index_MCP_AA', 'left_index_PIP', 'left_index_DIP',
-    'left_middle_MCP_FE', 'left_middle_MCP_AA', 'left_middle_PIP', 'left_middle_DIP',
-    'left_ring_MCP_FE', 'left_ring_MCP_AA', 'left_ring_PIP', 'left_ring_DIP',
-    'left_pinky_CMC', 'left_pinky_MCP_FE', 'left_pinky_MCP_AA', 'left_pinky_PIP', 'left_pinky_DIP',
-]
-def change_joint_order(
-    q: np.ndarray,
-    from_order: list[str],
-    to_order: list[str],
-) -> np.ndarray:
-    J = len(from_order)
-    assert len(to_order) == J, (
-        f"Expected to_order to have the same length as from_order, got {len(to_order)} and {len(from_order)}"
-    )
-    assert q.shape == (J,), (
-        f"Expected q to have length {J}, got {q.shape}"
-    )
-
-    assert set(to_order) == set(from_order), (
-        f"Expected to_order to be the same as from_order, got to_order: {to_order} and from_order: {from_order}. Only in to_order: {set(to_order) - set(from_order)}"
-    )
-
-    # q is given in the from_order
-    joint_name_to_value = {from_order[i]: q[i] for i in range(J)}
-    new_q = np.array([joint_name_to_value[name] for name in to_order])
-
-    assert new_q.shape == (len(to_order),), (
-        f"Expected new_q to be {len(to_order)}, got {new_q.shape}"
-    )
-    return new_q
-
+# BETWEEN_JOINT_ORDER = [
+#     'iiwa14_joint_1', 'iiwa14_joint_2', 'iiwa14_joint_3', 'iiwa14_joint_4', 'iiwa14_joint_5', 'iiwa14_joint_6', 'iiwa14_joint_7',
+#     'left_index_MCP_FE', 'left_index_MCP_AA', 'left_index_PIP', 'left_index_DIP',
+#     'left_middle_MCP_FE', 'left_middle_MCP_AA', 'left_middle_PIP', 'left_middle_DIP',
+#     'left_pinky_CMC', 'left_pinky_MCP_FE', 'left_pinky_MCP_AA', 'left_pinky_PIP', 'left_pinky_DIP',
+#     'left_ring_MCP_FE', 'left_ring_MCP_AA', 'left_ring_PIP', 'left_ring_DIP',
+#     'left_thumb_CMC_FE', 'left_thumb_CMC_AA', 'left_thumb_MCP_FE', 'left_thumb_MCP_AA', 'left_thumb_IP',
+# ]
+# 
+# ADJUSTED_JOINT_ORDER = [
+#     'iiwa14_joint_1', 'iiwa14_joint_2', 'iiwa14_joint_3', 'iiwa14_joint_4', 'iiwa14_joint_5', 'iiwa14_joint_6', 'iiwa14_joint_7',
+#     'left_thumb_CMC_FE', 'left_thumb_CMC_AA', 'left_thumb_MCP_FE', 'left_thumb_MCP_AA', 'left_thumb_IP',
+#     'left_index_MCP_FE', 'left_index_MCP_AA', 'left_index_PIP', 'left_index_DIP',
+#     'left_middle_MCP_FE', 'left_middle_MCP_AA', 'left_middle_PIP', 'left_middle_DIP',
+#     'left_ring_MCP_FE', 'left_ring_MCP_AA', 'left_ring_PIP', 'left_ring_DIP',
+#     'left_pinky_CMC', 'left_pinky_MCP_FE', 'left_pinky_MCP_AA', 'left_pinky_PIP', 'left_pinky_DIP',
+# ]
+# def change_joint_order(
+#     q: np.ndarray,
+#     from_order: list[str],
+#     to_order: list[str],
+# ) -> np.ndarray:
+#     J = len(from_order)
+#     assert len(to_order) == J, (
+#         f"Expected to_order to have the same length as from_order, got {len(to_order)} and {len(from_order)}"
+#     )
+#     assert q.shape == (J,), (
+#         f"Expected q to have length {J}, got {q.shape}"
+#     )
+# 
+#     assert set(to_order) == set(from_order), (
+#         f"Expected to_order to be the same as from_order, got to_order: {to_order} and from_order: {from_order}. Only in to_order: {set(to_order) - set(from_order)}"
+#     )
+# 
+#     # q is given in the from_order
+#     joint_name_to_value = {from_order[i]: q[i] for i in range(J)}
+#     new_q = np.array([joint_name_to_value[name] for name in to_order])
+# 
+#     assert new_q.shape == (len(to_order),), (
+#         f"Expected new_q to be {len(to_order)}, got {new_q.shape}"
+#     )
+#     return new_q
 
 
 def adjusted_to_between(q: np.ndarray) -> np.ndarray:
-    return change_joint_order(
-        q=q,
-        from_order=ADJUSTED_JOINT_ORDER,
-        to_order=BETWEEN_JOINT_ORDER,
-    )
-
+    return q
 
 def between_to_adjusted(q: np.ndarray) -> np.ndarray:
-    return change_joint_order(
-        q=q,
-        from_order=BETWEEN_JOINT_ORDER,
-        to_order=ADJUSTED_JOINT_ORDER,
-    )
+    return q
+
+
+# def adjusted_to_between(q: np.ndarray) -> np.ndarray:
+#     return change_joint_order(
+#         q=q,
+#         from_order=ADJUSTED_JOINT_ORDER,
+#         to_order=BETWEEN_JOINT_ORDER,
+#     )
+# 
+# 
+# def between_to_adjusted(q: np.ndarray) -> np.ndarray:
+#     return change_joint_order(
+#         q=q,
+#         from_order=BETWEEN_JOINT_ORDER,
+#         to_order=ADJUSTED_JOINT_ORDER,
+#     )
 
 
 
@@ -192,14 +198,17 @@ class RLPolicyNode:
         CONFIG_PATH = Path(
             # "/home/tylerlum/github_repos/sapg/closed_loop_testing/config.yaml"
             # "/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-11-05_hairbrush/00_smooth-arm-hand_speed-10_dropout-obs_2025-11-05_05-20-24/runs/00_smooth-arm-hand_speed-10_dropout-obs_2025-11-05_05-20-24/config.yaml"
-            "/home/tylerlum/github_repos/sapg/closed_loop_testing_sharpa/config.yaml"
+            # "/home/tylerlum/github_repos/sapg/closed_loop_testing_sharpa/config.yaml"
+            "/home/tylerlum/github_repos/sapg/closed_loop_testing_sharpa_hammer_2/config.yaml"
         )
         assert Path(CONFIG_PATH).exists()
         CHECKPOINT_PATH = Path(
             # Fast
             # "/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-11-12_sharpa_hammer_2_coacd/00_CUBOID_obs-curriculum_thresh0-1_local_2025-11-14_00-04-24/runs/00_CUBOID_obs-curriculum_thresh0-1_local_2025-11-14_00-04-24/last/model.pth"
             # Slow
-            "/juno/u/kedia/sapg/train_dir/checkpoints/SLOW_CUBOID/model.pth"
+            # "/juno/u/kedia/sapg/train_dir/checkpoints/SLOW_CUBOID/model.pth"
+            # "/juno/u/kedia/sapg/train_dir/checkpoints/dr_hammer_slow.pth"
+            "/juno/u/kedia/sapg/train_dir/checkpoints/hammer_slowest.pth"
         )
         assert CHECKPOINT_PATH.exists()
 
@@ -219,7 +228,8 @@ class RLPolicyNode:
 
         # Set up chain and palm_serial_chain
         asset_root = Path(__file__).parent / "../assets"
-        urdf_path = asset_root / "urdf/kuka_allegro_description/iiwa14_left_sharpa_between.urdf"
+        # urdf_path = asset_root / "urdf/kuka_allegro_description/iiwa14_left_sharpa_between.urdf"
+        urdf_path = asset_root / "urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted_restricted.urdf"
         assert urdf_path.exists(), f"URDF file {urdf_path} does not exist"
         self.chain = pk.build_chain_from_urdf(
             open(urdf_path).read(),
@@ -423,8 +433,8 @@ class RLPolicyNode:
                 assert_equals(normalized_action.shape, (1, self.num_actions))
 
                 HAND_MOVING_AVERAGE = 0.1
-                ARM_MOVING_AVERAGE = 0.01
-                HAND_DOF_SPEED_SCALE = 5.0
+                ARM_MOVING_AVERAGE = 0.03
+                HAND_DOF_SPEED_SCALE = 2.5
                 DT = 1 / 60
                 joint_pos_targets = compute_joint_pos_targets(
                     actions=normalized_action,
@@ -487,8 +497,11 @@ class RLPolicyNode:
     def object_scales(self) -> np.ndarray:
         # object_scales = np.array([0.1, 0.035, 0.025]) * 20
         # object_scales = np.array([3.0, 0.5, 0.5])
-        object_scales = np.array([4.0, 0.75, 1.0])
+        # object_scales = np.array([4.0, 0.75, 1.0])
         # object_scales = np.array([4.0, 0.75, 1.0]) * 1.25
+
+        # Hammer 2
+        object_scales = np.array([3.0, 0.25, 0.2])
         return object_scales
 
 

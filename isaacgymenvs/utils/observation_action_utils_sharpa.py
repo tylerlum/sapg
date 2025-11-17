@@ -16,28 +16,49 @@ from isaacgymenvs.utils.torch_jit_utils import (
 )
 
 # Constants
+# JOINT_NAMES_ISAACGYM = [
+#     'iiwa14_joint_1', 'iiwa14_joint_2', 'iiwa14_joint_3', 'iiwa14_joint_4', 'iiwa14_joint_5', 'iiwa14_joint_6', 'iiwa14_joint_7',
+#     'left_index_MCP_FE', 'left_index_MCP_AA', 'left_index_PIP', 'left_index_DIP',
+#     'left_middle_MCP_FE', 'left_middle_MCP_AA', 'left_middle_PIP', 'left_middle_DIP',
+#     'left_pinky_CMC', 'left_pinky_MCP_FE', 'left_pinky_MCP_AA', 'left_pinky_PIP', 'left_pinky_DIP',
+#     'left_ring_MCP_FE', 'left_ring_MCP_AA', 'left_ring_PIP', 'left_ring_DIP',
+#     'left_thumb_CMC_FE', 'left_thumb_CMC_AA', 'left_thumb_MCP_FE', 'left_thumb_MCP_AA', 'left_thumb_IP',
+# ]
 JOINT_NAMES_ISAACGYM = [
     'iiwa14_joint_1', 'iiwa14_joint_2', 'iiwa14_joint_3', 'iiwa14_joint_4', 'iiwa14_joint_5', 'iiwa14_joint_6', 'iiwa14_joint_7',
-    'left_index_MCP_FE', 'left_index_MCP_AA', 'left_index_PIP', 'left_index_DIP',
-    'left_middle_MCP_FE', 'left_middle_MCP_AA', 'left_middle_PIP', 'left_middle_DIP',
-    'left_pinky_CMC', 'left_pinky_MCP_FE', 'left_pinky_MCP_AA', 'left_pinky_PIP', 'left_pinky_DIP',
-    'left_ring_MCP_FE', 'left_ring_MCP_AA', 'left_ring_PIP', 'left_ring_DIP',
-    'left_thumb_CMC_FE', 'left_thumb_CMC_AA', 'left_thumb_MCP_FE', 'left_thumb_MCP_AA', 'left_thumb_IP',
+    'left_1_thumb_CMC_FE', 'left_thumb_CMC_AA', 'left_thumb_MCP_FE', 'left_thumb_MCP_AA', 'left_thumb_IP',
+    'left_2_index_MCP_FE', 'left_index_MCP_AA', 'left_index_PIP', 'left_index_DIP',
+    'left_3_middle_MCP_FE', 'left_middle_MCP_AA', 'left_middle_PIP', 'left_middle_DIP',
+    'left_4_ring_MCP_FE', 'left_ring_MCP_AA', 'left_ring_PIP', 'left_ring_DIP',
+    'left_5_pinky_CMC', 'left_pinky_MCP_FE', 'left_pinky_MCP_AA', 'left_pinky_PIP', 'left_pinky_DIP',
 ]
+
 
 assert len(JOINT_NAMES_ISAACGYM) == 29, (
     f"len(JOINT_NAMES_ISAACGYM): {len(JOINT_NAMES_ISAACGYM)}, expected: 29"
 )
 
-Q_LOWER_LIMITS_np = np.array( [-2.9671, -2.0944, -2.9671, -2.0944, -2.9671, -2.0944, -3.0543, -0.1745,
-        -0.0349,  0.0000,  0.0000, -0.1745, -0.0349,  0.0000,  0.0000,  0.0000,
+# Q_LOWER_LIMITS_np = np.array( [-2.9671, -2.0944, -2.9671, -2.0944, -2.9671, -2.0944, -3.0543, -0.1745,
+#         -0.0349,  0.0000,  0.0000, -0.1745, -0.0349,  0.0000,  0.0000,  0.0000,
+#         -0.1745, -0.0349,  0.0000,  0.0000, -0.1745, -0.0349,  0.0000,  0.0000,
+#         -0.1745, -0.3491, -0.5236, -0.3491,  0.0000],)
+# 
+# Q_UPPER_LIMITS_np = np.array( [2.9671, 2.0944, 2.9671, 2.0944, 2.9671, 2.0944, 3.0543, 1.5708, 0.0349,
+#         1.7453, 1.3963, 1.5708, 0.0349, 1.7453, 1.3963, 0.2618, 1.5708, 0.0349,
+#         1.7453, 1.3963, 1.5708, 0.0349, 1.7453, 1.3963, 1.9199, 0.1309, 1.3963,
+#         0.3491, 1.7453],)
+Q_LOWER_LIMITS_np = np.array( [
+        -2.9671, -2.0944, -2.9671, -2.0944, -2.9671, -2.0944, -3.0543, -0.1745,
+        -0.3491, -0.5236, -0.3491,  0.0000, -0.1745, -0.0349,  0.0000,  0.0000,
         -0.1745, -0.0349,  0.0000,  0.0000, -0.1745, -0.0349,  0.0000,  0.0000,
-        -0.1745, -0.3491, -0.5236, -0.3491,  0.0000],)
-
-Q_UPPER_LIMITS_np = np.array( [2.9671, 2.0944, 2.9671, 2.0944, 2.9671, 2.0944, 3.0543, 1.5708, 0.0349,
+         0.0000, -0.1745, -0.0349,  0.0000,  0.0000
+])
+Q_UPPER_LIMITS_np = np.array( [
+        2.9671, 2.0944, 2.9671, 2.0944, 2.9671, 2.0944, 3.0543, 1.9199, 0.1309,
+        1.3963, 0.3491, 1.7453, 1.5708, 0.0349, 1.7453, 1.3963, 1.5708, 0.0349,
         1.7453, 1.3963, 1.5708, 0.0349, 1.7453, 1.3963, 0.2618, 1.5708, 0.0349,
-        1.7453, 1.3963, 1.5708, 0.0349, 1.7453, 1.3963, 1.9199, 0.1309, 1.3963,
-        0.3491, 1.7453],)
+        1.7453, 1.3963
+])
 assert Q_LOWER_LIMITS_np.shape == (29,), f"Q_LOWER_LIMITS_np.shape: {Q_LOWER_LIMITS_np.shape}, expected: (29,)"
 assert Q_UPPER_LIMITS_np.shape == (29,), f"Q_UPPER_LIMITS_np.shape: {Q_UPPER_LIMITS_np.shape}, expected: (29,)"
 

@@ -276,7 +276,8 @@ class ViserVisualizationNode:
         from isaacgymenvs.utils.objects import NAME_TO_OBJECT
         object_name = rospy.get_param("/object_name", None)
         if object_name is None:
-            DEFAULT_OBJECT_NAME = "blue_cuboid"
+            # DEFAULT_OBJECT_NAME = "blue_cuboid"
+            DEFAULT_OBJECT_NAME = "mallet"
             # DEFAULT_OBJECT_NAME = "scanned_hammer_2"
             warn(f"Using default object name: {DEFAULT_OBJECT_NAME}")
             object_name = DEFAULT_OBJECT_NAME

@@ -142,14 +142,16 @@ class IsaacEnvNoRosJointPosTargets:
 def main():
     CONTROL_DT = 1.0 / 60.0
     CONFIG_PATH = Path(
-        "/home/tylerlum/github_repos/sapg/closed_loop_testing_sharpa/config.yaml"
+        # "/home/tylerlum/github_repos/sapg/closed_loop_testing_sharpa/config.yaml"
+        "/home/tylerlum/github_repos/sapg/closed_loop_testing_sharpa_hammer_2/config.yaml"
     )
     assert Path(CONFIG_PATH).exists()
     CHECKPOINT_PATH = Path(
         # Fast
         # "/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-11-12_sharpa_hammer_2_coacd/00_CUBOID_obs-curriculum_thresh0-1_local_2025-11-14_00-04-24/runs/00_CUBOID_obs-curriculum_thresh0-1_local_2025-11-14_00-04-24/last/model.pth"
         # Slow
-        "/juno/u/kedia/sapg/train_dir/checkpoints/SLOW_CUBOID/model.pth"
+        # "/juno/u/kedia/sapg/train_dir/checkpoints/SLOW_CUBOID/model.pth"
+        "/juno/u/kedia/sapg/train_dir/checkpoints/dr_hammer_slow.pth"
     )
     assert CHECKPOINT_PATH.exists()
 
@@ -175,7 +177,8 @@ def main():
     )
 
     chain, palm_serial_chain = create_chain_and_serial_chain(
-        device=DEVICE, robot_name="iiwa14_left_sharpa_between"
+        # device=DEVICE, robot_name="iiwa14_left_sharpa_between"
+        device=DEVICE, robot_name="iiwa14_left_sharpa_adjusted_restricted"
     )
 
     isaac_env_no_ros_joint_pos_targets = IsaacEnvNoRosJointPosTargets(

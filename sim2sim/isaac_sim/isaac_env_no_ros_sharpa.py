@@ -52,14 +52,16 @@ class IsaacEnvNoRos:
 def main():
     CONTROL_DT = 1.0 / 60.0  # Control loop frequency (policy loop rate)
     CONFIG_PATH = Path(
-        "/home/tylerlum/github_repos/sapg/closed_loop_testing_sharpa/config.yaml"
+        # "/home/tylerlum/github_repos/sapg/closed_loop_testing_sharpa/config.yaml"
+        "/home/tylerlum/github_repos/sapg/closed_loop_testing_sharpa_hammer_2/config.yaml"
     )
     assert Path(CONFIG_PATH).exists()
     CHECKPOINT_PATH = Path(
         # Fast
         # "/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-11-12_sharpa_hammer_2_coacd/00_CUBOID_obs-curriculum_thresh0-1_local_2025-11-14_00-04-24/runs/00_CUBOID_obs-curriculum_thresh0-1_local_2025-11-14_00-04-24/last/model.pth"
         # Slow
-        "/juno/u/kedia/sapg/train_dir/checkpoints/SLOW_CUBOID/model.pth"
+        # "/juno/u/kedia/sapg/train_dir/checkpoints/SLOW_CUBOID/model.pth"
+        "/juno/u/kedia/sapg/train_dir/checkpoints/dr_hammer_slow.pth"
     )
     assert CHECKPOINT_PATH.exists()
 

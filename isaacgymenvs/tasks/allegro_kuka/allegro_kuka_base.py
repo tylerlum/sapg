@@ -1956,7 +1956,8 @@ class AllegroKukaBase(VecTask):
             import pytorch_kinematics as pk
             # Create chain and palm_serial_chain from URDF
             if not hasattr(self, "chain") or not hasattr(self, "palm_serial_chain"):
-                self.chain, self.palm_serial_chain = create_chain_and_serial_chain(device=self.device, robot_name="iiwa14_left_sharpa_between")
+                # self.chain, self.palm_serial_chain = create_chain_and_serial_chain(device=self.device, robot_name="iiwa14_left_sharpa_between")
+                self.chain, self.palm_serial_chain = create_chain_and_serial_chain(device=self.device, robot_name="iiwa14_left_sharpa_adjusted_restricted")
 
             computed_obs = compute_observation(
                 q=self.arm_hand_dof_pos,
@@ -2105,6 +2106,9 @@ class AllegroKukaBase(VecTask):
             if USE_FIXED_INIT_OBJECT_POSE:
                 new_object_rot[:] = 0.0 #HACK
                 new_object_rot[:, -1] = 1.0 #HACK  xyzw
+
+                from scipy.spatial.transform import Rotation as R
+                new_object_rot[:] = torch.from_numpy(R.from_euler("z", 180, degrees=True).as_quat()).float().to(self.device)[None]
 
             # indices 3,4,5,6 correspond to the rotation quaternion
             self.root_state_tensor[obj_indices, 3:7] = new_object_rot
