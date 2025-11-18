@@ -15,65 +15,92 @@ from scipy.spatial.transform import Rotation as R
 from sensor_msgs.msg import JointState
 from termcolor import colored
 
-from isaacgymenvs.utils.observation_action_utils_sharpa import (
+
+USE_BETWEEN = True
+if USE_BETWEEN:
+    from isaacgymenvs.utils.observation_action_utils_sharpa_between import (
+        compute_joint_pos_targets,
+        compute_observation,
+        create_chain_and_serial_chain,
+        Q_LOWER_LIMITS_restricted_np as Q_LOWER_LIMITS_np_between,
+        Q_UPPER_LIMITS_restricted_np as Q_UPPER_LIMITS_np_between,
+    )
+else:
+    from isaacgymenvs.utils.observation_action_utils_sharpa import (
     compute_joint_pos_targets,
     compute_observation,
+    create_chain_and_serial_chain,
     Q_LOWER_LIMITS_restricted_np as Q_LOWER_LIMITS_np_between,
     Q_UPPER_LIMITS_restricted_np as Q_UPPER_LIMITS_np_between,
 )
 
+
 T_W_R = np.eye(4)
 T_W_R[:3, 3] = np.array([0.0, 0.8, 0.0])
 
-# BETWEEN_JOINT_ORDER = [
-#     'iiwa14_joint_1', 'iiwa14_joint_2', 'iiwa14_joint_3', 'iiwa14_joint_4', 'iiwa14_joint_5', 'iiwa14_joint_6', 'iiwa14_joint_7',
-#     'left_index_MCP_FE', 'left_index_MCP_AA', 'left_index_PIP', 'left_index_DIP',
-#     'left_middle_MCP_FE', 'left_middle_MCP_AA', 'left_middle_PIP', 'left_middle_DIP',
-#     'left_pinky_CMC', 'left_pinky_MCP_FE', 'left_pinky_MCP_AA', 'left_pinky_PIP', 'left_pinky_DIP',
-#     'left_ring_MCP_FE', 'left_ring_MCP_AA', 'left_ring_PIP', 'left_ring_DIP',
-#     'left_thumb_CMC_FE', 'left_thumb_CMC_AA', 'left_thumb_MCP_FE', 'left_thumb_MCP_AA', 'left_thumb_IP',
-# ]
-# 
-# ADJUSTED_JOINT_ORDER = [
-#     'iiwa14_joint_1', 'iiwa14_joint_2', 'iiwa14_joint_3', 'iiwa14_joint_4', 'iiwa14_joint_5', 'iiwa14_joint_6', 'iiwa14_joint_7',
-#     'left_thumb_CMC_FE', 'left_thumb_CMC_AA', 'left_thumb_MCP_FE', 'left_thumb_MCP_AA', 'left_thumb_IP',
-#     'left_index_MCP_FE', 'left_index_MCP_AA', 'left_index_PIP', 'left_index_DIP',
-#     'left_middle_MCP_FE', 'left_middle_MCP_AA', 'left_middle_PIP', 'left_middle_DIP',
-#     'left_ring_MCP_FE', 'left_ring_MCP_AA', 'left_ring_PIP', 'left_ring_DIP',
-#     'left_pinky_CMC', 'left_pinky_MCP_FE', 'left_pinky_MCP_AA', 'left_pinky_PIP', 'left_pinky_DIP',
-# ]
-# def change_joint_order(
-#     q: np.ndarray,
-#     from_order: list[str],
-#     to_order: list[str],
-# ) -> np.ndarray:
-#     J = len(from_order)
-#     assert len(to_order) == J, (
-#         f"Expected to_order to have the same length as from_order, got {len(to_order)} and {len(from_order)}"
-#     )
-#     assert q.shape == (J,), (
-#         f"Expected q to have length {J}, got {q.shape}"
-#     )
-# 
-#     assert set(to_order) == set(from_order), (
-#         f"Expected to_order to be the same as from_order, got to_order: {to_order} and from_order: {from_order}. Only in to_order: {set(to_order) - set(from_order)}"
-#     )
-# 
-#     # q is given in the from_order
-#     joint_name_to_value = {from_order[i]: q[i] for i in range(J)}
-#     new_q = np.array([joint_name_to_value[name] for name in to_order])
-# 
-#     assert new_q.shape == (len(to_order),), (
-#         f"Expected new_q to be {len(to_order)}, got {new_q.shape}"
-#     )
-#     return new_q
+BETWEEN_JOINT_ORDER = [
+    'iiwa14_joint_1', 'iiwa14_joint_2', 'iiwa14_joint_3', 'iiwa14_joint_4', 'iiwa14_joint_5', 'iiwa14_joint_6', 'iiwa14_joint_7',
+    'left_index_MCP_FE', 'left_index_MCP_AA', 'left_index_PIP', 'left_index_DIP',
+    'left_middle_MCP_FE', 'left_middle_MCP_AA', 'left_middle_PIP', 'left_middle_DIP',
+    'left_pinky_CMC', 'left_pinky_MCP_FE', 'left_pinky_MCP_AA', 'left_pinky_PIP', 'left_pinky_DIP',
+    'left_ring_MCP_FE', 'left_ring_MCP_AA', 'left_ring_PIP', 'left_ring_DIP',
+    'left_thumb_CMC_FE', 'left_thumb_CMC_AA', 'left_thumb_MCP_FE', 'left_thumb_MCP_AA', 'left_thumb_IP',
+]
+
+ADJUSTED_JOINT_ORDER = [
+    'iiwa14_joint_1', 'iiwa14_joint_2', 'iiwa14_joint_3', 'iiwa14_joint_4', 'iiwa14_joint_5', 'iiwa14_joint_6', 'iiwa14_joint_7',
+    'left_thumb_CMC_FE', 'left_thumb_CMC_AA', 'left_thumb_MCP_FE', 'left_thumb_MCP_AA', 'left_thumb_IP',
+    'left_index_MCP_FE', 'left_index_MCP_AA', 'left_index_PIP', 'left_index_DIP',
+    'left_middle_MCP_FE', 'left_middle_MCP_AA', 'left_middle_PIP', 'left_middle_DIP',
+    'left_ring_MCP_FE', 'left_ring_MCP_AA', 'left_ring_PIP', 'left_ring_DIP',
+    'left_pinky_CMC', 'left_pinky_MCP_FE', 'left_pinky_MCP_AA', 'left_pinky_PIP', 'left_pinky_DIP',
+]
+def change_joint_order(
+    q: np.ndarray,
+    from_order: list[str],
+    to_order: list[str],
+) -> np.ndarray:
+    J = len(from_order)
+    assert len(to_order) == J, (
+        f"Expected to_order to have the same length as from_order, got {len(to_order)} and {len(from_order)}"
+    )
+    assert q.shape == (J,), (
+        f"Expected q to have length {J}, got {q.shape}"
+    )
+
+    assert set(to_order) == set(from_order), (
+        f"Expected to_order to be the same as from_order, got to_order: {to_order} and from_order: {from_order}. Only in to_order: {set(to_order) - set(from_order)}"
+    )
+
+    # q is given in the from_order
+    joint_name_to_value = {from_order[i]: q[i] for i in range(J)}
+    new_q = np.array([joint_name_to_value[name] for name in to_order])
+
+    assert new_q.shape == (len(to_order),), (
+        f"Expected new_q to be {len(to_order)}, got {new_q.shape}"
+    )
+    return new_q
 
 
 def adjusted_to_between(q: np.ndarray) -> np.ndarray:
-    return q
+    if USE_BETWEEN:
+        return change_joint_order(
+            q=q,
+            from_order=ADJUSTED_JOINT_ORDER,
+            to_order=BETWEEN_JOINT_ORDER,
+        )
+    else:
+        return q
 
 def between_to_adjusted(q: np.ndarray) -> np.ndarray:
-    return q
+    if USE_BETWEEN:
+        return change_joint_order(
+            q=q,
+            from_order=BETWEEN_JOINT_ORDER,
+            to_order=ADJUSTED_JOINT_ORDER,
+        )
+    else:
+        return q
 
 
 # def adjusted_to_between(q: np.ndarray) -> np.ndarray:
@@ -164,10 +191,10 @@ class RLPolicyNode:
 
         # Publisher for iiwa and sharpa joint commands
         self.iiwa_joint_cmd_pub = rospy.Publisher(
-            "/iiwa/joint_cmd", JointState, queue_size=10
+            "/iiwa/joint_cmd", JointState, queue_size=1
         )
         self.sharpa_joint_cmd_pub = rospy.Publisher(
-            "/sharpa/joint_cmd", JointState, queue_size=10
+            "/sharpa/joint_cmd", JointState, queue_size=1
         )
 
         # Variables to store the latest messages
@@ -178,16 +205,20 @@ class RLPolicyNode:
 
         # Subscribers
         self.object_pose_sub = rospy.Subscriber(
-            "/robot_frame/current_object_pose", PoseStamped, self.object_pose_callback
+            "/robot_frame/current_object_pose", PoseStamped, self.object_pose_callback,
+            queue_size=1
         )
         self.goal_object_pose_sub = rospy.Subscriber(
-            "/robot_frame/goal_object_pose", Pose, self.goal_object_pose_callback
+            "/robot_frame/goal_object_pose", Pose, self.goal_object_pose_callback,
+            queue_size=1
         )
         self.iiwa_joint_state_sub = rospy.Subscriber(
-            "/iiwa/joint_states", JointState, self.iiwa_joint_state_callback
+            "/iiwa/joint_states", JointState, self.iiwa_joint_state_callback,
+            queue_size=1
         )
         self.sharpa_joint_state_sub = rospy.Subscriber(
-            "/sharpa/joint_states", JointState, self.sharpa_joint_state_callback
+            "/sharpa/joint_states", JointState, self.sharpa_joint_state_callback,
+            queue_size=1
         )
 
         # RL Player setup
@@ -208,7 +239,16 @@ class RLPolicyNode:
             # Slow
             # "/juno/u/kedia/sapg/train_dir/checkpoints/SLOW_CUBOID/model.pth"
             # "/juno/u/kedia/sapg/train_dir/checkpoints/dr_hammer_slow.pth"
-            "/juno/u/kedia/sapg/train_dir/checkpoints/hammer_slowest.pth"
+            # "/juno/u/kedia/sapg/train_dir/checkpoints/hammer_slowest.pth"
+
+            # DR 4.075 speed
+            # "/juno/u/kedia/sapg/train_dir/checkpoints/2025_11_17_checkpoints/hammer_dr_4.075/00_DR_REAL_FINETUNING_SLOW_2025-11-15_13-49-55.pth"
+
+            # NODR 2.5 speed
+            # "/juno/u/kedia/sapg/train_dir/checkpoints/2025_11_17_checkpoints/hammer_nodr_2.5/00_REAL_FINETUNING_SLOW_2025-11-15_13-51-31.pth"
+
+            # Cuboid
+            "/juno/u/kedia/sapg/train_dir/checkpoints/2025_11_17_checkpoints/cuboid_nodr_5/00_SLOW_CUBOID_2025-11-14_11-59-02.pth"
         )
         assert CHECKPOINT_PATH.exists()
 
@@ -227,15 +267,12 @@ class RLPolicyNode:
         self.rate = rospy.Rate(self.rate_hz)
 
         # Set up chain and palm_serial_chain
-        asset_root = Path(__file__).parent / "../assets"
-        # urdf_path = asset_root / "urdf/kuka_allegro_description/iiwa14_left_sharpa_between.urdf"
-        urdf_path = asset_root / "urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted_restricted.urdf"
-        assert urdf_path.exists(), f"URDF file {urdf_path} does not exist"
-        self.chain = pk.build_chain_from_urdf(
-            open(urdf_path).read(),
-        ).to(device=self.device)
-        self.palm_serial_chain = pk.SerialChain(self.chain, "iiwa14_link_7").to(
-            device=self.device
+        if USE_BETWEEN:
+            robot_name = "iiwa14_left_sharpa_between"
+        else:
+            robot_name = "iiwa14_left_sharpa_adjusted_restricted"
+        self.chain, self.palm_serial_chain = create_chain_and_serial_chain(
+            device=self.device, robot_name=robot_name
         )
 
         # State: prev_targets
@@ -432,9 +469,12 @@ class RLPolicyNode:
                 # normalized_action = torch.zeros(1, self.num_actions, device=self.device)
                 assert_equals(normalized_action.shape, (1, self.num_actions))
 
+                # HAND_MOVING_AVERAGE = 0.05
                 HAND_MOVING_AVERAGE = 0.1
-                ARM_MOVING_AVERAGE = 0.03
-                HAND_DOF_SPEED_SCALE = 2.5
+                ARM_MOVING_AVERAGE = 0.01
+                # HAND_DOF_SPEED_SCALE = 2.5
+                # HAND_DOF_SPEED_SCALE = 4.075
+                HAND_DOF_SPEED_SCALE = 5.0
                 DT = 1 / 60
                 joint_pos_targets = compute_joint_pos_targets(
                     actions=normalized_action,
@@ -501,8 +541,28 @@ class RLPolicyNode:
         # object_scales = np.array([4.0, 0.75, 1.0]) * 1.25
 
         # Hammer 2
-        object_scales = np.array([3.0, 0.25, 0.2])
+        # object_scales = np.array([3.0, 0.25, 0.2])
+
+        # blue_cuboid (rearrange)
+        # object_scales = np.array([4.0, 1.0, 0.75])
+
+        # blue_cuboid_real_iphone
+        object_scales = np.array([3.0, 1.4, 0.2])
+
+        # # blue_cuboid_fake_iphone
+        # object_scales = np.array([2.0, 1.25, 0.5])
+
+        # # blue_cuboid_real_hammer
+        # object_scales = np.array([2.0, 0.55, 0.35])
+
+        # # blue_cuboid_fake_hammer
+        # object_scales = np.array([2.5, 0.75, 0.65])
+
+        # # blue_cuboid_real_screwdriver
+        # object_scales = np.array([1.3, 0.7, 0.5])
+
         return object_scales
+
 
 
 if __name__ == "__main__":

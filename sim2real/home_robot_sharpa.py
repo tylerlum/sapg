@@ -149,15 +149,16 @@ def main():
 
     # Create subscribers and publishers
     _sub_iiwa = rospy.Subscriber(
-        "/iiwa/joint_states", JointState, current_joint_pos_iiwa_callback
+        "/iiwa/joint_states", JointState, current_joint_pos_iiwa_callback, queue_size=1
     )
     _sub_sharpa = rospy.Subscriber(
         "/sharpa/joint_states",
         JointState,
         current_joint_pos_sharpa_callback,
+        queue_size=1
     )
-    pub_iiwa = rospy.Publisher("/iiwa/joint_cmd", JointState, queue_size=10)
-    pub_sharpa = rospy.Publisher("/sharpa/joint_cmd", JointState, queue_size=10)
+    pub_iiwa = rospy.Publisher("/iiwa/joint_cmd", JointState, queue_size=1)
+    pub_sharpa = rospy.Publisher("/sharpa/joint_cmd", JointState, queue_size=1)
 
     # Wait for current joint positions to be available
     while not rospy.is_shutdown():
@@ -179,6 +180,7 @@ def main():
         pub_iiwa=pub_iiwa,
         pub_sharpa=pub_sharpa,
         move_time=10.0,
+        # move_time=2.0,
     )
     print("Reached home pose")
 
