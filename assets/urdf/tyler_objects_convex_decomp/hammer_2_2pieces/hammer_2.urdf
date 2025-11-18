@@ -22,8 +22,14 @@
             </visual>
             <collision>
             <geometry>
-                <mesh filename="hammer_2.obj" scale="1 1 1"/>
+                <mesh filename="decomp_0.obj" scale="1 1 1"/>
+            </geometry>
+            </collision>
+            <collision>
+            <geometry>
+                <mesh filename="decomp_1.obj" scale="1 1 1"/>
             </geometry>
             </collision>
         </link>
         </robot>
+
