@@ -670,7 +670,7 @@ class AllegroKukaBase(VecTask):
                 self.trajectory_states = get_phone_trajectory(init_state, device=self.device)
             elif object_type in ["all_hammers", "all_cuboidal_hammers", "all_cylindrical_hammers", "all_cuboidal_and_cylindrical_hammers"]:
                 self.trajectory_states = get_hammer_trajectory(init_state, device=self.device)
-            elif object_type in ["cuboid", "blue_cuboid", "blue_cuboid_thick"]:
+            elif object_type in ["cuboid", "blue_cuboid", "blue_cuboid_thick", "blue_cuboid_real_iphone", "blue_cuboid_fake_iphone", "blue_cuboid_real_hammer", "blue_cuboid_fake_hammer", "blue_cuboid_real_screwdriver"]:
                 self.trajectory_states = get_cuboid_trajectory(init_state, device=self.device)
             else:
                 raise ValueError(f"The following object_type does not have a fixed trajectory: {object_type}, cannot use USE_FIXED_SET_OF_GOAL_STATES with this object type")

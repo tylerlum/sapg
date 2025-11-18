@@ -80,6 +80,46 @@ NAME_TO_OBJECT = {
         scale=(4.0, 0.75, 1.0),
         need_vhacd=False,
     ),
+    "blue_cuboid_real_iphone": Object(
+        filepath=(
+            get_repo_root_dir() / "assets/urdf/tyler_objects/blue_cuboid_real_iphone/blue_cuboid_real_iphone.urdf"
+        ),
+        coacd_filepaths=None,
+        scale=(3.0, 1.4, 0.2),
+        need_vhacd=False,
+    ),
+    "blue_cuboid_fake_iphone": Object(
+        filepath=(
+            get_repo_root_dir() / "assets/urdf/tyler_objects/blue_cuboid_fake_iphone/blue_cuboid_fake_iphone.urdf"
+        ),
+        coacd_filepaths=None,
+        scale=(2.0, 1.25, 0.5),
+        need_vhacd=False,
+    ),
+    "blue_cuboid_real_hammer": Object(
+        filepath=(
+            get_repo_root_dir() / "assets/urdf/tyler_objects/blue_cuboid_real_hammer/blue_cuboid_real_hammer.urdf"
+        ),
+        coacd_filepaths=None,
+        scale=(2.0, 0.55, 0.35),
+        need_vhacd=False,
+    ),
+    "blue_cuboid_fake_hammer": Object(
+        filepath=(
+            get_repo_root_dir() / "assets/urdf/tyler_objects/blue_cuboid_fake_hammer/blue_cuboid_fake_hammer.urdf"
+        ),
+        coacd_filepaths=None,
+        scale=(2.5, 0.75, 0.65),
+        need_vhacd=False,
+    ),
+    "blue_cuboid_real_screwdriver": Object(
+        filepath=(
+            get_repo_root_dir() / "assets/urdf/tyler_objects/blue_cuboid_real_screwdriver/blue_cuboid_real_screwdriver.urdf"
+        ),
+        coacd_filepaths=None,
+        scale=(1.3, 0.7, 0.5),
+        need_vhacd=False,
+    ),
     "blue_cuboid_thick": Object(
         filepath=(
             get_repo_root_dir() / "assets/urdf/tyler_objects/blue_cuboid_thick/blue_cuboid_thick.urdf"
