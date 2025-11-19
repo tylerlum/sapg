@@ -37,6 +37,9 @@ from isaacgymenvs.utils.torch_jit_utils import get_axis_params, to_torch, torch_
 from isaacgymenvs.tasks.allegro_kuka.allegro_kuka_base import AllegroKukaBase
 from isaacgymenvs.tasks.allegro_kuka.allegro_kuka_utils import populate_dof_properties
 
+from isaacgymenvs.utils.torch_jit_utils import *
+from isaacgym import gymapi, gymtorch, gymutil
+
 
 class AllegroKukaPoseReaching(AllegroKukaBase):
     """
