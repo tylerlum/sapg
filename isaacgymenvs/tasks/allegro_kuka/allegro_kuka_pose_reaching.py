@@ -45,7 +45,8 @@ class AllegroKukaPoseReaching(AllegroKukaBase):
     """
 
     def __init__(self, cfg, rl_device, sim_device, graphics_device_id, headless, virtual_screen_capture, force_render):
-        self.use_green_robot = True
+        self.use_green_robot = cfg["env"]["use_green_robot"]
+        self.sanity_check_controls = cfg["env"]["sanity_check_controls"]
         self.goal_object_indices: List[int] = []
 
         super().__init__(cfg, rl_device, sim_device, graphics_device_id, headless, virtual_screen_capture, force_render)
@@ -349,17 +350,119 @@ class AllegroKukaPoseReaching(AllegroKukaBase):
     # Control overrides
     # ------------------------------------------------------------------ #
     def pre_physics_step(self, actions, joint_pos_targets: Optional[Tensor] = None):
-        super().pre_physics_step(actions, joint_pos_targets=joint_pos_targets)
+        actions = actions.to(self.device)
 
-        if not self.use_green_robot:
-            return
+        self.actions = actions.clone()
 
+        if self.privileged_actions:
+            torque_actions = actions[:, :3]
+            actions = actions[:, 3:]
+
+        reset_env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
+        reset_goal_env_ids = self.reset_goal_buf.nonzero(as_tuple=False).squeeze(-1)
+
+        if self.good_reset_boundary > 0 and self.buffer_length > 0:
+            good_reset_env_ids = reset_env_ids[reset_env_ids < self.good_reset_boundary]
+            random_reset_env_ids = reset_env_ids[reset_env_ids >= self.good_reset_boundary]
+            good_reset_goal_env_ids = reset_goal_env_ids[reset_goal_env_ids < self.good_reset_boundary]
+            random_reset_goal_env_ids = reset_goal_env_ids[reset_goal_env_ids >= self.good_reset_boundary]
+            reset_buf_idxs = torch.randint(0, self.buffer_length, (self.num_envs,), device=self.device)
+        else:
+            good_reset_env_ids = torch.tensor([], device=self.device, dtype=reset_env_ids.dtype)
+            random_reset_env_ids = reset_env_ids
+            good_reset_goal_env_ids = torch.tensor([], device=self.device, dtype=reset_goal_env_ids.dtype)
+            random_reset_goal_env_ids = reset_goal_env_ids
+            reset_buf_idxs = None
+        
+        combined_random_env_ids = torch.cat([random_reset_env_ids, random_reset_goal_env_ids, random_reset_goal_env_ids])
+        uniques, counts = combined_random_env_ids.unique(return_counts=True)
+        random_reset_goal_env_ids = uniques[counts == 2]
+        self.reset_target_pose(random_reset_goal_env_ids, None)
+        self.reset_idx(good_reset_goal_env_ids, reset_buf_idxs, False)
+
+        if len(reset_env_ids) > 0:
+            self.reset_idx(random_reset_env_ids, None)
+            self.reset_idx(good_reset_env_ids, reset_buf_idxs)
+            
+        self.set_actor_root_state_tensor_indexed()
+
+        if self.use_relative_control:
+            # arm relative to current position
+            targets = self.arm_hand_dof_pos[:, :7] + self.hand_dof_speed_scale * self.dt * self.actions[:, :7]
+            self.cur_targets[:, :7] = tensor_clamp(
+                targets, self.arm_hand_dof_lower_limits[:7], self.arm_hand_dof_upper_limits[:7]
+            )
+        else:
+            # arm relative to previous target
+            targets = self.prev_targets[:, :7] + self.hand_dof_speed_scale * self.dt * self.actions[:, :7]
+            self.cur_targets[:, :7] = tensor_clamp(
+                targets, self.arm_hand_dof_lower_limits[:7], self.arm_hand_dof_upper_limits[:7]
+            )
+
+        # Smooth arm
+        self.cur_targets[:, :7] = (
+            self.arm_moving_average * self.cur_targets[:, :7]
+            + (1.0 - self.arm_moving_average) * self.prev_targets[:, :7]
+        )
+
+        # hand
+        self.cur_targets[:, 7 : self.num_hand_arm_dofs] = scale(
+            actions[:, 7 : self.num_hand_arm_dofs],
+            self.arm_hand_dof_lower_limits[7 : self.num_hand_arm_dofs],
+            self.arm_hand_dof_upper_limits[7 : self.num_hand_arm_dofs],
+        )
+        self.cur_targets[:, 7 : self.num_hand_arm_dofs] = (
+            self.hand_moving_average * self.cur_targets[:, 7 : self.num_hand_arm_dofs]
+            + (1.0 - self.hand_moving_average) * self.prev_targets[:, 7 : self.num_hand_arm_dofs]
+        )
+        self.cur_targets[:, 7 : self.num_hand_arm_dofs] = tensor_clamp(
+            self.cur_targets[:, 7 : self.num_hand_arm_dofs],
+            self.arm_hand_dof_lower_limits[7 : self.num_hand_arm_dofs],
+            self.arm_hand_dof_upper_limits[7 : self.num_hand_arm_dofs],
+        )
+
+        if self._DO_NOT_MOVE:
+            self.cur_targets[:, :] = self.prev_targets[:, :]
+
+        self.prev_targets[:, :] = self.cur_targets[:, :]
         desired_pose = self.joint_targets
-        # self.cur_targets[:, self.num_hand_arm_dofs : self.num_hand_arm_dofs * 2] = se
+        if self.sanity_check_controls:
+            self.cur_targets[:, :] = desired_pose
         self.green_robot_arm_hand_dof_pos[:] = desired_pose
         self.green_robot_arm_hand_dof_vel.zero_()
 
         green_robot_indices = self.green_robot_indices.to(torch.int32)
         self.deferred_set_dof_state_tensor_indexed([green_robot_indices])
         self.set_dof_state_tensor_indexed()
+        self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(self.cur_targets))
+
+        if self.force_scale > 0.0:
+            self.rb_forces *= torch.pow(self.force_decay, self.dt / self.force_decay_interval)
+
+            # apply new forces
+            force_indices = (torch.rand(self.num_envs, device=self.device) < self.random_force_prob).nonzero()
+            self.rb_forces[force_indices, self.object_rb_handles, :] = (
+                torch.randn(self.rb_forces[force_indices, self.object_rb_handles, :].shape, device=self.device)
+                * self.object_rb_masses
+                * self.force_scale
+            )
+
+            self.gym.apply_rigid_body_force_tensors(
+                self.sim, gymtorch.unwrap_tensor(self.rb_forces), None, gymapi.ENV_SPACE
+            )
+        
+        if self.good_reset_boundary > 0:
+            self.temp_root_states_buf[:, self.temp_buffer_index] = self.root_state_tensor.reshape(self.num_envs, -1, self.root_state_tensor.shape[1:]).cpu()
+            self.temp_dof_states_buf[:, self.temp_buffer_index] = self.dof_state.reshape(self.num_envs, -1, self.dof_state.shape[1:]).cpu()
+            self.temp_buffer_index += 1
+        # apply torques
+        if self.privileged_actions:
+            torque_actions = torque_actions.unsqueeze(1)
+            torque_amount = self.privileged_actions_torque
+            torque_actions *= torque_amount
+            self.action_torques[:, self.object_rb_handles, :] = torque_actions
+            self.gym.apply_rigid_body_force_tensors(
+                self.sim, None, gymtorch.unwrap_tensor(self.action_torques), gymapi.ENV_SPACE
+            )
+        
 

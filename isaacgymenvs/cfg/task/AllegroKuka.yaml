@@ -141,6 +141,10 @@ env:
   withTableForceSensor: False
   curriculumSuccessRatio: 0.6
 
+  # some pose_reaching_env specific settings
+  use_green_robot: True
+  sanity_check_controls: False
+
   asset:
     # Whis was the original kuka_allegro asset.
     # This URDF has some issues, i.e. weights of fingers are too high and the mass of the Allegro hand is too

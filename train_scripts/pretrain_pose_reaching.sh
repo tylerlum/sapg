@@ -1,7 +1,7 @@
 #!/bin/bash
 
-CUSTOM_EXPERIMENT_NAME="JOINT_POS_TARGETS_AS_BLUE_ROBOT"
-WANDB_GROUP="PRETRAIN"
+CUSTOM_EXPERIMENT_NAME="SANITY_CHECK_CONTROLS"
+WANDB_GROUP="POSE_REACHING"
 
 WANDB_ENTITY="kk837"
 WANDB_PROJECT="sapg_allegro_kuka_reorientation"
@@ -44,3 +44,5 @@ task.env.useRelativeControl=False \
 task.task.randomize=False \
 task.task.randomization_params.actor_params.object.scale.range=[0.999,1.001] \
 task.task.randomization_params.actor_params.allegro.scale.range=[0.999,1.001] \
+task.env.use_green_robot=True \
+task.env.sanity_check_controls=False \
