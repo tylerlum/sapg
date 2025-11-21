@@ -295,6 +295,19 @@ class AllegroKukaPoseReaching(AllegroKukaBase):
         self.current_joint_error = error
         self.current_joint_abs_error = torch.abs(error)
 
+        CHECK_WITH_COMPUTED_OBS = False
+        if CHECK_WITH_COMPUTED_OBS:
+            from isaacgymenvs.utils.observation_action_utils_sharpa_pose_reaching import compute_observation
+            computed_obs = compute_observation(
+                q=self.arm_hand_dof_pos,
+                qd=self.arm_hand_dof_vel,
+                joint_targets=self.joint_targets,
+            )
+            assert computed_obs.shape == self.obs_buf.shape, f"computed_obs.shape: {computed_obs.shape}, expected: {self.obs_buf.shape}"
+            diff = (self.obs_buf - computed_obs).abs().max()
+            print(f"diff: {diff}")
+            breakpoint()
+
         return self.obs_buf, self.reward_obs_offset
 
     def compute_kuka_reward(self):
@@ -438,6 +451,26 @@ class AllegroKukaPoseReaching(AllegroKukaBase):
             self.arm_hand_dof_lower_limits[7 : self.num_hand_arm_dofs],
             self.arm_hand_dof_upper_limits[7 : self.num_hand_arm_dofs],
         )
+
+        CHECK_WITH_COMPUTED_JOINT_POS_TARGETS = False
+        if CHECK_WITH_COMPUTED_JOINT_POS_TARGETS:
+            from isaacgymenvs.utils.observation_action_utils_sharpa_pose_reaching import compute_joint_pos_targets
+            computed_joint_pos_targets = compute_joint_pos_targets(
+                actions=self.actions,
+                prev_targets=self.prev_targets[:, :self.num_hand_arm_dofs],
+                hand_moving_average=self.hand_moving_average,
+                arm_moving_average=self.arm_moving_average,
+                hand_dof_speed_scale=self.hand_dof_speed_scale,
+                dt=self.dt,
+            )
+            our_robot_targets = self.cur_targets[:, :self.num_hand_arm_dofs]
+            assert our_robot_targets.shape == computed_joint_pos_targets.shape, f"{our_robot_targets.shape} != {computed_joint_pos_targets.shape}"
+            diff = (our_robot_targets - computed_joint_pos_targets).abs().max()
+            print(f"diff: {diff}")
+            breakpoint()
+
+        if joint_pos_targets is not None:
+            self.cur_targets[:, :self.num_hand_arm_dofs] = joint_pos_targets.clone()
 
         # self.prev_targets[:, :] = self.cur_targets[:, :].clone()
         # desired_pose = self.joint_targets.clone()
