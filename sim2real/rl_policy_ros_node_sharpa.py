@@ -469,8 +469,8 @@ class RLPolicyNode:
                 # normalized_action = torch.zeros(1, self.num_actions, device=self.device)
                 assert_equals(normalized_action.shape, (1, self.num_actions))
 
-                # HAND_MOVING_AVERAGE = 0.05
-                HAND_MOVING_AVERAGE = 0.1
+                HAND_MOVING_AVERAGE = 0.05
+                # HAND_MOVING_AVERAGE = 0.1
                 ARM_MOVING_AVERAGE = 0.01
                 # HAND_DOF_SPEED_SCALE = 2.5
                 # HAND_DOF_SPEED_SCALE = 4.075
@@ -544,10 +544,10 @@ class RLPolicyNode:
         # object_scales = np.array([3.0, 0.25, 0.2])
 
         # blue_cuboid (rearrange)
-        # object_scales = np.array([4.0, 1.0, 0.75])
+        object_scales = np.array([4.0, 1.0, 0.75])
 
         # blue_cuboid_real_iphone
-        object_scales = np.array([3.0, 1.4, 0.2])
+        # object_scales = np.array([3.0, 1.4, 0.2])
 
         # # blue_cuboid_fake_iphone
         # object_scales = np.array([2.0, 1.25, 0.5])

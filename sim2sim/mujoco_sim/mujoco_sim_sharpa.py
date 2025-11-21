@@ -181,9 +181,9 @@ class MujocoSim:
         object_free_joint.name = "object_free_joint"
         object_free_joint.type = mujoco.mjtJoint.mjJNT_FREE
 
-        ADD_BOX_OBJECT = False
+        ADD_BOX_OBJECT = True
         if ADD_BOX_OBJECT:
-            BOX_LEN_X, BOX_LEN_Y, BOX_LEN_Z = 0.30, 0.03, 0.02
+            BOX_LEN_X, BOX_LEN_Y, BOX_LEN_Z = 0.20, 0.05, 0.0375
 
             object_geom = object_body.add_geom()
             object_geom.name = "object_geom"

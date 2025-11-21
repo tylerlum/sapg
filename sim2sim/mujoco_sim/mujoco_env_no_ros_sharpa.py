@@ -29,7 +29,7 @@ def info(message: str):
     print(colored(message, "green"))
 
 
-class MujocoEnvNoRos:
+class MujocoEnvNoRosSharpa:
     def __init__(
         self,
         sim: MujocoSim,
@@ -170,7 +170,7 @@ def main():
         device=device, robot_name="iiwa14_left_sharpa_adjusted_restricted"
     )
 
-    mujoco_env_no_ros = MujocoEnvNoRos(
+    mujoco_env_no_ros = MujocoEnvNoRosSharpa(
         sim=sim,
         object_scales=OBJECT_SCALES,
         chain=chain,

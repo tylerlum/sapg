@@ -235,9 +235,9 @@ class MujocoEnvRosSharpa:
 
 def main():
     sim = MujocoSim(MujocoSimConfig(
-        enable_viewer=True,
-        # sim_dt=1.0 / 500.0,
-        sim_dt=1.0 / 2000.0,
+        enable_viewer=False,
+        sim_dt=1.0 / 500.0,
+        # sim_dt=1.0 / 2000.0,
         # object_name="blue_cuboid_real_iphone",
         object_name="blue_cuboid",
     ))
