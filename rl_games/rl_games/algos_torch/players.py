@@ -104,9 +104,7 @@ class PpoPlayerContinuous(BasePlayer):
 
             env_state = checkpoint.get('env_state', None)
             if self.env is not None and env_state is not None:
-                # HACK
-                # self.env.set_env_state(env_state)
-                pass
+                self.env.set_env_state(env_state)
 
         self.loaded_checkpoint = fn
         
