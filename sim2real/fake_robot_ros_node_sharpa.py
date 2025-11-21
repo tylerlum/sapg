@@ -10,7 +10,7 @@ from termcolor import colored
 NUM_ARM_JOINTS = 7
 NUM_HAND_JOINTS = 22
 
-DEFAULT_ARM_Q = np.array([-1.571, 1.571, -0.000, 1.376, -0.000, 1.485, 2.358])
+DEFAULT_ARM_Q = np.array([-1.571, 1.571, -0.000, 1.376, -0.000, 1.485, 1.308])
 
 DEFAULT_HAND_Q = np.zeros(22)
 

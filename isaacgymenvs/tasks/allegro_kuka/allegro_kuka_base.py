@@ -42,7 +42,8 @@ from isaacgym import gymapi, gymtorch, gymutil
 from torch import Tensor
 
 from isaacgymenvs.tasks.allegro_kuka.allegro_kuka_utils import DofParameters, populate_dof_properties
-from isaacgymenvs.utils.observation_action_utils import compute_observation, OBS_NAMES, compute_joint_pos_targets, create_chain_and_serial_chain
+from isaacgymenvs.utils.observation_action_utils_sharpa import compute_observation, OBS_NAMES, compute_joint_pos_targets, create_chain_and_serial_chain
+
 from isaacgymenvs.tasks.base.vec_task import VecTask
 from isaacgymenvs.tasks.allegro_kuka.generate_cuboids import (
     generate_big_cuboids,
@@ -53,6 +54,7 @@ from isaacgymenvs.tasks.allegro_kuka.generate_cuboids import (
 from isaacgymenvs.utils.torch_jit_utils import *
 from isaacgymenvs.utils.objects import NAME_TO_OBJECT
 from isaacgymenvs.utils.object_trajectories import (
+    get_cuboid_trajectory,
     get_hammer_trajectory,
     get_hairbrush_trajectory,
     get_screwdriver_trajectory,
@@ -609,7 +611,7 @@ class AllegroKukaBase(VecTask):
             need_vhacds = [obj.need_vhacd]
 
         elif object_type == "all_hammers":
-            hammer_names = ["scanned_hammer_1", "scanned_hammer_2", "scanned_hammer_2_coacd", "YcbHammer", "cuboidal_hammer", "cylindrical_hammer", "cuboidal_hammer_2x", "cylindrical_hammer_2x"]
+            hammer_names = ["scanned_hammer_1", "scanned_hammer_2", "scanned_hammer_2_coacd", "scanned_hammer_2_coacd2", "YcbHammer", "cuboidal_hammer", "cylindrical_hammer", "cuboidal_hammer_2x", "cylindrical_hammer_2x"]
             object_asset_files = [NAME_TO_OBJECT[name].filepath for name in hammer_names]
             object_asset_scales = [NAME_TO_OBJECT[name].scale for name in hammer_names]
             need_vhacds = [NAME_TO_OBJECT[name].need_vhacd for name in hammer_names]
@@ -652,7 +654,7 @@ class AllegroKukaBase(VecTask):
             # Many objects share a trajectory
             # Some objects don't have a fixed trajectory, so we raise an error
             HAMMER_TRAJECTORY_OBJECTS = set(
-                ["scanned_hammer_1", "scanned_hammer_2", "scanned_hammer_2_coacd", "YcbHammer", "cuboidal_hammer", "cylindrical_hammer", "cuboidal_hammer_2x", "cylindrical_hammer_2x",]
+                ["scanned_hammer_1", "scanned_hammer_2", "scanned_hammer_2_coacd", "scanned_hammer_2_coacd2", "YcbHammer", "cuboidal_hammer", "cylindrical_hammer", "cuboidal_hammer_2x", "cylindrical_hammer_2x",]
             )
             if object_type in HAMMER_TRAJECTORY_OBJECTS:
                 self.trajectory_states = get_hammer_trajectory(init_state, device=self.device)
@@ -668,6 +670,8 @@ class AllegroKukaBase(VecTask):
                 self.trajectory_states = get_phone_trajectory(init_state, device=self.device)
             elif object_type in ["all_hammers", "all_cuboidal_hammers", "all_cylindrical_hammers", "all_cuboidal_and_cylindrical_hammers"]:
                 self.trajectory_states = get_hammer_trajectory(init_state, device=self.device)
+            elif object_type in ["cuboid", "blue_cuboid", "blue_cuboid_thick", "blue_cuboid_real_iphone", "blue_cuboid_fake_iphone", "blue_cuboid_real_hammer", "blue_cuboid_fake_hammer", "blue_cuboid_real_screwdriver"]:
+                self.trajectory_states = get_cuboid_trajectory(init_state, device=self.device)
             else:
                 raise ValueError(f"The following object_type does not have a fixed trajectory: {object_type}, cannot use USE_FIXED_SET_OF_GOAL_STATES with this object type")
 
@@ -1474,7 +1478,23 @@ class AllegroKukaBase(VecTask):
             self.curr_fingertip_distances.max(dim=-1).values > 1.5, ones, zeros
         )
 
-        resets = self.reset_buf | object_z_low | max_consecutive_successes_reached | max_episode_length_reached | table_force_too_high | hand_far_from_object
+        # Reset when dropped
+        # Dropped means the object was lifted and then dropped back down to the table
+        if self.cfg["env"]["resetWhenDropped"]:
+            # As of right now:
+            # - table center is at 0.38m and is 0.3m tall, so its surface is at 0.38m + 0.15m = 0.53m
+            # - object init state is at 0.63m (table height 0.38m + object relative to table height 0.25m) with +/-0.02m variation
+            # - The goal states are sampled in 0.8m + [-0.12m, 0.25m] = [0.68m, 1.05m]
+            # - Right now, liftedBonusThreshold is 0.15m, so the object is lifted if it is at least 0.15m - 0.05m above init state, which is 0.73m
+            # - We don't want it to flicker between first lifted then suddenly dropped if it slightly goes down, so we need hysteresis here
+            # - Thus, we choose a threshold of object init state at 0.63m, so there is 0.1m gap below lifted threshold and 0.05m gap below goal states
+            # - And there is 0.1 gap above the table surface, so dropping the object on the table will be detected as dropped
+            dropped_z = self.object_init_state[:, 2]
+            dropped = torch.where(self.object_pos[:, 2] < dropped_z, ones, zeros) * self.lifted_object
+        else:
+            dropped = zeros
+
+        resets = self.reset_buf | object_z_low | max_consecutive_successes_reached | max_episode_length_reached | table_force_too_high | hand_far_from_object | dropped
         resets = self._extra_reset_rules(resets)
 
         # Print resets when there is only one environment
@@ -1486,6 +1506,7 @@ class AllegroKukaBase(VecTask):
             print(f"max_episode_length_reached: {max_episode_length_reached.item()}")
             print(f"table_force_too_high: {table_force_too_high.item()}")
             print(f"hand_far_from_object: {hand_far_from_object.item()}")
+            print(f"dropped: {dropped.item()}")
             print(f"resets: {resets.item()}")
             print("=" * 100)
             print(f"self.successes: {self.successes.item()}")
@@ -1502,6 +1523,7 @@ class AllegroKukaBase(VecTask):
                 "max_episode_length_reached": 0,
                 "table_force_too_high": 0,
                 "hand_far_from_object": 0,
+                "dropped": 0,
             }
         # Current means this recent step (across all environments)
         # Recent means the last MAX_HISTORY_LENGTH resets
@@ -1516,6 +1538,7 @@ class AllegroKukaBase(VecTask):
             "max_episode_length_reached": max_episode_length_reached.sum().item(),
             "table_force_too_high": table_force_too_high.sum().item(),
             "hand_far_from_object": hand_far_from_object.sum().item(),
+            "dropped": dropped.sum().item(),
         }
 
         # Update counts
@@ -1933,7 +1956,8 @@ class AllegroKukaBase(VecTask):
             import pytorch_kinematics as pk
             # Create chain and palm_serial_chain from URDF
             if not hasattr(self, "chain") or not hasattr(self, "palm_serial_chain"):
-                self.chain, self.palm_serial_chain = create_chain_and_serial_chain(device=self.device, robot_name=self.robot_name)
+                # self.chain, self.palm_serial_chain = create_chain_and_serial_chain(device=self.device, robot_name="iiwa14_left_sharpa_between")
+                self.chain, self.palm_serial_chain = create_chain_and_serial_chain(device=self.device, robot_name="iiwa14_left_sharpa_adjusted_restricted")
 
             computed_obs = compute_observation(
                 q=self.arm_hand_dof_pos,
@@ -2083,6 +2107,9 @@ class AllegroKukaBase(VecTask):
                 new_object_rot[:] = 0.0 #HACK
                 new_object_rot[:, -1] = 1.0 #HACK  xyzw
 
+                from scipy.spatial.transform import Rotation as R
+                new_object_rot[:] = torch.from_numpy(R.from_euler("z", 180, degrees=True).as_quat()).float().to(self.device)[None]
+
             # indices 3,4,5,6 correspond to the rotation quaternion
             self.root_state_tensor[obj_indices, 3:7] = new_object_rot
 
@@ -2200,6 +2227,7 @@ class AllegroKukaBase(VecTask):
 
         # reset allegro hand
         if len(env_ids) > 0 and reset_buf_idxs is None and tensor_reset:
+            print("IN RESET")
             delta_max = self.arm_hand_dof_upper_limits - self.hand_arm_default_dof_pos
             delta_min = self.arm_hand_dof_lower_limits - self.hand_arm_default_dof_pos
 
@@ -2264,7 +2292,16 @@ class AllegroKukaBase(VecTask):
         self.deferred_set_actor_root_state_tensor_indexed(self._extra_object_indices(env_ids))
 
     def pre_physics_step(self, actions, joint_pos_targets: Optional[torch.Tensor] = None):
-        PRINT_TIME_SINCE_LAST_STEP = False
+        # print(f"joint_names = {self.joint_names}")
+        # print(f"self.joint_lower_limits = {self.joint_lower_limits}")
+        # print(f"self.joint_upper_limits = {self.joint_upper_limits}")
+        # print(f"self.arm_hand_dof_lower_limits = {self.arm_hand_dof_lower_limits}")
+        # print(f"self.arm_hand_dof_upper_limits = {self.arm_hand_dof_upper_limits}")
+        # print(f"self.full_state_size = {self.full_state_size}")
+        # print(f"self.object_rb_masses = {self.object_rb_masses}")
+        # breakpoint()
+
+        PRINT_TIME_SINCE_LAST_STEP = True
         if PRINT_TIME_SINCE_LAST_STEP:
             if not hasattr(self, "last_time"):
                 self.last_time = time.time()

@@ -119,7 +119,7 @@ class RosSnapshot:
 
         if self.sharpa_joint_cmd is None:
             warn_every("sharpa_joint_cmd is None", n_seconds=1.0)
-            sharpa_joint_cmd = np.zeros(NUM_HAND_JOINTS)
+            sharpa_joint_cmd = np.zeros(NUM_HAND_JOINTS) + 0.5  # Not 0 so it is obvious when not there
         else:
             sharpa_joint_cmd = self.sharpa_joint_cmd
 
@@ -205,7 +205,8 @@ class ViserVisualizationNode:
         # Load robot URDF with a fixed base
         # robot_urdf_path = get_repo_root_dir() / "assets/urdf/kuka_allegro_description/iiwa14_real.urdf"
         # robot_urdf_path = get_repo_root_dir() / "assets/urdf/kuka_allegro_description/kuka_allegro_touch_sensor.urdf"
-        robot_urdf_path = get_repo_root_dir() / "assets/urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted.urdf"
+        # robot_urdf_path = get_repo_root_dir() / "assets/urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted.urdf"
+        robot_urdf_path = get_repo_root_dir() / "assets/urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted_restricted.urdf"
         assert robot_urdf_path.exists(), f"robot_urdf_path not found: {robot_urdf_path}"
 
         SERVER.scene.add_frame(
@@ -275,8 +276,13 @@ class ViserVisualizationNode:
         from isaacgymenvs.utils.objects import NAME_TO_OBJECT
         object_name = rospy.get_param("/object_name", None)
         if object_name is None:
-            DEFAULT_OBJECT_NAME = "hairbrush_modified"
+            DEFAULT_OBJECT_NAME = "blue_cuboid"
+            # DEFAULT_OBJECT_NAME = "blue_cuboid_fake_hammer"
+            # DEFAULT_OBJECT_NAME = "blue_cuboid_real_hammer"
+            # DEFAULT_OBJECT_NAME = "blue_cuboid_real_iphone"
+            # DEFAULT_OBJECT_NAME = "mallet"
             # DEFAULT_OBJECT_NAME = "scanned_hammer_2"
+            # DEFAULT_OBJECT_NAME = "hairbrush"
             warn(f"Using default object name: {DEFAULT_OBJECT_NAME}")
             object_name = DEFAULT_OBJECT_NAME
 

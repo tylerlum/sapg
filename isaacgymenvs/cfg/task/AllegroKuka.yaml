@@ -140,6 +140,7 @@ env:
   VISUALIZE_PD_TARGET_AS_BLUE_ROBOT: False
   withTableForceSensor: False
   curriculumSuccessRatio: 0.6
+  resetWhenDropped: False
 
   # some pose_reaching_env specific settings
   use_green_robot: True
