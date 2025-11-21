@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CUSTOM_EXPERIMENT_NAME="SANITY_CHECK_CONTROLS"
+CUSTOM_EXPERIMENT_NAME="CHANGE_REWARD_TO_MEAN_ABS_ERROR"
 WANDB_GROUP="POSE_REACHING"
 
 WANDB_ENTITY="kk837"
@@ -17,7 +17,7 @@ task/env=pose_reaching \
 task.env.VISUALIZE_PD_TARGET_AS_BLUE_ROBOT=False \
 ++task.env.useSparseReward=False \
 headless=True \
-task.env.numEnvs=12288 \
+task.env.numEnvs=24576 \
 train.params.config.minibatch_size=98304 \
 multi_gpu=False \
 train.params.config.good_reset_boundary=0 \
@@ -26,7 +26,7 @@ train.params.config.use_others_experience=lf \
 train.params.config.off_policy_ratio=1.0 \
 train.params.config.expl_type=mixed_expl_learn_param \
 train.params.config.expl_reward_type=entropy \
-train.params.config.expl_coef_block_size=2048 \
+train.params.config.expl_coef_block_size=4096 \
 train.params.config.expl_reward_coef_scale=0.005 \
 train.params.network.space.continuous.fixed_sigma=coef_cond \
 wandb_project=${WANDB_PROJECT} \
@@ -46,3 +46,6 @@ task.task.randomization_params.actor_params.object.scale.range=[0.999,1.001] \
 task.task.randomization_params.actor_params.allegro.scale.range=[0.999,1.001] \
 task.env.use_green_robot=True \
 task.env.sanity_check_controls=False \
+task.env.armMovingAverage=0.1 \
+task.env.handMovingAverage=0.1 \
+# task.env.episodeLength=100 \

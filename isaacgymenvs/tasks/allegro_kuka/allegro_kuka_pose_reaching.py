@@ -65,15 +65,13 @@ class AllegroKukaPoseReaching(AllegroKukaBase):
         self.current_joint_error = torch.zeros_like(self.joint_targets)
         self.current_joint_abs_error = torch.zeros_like(self.joint_targets)
 
-        self.joint_target_noise = self.cfg["env"].get("targetJointNoise", 0.1)
+        self.joint_target_noise = self.cfg["env"].get("targetJointNoise", 0.5)
         self.joint_success_tolerance = self.cfg["env"].get("jointSuccessTolerance", 0.05)
         self.kuka_joint_success_tolerance = self.cfg["env"].get("kukaJointSuccessTolerance", 0.01)
         self.hand_joint_success_tolerance = self.cfg["env"].get("handJointSuccessTolerance", 0.05)
         self.joint_error_scale = self.cfg["env"].get("jointErrorRewScale", 1.0)
-        self.joint_velocity_penalty_scale = self.cfg["env"].get("jointVelocityPenaltyScale", 0.01)
+        self.joint_velocity_penalty_scale = self.cfg["env"].get("jointVelocityPenaltyScale", 0.0)
         
-
-
         # Dummy buffers for base-class debug drawing helpers
         self.object_state = torch.zeros((self.num_envs, 13), dtype=torch.float, device=self.device)
         self.object_pos = torch.zeros((self.num_envs, 3), dtype=torch.float, device=self.device)
@@ -230,10 +228,10 @@ class AllegroKukaPoseReaching(AllegroKukaBase):
 
         self.allegro_hand_indices = to_torch(self.allegro_hand_indices, dtype=torch.long, device=self.device)
         self.allegro_fingertip_handles = to_torch(self.allegro_fingertip_handles, dtype=torch.long, device=self.device)
-        self.object_indices = self.allegro_hand_indices.clone()
-        self.table_indices = self.allegro_hand_indices.clone()
-        self.object_rb_handles = to_torch([self.allegro_palm_handle], dtype=torch.long, device=self.device)
-        self.object_rb_masses = torch.ones_like(self.object_rb_handles, dtype=torch.float)
+        # self.object_indices = self.allegro_hand_indices.clone()
+        # self.table_indices = self.allegro_hand_indices.clone()
+        # self.object_rb_handles = to_torch([self.allegro_palm_handle], dtype=torch.long, device=self.device)
+        # self.object_rb_masses = torch.ones_like(self.object_rb_handles, dtype=torch.float)
 
         self.object_init_state = torch.zeros((self.num_envs, 13), dtype=torch.float, device=self.device)
         self.goal_states = self.object_init_state.clone()
@@ -276,6 +274,13 @@ class AllegroKukaPoseReaching(AllegroKukaBase):
     # ------------------------------------------------------------------ #
     def compute_observations(self):
         self.gym.refresh_dof_state_tensor(self.sim)
+        self.gym.refresh_actor_root_state_tensor(self.sim)
+        self.gym.refresh_rigid_body_state_tensor(self.sim)
+        if self.obs_type == "full_state":
+            if self.with_fingertip_force_sensors or self.with_table_force_sensor:
+                self.gym.refresh_force_sensor_tensor(self.sim)
+            if self.with_dof_force_sensors:
+                self.gym.refresh_dof_force_tensor(self.sim)
 
         joint_pos = self.arm_hand_dof_pos[:, : self.num_hand_arm_dofs]
         joint_vel = self.arm_hand_dof_vel[:, : self.num_hand_arm_dofs]
@@ -299,15 +304,22 @@ class AllegroKukaPoseReaching(AllegroKukaBase):
             self.arm_hand_dof_vel[:, : self.num_hand_arm_dofs] ** 2,
             dim=1,
         )
-
-        reward = -self.joint_error_scale * joint_error_mse - self.joint_velocity_penalty_scale * joint_vel_penalty
+        abs_error = torch.abs(joint_error)
 
         max_abs_error = self.current_joint_abs_error.max(dim=1).values
+        reward = -torch.mean(abs_error, dim=1)
 
+        # old threshold
         kuka_joint_mse = torch.mean(joint_error[:, :self.num_arm_dofs] ** 2, dim=1)
         hand_joint_mse = torch.mean(joint_error[:, self.num_arm_dofs:] ** 2, dim=1)
         kuka_near_goal = kuka_joint_mse <= self.kuka_joint_success_tolerance
         hand_near_goal = hand_joint_mse <= self.hand_joint_success_tolerance
+
+        # new threshold
+        # kuka_abs_error = torch.mean(abs_error[:, :self.num_arm_dofs], dim=1)
+        # hand_abs_error = torch.mean(abs_error[:, self.num_arm_dofs:], dim=1)
+        # kuka_near_goal = kuka_abs_error <= self.kuka_joint_success_tolerance
+        # hand_near_goal = hand_abs_error <= self.hand_joint_success_tolerance
         near_goal = kuka_near_goal & hand_near_goal
         print(f"near_goal: {near_goal[0].item()}")
         print(f"joint_error_mse: {joint_error_mse[0].item()}")
@@ -382,6 +394,9 @@ class AllegroKukaPoseReaching(AllegroKukaBase):
         random_reset_goal_env_ids = uniques[counts == 2]
         self.reset_target_pose(random_reset_goal_env_ids, None)
         self.reset_idx(good_reset_goal_env_ids, reset_buf_idxs, False)
+        # if env 0 is reset, then print a message
+        if 0 in reset_env_ids:
+            print("Environment 0 was reset--------------------------------")
 
         if len(reset_env_ids) > 0:
             self.reset_idx(random_reset_env_ids, None)
@@ -424,13 +439,11 @@ class AllegroKukaPoseReaching(AllegroKukaBase):
             self.arm_hand_dof_upper_limits[7 : self.num_hand_arm_dofs],
         )
 
-        if self._DO_NOT_MOVE:
-            self.cur_targets[:, :] = self.prev_targets[:, :]
-
-        self.prev_targets[:, :] = self.cur_targets[:, :]
-        desired_pose = self.joint_targets
+        self.prev_targets[:, :] = self.cur_targets[:, :].clone()
+        desired_pose = self.joint_targets.clone()
         if self.sanity_check_controls:
-            self.cur_targets[:, :] = desired_pose
+            self.cur_targets[:, :self.num_hand_arm_dofs] = desired_pose[:]
+        self.cur_targets[:, self.num_hand_arm_dofs:] = desired_pose.clone()
         self.green_robot_arm_hand_dof_pos[:] = desired_pose
         self.green_robot_arm_hand_dof_vel.zero_()
 
@@ -438,34 +451,5 @@ class AllegroKukaPoseReaching(AllegroKukaBase):
         self.deferred_set_dof_state_tensor_indexed([green_robot_indices])
         self.set_dof_state_tensor_indexed()
         self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(self.cur_targets))
-
-        if self.force_scale > 0.0:
-            self.rb_forces *= torch.pow(self.force_decay, self.dt / self.force_decay_interval)
-
-            # apply new forces
-            force_indices = (torch.rand(self.num_envs, device=self.device) < self.random_force_prob).nonzero()
-            self.rb_forces[force_indices, self.object_rb_handles, :] = (
-                torch.randn(self.rb_forces[force_indices, self.object_rb_handles, :].shape, device=self.device)
-                * self.object_rb_masses
-                * self.force_scale
-            )
-
-            self.gym.apply_rigid_body_force_tensors(
-                self.sim, gymtorch.unwrap_tensor(self.rb_forces), None, gymapi.ENV_SPACE
-            )
-        
-        if self.good_reset_boundary > 0:
-            self.temp_root_states_buf[:, self.temp_buffer_index] = self.root_state_tensor.reshape(self.num_envs, -1, self.root_state_tensor.shape[1:]).cpu()
-            self.temp_dof_states_buf[:, self.temp_buffer_index] = self.dof_state.reshape(self.num_envs, -1, self.dof_state.shape[1:]).cpu()
-            self.temp_buffer_index += 1
-        # apply torques
-        if self.privileged_actions:
-            torque_actions = torque_actions.unsqueeze(1)
-            torque_amount = self.privileged_actions_torque
-            torque_actions *= torque_amount
-            self.action_torques[:, self.object_rb_handles, :] = torque_actions
-            self.gym.apply_rigid_body_force_tensors(
-                self.sim, None, gymtorch.unwrap_tensor(self.action_torques), gymapi.ENV_SPACE
-            )
         
 
