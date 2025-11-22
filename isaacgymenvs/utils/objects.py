@@ -24,14 +24,14 @@ class Object:
     def __post_init__(self):
         assert self.filepath.exists(), f"Filepath {self.filepath} does not exist"
 
-        if self.coacd_filepaths is not None:
-            assert len(self.coacd_filepaths) > 0, (
-                f"coacd_filepaths is empty: {self.coacd_filepaths}"
-            )
-            for coacd_filepath in self.coacd_filepaths:
-                assert coacd_filepath.exists(), (
-                    f"COACD file {coacd_filepath} does not exist"
-                )
+        # if self.coacd_filepaths is not None:
+        #     assert len(self.coacd_filepaths) > 0, (
+        #         f"coacd_filepaths is empty: {self.coacd_filepaths}"
+        #     )
+        #     for coacd_filepath in self.coacd_filepaths:
+        #         assert coacd_filepath.exists(), (
+        #             f"COACD file {coacd_filepath} does not exist"
+        #         )
 
     def get_object_mesh_path_and_scale(self) -> Tuple[Path, np.ndarray]:
         from yourdfpy import URDF

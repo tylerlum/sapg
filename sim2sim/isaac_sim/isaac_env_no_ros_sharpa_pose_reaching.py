@@ -54,7 +54,7 @@ def main():
     CONFIG_PATH = Path(
         # "/home/tylerlum/github_repos/sapg/closed_loop_testing_sharpa/config.yaml"
         # "/home/tylerlum/github_repos/sapg/closed_loop_testing_sharpa_hammer_2/config.yaml"
-        "/home/tylerlum/github_repos/sapg/closed_loop_testing_pose_reaching/config.yaml"
+        "/juno/u/kedia/sapg/closed_loop_testing/pose_reaching.yaml"
     )
     assert Path(CONFIG_PATH).exists()
     CHECKPOINT_PATH = Path(
