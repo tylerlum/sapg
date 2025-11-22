@@ -3,6 +3,11 @@
 # TYLER README (Last Updated: November 4, 2025)
 
 ## Rough Installation Instructions
+
+We need two conda envs: one for training with isaacgym (requires Python 3.8) and one for sim2real (Robostack requires Python 3.11+).
+
+### IsaacGym Env
+
 ```
 conda create -n sapg_env python=3.8  # isaacgym requires Python 3.8
 conda activate sapg_env
@@ -50,7 +55,52 @@ cd <this repo>
 pip install -e .
 ```
 
-To use with ROS, we use RoboStack with ROS1 Noetic: https://robostack.github.io/noetic.html. This requires a separate conda env because it does not support Python 3.8.
+### Sim2Real Env
+
+We use RoboStack with ROS1 Noetic: https://robostack.github.io/noetic.html.
+
+```
+conda create -n sapg_ros_env -c conda-forge -c robostack-noetic ros-noetic-desktop python=3.11  # Robostack requires Python 3.11+
+conda activate sapg_ros_env
+conda config --env --add channels robostack-noetic
+
+# Misc
+pip install \
+  absl-py aiohttp aiosignal async-timeout attrs backports.functools-lru-cache \
+  blinker cachetools certifi cffi charset-normalizer click cryptography debugpy decorator \
+  google-auth google-auth-oauthlib grpcio idna importlib-metadata ipykernel ipython \
+  jupyter-client jupyter-core markdown markupsafe matplotlib matplotlib-inline nest-asyncio \
+  numpy oauthlib packaging parso pexpect pickleshare pillow prompt-toolkit protobuf psutil \
+  pyasn1 pyasn1-modules pycparser pygments pyjwt pyopenssl pysocks python-dateutil \
+  torch torchvision pyyaml pyzmq requests requests-oauthlib rsa scipy setuptools six \
+  tensorboard tensorboard-data-server tensorboard-plugin-wit tk tornado traitlets \
+  typing-extensions urllib3 werkzeug wheel \
+  antlr4-python3-runtime cloudpickle cycler docker-pycreds fasteners fonttools freetype-py \
+  gitpython gym gym-notices hydra-core imageio jinja2 kiwisolver lxml matplotlib networkx \
+  ninja omegaconf opencv-python pathtools promise pyglet pyopengl pyparsing pyrender pysdf \
+  pyvirtualdisplay sentry-sdk setproctitle shortuuid smmap tensorboardx termcolor transforms3d \
+  trimesh urdfpy wandb warp-lang
+
+# Imageio for saving video
+pip install "imageio[ffmpeg]"
+
+# Viser
+pip install viser
+
+# Pytorch kinematics
+pip install pytorch_kinematics
+
+# Mujoco
+pip install mujoco
+
+# Install this repo's rl_games
+cd <this repo>/rl_games
+pip install -e .
+
+# Install this repo
+cd <this repo>
+pip install -e .
+```
 
 ## Pretrain (Standard Cuboid)
 
