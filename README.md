@@ -104,6 +104,13 @@ pip install -e .
 
 ## Pretrain (Standard Cuboid)
 
+Either use our training script:
+```
+bash train_scripts/pretrain.sh
+```
+
+Or use the following command:
+
 ```
 python -m isaacgymenvs.train \
 task=AllegroKukaLSTM \
@@ -136,6 +143,13 @@ task.env.object_type='cuboid'
 
 
 ## Finetune (Marker)
+
+Either use our training script:
+```
+bash train_scripts/finetune.sh
+```
+
+Or use the following command:
 
 ```
 python -m \
@@ -172,6 +186,13 @@ task.env.use_fixed_init_object_pose=False
 ```
 
 ## Play Pretrained Policy
+
+Either use our training script:
+```
+bash train_scripts/play.sh
+```
+
+Or use the following command:
 
 ```
 python -m isaacgymenvs.train \
