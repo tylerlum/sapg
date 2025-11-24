@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CUSTOM_EXPERIMENT_NAME="CHANGE_REWARD_TO_MEAN_ABS_ERROR"
+CUSTOM_EXPERIMENT_NAME="OLD_PRE_PHYSICS_STEP_NO_FORCE_CLONE_DESIRED_POSE_CLONE_PREV_TARGETS"
 WANDB_GROUP="POSE_REACHING"
 
 WANDB_ENTITY="kk837"
@@ -48,4 +48,5 @@ task.env.use_green_robot=True \
 task.env.sanity_check_controls=False \
 task.env.armMovingAverage=0.1 \
 task.env.handMovingAverage=0.1 \
+task.env.forceScale=0.0 \
 # task.env.episodeLength=100 \

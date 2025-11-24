@@ -1,9 +1,9 @@
 #!/bin/bash
 
-CUSTOM_EXPERIMENT_NAME="DR_RELATIVE_SLOW"
+CUSTOM_EXPERIMENT_NAME="FAST_PRETRAIN_BASELINE"
 WANDB_GROUP="PRETRAIN"
 
-WANDB_ENTITY="tylerlum"
+WANDB_ENTITY="kk837"
 WANDB_PROJECT="sapg_allegro_kuka_reorientation"
 OBJECT_TYPE="cuboid"
 
@@ -41,5 +41,5 @@ task.env.object_type=${OBJECT_TYPE} \
 task.env.dofSpeedScale=10 \
 task.env.useRelativeControl=False \
 task.task.randomize=True \
-task.task.randomization_params.actor_params.object.scale.range=[0.999,1.001] \
-task.task.randomization_params.actor_params.allegro.scale.range=[0.999,1.001] \
+# task.task.randomization_params.actor_params.object.scale.range=[0.999,1.001] \
+# task.task.randomization_params.actor_params.allegro.scale.range=[0.999,1.001] \

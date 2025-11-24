@@ -1,0 +1,56 @@
+#!/bin/bash
+
+# experiment_name="domain_randomization_slow_no_extra_obs_single_gpu_pretraining"
+experiment_name="DR_RELATIVE_SLOW"
+
+python -m isaacgymenvs.train \
+task=AllegroKukaLSTM \
+task/env=reorientation \
+++task.env.useSparseReward=False \
+headless=True \
+task.env.numEnvs=24576 \
+train.params.config.minibatch_size=98304 \
+multi_gpu=False \
+train.params.config.good_reset_boundary=0 \
+task.env.goodResetBoundary=0 \
+train.params.config.use_others_experience=lf \
+train.params.config.off_policy_ratio=1.0 \
+train.params.config.expl_type=mixed_expl_learn_param \
+train.params.config.expl_reward_type=entropy \
+train.params.config.expl_coef_block_size=4096 \
+train.params.config.expl_reward_coef_scale=0.005 \
+train.params.network.space.continuous.fixed_sigma=coef_cond \
+wandb_project=pretraining_ablations \
+wandb_entity=kk837 \
+wandb_activate=True \
+wandb_group=${experiment_name} \
+wandb_tags=[] \
+++wandb_notes='' \
+seed=0 \
+experiment=00_${experiment_name} \
+hydra.run.dir=./train_dir/allegro_kuka_reorientation/${experiment_name} \
+task.env.capture_video=True \
+task.env.asset.kukaAllegro=urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted.urdf \
+task.env.handMovingAverage=0.1 \
+task.env.armMovingAverage=0.1 \
+task.env.object_type=cuboid \
+task.env.dofSpeedScale=1 \
+task.env.useRelativeControl=True \
+task.task.randomize=True \
+task.env.use_fixed_set_of_goal_states=False \
+task.env.use_fixed_init_object_pose=False \
+task.env.turn_off_object_vel_obs=False \
+task.env.turn_off_palm_vel_obs=False \
+task.env.turn_off_extra_obs=False \
+task.env.turn_off_object_vel_obs_slowly=False \
+task.env.turn_off_palm_vel_obs_slowly=False \
+task.env.turn_off_extra_obs_slowly=False \
+task.env.use_obs_dropout=False \
+task.task.randomize=False \
+task.env.asset.kukaAllegro=urdf/kuka_allegro_description/iiwa14_left_sharpa_between.urdf \
+task.env.allegroStiffness=40.0 \
+task.env.allegroDamping=5.0 \
+task.env.kukaStiffness=40.0 \
+task.env.kukaDamping=5.0 \
+checkpoint=/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-11-05_sharpa_ctd/00_iiwa14_left_sharpa_pretrain_2025-11-05_05-24-24/runs/00_iiwa14_left_sharpa_pretrain_2025-11-05_05-24-24/best/model.pth
+# task.env.asset.kukaAllegro=urdf/kuka_allegro_description/iiwa14_real.urdf \
