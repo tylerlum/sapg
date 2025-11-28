@@ -50,6 +50,7 @@ class AllegroKukaPoseReaching(AllegroKukaBase):
     def __init__(self, cfg, rl_device, sim_device, graphics_device_id, headless, virtual_screen_capture, force_render):
         self.use_green_robot = cfg["env"]["use_green_robot"]
         self.sanity_check_controls = cfg["env"]["sanity_check_controls"]
+        self.add_prev_targets_to_obs = cfg["env"]["add_prev_targets_to_obs"]
         self.goal_object_indices: List[int] = []
 
         super().__init__(cfg, rl_device, sim_device, graphics_device_id, headless, virtual_screen_capture, force_render)
@@ -88,6 +89,14 @@ class AllegroKukaPoseReaching(AllegroKukaBase):
         env_ids = torch.arange(self.num_envs, device=self.device, dtype=torch.long)
         self._sample_joint_targets(env_ids)
 
+    def _object_keypoint_offsets(self):
+        return [
+            [1, 1, 1],
+            [1, 1, -1],
+            [-1, -1, 1],
+            [-1, -1, -1],
+        ]
+
     def _build_nominal_joint_target(self) -> Tensor:
         target_pose_cfg = self.cfg["env"].get("targetJointPose", None)
         if target_pose_cfg is None:
@@ -98,12 +107,6 @@ class AllegroKukaPoseReaching(AllegroKukaBase):
                 f"targetJointPose must have {self.num_hand_arm_dofs} entries, got {len(target_pose_cfg)}"
             )
         return torch.tensor(target_pose_cfg, dtype=torch.float, device=self.device)
-
-    # ------------------------------------------------------------------ #
-    # Scene creation
-    # ------------------------------------------------------------------ #
-    def _object_keypoint_offsets(self):
-        return []
 
     def _create_envs(self, num_envs, spacing, num_per_row):
         if self.should_load_initial_states:
@@ -284,9 +287,12 @@ class AllegroKukaPoseReaching(AllegroKukaBase):
 
         joint_pos = self.arm_hand_dof_pos[:, : self.num_hand_arm_dofs]
         joint_vel = self.arm_hand_dof_vel[:, : self.num_hand_arm_dofs]
+        prev_targets = self.prev_targets[:, : self.num_hand_arm_dofs].clone()
 
         error = self.joint_targets - joint_pos
         obs = torch.cat([joint_pos, joint_vel, self.joint_targets], dim=-1)
+        if self.add_prev_targets_to_obs:
+            obs = torch.cat([obs, prev_targets], dim=-1)
 
         self.obs_buf.zero_()
         cols = obs.shape[1]

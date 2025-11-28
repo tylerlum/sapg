@@ -1,15 +1,15 @@
 #!/bin/bash
 
-CUSTOM_EXPERIMENT_NAME="CHANGE_REWARD_TO_MEAN_ABS_ERROR"
+CUSTOM_EXPERIMENT_NAME="BASELINE_CORRECT_DIM"
 WANDB_GROUP="POSE_REACHING"
 
 WANDB_ENTITY="kk837"
-WANDB_PROJECT="sapg_allegro_kuka_reorientation"
+WANDB_PROJECT="sapg_pose_reaching"
 OBJECT_TYPE="cuboid"
 
 DATETIME=$(date +"%Y-%m-%d_%H-%M-%S")
 EXPERIMENT_NAME="${CUSTOM_EXPERIMENT_NAME}_$DATETIME"
-HYDRA_RUN_DIR=./train_dir/allegro_kuka_reorientation/${WANDB_GROUP}/${EXPERIMENT_NAME}
+HYDRA_RUN_DIR=./train_dir/pose_reaching/${WANDB_GROUP}/${EXPERIMENT_NAME}
 
 python -m isaacgymenvs.train \
 task=AllegroKukaLSTM \
@@ -39,7 +39,7 @@ seed=0 \
 experiment=00_${EXPERIMENT_NAME} \
 hydra.run.dir=${HYDRA_RUN_DIR} \
 task.env.object_type=${OBJECT_TYPE} \
-task.env.dofSpeedScale=10 \
+task.env.dofSpeedScale=2.5 \
 task.env.useRelativeControl=False \
 task.task.randomize=False \
 task.task.randomization_params.actor_params.object.scale.range=[0.999,1.001] \
@@ -48,4 +48,6 @@ task.env.use_green_robot=True \
 task.env.sanity_check_controls=False \
 task.env.armMovingAverage=0.1 \
 task.env.handMovingAverage=0.1 \
+task.env.add_prev_targets_to_obs=False \
+task.task.randomize=False \
 # task.env.episodeLength=100 \

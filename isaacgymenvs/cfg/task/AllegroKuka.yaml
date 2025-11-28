@@ -145,6 +145,7 @@ env:
   # some pose_reaching_env specific settings
   use_green_robot: True
   sanity_check_controls: False
+  add_prev_targets_to_obs: False
 
   asset:
     # Whis was the original kuka_allegro asset.
