@@ -14,6 +14,8 @@ from isaacgymenvs.utils.observation_action_utils_sharpa_pose_reaching import (
     compute_observation,
 )
 from sim2sim.isaac_sim.isaac_env import create_env
+import numpy as np
+from datetime import datetime
 
 N_OBS = 109
 N_ACT = 29
@@ -113,7 +115,7 @@ class IsaacEnvNoRosJointPosTargets:
                 print(f"--------------------------------")
 
             breakpoint()
-        return new_obs, reward, done, info
+        return new_obs, reward, done, info, joint_pos_targets
 
 
 def main():
@@ -163,25 +165,58 @@ def main():
         control_dt=CONTROL_DT,
         device=DEVICE,
     )
+    joint_targets = np.array([
+        -1.271,  1.871,  0.3  ,  1.676,  0.3  ,  1.785,  1.608,  0.3  ,
+        0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,
+        0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,
+        0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3 
+    ])
+    # joint_targets = joint_targets.repeat(1, 29)
+    joint_targets = torch.from_numpy(joint_targets).float().to(DEVICE)
+    
+    isaac_env_no_ros_joint_pos_targets.env.joint_targets = joint_targets[None].clone()
     observation = isaac_env_no_ros_joint_pos_targets.reset()
+    current_step = 0
 
+    data = {
+        'robot_joint_positions_array': [],
+        'robot_joint_pos_targets_array': [],
+    }
     while True:
+        isaac_env_no_ros_joint_pos_targets.env.joint_targets = joint_targets[None].clone()
         start_time = time.time()
+        data['robot_joint_positions_array'].append(observation[0][:29].cpu().numpy())
         action = policy.get_normalized_action(observation, deterministic_actions=True)
-        observation, _, done, _ = (
+        observation, _, done, _, joint_pos_targets = (
             isaac_env_no_ros_joint_pos_targets.step_with_joint_pos_targets(action)
         )
+        print(f"Step {current_step}, done = {done}")
+        current_step += 1
+        
+        data['robot_joint_pos_targets_array'].append(joint_pos_targets[0].cpu().numpy())
         if done.item():
             observation = isaac_env_no_ros_joint_pos_targets.reset()
+            joint_pos_targets = torch.zeros((1, N_ACT), device=DEVICE)
+            current_step = 0
+            break
         end_time = time.time()
         sleep_time = CONTROL_DT - (end_time - start_time)
         if sleep_time > 0:
             time.sleep(sleep_time)
         else:
-            print(
-                f"Control loop too slow! Desired FPS: {1.0 / CONTROL_DT:.1f}, Actual FPS: {1.0 / (end_time - start_time):.1f}"
-            )
+            pass
+            # print(
+            #     f"Control loop too slow! Desired FPS: {1.0 / CONTROL_DT:.1f}, Actual FPS: {1.0 / (end_time - start_time):.1f}"
+            # )
 
+    data['robot_joint_positions_array'] = np.array(data['robot_joint_positions_array'])
+    data['robot_joint_pos_targets_array'] = np.array(data['robot_joint_pos_targets_array'])
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    np.savez_compressed(
+        f'/juno/u/kedia/sapg/recorded_robot_state/sim_rollout_{timestamp}.npz',
+        **data
+    )
+    print(f"Saved data to /juno/u/kedia/sapg/recorded_robot_state/sim_rollout_{timestamp}.npz")
 
 if __name__ == "__main__":
     main()
