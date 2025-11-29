@@ -1,7 +1,7 @@
 #!/bin/bash
 
-CUSTOM_EXPERIMENT_NAME="BASELINE_CORRECT_DIM"
-WANDB_GROUP="POSE_REACHING"
+CUSTOM_EXPERIMENT_NAME="WITH_MAX_ABS_ERROR_Baseline"
+WANDB_GROUP="POSE_REACHING_NO_FORCE"
 
 WANDB_ENTITY="kk837"
 WANDB_PROJECT="sapg_pose_reaching"
@@ -50,4 +50,5 @@ task.env.armMovingAverage=0.1 \
 task.env.handMovingAverage=0.1 \
 task.env.add_prev_targets_to_obs=False \
 task.task.randomize=False \
+task.env.forceScale=0.0 \
 # task.env.episodeLength=100 \
