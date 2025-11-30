@@ -146,6 +146,7 @@ env:
   use_green_robot: True
   sanity_check_controls: False
   add_prev_targets_to_obs: False
+  jointVelocityPenaltyScale: 0.0
 
   asset:
     # Whis was the original kuka_allegro asset.

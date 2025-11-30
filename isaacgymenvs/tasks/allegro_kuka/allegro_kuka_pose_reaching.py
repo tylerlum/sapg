@@ -327,7 +327,9 @@ class AllegroKukaPoseReaching(AllegroKukaBase):
 
         max_abs_error = self.current_joint_abs_error.max(dim=1).values
         # reward = -torch.mean(abs_error, dim=1)
-        reward = -max_abs_error
+        joint_velocity_penalty = torch.mean(joint_vel_penalty, dim=1)
+
+        reward = -max_abs_error - joint_velocity_penalty*self.joint_velocity_penalty_scale
 
         # old threshold
         kuka_joint_mse = torch.mean(joint_error[:, :self.num_arm_dofs] ** 2, dim=1)
