@@ -67,11 +67,10 @@ class AllegroKukaPoseReaching(AllegroKukaBase):
         self.current_joint_abs_error = torch.zeros_like(self.joint_targets)
 
         self.joint_target_noise = self.cfg["env"].get("targetJointNoise", 0.5)
-        self.joint_success_tolerance = self.cfg["env"].get("jointSuccessTolerance", 0.05)
         self.kuka_joint_success_tolerance = self.cfg["env"].get("kukaJointSuccessTolerance", 0.01)
         self.hand_joint_success_tolerance = self.cfg["env"].get("handJointSuccessTolerance", 0.05)
-        self.joint_error_scale = self.cfg["env"].get("jointErrorRewScale", 1.0)
         self.joint_velocity_penalty_scale = self.cfg["env"].get("jointVelocityPenaltyScale", 0.0)
+        self.joint_acceleration_penalty_scale = self.cfg["env"].get("jointAccelerationPenaltyScale", 0.0)
         
         # Dummy buffers for base-class debug drawing helpers
         self.object_state = torch.zeros((self.num_envs, 13), dtype=torch.float, device=self.device)
@@ -87,7 +86,23 @@ class AllegroKukaPoseReaching(AllegroKukaBase):
             self.green_robot_arm_hand_dof_vel = self.green_robot_arm_hand_dof_state[..., 1]
 
         env_ids = torch.arange(self.num_envs, device=self.device, dtype=torch.long)
+        self.prev_joint_velocity = torch.zeros((self.num_envs, self.num_hand_arm_dofs), dtype=torch.float, device=self.device)
         self._sample_joint_targets(env_ids)
+
+        reward_keys = [
+            "mean_joint_error",
+            "max_joint_error",
+            "joint_velocity_mean",
+            "joint_acceleration_mean",
+            "bonus_rew",
+            "pose_reaching_rew",
+            "joint_velocity_penalty_rew",
+            "joint_acceleration_penalty_rew",
+        ]
+
+        self.rewards_episode = {
+            key: torch.zeros(self.num_envs, dtype=torch.float, device=self.device) for key in reward_keys
+        }
 
     def _object_keypoint_offsets(self):
         return [
@@ -245,18 +260,9 @@ class AllegroKukaPoseReaching(AllegroKukaBase):
 
         self._after_envs_created()
 
-    # ------------------------------------------------------------------ #
-    # Goal sampling
-    # ------------------------------------------------------------------ #
     def _sample_joint_targets(self, env_ids: Tensor) -> None:
         if len(env_ids) == 0:
             return
-
-        # lower = self.arm_hand_dof_lower_limits[: self.num_hand_arm_dofs].unsqueeze(0)
-        # upper = self.arm_hand_dof_upper_limits[: self.num_hand_arm_dofs].unsqueeze(0)
-        # rand = torch.rand((len(env_ids), self.num_hand_arm_dofs), device=self.device)
-        # target = lower + rand * (upper - lower)
-        # sample around nominal joint target
         target = self.nominal_joint_target.unsqueeze(0).repeat(len(env_ids), 1)
         noise = torch_rand_float(-1.0, 1.0, (len(env_ids), self.num_hand_arm_dofs), device=self.device)
         target = target + noise * self.joint_target_noise
@@ -272,34 +278,25 @@ class AllegroKukaPoseReaching(AllegroKukaBase):
     def reset_object_pose(self, env_ids: Tensor, reset_buf_idxs=None, tensor_reset=True):
         return
 
-    # ------------------------------------------------------------------ #
-    # Observations and rewards
-    # ------------------------------------------------------------------ #
     def compute_observations(self):
         self.gym.refresh_dof_state_tensor(self.sim)
         self.gym.refresh_actor_root_state_tensor(self.sim)
         self.gym.refresh_rigid_body_state_tensor(self.sim)
-        if self.obs_type == "full_state":
-            if self.with_fingertip_force_sensors or self.with_table_force_sensor:
-                self.gym.refresh_force_sensor_tensor(self.sim)
-            if self.with_dof_force_sensors:
-                self.gym.refresh_dof_force_tensor(self.sim)
 
-        joint_pos = self.arm_hand_dof_pos[:, : self.num_hand_arm_dofs]
-        joint_vel = self.arm_hand_dof_vel[:, : self.num_hand_arm_dofs]
+        self.joint_pos = self.arm_hand_dof_pos[:, : self.num_hand_arm_dofs]
+        self.joint_vel = self.arm_hand_dof_vel[:, : self.num_hand_arm_dofs]
+        is_ep_start = self.progress_buf == 1 # dim (num_envs)
+        self.prev_joint_velocity = self.joint_vel.clone()*is_ep_start[:, None]
+        self.joint_acceleration = (self.joint_vel - self.prev_joint_velocity) / self.dt
+        self.prev_joint_velocity = self.joint_vel.clone()
+        
         prev_targets = self.prev_targets[:, : self.num_hand_arm_dofs].clone()
-
-        error = self.joint_targets - joint_pos
-        obs = torch.cat([joint_pos, joint_vel, self.joint_targets], dim=-1)
+        obs = torch.cat([self.joint_pos, self.joint_vel, self.joint_targets], dim=-1)
         if self.add_prev_targets_to_obs:
             obs = torch.cat([obs, prev_targets], dim=-1)
-
         self.obs_buf.zero_()
         cols = obs.shape[1]
         self.obs_buf[:, :cols] = obs[:, :cols]
-
-        self.current_joint_error = error
-        self.current_joint_abs_error = torch.abs(error)
 
         CHECK_WITH_COMPUTED_OBS = False
         if CHECK_WITH_COMPUTED_OBS:
@@ -317,57 +314,63 @@ class AllegroKukaPoseReaching(AllegroKukaBase):
         return self.obs_buf, self.reward_obs_offset
 
     def compute_kuka_reward(self):
-        joint_error = self.current_joint_error
-        joint_error_mse = torch.mean(joint_error ** 2, dim=1)
-        joint_vel_penalty = torch.mean(
-            self.arm_hand_dof_vel[:, : self.num_hand_arm_dofs] ** 2,
+        mean_joint_error = torch.mean(torch.abs(self.joint_targets - self.joint_pos), dim=1)
+        max_joint_error = torch.max(torch.abs(self.joint_targets - self.joint_pos), dim=1).values
+        mean_joint_velocity_penalty = torch.mean(
+            self.joint_vel ** 2,
             dim=1,
         )
-        abs_error = torch.abs(joint_error)
+        mean_joint_acceleration_penalty = torch.mean(
+            self.joint_acceleration ** 2,
+            dim=1,
+        )
 
-        max_abs_error = self.current_joint_abs_error.max(dim=1).values
-        # reward = -torch.mean(abs_error, dim=1)
-        joint_velocity_penalty = torch.mean(joint_vel_penalty, dim=1)
-
-        reward = -max_abs_error - joint_velocity_penalty*self.joint_velocity_penalty_scale
-
-        # old threshold
-        kuka_joint_mse = torch.mean(joint_error[:, :self.num_arm_dofs] ** 2, dim=1)
-        hand_joint_mse = torch.mean(joint_error[:, self.num_arm_dofs:] ** 2, dim=1)
+        # success determination
+        kuka_joint_mse = torch.mean(torch.abs(self.joint_targets - self.joint_pos)[:, :self.num_arm_dofs]**2, dim=1)
+        hand_joint_mse = torch.mean(torch.abs(self.joint_targets - self.joint_pos)[:, self.num_arm_dofs:]**2, dim=1)
         kuka_near_goal = kuka_joint_mse <= self.kuka_joint_success_tolerance
         hand_near_goal = hand_joint_mse <= self.hand_joint_success_tolerance
-
-        # new threshold
-        # kuka_abs_error = torch.mean(abs_error[:, :self.num_arm_dofs], dim=1)
-        # hand_abs_error = torch.mean(abs_error[:, self.num_arm_dofs:], dim=1)
-        # kuka_near_goal = kuka_abs_error <= self.kuka_joint_success_tolerance
-        # hand_near_goal = hand_abs_error <= self.hand_joint_success_tolerance
         near_goal = kuka_near_goal & hand_near_goal
-        # print(f"near_goal: {near_goal[0].item()}")
-        # print(f"joint_error_mse: {joint_error_mse[0].item()}")
         self.near_goal_steps += near_goal
         is_success = self.near_goal_steps >= self.success_steps
         self.successes += is_success
         self.reset_goal_buf[:] = is_success
+        
+        # reward computation
+        bonus_rew = near_goal * (self.reach_goal_bonus / max(self.success_steps, 1))
+        pose_reaching_rew = -max_joint_error
+        joint_velocity_penalty_rew = -mean_joint_velocity_penalty*self.joint_velocity_penalty_scale
+        joint_acceleration_penalty_rew = -mean_joint_acceleration_penalty*self.joint_acceleration_penalty_scale
+        reward = pose_reaching_rew + joint_velocity_penalty_rew + joint_acceleration_penalty_rew + bonus_rew
 
-        self.rewards_episode["keypoint_rew"] += -self.joint_error_scale * joint_error_mse
-        self.rewards_episode["allegro_actions_penalty"] += -self.joint_velocity_penalty_scale * joint_vel_penalty
-
-        bonus = near_goal * (self.reach_goal_bonus / max(self.success_steps, 1))
-        reward = reward + bonus
         self.rew_buf[:] = reward
         resets = self._compute_resets(is_success)
         self.reset_buf[:] = resets
 
-        self.joint_error_mse = joint_error_mse
-        self.extras["joint_error_mse"] = joint_error_mse
-        self.extras["joint_max_abs_error"] = max_abs_error
         self.true_objective = self._true_objective()
         self.extras["true_objective"] = self.true_objective
         self.extras["successes"] = self.prev_episode_successes
         if self.max_consecutive_successes > 0:
             denom = max(1, self.max_consecutive_successes)
             self.extras["success_ratio"] = self.prev_episode_successes.mean().item() / denom
+
+        rewards = [
+            (pose_reaching_rew, "pose_reaching_rew"),
+            (joint_velocity_penalty_rew, "joint_velocity_penalty_rew"),
+            (joint_acceleration_penalty_rew, "joint_acceleration_penalty_rew"),
+            (bonus_rew, "bonus_rew"),
+            (mean_joint_error, "mean_joint_error"),
+            (max_joint_error, "max_joint_error"),
+            (mean_joint_velocity_penalty, "joint_velocity_mean"),
+            (mean_joint_acceleration_penalty, "joint_acceleration_mean"),
+        ]
+        
+        episode_cumulative = dict()
+        for rew_value, rew_name in rewards:
+            self.rewards_episode[rew_name] += rew_value
+            episode_cumulative[rew_name] = rew_value
+        self.extras["rewards_episode"] = self.rewards_episode
+        self.extras["episode_cumulative"] = episode_cumulative
 
         return self.rew_buf, is_success
 
@@ -381,7 +384,7 @@ class AllegroKukaPoseReaching(AllegroKukaBase):
         return resets
 
     def _true_objective(self) -> Tensor:
-        return -self.joint_error_mse
+        return -torch.mean(torch.abs(self.joint_targets - self.joint_pos)**2, dim=1)
 
     # ------------------------------------------------------------------ #
     # Control overrides
