@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CUSTOM_EXPERIMENT_NAME="LOGGING_WITH_JOINT_ACCELERATION_PENALTY"
+CUSTOM_EXPERIMENT_NAME="LOGGING_WITH_JOINT_ACCELERATION_PENALTY_HIGHER"
 WANDB_GROUP="POSE_REACHING_NO_FORCE"
 
 WANDB_ENTITY="kk837"
@@ -52,5 +52,5 @@ task.env.add_prev_targets_to_obs=False \
 task.task.randomize=False \
 task.env.forceScale=0.0 \
 task.env.jointVelocityPenaltyScale=0 \
-task.env.jointAccelerationPenaltyScale=0.00001 \
+task.env.jointAccelerationPenaltyScale=0.001 \
 # task.env.episodeLength=100 \
