@@ -13,7 +13,7 @@ task:
     stiffnessScale: 1.0
     forceLimitScale: 1.0
     useRelativeControl: false
-    dofSpeedScale: 10
+    dofSpeedScale: 2.5
     handMovingAverage: 0.1
     armMovingAverage: 0.1
     dofSpeedScaleFinal: ${eval:"None"}
@@ -27,7 +27,7 @@ task:
     resetDofPosRandomIntervalFingers: 0.0
     resetDofPosRandomIntervalArm: 0.0
     resetDofVelRandomInterval: 0.0
-    forceScale: 2.0
+    forceScale: 0.0
     forceProbRange:
     - 0.001
     - 0.1
@@ -106,6 +106,7 @@ task:
     curriculumSuccessRatio: 0.6
     resetWhenDropped: false
     use_green_robot: true
+    add_prev_targets_to_obs: false
     sanity_check_controls: false
     asset:
       kukaAllegro: urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted_restricted.urdf
@@ -359,7 +360,7 @@ task_name: ${task.name}
 experiment: 00_CHANGE_REWARD_TO_MEAN_ABS_ERROR_2025-11-21_13-31-46
 num_envs: ''
 seed: 0
-torch_deterministic: false
+torch_deterministic: true
 max_iterations: ''
 physics_engine: physx
 pipeline: gpu

@@ -13,10 +13,14 @@ from isaacgymenvs.utils.observation_action_utils_sharpa_pose_reaching import (
     compute_joint_pos_targets,
     compute_observation,
 )
-from sim2sim.isaac_sim.isaac_env import create_env
+from isaacgymenvs.utils.observation_action_utils_sharpa import Q_LOWER_LIMITS_np, Q_UPPER_LIMITS_np
+from sim2sim.isaac_sim.isaac_env import create_env_from_cfg
 import numpy as np
 from datetime import datetime
 import os
+from sim2real.rl_player_utils import (
+    read_cfg_omegaconf,
+)
 
 N_OBS = 133
 N_ACT = 29
@@ -98,6 +102,7 @@ class IsaacEnvNoRosJointPosTargets:
             q=q,
             qd=qd,
             joint_targets=joint_targets,
+            reward=reward,
         )
 
         DEBUG = False
@@ -123,30 +128,28 @@ class IsaacEnvNoRosJointPosTargets:
 def main():
     CONTROL_DT = 1.0 / 60.0
     CONFIG_PATH = Path(
-        # "/home/tylerlum/github_repos/sapg/closed_loop_testing_sharpa/config.yaml"
-        # "/home/tylerlum/github_repos/sapg/closed_loop_testing_sharpa_hammer_2/config.yaml"
         "/juno/u/kedia/sapg/closed_loop_testing/pose_reaching.yaml"
     )
     assert Path(CONFIG_PATH).exists()
+    CHECKPOINT_NAME = "joint_vel_best"
+    # CHECKPOINT_NAME = "baseline_best"
     CHECKPOINT_PATH = Path(
-        # Fast
-        # "/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-11-12_sharpa_hammer_2_coacd/00_CUBOID_obs-curriculum_thresh0-1_local_2025-11-14_00-04-24/runs/00_CUBOID_obs-curriculum_thresh0-1_local_2025-11-14_00-04-24/last/model.pth"
-        # Slow
-        # "/juno/u/kedia/sapg/train_dir/checkpoints/SLOW_CUBOID/model.pth"
-        # "/juno/u/kedia/sapg/train_dir/checkpoints/dr_hammer_slow.pth"
-
         # Pose reaching
-        # "/juno/u/kedia/sapg/train_dir/checkpoints/pose_reaching/joint_accel.pth"
-        "/juno/u/kedia/sapg/train_dir/checkpoints/pose_reaching/joint_accel.pth"
+        # "/juno/u/kedia/sapg/train_dir/checkpoints/pose_reaching/baseline_best.pth"
+        f"/juno/u/kedia/sapg/train_dir/checkpoints/pose_reaching/{CHECKPOINT_NAME}.pth"
     )
+    # STIFFNESS_MULTIPLIER, DAMPING_MULTIPLIER = 1, 1
+    STIFFNESS_MULTIPLIER, DAMPING_MULTIPLIER = 1.3, 0.7
     assert CHECKPOINT_PATH.exists()
 
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-    # DEVICE = "cpu"  # "cpu" faster for single env, but some bugs with cpu like force sensors not working
-    env = create_env(
-        config_path=str(CONFIG_PATH),
+    cfg = read_cfg_omegaconf(config_path=str(CONFIG_PATH), device=DEVICE)
+    # breakpoint()
+    cfg.task.env.allegroDamping = DAMPING_MULTIPLIER * cfg.task.env.allegroDamping
+    cfg.task.env.allegroStiffness = STIFFNESS_MULTIPLIER * cfg.task.env.allegroStiffness
+    env = create_env_from_cfg(
+        cfg=cfg,
         headless=False,
-        device=DEVICE,
     )
 
     # Set env state from checkpoint to match things like success_tolerance
@@ -168,13 +171,24 @@ def main():
         control_dt=CONTROL_DT,
         device=DEVICE,
     )
-    joint_targets = np.array([
+    nominal_joint_targets = np.array([
+        -1.571, 1.571, -0.000, 1.376, -0.000, 1.485, 2.358,
+        0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0,
+        0, 0
+    ])
+    assert len(nominal_joint_targets) == 29
+
+    # sampled_joint_targets = nominal_joint_targets + np.random.normal(0, 0.1, 29)
+    sampled_joint_targets = np.array([
         -1.271,  1.871,  0.3  ,  1.676,  0.3  ,  1.785,  1.608,  0.3  ,
         0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,
         0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,
         0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3 
     ])
-    # joint_targets = joint_targets.repeat(1, 29)
+    joint_targets = np.clip(sampled_joint_targets, Q_LOWER_LIMITS_np, Q_UPPER_LIMITS_np)
     joint_targets = torch.from_numpy(joint_targets).float().to(DEVICE)
     
     isaac_env_no_ros_joint_pos_targets.env.joint_targets = joint_targets[None].clone()
@@ -183,23 +197,38 @@ def main():
 
     data = {
         'robot_joint_positions_array': [],
+        'robot_joint_velocities_array': [],
+        'robot_joint_accelerations_array': [],
         'robot_joint_pos_targets_array': [],
+        'hand_joint_velocities_array': [],
+        'hand_joint_accelerations_array': [],
     }
+    prev_joint_velocities = np.zeros(29)
     while True:
         isaac_env_no_ros_joint_pos_targets.env.joint_targets = joint_targets[None].clone()
         start_time = time.time()
+        joint_accelerations = (observation[0][29:58].cpu().numpy() - prev_joint_velocities) / CONTROL_DT
         data['robot_joint_positions_array'].append(observation[0][:29].cpu().numpy())
+        data['robot_joint_velocities_array'].append(observation[0][29:58].cpu().numpy())
+        data['robot_joint_accelerations_array'].append(joint_accelerations[:])
+        data['hand_joint_velocities_array'].append(observation[0][36:65].cpu().numpy())
+        data['hand_joint_accelerations_array'].append(joint_accelerations[7:])
+        prev_joint_velocities = observation[0][29:58].cpu().numpy()
+        error = (joint_targets - observation[0][:29]).abs().cpu().numpy()
+        mean_kuka_mse_error = np.mean(error[:7]**2)
+        mean_hand_mse_error = np.mean(error[7:]**2)
+        
         action = policy.get_normalized_action(observation, deterministic_actions=True)
-        observation, _, done, _, joint_pos_targets = (
+        observation, _, done, info, joint_pos_targets = (
             isaac_env_no_ros_joint_pos_targets.step_with_joint_pos_targets(action)
         )
-        print(f"Step {current_step}, done = {done}")
+        data['robot_joint_pos_targets_array'].append(joint_pos_targets[0][:29].cpu().numpy())
+        success = (mean_kuka_mse_error < 0.01 and mean_hand_mse_error < 0.05) or info['successes'].item()
+        # print(f"Mean Kuka MSE Error = {mean_kuka_mse_error}")
+        # print(f"Mean Hand MSE Error = {mean_hand_mse_error}")
+        # print(f"Step {current_step}, Success = {success}")
         current_step += 1
-        
-        data['robot_joint_pos_targets_array'].append(joint_pos_targets[0].cpu().numpy())
-        if done.item():
-            observation = isaac_env_no_ros_joint_pos_targets.reset()
-            joint_pos_targets = torch.zeros((1, N_ACT), device=DEVICE)
+        if success:
             current_step = 0
             break
         end_time = time.time()
@@ -213,12 +242,30 @@ def main():
             # )
 
     data['robot_joint_positions_array'] = np.array(data['robot_joint_positions_array'])
+    data['robot_joint_velocities_array'] = np.array(data['robot_joint_velocities_array'])
+    data['robot_joint_accelerations_array'] = np.array(data['robot_joint_accelerations_array'])
     data['robot_joint_pos_targets_array'] = np.array(data['robot_joint_pos_targets_array'])
+    data['hand_joint_velocities_array'] = np.array(data['hand_joint_velocities_array'])
+    data['hand_joint_accelerations_array'] = np.array(data['hand_joint_accelerations_array'])
+    # print mean squared joint velocities and accelerations
+    # breakpoint()
+    print(f"CHECKPOINT_NAME = {CHECKPOINT_NAME} Stiffness Multiplier = {STIFFNESS_MULTIPLIER} Damping Multiplier = {DAMPING_MULTIPLIER}")
+    print(f"Mean Squared Joint Velocities = {np.mean(data['robot_joint_velocities_array']**2)}")
+    print(f"Mean Squared Joint Accelerations = {np.mean(data['robot_joint_accelerations_array']**2)}")
+    print(f"Mean Squared Hand Joint Velocities = {np.mean(data['hand_joint_velocities_array']**2)}")
+    print(f"Mean Squared Hand Joint Accelerations = {np.mean(data['hand_joint_accelerations_array']**2)}")
+    hand_mean_mse_error = np.sqrt(np.mean(data['hand_joint_accelerations_array']**2))
+    rounded_hand_mean_mse_error = round(hand_mean_mse_error, 1)
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    npz_dir = f'/juno/u/kedia/sapg/recorded_robot_states/pose_reaching_test/{CHECKPOINT_PATH.stem}'
+    npz_dir = f'/juno/u/kedia/sapg/recorded_robot_states/pose_reaching_FINAL/{CHECKPOINT_NAME}_{STIFFNESS_MULTIPLIER}_{DAMPING_MULTIPLIER}'
     os.makedirs(npz_dir, exist_ok=True)
-    np.savez_compressed(os.path.join(npz_dir, f'{timestamp}.npz'), **data)
-    print(f"Saved data to {os.path.join(npz_dir, f'{timestamp}.npz')}")
+    np.savez_compressed(os.path.join(npz_dir, f'{rounded_hand_mean_mse_error}.npz'), **data)
+    print(f"Saved data to {os.path.join(npz_dir, f'{rounded_hand_mean_mse_error}.npz')}")
+    # close the environment
+    del env
+    del isaac_env_no_ros_joint_pos_targets
+    del policy
+    # breakpoint()
 
 if __name__ == "__main__":
     main()

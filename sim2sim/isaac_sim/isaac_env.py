@@ -15,6 +15,25 @@ from sim2real.rl_player_utils import (
 )
 
 
+def create_env_from_cfg(
+    cfg: DictConfig,
+    headless: bool = False,
+    enable_viewer_sync_at_start: bool = True,
+    merge_with_default_config: bool = True,
+    episode_length: Optional[int] = None,
+    overrides: Optional[Dict[str, Any]] = None,
+) -> AllegroKukaBase:
+    if merge_with_default_config:
+        cfg = merge_cfg_with_default_config(cfg)
+    return create_env_from_cfg(
+        cfg=cfg,
+        headless=headless,
+        enable_viewer_sync_at_start=enable_viewer_sync_at_start,
+        episode_length=episode_length,
+        overrides=overrides,
+    )
+
+
 def create_env(
     config_path: str,
     device: str,
