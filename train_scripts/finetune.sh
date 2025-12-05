@@ -1,16 +1,16 @@
 #!/bin/bash
 
-CHECKPOINT=/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-11-05_sharpa_ctd/00_iiwa14_left_sharpa_pretrain_2025-11-05_05-24-24/runs/00_iiwa14_left_sharpa_pretrain_2025-11-05_05-24-24/best/model.pth
-CUSTOM_EXPERIMENT_NAME="DR_RELATIVE_SLOW"
-WANDB_GROUP="FINETUNE"
+CHECKPOINT=/share/portal/kk837/sapg/train_dir/allegro_kuka_reorientation/CUBOID_FINETUNING/00_RESTART_DR_NoObs_Slow_2025-11-20_21-01-53/runs/00_RESTART_DR_NoObs_Slow_2025-11-20_21-01-53/last/model.pth
+CUSTOM_EXPERIMENT_NAME="BASELINE_RUN"
+WANDB_GROUP="hyperparamChanges"
 
-WANDB_ENTITY="tylerlum"
-WANDB_PROJECT="sapg_allegro_kuka_reorientation"
-OBJECT_TYPE="scanned_hammer_2_coacd"
+WANDB_ENTITY="kk837"
+WANDB_PROJECT="improveSimPerformance"
+OBJECT_TYPE="cuboid"
 
 DATETIME=$(date +"%Y-%m-%d_%H-%M-%S")
 EXPERIMENT_NAME="${CUSTOM_EXPERIMENT_NAME}_$DATETIME"
-HYDRA_RUN_DIR=./train_dir/allegro_kuka_reorientation/${WANDB_GROUP}/${EXPERIMENT_NAME}
+HYDRA_RUN_DIR=./train_dir/improveSimPerformance/${WANDB_GROUP}/${EXPERIMENT_NAME}
 
 python -m isaacgymenvs.train \
 task=AllegroKukaLSTM \
@@ -40,14 +40,20 @@ experiment=00_${EXPERIMENT_NAME} \
 hydra.run.dir=${HYDRA_RUN_DIR} \
 task.env.object_type=${OBJECT_TYPE} \
 task.env.useRelativeControl=False \
-task.task.randomize=True \
 checkpoint=${CHECKPOINT} \
+task.task.randomization_params.actor_params.object.scale.range=[0.999,1.001] \
+task.task.randomization_params.actor_params.allegro.scale.range=[0.999,1.001] \
 task.env.turn_off_object_vel_obs_slowly=True \
 task.env.turn_off_extra_obs_slowly=True \
 task.env.use_obs_dropout=True \
 task.env.dofSpeedScale=10 \
-task.env.dofSpeedScaleFinal=1.0 \
-task.env.curriculumSuccessRatio=0.6 \
+task.env.dofSpeedScaleFinal=2.5 \
+task.env.curriculumSuccessRatio=0.1 \
+task.env.forceScale=0.0 \
+task.task.randomize=True \
+task.env.init_tyler_curriculum_scale=0.87 \
+task.env.episodeLength=600 \
+task.env.controlFrequencyInv=1 \
 
 # task.task.randomization_params.actor_params.object.scale.range=[0.9,1.1] \
 # task.task.randomization_params.actor_params.allegro.scale.range=[0.9,1.1] \

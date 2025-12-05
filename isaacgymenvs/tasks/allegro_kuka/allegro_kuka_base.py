@@ -2227,7 +2227,6 @@ class AllegroKukaBase(VecTask):
 
         # reset allegro hand
         if len(env_ids) > 0 and reset_buf_idxs is None and tensor_reset:
-            print("IN RESET")
             delta_max = self.arm_hand_dof_upper_limits - self.hand_arm_default_dof_pos
             delta_min = self.arm_hand_dof_lower_limits - self.hand_arm_default_dof_pos
 
@@ -2301,7 +2300,7 @@ class AllegroKukaBase(VecTask):
         # print(f"self.object_rb_masses = {self.object_rb_masses}")
         # breakpoint()
 
-        PRINT_TIME_SINCE_LAST_STEP = True
+        PRINT_TIME_SINCE_LAST_STEP = False
         if PRINT_TIME_SINCE_LAST_STEP:
             if not hasattr(self, "last_time"):
                 self.last_time = time.time()
