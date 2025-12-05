@@ -121,10 +121,10 @@ class MujocoSim:
         self.config = config
         self._init_scene()
         self.set_robot_joint_pos_targets(INIT_JOINT_POS)
-        self.set_robot_joint_positions(INIT_JOINT_POS)
+        self.set_robot_joint_positions(INIT_JOINT_POS + np.ones(N_JOINTS) * 0.1)
 
     def _init_scene(self) -> None:
-        USE_MERGED_XML = True
+        USE_MERGED_XML = False
         if not USE_MERGED_XML:
             # Robot
             iiwa_xml_path = get_repo_root_dir() / "assets/mjcf/kuka_iiwa_14/scene.xml"
@@ -132,7 +132,6 @@ class MujocoSim:
 
             # Load mjspec from robot path
             spec = mujoco.MjSpec.from_file(str(iiwa_xml_path))
-            spec.option.timestep = self.config.sim_dt
 
             sharpa_xml_path = get_repo_root_dir() / "assets/urdf/left_sharpa_ha4/left_sharpa_ha4_v2_1_offset.xml"
             assert sharpa_xml_path.exists(), (
@@ -154,7 +153,9 @@ class MujocoSim:
             MERGED_XML_PATH = get_repo_root_dir() / "assets/urdf/kuka_allegro_sharpa_merged/iiwa14_left_sharpa.xml"
             assert MERGED_XML_PATH.exists(), f"Merged path does not exist: {MERGED_XML_PATH}"
             spec = mujoco.MjSpec.from_file(str(MERGED_XML_PATH))
-            spec.option.timestep = self.config.sim_dt
+
+        spec.option.timestep = self.config.sim_dt
+        # spec.option.integrator = mujoco.mjtIntegrator.mjINT_EULER
 
         # Enable gravity compensation for robot bodies
         # https://mujoco.readthedocs.io/en/3.1.2/XMLreference.html#body-gravcomp
@@ -308,6 +309,15 @@ class MujocoSim:
         self.mj_data.qpos[qpos_adr+3:qpos_adr+7] = quat_wxyz
 
     # ############################################################
+    # Getting applied joint torques
+    # ############################################################
+    def get_applied_joint_torques(self) -> np.ndarray:
+        # Make sure to step simulation first
+        actuator_ids = [self.mj_model.actuator(name=name).id for name in ACTUATOR_NAMES]
+        torques = self.mj_data.qfrc_actuator[actuator_ids]
+        return torques
+
+    # ############################################################
     # Getting body poses and simulation state
     # ############################################################
     def get_body_pose(self, body_name: str) -> tuple[np.ndarray, np.ndarray]:
@@ -363,8 +373,157 @@ class MujocoSim:
         while self._continue_running():
             start_loop_no_sleep_time = time.time()
 
+            joint_ids = [self.mj_model.joint(name=name).id for name in JOINT_NAMES]
+            prev_joint_positions = self.mj_data.qpos[joint_ids].copy()
+            prev_joint_velocities = self.mj_data.qvel[joint_ids].copy()
+
             # Step simulation
             self.sim_step()
+
+            arm_kps = [300] * 7
+            hand_kps = [6.95, 13.2, 4.76, 6.62, 0.9, 4.76, 6.62, 0.9, 0.9, 4.76, 6.62, 0.9, 0.9, 4.76, 6.62, 0.9, 0.9, 1.38, 4.76, 6.62, 0.9, 0.9]
+            arm_kds = [20] * 7
+            def compute_armature(joint_type: str) -> float:
+                if joint_type == "CMC_joint":
+                    return 0.0032
+                elif joint_type == "PCMC_joint":
+                    return 0.00012
+                elif joint_type == "MCP_joint":
+                    return 0.00265
+                elif joint_type == "PIP_joint":
+                    return 0.0006
+                elif joint_type == "DIP_joint":
+                    return 0.00042
+                else:
+                    raise ValueError(f"Invalid joint type: {joint_type}")
+            def compute_frictionloss(joint_type: str) -> float:
+                if joint_type == "CMC_joint":
+                    return 0.132
+                elif joint_type == "PCMC_joint":
+                    return 0.012
+                elif joint_type == "MCP_joint":
+                    return 0.07456
+                elif joint_type == "PIP_joint":
+                    return 0.01276
+                elif joint_type == "DIP_joint":
+                    return 0.00378738
+                else:
+                    raise ValueError(f"Invalid joint type: {joint_type}")
+            def compute_damping(joint_type: str) -> float:
+                if joint_type == "CMC_joint":
+                    return 4.20E-05
+                elif joint_type == "PCMC_joint":
+                    return 4.20E-05
+                elif joint_type == "MCP_joint":
+                    return 2.38E-05
+                elif joint_type == "PIP_joint":
+                    return 4.06E-06
+                elif joint_type == "DIP_joint":
+                    return 1.21E-06
+                else:
+                    raise ValueError(f"Invalid joint type: {joint_type}")
+            def compute_kd(kp: float, armature: float) -> float:
+                return 2 * np.sqrt(kp * armature)
+
+            hand_joint_types = [
+                "CMC_joint",
+                "CMC_joint",
+                "MCP_joint",
+                "MCP_joint",
+                "PIP_joint",
+
+                "MCP_joint",
+                "MCP_joint",
+                "PIP_joint",
+                "DIP_joint",
+
+                "MCP_joint",
+                "MCP_joint",
+                "PIP_joint",
+                "DIP_joint",
+
+                "MCP_joint",
+                "MCP_joint",
+                "PIP_joint",
+                "DIP_joint",
+
+                "PCMC_joint",
+                "MCP_joint",
+                "MCP_joint",
+                "PIP_joint",
+                "DIP_joint",
+            ]
+
+            hand_armatures = [compute_armature(joint_type) for joint_type in hand_joint_types]
+            arm_armatures = [0.0] * 7
+            armatures = np.array(arm_armatures + hand_armatures)
+            hand_frictionlosses = [compute_frictionloss(joint_type) for joint_type in hand_joint_types]
+            hand_dampings = [compute_damping(joint_type) for joint_type in hand_joint_types]
+            arm_frictionlosses = [0.0] * 7
+            arm_dampings = [0.0] * 7
+            frictionlosses = np.array(arm_frictionlosses + hand_frictionlosses)
+            dampings = np.array(arm_dampings + hand_dampings)
+
+            frictionlosses[:] = 0.0
+            dampings[:] = 0.0
+
+            hand_kds = [compute_kd(kp, armature) for kp, armature in zip(hand_kps, hand_armatures)]
+            kps = np.array(arm_kps + hand_kps)
+            kds = np.array(arm_kds + hand_kds)
+
+            joint_ids = [self.mj_model.joint(name=name).id for name in JOINT_NAMES]
+            joint_positions = self.mj_data.qpos[joint_ids]
+            joint_velocities = self.mj_data.qvel[joint_ids]
+            joint_pos_targets = self.robot_joint_pos_targets
+            joint_vel_targets = np.zeros_like(joint_velocities)
+            applied_joint_torques = self.get_applied_joint_torques()
+            pos_error = joint_pos_targets - joint_positions
+            vel_error = joint_vel_targets - joint_velocities
+            prev_pos_error = joint_pos_targets - prev_joint_positions
+            prev_vel_error = joint_vel_targets - prev_joint_velocities
+            estimated_joint_torques = kps * pos_error + kds * vel_error + dampings * vel_error + frictionlosses * np.sign(vel_error)
+            prev_estimated_joint_torques = kps * prev_pos_error + kds * prev_vel_error + dampings * prev_vel_error + frictionlosses * np.sign(prev_vel_error)
+            percent_error = np.round(np.abs(prev_estimated_joint_torques - applied_joint_torques) / np.abs(applied_joint_torques) * 100.0, 2)
+            # print(f"applied_joint_torques: {applied_joint_torques}")
+            # print(f"prev_estimated_joint_torques: {prev_estimated_joint_torques}")
+            actuators = [self.mj_model.actuator(name=name) for name in ACTUATOR_NAMES]
+            # actual_kps = np.array([actuator.gainprm[0] for actuator in actuators])
+            actual_kps = np.array([-actuator.biasprm[1] for actuator in actuators])
+            actual_kds = np.array([-actuator.biasprm[2] for actuator in actuators])
+            actual_estimated_joint_torques = actual_kps * pos_error + actual_kds * vel_error + dampings * vel_error + frictionlosses * np.sign(vel_error)
+            actual_prev_estimated_joint_torques = actual_kps * prev_pos_error + actual_kds * prev_vel_error + dampings * prev_vel_error + frictionlosses * np.sign(prev_vel_error)
+            actual_percent_error = np.round(np.abs(actual_prev_estimated_joint_torques - applied_joint_torques) / np.abs(applied_joint_torques) * 100.0, 2)
+
+            print(f"JOINT_NAMES: {JOINT_NAMES}")
+            print(f"joint_positions: {joint_positions}")
+            print(f"joint_pos_targets: {joint_pos_targets}")
+            print(f"joint_velocities: {joint_velocities}")
+            print(f"pos_error: {pos_error}")
+            print(f"applied_joint_torques: {applied_joint_torques}")
+            print(f"estimated_joint_torques: {estimated_joint_torques}")
+            print(f"prev_estimated_joint_torques: {prev_estimated_joint_torques}")
+            print(f"kps: {kps}")
+            print(f"kds: {kds}")
+            print(f"actual_kps: {actual_kps}")
+            print(f"actual_kds: {actual_kds}")
+            print(f"actual_estimated_joint_torques: {actual_estimated_joint_torques}")
+            print(f"actual_prev_estimated_joint_torques: {actual_prev_estimated_joint_torques}")
+            print(f"actual_percent_error: {actual_percent_error} (max is {np.max(actual_percent_error)})")
+            print(f"percent_error: {percent_error} (max is {np.max(percent_error)})")
+            # for i, joint_name in enumerate(JOINT_NAMES):
+            #     print(f"For {joint_name}: ")
+            #     print(f"  kp: {kps[i]}")
+            #     print(f"  kd: {kds[i]}")
+            #     print(f"  armature: {armatures[i]}")
+            #     print(f"  damping: {dampings[i]}")
+            #     print(f"  frictionloss: {frictionlosses[i]}")
+            #     print(f"  estimated_torque: {estimated_joint_torques[i]}")
+            #     print(f"  prev_estimated_torque: {prev_estimated_joint_torques[i]}")
+            #     print(f"  pos_error: {pos_error[i]}")
+            #     print(f"  vel_error: {vel_error[i]}")
+            print()
+            if len(loop_dts) == 10:
+                breakpoint()
 
             # Get simulation state
             sim_state_dict = self.get_sim_state()
