@@ -1,18 +1,17 @@
 #!/bin/bash
 
-CUSTOM_EXPERIMENT_NAME="DR_RELATIVE_SLOW"
+CUSTOM_EXPERIMENT_NAME="SYMMETRIC_ORIG_OBS"
 WANDB_GROUP="PRETRAIN"
 
-WANDB_ENTITY="tylerlum"
-WANDB_PROJECT="sapg_allegro_kuka_reorientation"
+WANDB_ENTITY="kk837"
+WANDB_PROJECT="FINAL_ASYMMETRIC_RUNS"
 OBJECT_TYPE="cuboid"
 
 DATETIME=$(date +"%Y-%m-%d_%H-%M-%S")
 EXPERIMENT_NAME="${CUSTOM_EXPERIMENT_NAME}_$DATETIME"
-HYDRA_RUN_DIR=./train_dir/allegro_kuka_reorientation/${WANDB_GROUP}/${EXPERIMENT_NAME}
+HYDRA_RUN_DIR=./train_dir/final_asymmetric_runs/${WANDB_GROUP}/${EXPERIMENT_NAME}
 
 python -m isaacgymenvs.train \
-task=AllegroKukaLSTM \
 task/env=reorientation \
 ++task.env.useSparseReward=False \
 headless=True \
@@ -40,6 +39,9 @@ hydra.run.dir=${HYDRA_RUN_DIR} \
 task.env.object_type=${OBJECT_TYPE} \
 task.env.dofSpeedScale=10 \
 task.env.useRelativeControl=False \
-task.task.randomize=True \
+task.task.randomize=False \
 task.task.randomization_params.actor_params.object.scale.range=[0.999,1.001] \
 task.task.randomization_params.actor_params.allegro.scale.range=[0.999,1.001] \
+task=AllegroKukaLSTM \
+# task.env.observationType=asymmetric \
+# task=AllegroKukaLSTMAsymmetric \

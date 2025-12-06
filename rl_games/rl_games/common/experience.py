@@ -330,7 +330,7 @@ class ExperienceBuffer:
 
         self.tensor_dict['obses'] = self._create_tensor_from_space(env_info['observation_space'], obs_base_shape, extra_obs_dim)
         if self.has_central_value:
-            self.tensor_dict['states'] = self._create_tensor_from_space(env_info['state_space'], state_base_shape)
+            self.tensor_dict['states'] = self._create_tensor_from_space(env_info['state_space'], state_base_shape,extra_obs_dim)
         
         val_space = gym.spaces.Box(low=0, high=1,shape=(env_info.get('value_size',1),))
         intr_rew_space = gym.spaces.Box(low=0, high=1,shape=(1,))

@@ -210,55 +210,44 @@ class AllegroKukaBase(VecTask):
 
         assert self.num_allegro_fingertips == len(self.allegro_fingertips)
 
-        # can be only "full_state"
+        # can be only "full_state" or "asymmetric"
         self.obs_type = self.cfg["env"]["observationType"]
 
-        if not (self.obs_type in ["full_state"]):
+        if not (self.obs_type in ["full_state", "asymmetric"]):
             raise Exception("Unknown type of observations!")
 
         print("Obs type:", self.obs_type)
 
-        num_dof_pos = self.num_hand_arm_dofs
-        num_dof_vel = self.num_hand_arm_dofs
-        num_dof_forces = self.num_hand_arm_dofs if self.with_dof_force_sensors else 0
+        self.obs_type_size_dict = {
+            "joint_pos": self.num_hand_arm_dofs,
+            "joint_vel": self.num_hand_arm_dofs,
+            "palm_pos": 3,
+            "palm_rot": 4,
+            "palm_vel": 6,
+            "object_rot": 4,
+            "object_vel": 6,
+            "fingertip_pos_rel_palm": 3 * self.num_allegro_fingertips,
+            "keypoints_rel_palm": 3 * self.num_keypoints,
+            "keypoints_rel_goal": 3 * self.num_keypoints,
+            "object_scales": 3,
+            "closest_keypoint_max_dist": 1,
+            "closest_fingertip_dist": self.num_allegro_fingertips,
+            "lifted_object": 1,
+            "progress": 1,
+            "successes": 1,
+            "reward": 1,
+        }
 
-        palm_pos_size = 3
-        palm_rot_vel_angvel_size = 10
+        self.full_obs_list = ["joint_pos", "joint_vel", "palm_pos", "palm_rot", "palm_vel", "object_rot", "object_vel", "fingertip_pos_rel_palm", "keypoints_rel_palm", "keypoints_rel_goal", "object_scales", "closest_keypoint_max_dist", "closest_fingertip_dist", "lifted_object", "progress", "successes", "reward"]
 
-        obj_rot_vel_angvel_size = 10
+        self.asymmetric_obs_list = ["joint_pos", "joint_vel", "palm_pos", "palm_rot", "object_rot", "fingertip_pos_rel_palm", "keypoints_rel_palm", "keypoints_rel_goal", "object_scales"]
 
-        fingertip_rel_pos_size = 3 * self.num_allegro_fingertips
-
-        keypoint_info_size = self.num_keypoints * 3 + self.num_keypoints * 3
-        object_scales_size = 3
-        max_keypoint_dist_size = 1
-        lifted_object_flag_size = 1
-        progress_obs_size = 1 + 1
-        closest_fingertip_distance_size = self.num_allegro_fingertips
-        reward_obs_size = 1
-
-        self.full_state_size = (
-            num_dof_pos
-            + num_dof_vel
-            + num_dof_forces
-            + palm_pos_size
-            + palm_rot_vel_angvel_size
-            + obj_rot_vel_angvel_size
-            + fingertip_rel_pos_size
-            + keypoint_info_size
-            + object_scales_size
-            + max_keypoint_dist_size
-            + lifted_object_flag_size
-            + progress_obs_size
-            + closest_fingertip_distance_size
-            + reward_obs_size
-            # + self.num_allegro_actions
-        )
-
-        num_states = self.full_state_size
+        self.full_state_size = sum([self.obs_type_size_dict[obs_type] for obs_type in self.full_obs_list])
+        self.asymmetric_state_size = sum([self.obs_type_size_dict[obs_type] for obs_type in self.asymmetric_obs_list])
 
         self.num_obs_dict = {
             "full_state": self.full_state_size,
+            "asymmetric": self.asymmetric_state_size,
         }
 
         self.up_axis = "z"
@@ -266,7 +255,7 @@ class AllegroKukaBase(VecTask):
         self.fingertip_obs = True
 
         self.cfg["env"]["numObservations"] = self.num_obs_dict[self.obs_type]
-        self.cfg["env"]["numStates"] = num_states
+        self.cfg["env"]["numStates"] = self.full_state_size
         self.cfg["env"]["numActions"] = self.num_allegro_kuka_actions
 
         self.cfg["device_type"] = sim_device.split(":")[0] if sim_device.find(":") != -1 else sim_device
@@ -306,24 +295,23 @@ class AllegroKukaBase(VecTask):
         dof_state_tensor = self.gym.acquire_dof_state_tensor(self.sim)
         rigid_body_tensor = self.gym.acquire_rigid_body_state_tensor(self.sim)
 
-        if self.obs_type == "full_state":
-            if self.with_fingertip_force_sensors or self.with_table_force_sensor:
-                sensor_tensor = self.gym.acquire_force_sensor_tensor(self.sim)
-                self.force_sensor_tensor = gymtorch.wrap_tensor(sensor_tensor).view(
-                    # self.num_envs, self.num_allegro_fingertips * 6
-                    self.num_envs, -1, 6
-                )
-                print(f"force_sensor_tensor: {self.force_sensor_tensor.shape}")
-                self.gym.refresh_force_sensor_tensor(self.sim)
-                if self.device == "cpu":
-                    raise ValueError("Force sensors not supported on CPU, they only gives 0s on CPU")
+        if self.with_fingertip_force_sensors or self.with_table_force_sensor:
+            sensor_tensor = self.gym.acquire_force_sensor_tensor(self.sim)
+            self.force_sensor_tensor = gymtorch.wrap_tensor(sensor_tensor).view(
+                # self.num_envs, self.num_allegro_fingertips * 6
+                self.num_envs, -1, 6
+            )
+            print(f"force_sensor_tensor: {self.force_sensor_tensor.shape}")
+            self.gym.refresh_force_sensor_tensor(self.sim)
+            if self.device == "cpu":
+                raise ValueError("Force sensors not supported on CPU, they only gives 0s on CPU")
 
-            if self.with_dof_force_sensors:
-                dof_force_tensor = self.gym.acquire_dof_force_tensor(self.sim)
-                self.dof_force_tensor = gymtorch.wrap_tensor(dof_force_tensor).view(
-                    self.num_envs, self.num_hand_arm_dofs
-                )
-                self.gym.refresh_dof_force_tensor(self.sim)
+        if self.with_dof_force_sensors:
+            dof_force_tensor = self.gym.acquire_dof_force_tensor(self.sim)
+            self.dof_force_tensor = gymtorch.wrap_tensor(dof_force_tensor).view(
+                self.num_envs, self.num_hand_arm_dofs
+            )
+            self.gym.refresh_dof_force_tensor(self.sim)
 
         self.gym.refresh_actor_root_state_tensor(self.sim)
         self.gym.refresh_dof_state_tensor(self.sim)
@@ -1218,9 +1206,8 @@ class AllegroKukaBase(VecTask):
             for name in self.gym.get_actor_rigid_body_names(env_ptr, allegro_actor):
                 self.rigid_body_name_to_idx["allegro/" + name] = self.gym.find_actor_rigid_body_index(env_ptr, allegro_actor, name, gymapi.DOMAIN_ENV)
 
-            if self.obs_type == "full_state":
-                if self.with_dof_force_sensors:
-                    self.gym.enable_actor_dof_force_sensors(env_ptr, allegro_actor)
+            if self.with_dof_force_sensors:
+                self.gym.enable_actor_dof_force_sensors(env_ptr, allegro_actor)
 
             if self.VISUALIZE_PD_TARGET_AS_BLUE_ROBOT:
                 blue_robot_actor = self.gym.create_actor(
@@ -1734,11 +1721,11 @@ class AllegroKukaBase(VecTask):
         self.gym.refresh_actor_root_state_tensor(self.sim)
         self.gym.refresh_rigid_body_state_tensor(self.sim)
 
-        if self.obs_type == "full_state":
-            if self.with_fingertip_force_sensors or self.with_table_force_sensor:
-                self.gym.refresh_force_sensor_tensor(self.sim)
-            if self.with_dof_force_sensors:
-                self.gym.refresh_dof_force_tensor(self.sim)
+        # if self.obs_type == "full_state":
+        if self.with_fingertip_force_sensors or self.with_table_force_sensor:
+            self.gym.refresh_force_sensor_tensor(self.sim)
+        if self.with_dof_force_sensors:
+            self.gym.refresh_dof_force_tensor(self.sim)
 
         if self.with_table_force_sensor:
             self.table_sensor_forces_raw = self.force_sensor_tensor[:, self.table_sensor_idx, :]
@@ -1851,103 +1838,54 @@ class AllegroKukaBase(VecTask):
             self.closest_keypoint_max_dist < 0.0, self.keypoints_max_dist, self.closest_keypoint_max_dist
         )
 
-        if self.obs_type == "full_state":
-            full_state_size, reward_obs_ofs = self.compute_full_state(self.obs_buf)
-            assert (
-                full_state_size == self.full_state_size
-            ), f"Expected full state size {self.full_state_size}, actual: {full_state_size}"
+        self.compute_full_state()
 
-            return self.obs_buf, reward_obs_ofs
-        else:
-            raise ValueError("Unkown observations type!")
-
-    def compute_full_state(self, buf: Tensor) -> Tuple[int, int]:
+    def compute_full_state(self) -> None:
         num_dofs = self.num_hand_arm_dofs
-        ofs = 0
-
+        obs_dict = {}
         # dof positions
-        buf[:, ofs : ofs + num_dofs] = unscale(
-            self.arm_hand_dof_pos[:, :num_dofs],
-            self.arm_hand_dof_lower_limits[:num_dofs],
-            self.arm_hand_dof_upper_limits[:num_dofs],
-        )
-        ofs += num_dofs
-
+        obs_dict["joint_pos"] = unscale(self.arm_hand_dof_pos[:, :num_dofs], self.arm_hand_dof_lower_limits[:num_dofs],self.arm_hand_dof_upper_limits[:num_dofs],)
         # dof velocities
-        buf[:, ofs : ofs + num_dofs] = self.arm_hand_dof_vel[:, :num_dofs]
-        ofs += num_dofs
-
-        if self.with_dof_force_sensors:
-            # dof forces
-            buf[:, ofs : ofs + num_dofs] = self.dof_force_tensor[:, :num_dofs]
-            ofs += num_dofs
-
+        obs_dict["joint_vel"] = self.arm_hand_dof_vel[:, :num_dofs]
         # palm pos
-        buf[:, ofs : ofs + 3] = self.palm_center_pos
-        ofs += 3
-
-        # palm rot, linvel, ang vel
-        buf[:, ofs : ofs + 4] = self._palm_state[:, 3:7]
-        ofs += 4
-        buf[:, ofs : ofs + 3] = self._palm_state[:, 7:10] * self.turn_off_palm_vel_obs_scale
-        ofs += 3
-        buf[:, ofs : ofs + 3] = self._palm_state[:, 10:13] * self.turn_off_palm_vel_obs_scale
-        ofs += 3
-
-        # object rot, linvel, ang vel
-        buf[:, ofs : ofs + 4] = self.object_state[:, 3:7]
-        ofs += 4
-        buf[:, ofs : ofs + 3] = self.object_state[:, 7:10] * self.turn_off_object_vel_obs_scale
-        ofs += 3
-        buf[:, ofs : ofs + 3] = self.object_state[:, 10:13] * self.turn_off_object_vel_obs_scale
-        ofs += 3
-
+        obs_dict["palm_pos"] = self.palm_center_pos
+        # palm rot
+        obs_dict["palm_rot"] = self._palm_state[:, 3:7]
+        # palm linvel, ang vel
+        obs_dict["palm_vel"] = self._palm_state[:, 7:13]*self.turn_off_extra_obs_scale
+        # object rot
+        obs_dict["object_rot"] = self.object_state[:, 3:7]
+        # object vel
+        obs_dict["object_vel"] = self.object_state[:, 7:13]*self.turn_off_extra_obs_scale
         # fingertip pos relative to the palm of the hand
         fingertip_rel_pos_size = 3 * self.num_allegro_fingertips
-        buf[:, ofs : ofs + fingertip_rel_pos_size] = self.fingertip_pos_rel_palm.reshape(
-            self.num_envs, fingertip_rel_pos_size
-        )
-        ofs += fingertip_rel_pos_size
-
+        obs_dict["fingertip_pos_rel_palm"] = self.fingertip_pos_rel_palm.reshape(self.num_envs, fingertip_rel_pos_size)
         # keypoint distances relative to the palm of the hand
         keypoint_rel_pos_size = 3 * self.num_keypoints
-        buf[:, ofs : ofs + keypoint_rel_pos_size] = self.keypoints_rel_palm.reshape(
-            self.num_envs, keypoint_rel_pos_size
-        )
-        ofs += keypoint_rel_pos_size
-
+        obs_dict["keypoints_rel_palm"] = self.keypoints_rel_palm.reshape(self.num_envs, keypoint_rel_pos_size)
         # keypoint distances relative to the goal
-        buf[:, ofs : ofs + keypoint_rel_pos_size] = self.keypoints_rel_goal.reshape(
-            self.num_envs, keypoint_rel_pos_size
-        )
-        ofs += keypoint_rel_pos_size
-
+        obs_dict["keypoints_rel_goal"] = self.keypoints_rel_goal.reshape(self.num_envs, keypoint_rel_pos_size)
         # object scales
-        buf[:, ofs : ofs + 3] = self.object_scales
-        ofs += 3
-
+        obs_dict["object_scales"] = self.object_scales
         # closest distance to the furthest keypoint, achieved so far in this episode
-        buf[:, ofs : ofs + 1] = self.closest_keypoint_max_dist.unsqueeze(-1) * self.turn_off_extra_obs_scale
-        ofs += 1
-
+        obs_dict["closest_keypoint_max_dist"] = self.closest_keypoint_max_dist.unsqueeze(-1) * self.turn_off_extra_obs_scale
         # closest distance between a fingertip and an object achieved since last target reset
         # this should help the critic predict the anticipated fingertip reward
-        buf[:, ofs : ofs + self.num_allegro_fingertips] = self.closest_fingertip_dist * self.turn_off_extra_obs_scale
-        ofs += self.num_allegro_fingertips
-
+        obs_dict["closest_fingertip_dist"] = self.closest_fingertip_dist.unsqueeze(-1) * self.turn_off_extra_obs_scale
         # indicates whether we already lifted the object from the table or not, should help the critic be more accurate
-        buf[:, ofs : ofs + 1] = self.lifted_object.unsqueeze(-1) * self.turn_off_extra_obs_scale
-        ofs += 1
-
+        obs_dict["lifted_object"] = self.lifted_object.unsqueeze(-1) * self.turn_off_extra_obs_scale
         # this should help the critic predict the future rewards better and anticipate the episode termination
-        buf[:, ofs : ofs + 1] = torch.log(self.progress_buf / 10 + 1).unsqueeze(-1) * self.turn_off_extra_obs_scale
-        ofs += 1
-        buf[:, ofs : ofs + 1] = torch.log(self.successes + 1).unsqueeze(-1) * self.turn_off_extra_obs_scale
-        ofs += 1
-
+        obs_dict["progress"] = torch.log(self.progress_buf / 10 + 1).unsqueeze(-1) * self.turn_off_extra_obs_scale
+        obs_dict["successes"] = torch.log(self.successes + 1).unsqueeze(-1) * self.turn_off_extra_obs_scale
         # this is where we will add the reward observation
-        reward_obs_ofs = ofs
-        ofs += 1
+        obs_dict["reward"] = self.rew_buf * self.turn_off_extra_obs_scale
+        self.states_buf = torch.cat([obs_dict[k].reshape(self.num_envs, -1) for k in self.full_obs_list], dim=-1)
+        if self.obs_type == "full_state":
+            self.obs_buf = torch.cat([obs_dict[k].reshape(self.num_envs, -1) for k in self.full_obs_list], dim=-1)
+        elif self.obs_type == "asymmetric":
+            self.obs_buf = torch.cat([obs_dict[k].reshape(self.num_envs, -1) for k in self.asymmetric_obs_list], dim=-1)
+        else:
+            raise ValueError(f"Unknown observation type: {self.obs_type}")
 
         # Default CHECK_WITH_COMPUTED_OBS = False
         # Set to True to check if the observations are computed correctly
@@ -1988,9 +1926,6 @@ class AllegroKukaBase(VecTask):
             print(f"num_errors: {num_errors}")
             print("="*100)
             breakpoint()
-
-        assert ofs == self.full_state_size
-        return ofs, reward_obs_ofs
 
     @property
     def turn_off_palm_vel_obs_scale(self) -> float:
@@ -2053,9 +1988,10 @@ class AllegroKukaBase(VecTask):
         self.extras["turn_off_extra_obs_scale"] = scale
         return scale
 
-    def clamp_obs(self, obs_buf: Tensor) -> None:
+    def clamp_obs(self) -> None:
         if self.clamp_abs_observations > 0:
-            obs_buf.clamp_(-self.clamp_abs_observations, self.clamp_abs_observations)
+            self.obs_buf.clamp_(-self.clamp_abs_observations, self.clamp_abs_observations)
+            self.states_buf.clamp_(-self.clamp_abs_observations, self.clamp_abs_observations)
 
     def get_random_quat(self, env_ids):
         # https://github.com/KieranWynn/pyquaternion/blob/master/pyquaternion/quaternion.py
@@ -2707,7 +2643,7 @@ class AllegroKukaBase(VecTask):
 
         self._update_tyler_curriculum()
 
-        obs_buf, reward_obs_ofs = self.compute_observations()
+        self.compute_observations()
         rewards, is_success = self.compute_kuka_reward()
         
         if self.good_reset_boundary > 0:
@@ -2743,10 +2679,13 @@ class AllegroKukaBase(VecTask):
 
         # add rewards to observations
         reward_obs_scale = 0.01
-        obs_buf[:, reward_obs_ofs : reward_obs_ofs + 1] = rewards.unsqueeze(-1) * reward_obs_scale * self.turn_off_extra_obs_scale
+        # obs_buf[:, reward_obs_ofs : reward_obs_ofs + 1] = rewards.unsqueeze(-1) * reward_obs_scale * self.turn_off_extra_obs_scale
         # print(f"obs_buf: {obs_buf[0]}")
+        self.states_buf[:, -1:] = rewards.unsqueeze(-1) * reward_obs_scale * self.turn_off_extra_obs_scale
+        if self.obs_type == "full_state":
+            self.obs_buf[:, -1:] = rewards.unsqueeze(-1) * reward_obs_scale * self.turn_off_extra_obs_scale
 
-        self.clamp_obs(obs_buf)
+        self.clamp_obs()
 
         self._eval_stats(is_success)
 

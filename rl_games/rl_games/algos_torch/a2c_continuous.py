@@ -43,8 +43,12 @@ class A2CAgent(a2c_common.ContinuousA2CBase):
         self.optimizer = optim.Adam(self.model.parameters(), float(self.last_lr), eps=1e-08, weight_decay=self.weight_decay)
 
         if self.has_central_value:
+            if self.intr_reward_coef_embd is not None and not (self.expl_type.startswith('mixed_expl') and 'disjoint' in self.expl_type):
+                value_input_shape = (self.state_shape[0] + self.intr_reward_coef_embd.shape[1],)
+            else:
+                value_input_shape = self.state_shape
             cv_config = {
-                'state_shape' : self.state_shape, 
+                'state_shape' : value_input_shape, 
                 'value_size' : self.value_size,
                 'ppo_device' : self.ppo_device, 
                 'num_agents' : self.num_agents, 
@@ -58,8 +62,12 @@ class A2CAgent(a2c_common.ContinuousA2CBase):
                 'writter' : self.writer,
                 'max_epochs' : self.max_epochs,
                 'multi_gpu' : self.multi_gpu,
-                'zero_rnn_on_done' : self.zero_rnn_on_done
+                'zero_rnn_on_done' : self.zero_rnn_on_done,
+                'type': 'simple' if 'learn_param' not in self.expl_type else 'extra_param',
             }
+            if self.expl_type.startswith('mixed_expl'):
+                cv_config['coef_ids'] = self.intr_reward_coef_embd[::self.intr_coef_block_size,0]
+                cv_config['coef_id_idx'] = self.state_shape[0]
             self.central_value_net = central_value.CentralValueTrain(**cv_config).to(self.ppo_device)
 
         self.use_experimental_cv = self.config.get('use_experimental_cv', True)
