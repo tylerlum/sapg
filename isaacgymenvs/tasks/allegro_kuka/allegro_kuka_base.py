@@ -793,7 +793,6 @@ class AllegroKukaBase(VecTask):
                 self.__dict__[key] = value
             print(f"Loaded env state value {key}:{value}")
         
-        print(self._extra_object_indices(None)[0][0].shape)
         self.arm_hand_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, : self.num_hand_arm_dofs]
         self.arm_hand_dof_pos = self.arm_hand_dof_state[..., 0]
         self.arm_hand_dof_vel = self.arm_hand_dof_state[..., 1]
