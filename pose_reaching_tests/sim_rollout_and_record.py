@@ -147,6 +147,10 @@ def main():
     # breakpoint()
     cfg.task.env.allegroDamping = DAMPING_MULTIPLIER * cfg.task.env.allegroDamping
     cfg.task.env.allegroStiffness = STIFFNESS_MULTIPLIER * cfg.task.env.allegroStiffness
+
+    cfg.task.env.episodeLength = 1000000  # Don't end early
+    cfg.task.env.successSteps = 10000  # Hold position for long time
+
     env = create_env_from_cfg(
         cfg=cfg,
         headless=False,
@@ -233,7 +237,8 @@ def main():
         # print(f"Mean Hand MSE Error = {mean_hand_mse_error}")
         # print(f"Step {current_step}, Success = {success}")
         current_step += 1
-        if success:
+        # if success:
+        if False:
             current_step = 0
             break
         end_time = time.time()
