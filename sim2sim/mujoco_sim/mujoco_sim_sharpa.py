@@ -124,21 +124,37 @@ class MujocoSim:
         self.set_robot_joint_positions(INIT_JOINT_POS)
 
     def _init_scene(self) -> None:
-        # Robot
-        iiwa_xml_path = get_repo_root_dir() / "assets/mjcf/kuka_iiwa_14/scene.xml"
-        assert iiwa_xml_path.exists(), f"Robot path does not exist: {iiwa_xml_path}"
+        USE_MERGED_XML = True
+        if not USE_MERGED_XML:
+            # Robot
+            iiwa_xml_path = get_repo_root_dir() / "assets/mjcf/kuka_iiwa_14/scene.xml"
+            assert iiwa_xml_path.exists(), f"Robot path does not exist: {iiwa_xml_path}"
 
-        # Load mjspec from robot path
-        spec = mujoco.MjSpec.from_file(str(iiwa_xml_path))
-        spec.option.timestep = self.config.sim_dt
+            # Load mjspec from robot path
+            spec = mujoco.MjSpec.from_file(str(iiwa_xml_path))
+            spec.option.timestep = self.config.sim_dt
 
-        sharpa_xml_path = get_repo_root_dir() / "assets/urdf/left_sharpa_ha4/left_sharpa_ha4_v2_1_offset.xml"
-        assert sharpa_xml_path.exists(), (
-            f"Sharpa XML path does not exist: {sharpa_xml_path}"
-        )
-        sharpa_spec = mujoco.MjSpec.from_file(str(sharpa_xml_path))
-        attachment_site = next(s for s in spec.sites if s.name == "attachment_site")
-        attachment_site.attach_body(sharpa_spec.worldbody, "palm", "")
+            sharpa_xml_path = get_repo_root_dir() / "assets/urdf/left_sharpa_ha4/left_sharpa_ha4_v2_1_offset.xml"
+            assert sharpa_xml_path.exists(), (
+                f"Sharpa XML path does not exist: {sharpa_xml_path}"
+            )
+            sharpa_spec = mujoco.MjSpec.from_file(str(sharpa_xml_path))
+            attachment_site = next(s for s in spec.sites if s.name == "attachment_site")
+            attachment_site.attach_body(sharpa_spec.worldbody, "palm", "")
+
+            SAVE_MERGED_XML = True
+            if SAVE_MERGED_XML:
+                MERGED_XML_PATH = get_repo_root_dir() / "assets/urdf/kuka_allegro_sharpa_merged/iiwa14_left_sharpa.xml"
+                MERGED_XML_PATH.parent.mkdir(parents=True, exist_ok=True)
+                with open(MERGED_XML_PATH, "w") as f:
+                    f.write(spec.to_xml())
+                print(f"Saved to file: {MERGED_XML_PATH}")
+
+        else:
+            MERGED_XML_PATH = get_repo_root_dir() / "assets/urdf/kuka_allegro_sharpa_merged/iiwa14_left_sharpa.xml"
+            assert MERGED_XML_PATH.exists(), f"Merged path does not exist: {MERGED_XML_PATH}"
+            spec = mujoco.MjSpec.from_file(str(MERGED_XML_PATH))
+            spec.option.timestep = self.config.sim_dt
 
         # Enable gravity compensation for robot bodies
         # https://mujoco.readthedocs.io/en/3.1.2/XMLreference.html#body-gravcomp
