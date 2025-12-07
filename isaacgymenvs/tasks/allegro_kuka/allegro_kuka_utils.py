@@ -76,9 +76,9 @@ def populate_dof_properties(hand_arm_dof_props, params: DofParameters, arm_dofs:
         kuka_reflected_inertias = [n * n * J for n, J in zip(kuka_gear_ratios, kuka_rotor_inertias)]
         kuka_armatures = kuka_reflected_inertias
 
-        hand_arm_dof_props["stiffness"][0:arm_dofs].fill(kuka_stiffnesses)
-        hand_arm_dof_props["damping"][0:arm_dofs].fill(kuka_dampings)
-        hand_arm_dof_props["armature"][0:arm_dofs].fill(kuka_armatures)
+        hand_arm_dof_props["stiffness"][0:arm_dofs] = kuka_stiffnesses
+        hand_arm_dof_props["damping"][0:arm_dofs] = kuka_dampings
+        hand_arm_dof_props["armature"][0:arm_dofs] = kuka_armatures
 
         # Assumes hand order
         # ['left_thumb_CMC_FE', 'left_thumb_CMC_AA', 'left_thumb_MCP_FE', 'left_thumb_MCP_AA', 'left_thumb_IP',
@@ -91,10 +91,10 @@ def populate_dof_properties(hand_arm_dof_props, params: DofParameters, arm_dofs:
         hand_armatures = [0.0032, 0.0032, 0.00265, 0.00265, 0.0006, 0.00265, 0.00265, 0.0006, 0.00042, 0.00265, 0.00265, 0.0006, 0.00042, 0.00265, 0.00265, 0.0006, 0.00042, 0.00012, 0.00265, 0.00265, 0.0006, 0.00042]
         hand_frictions = [0.132, 0.132, 0.07456, 0.07456, 0.01276, 0.07456, 0.07456, 0.01276, 0.00378738, 0.07456, 0.07456, 0.01276, 0.00378738, 0.07456, 0.07456, 0.01276, 0.00378738, 0.012, 0.07456, 0.07456, 0.01276, 0.00378738]
         assert len(hand_stiffnesses) == len(hand_dampings) == len(hand_armatures) == len(hand_frictions) == hand_dofs, f"{len(hand_stiffnesses)} != {len(hand_dampings)} != {len(hand_armatures)} != {len(hand_frictions)} != {hand_dofs}"
-        hand_arm_dof_props["stiffness"][arm_dofs:].fill(hand_stiffnesses)
-        hand_arm_dof_props["damping"][arm_dofs:].fill(hand_dampings)
-        hand_arm_dof_props["armature"][arm_dofs:].fill(hand_armatures)
-        hand_arm_dof_props["friction"][arm_dofs:].fill(hand_frictions)
+        hand_arm_dof_props["stiffness"][arm_dofs:] = hand_stiffnesses
+        hand_arm_dof_props["damping"][arm_dofs:] = hand_dampings
+        hand_arm_dof_props["armature"][arm_dofs:] = hand_armatures
+        hand_arm_dof_props["friction"][arm_dofs:] = hand_frictions
     else:
         hand_arm_dof_props["stiffness"][0:arm_dofs].fill(params.kuka_stiffness)
         hand_arm_dof_props["stiffness"][arm_dofs:].fill(params.allegro_stiffness)
