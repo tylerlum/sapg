@@ -132,6 +132,7 @@ class MujocoSim:
 
             # Load mjspec from robot path
             spec = mujoco.MjSpec.from_file(str(iiwa_xml_path))
+            spec.option.timestep = self.config.sim_dt
 
             sharpa_xml_path = get_repo_root_dir() / "assets/urdf/left_sharpa_ha4/left_sharpa_ha4_v2_1_offset.xml"
             assert sharpa_xml_path.exists(), (
@@ -153,8 +154,8 @@ class MujocoSim:
             MERGED_XML_PATH = get_repo_root_dir() / "assets/urdf/kuka_allegro_sharpa_merged/iiwa14_left_sharpa.xml"
             assert MERGED_XML_PATH.exists(), f"Merged path does not exist: {MERGED_XML_PATH}"
             spec = mujoco.MjSpec.from_file(str(MERGED_XML_PATH))
+            spec.option.timestep = self.config.sim_dt
 
-        spec.option.timestep = self.config.sim_dt
         # spec.option.integrator = mujoco.mjtIntegrator.mjINT_EULER
 
         # Enable gravity compensation for robot bodies
@@ -422,8 +423,8 @@ class MujocoSim:
                     return 1.21E-06
                 else:
                     raise ValueError(f"Invalid joint type: {joint_type}")
-            def compute_kd(kp: float, armature: float) -> float:
-                return 2 * np.sqrt(kp * armature)
+            def compute_kd(kp: float, armature: float, damping_ratio: float) -> float:
+                return 2 * damping_ratio * np.sqrt(kp * armature)
 
             hand_joint_types = [
                 "CMC_joint",
@@ -467,7 +468,8 @@ class MujocoSim:
             frictionlosses[:] = 0.0
             dampings[:] = 0.0
 
-            hand_kds = [compute_kd(kp, armature) for kp, armature in zip(hand_kps, hand_armatures)]
+            hand_damping_ratio = 0.9
+            hand_kds = [compute_kd(kp, armature, hand_damping_ratio) for kp, armature in zip(hand_kps, hand_armatures)]
             kps = np.array(arm_kps + hand_kps)
             kds = np.array(arm_kds + hand_kds)
 
@@ -510,6 +512,9 @@ class MujocoSim:
             print(f"actual_prev_estimated_joint_torques: {actual_prev_estimated_joint_torques}")
             print(f"actual_percent_error: {actual_percent_error} (max is {np.max(actual_percent_error)})")
             print(f"percent_error: {percent_error} (max is {np.max(percent_error)})")
+            print(f"armatures: {armatures}")
+            print(f"dampings: {dampings}")
+            print(f"frictionlosses: {frictionlosses}")
             # for i, joint_name in enumerate(JOINT_NAMES):
             #     print(f"For {joint_name}: ")
             #     print(f"  kp: {kps[i]}")
