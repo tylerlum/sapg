@@ -396,6 +396,9 @@ class AllegroKukaBase(VecTask):
         self.goal_keypoint_pos = torch.zeros(
             (self.num_envs, self.num_keypoints, 3), dtype=torch.float, device=self.device
         )
+        self.observed_obj_keypoint_pos = torch.zeros(
+            (self.num_envs, self.num_keypoints, 3), dtype=torch.float, device=self.device
+        )
 
         # how many steps we were within the goal tolerance
         self.near_goal_steps = torch.zeros(self.num_envs, dtype=torch.int, device=self.device)
@@ -477,6 +480,8 @@ class AllegroKukaBase(VecTask):
             self.max_table_sensor_force_norm_smoothed = torch.zeros((self.num_envs), dtype=torch.float, device=self.device)
 
         self._init_tyler_curriculum()
+
+        self._init_obs_action_history()
 
     ##### KEYBOARD START #####
     def _subscribe_to_keyboard_events(self) -> None:
@@ -1768,6 +1773,72 @@ class AllegroKukaBase(VecTask):
         self.object_linvel = self.root_state_tensor[self.object_indices, 7:10]
         self.object_angvel = self.root_state_tensor[self.object_indices, 10:13]
 
+        # Observed object state
+        self.observed_object_state = self.object_state.clone()
+
+        # Update object state history
+        # Roll the history down by 1, then update index=0 with the new object state
+        self.object_state_history[:, 1:] = self.object_state_history[:, :-1]
+        self.object_state_history[:, 0] = self.object_state.clone()
+        USE_OBJECT_STATE_DELAY = False
+        if USE_OBJECT_STATE_DELAY:
+            # Sample a delay index from the history
+            delay_index = torch.randint(0, self.object_state_history.shape[1], (self.num_envs,), device=self.device)
+            self.observed_object_state[:] = self.object_state_history[torch.arange(self.num_envs), delay_index]
+        USE_OBJECT_STATE_NOISE = False
+        if USE_OBJECT_STATE_NOISE:
+            def add_noise_to_quat(quat_xyzw: Tensor, noise_std: float) -> Tensor:
+                assert quat_xyzw.shape == (self.num_envs, 4)
+
+                # Extract components in XYZW order
+                w = quat_xyzw[:, 3]
+                xyz = quat_xyzw[:, 0:3]
+
+                # Convert quaternion → rotation vector
+                angle = 2 * torch.acos(torch.clamp(w, -1.0, 1.0))
+                sin_half = torch.sin(angle / 2).unsqueeze(-1)
+                axis = xyz / (sin_half + 1e-8)
+
+                rotvec = axis * angle.unsqueeze(-1)
+
+                # Add small Gaussian noise in rotation vector space
+                noise = torch.randn_like(rotvec) * noise_std
+                rotvec_noisy = rotvec + noise
+
+                # Convert rotation vector → quaternion
+                new_angle = torch.norm(rotvec_noisy, dim=-1)
+                axis_noisy = rotvec_noisy / (new_angle.unsqueeze(-1) + 1e-8)
+                half = new_angle / 2
+
+                w_new = torch.cos(half)
+                xyz_new = axis_noisy * torch.sin(half).unsqueeze(-1)
+
+                # Put back into XYZW order
+                quat_xyzw_with_noise = torch.cat([xyz_new, w_new.unsqueeze(-1)], dim=-1)
+
+                # Normalize for safety
+                quat_xyzw_with_noise = quat_xyzw_with_noise / quat_xyzw_with_noise.norm(dim=-1, keepdim=True)
+
+                assert quat_xyzw_with_noise.shape == (self.num_envs, 4)
+                return quat_xyzw_with_noise
+
+
+            # Add noise to the observed object state
+            XYZ_NOISE_STD = 0.01
+            QUAT_NOISE_STD = 0.01
+            LINVEL_NOISE_STD = 0.01
+            ANGVEL_NOISE_STD = 0.01
+            self.observed_object_state[:, 0:3] += torch.randn_like(self.observed_object_state[:, 0:3]) * XYZ_NOISE_STD
+            self.observed_object_state[:, 3:7] = add_noise_to_quat(self.observed_object_state[:, 3:7], QUAT_NOISE_STD)
+            self.observed_object_state[:, 7:10] += torch.randn_like(self.observed_object_state[:, 7:10]) * LINVEL_NOISE_STD
+            self.observed_object_state[:, 10:13] += torch.randn_like(self.observed_object_state[:, 10:13]) * ANGVEL_NOISE_STD
+
+        self.observed_object_pose = self.observed_object_state[:, 0:7]
+        self.observed_object_pos = self.observed_object_state[:, 0:3]
+        self.observed_object_rot = self.observed_object_state[:, 3:7]
+        self.observed_object_linvel = self.observed_object_state[:, 7:10]
+        self.observed_object_angvel = self.observed_object_state[:, 10:13]
+
         self.goal_pose = self.goal_states[:, 0:7]
         self.goal_pos = self.goal_states[:, 0:3]
         self.goal_rot = self.goal_states[:, 3:7]
@@ -1833,11 +1904,16 @@ class AllegroKukaBase(VecTask):
             self.goal_keypoint_pos[:, i] = self.goal_pos + quat_rotate(
                 self.goal_rot, self.object_keypoint_offsets[:, i]
             )
+            self.observed_obj_keypoint_pos[:, i] = self.observed_object_pos + quat_rotate(
+                self.observed_object_rot, self.object_keypoint_offsets[:, i]
+            )
 
         self.keypoints_rel_goal = self.obj_keypoint_pos - self.goal_keypoint_pos
+        self.observed_keypoints_rel_goal = self.observed_obj_keypoint_pos - self.goal_keypoint_pos
 
         palm_center_repeat = self.palm_center_pos.unsqueeze(1).repeat(1, self.num_keypoints, 1)
         self.keypoints_rel_palm = self.obj_keypoint_pos - palm_center_repeat
+        self.observed_keypoints_rel_palm = self.observed_obj_keypoint_pos - palm_center_repeat
 
         self.keypoint_distances_l2 = torch.norm(self.keypoints_rel_goal, dim=-1)
 
@@ -1894,11 +1970,11 @@ class AllegroKukaBase(VecTask):
         ofs += 3
 
         # object rot, linvel, ang vel
-        buf[:, ofs : ofs + 4] = self.object_state[:, 3:7]
+        buf[:, ofs : ofs + 4] = self.observed_object_rot[:, 3:7]
         ofs += 4
-        buf[:, ofs : ofs + 3] = self.object_state[:, 7:10] * self.turn_off_object_vel_obs_scale
+        buf[:, ofs : ofs + 3] = self.observed_object_linvel[:, 7:10] * self.turn_off_object_vel_obs_scale
         ofs += 3
-        buf[:, ofs : ofs + 3] = self.object_state[:, 10:13] * self.turn_off_object_vel_obs_scale
+        buf[:, ofs : ofs + 3] = self.observed_object_angvel[:, 10:13] * self.turn_off_object_vel_obs_scale
         ofs += 3
 
         # fingertip pos relative to the palm of the hand
@@ -1910,13 +1986,13 @@ class AllegroKukaBase(VecTask):
 
         # keypoint distances relative to the palm of the hand
         keypoint_rel_pos_size = 3 * self.num_keypoints
-        buf[:, ofs : ofs + keypoint_rel_pos_size] = self.keypoints_rel_palm.reshape(
+        buf[:, ofs : ofs + keypoint_rel_pos_size] = self.observed_keypoints_rel_palm.reshape(
             self.num_envs, keypoint_rel_pos_size
         )
         ofs += keypoint_rel_pos_size
 
         # keypoint distances relative to the goal
-        buf[:, ofs : ofs + keypoint_rel_pos_size] = self.keypoints_rel_goal.reshape(
+        buf[:, ofs : ofs + keypoint_rel_pos_size] = self.observed_keypoints_rel_goal.reshape(
             self.num_envs, keypoint_rel_pos_size
         )
         ofs += keypoint_rel_pos_size
@@ -2308,6 +2384,16 @@ class AllegroKukaBase(VecTask):
             self.last_time = time.time()
 
         actions = actions.to(self.device)
+
+        # Update actions history
+        # Roll the history down by 1, then update index=0 with the new action
+        self.action_history[:, 1:] = self.action_history[:, :-1]
+        self.action_history[:, 0] = actions.clone()
+        USE_ACTION_DELAY = False
+        if USE_ACTION_DELAY:
+            # Sample a delay index from the history
+            delay_index = torch.randint(0, self.action_history.shape[1], (self.num_envs,), device=self.device)
+            actions = self.action_history[torch.arange(self.num_envs), delay_index]
 
         self.actions = actions.clone()
 
@@ -2748,6 +2834,16 @@ class AllegroKukaBase(VecTask):
 
         self.clamp_obs(obs_buf)
 
+        # Update obs history
+        # Roll the history down by 1, then update index=0 with the new obs
+        self.obs_history[:, 1:] = self.obs_history[:, :-1]
+        self.obs_history[:, 0] = obs_buf.clone()
+        USE_OBS_DELAY = False
+        if USE_OBS_DELAY:
+            # Sample a delay index from the history
+            delay_index = torch.randint(0, self.obs_history.shape[1], (self.num_envs,), device=self.device)
+            obs_buf[:] = self.obs_history[torch.arange(self.num_envs), delay_index]
+
         self._eval_stats(is_success)
 
         if self.save_states:
@@ -2832,6 +2928,25 @@ class AllegroKukaBase(VecTask):
                 )
                 self._draw_transform(transform=object_transform, env_idx=i)
                 # self._draw_transform(transform=goal_transform, env_idx=i)
+
+    def _init_obs_action_history(self):
+        HISTORY_LENGTH = 3
+        self.obs_history = torch.zeros(self.num_envs, HISTORY_LENGTH, self.obs_buf.shape[1], dtype=torch.float, device=self.device)
+        self.action_history = torch.zeros(self.num_envs, HISTORY_LENGTH, self.actions.shape[1], dtype=torch.float, device=self.device)
+
+        # Along HISTORY_LENGTH dimension, index=0 is the most recent observation/action
+        # At each step, we update the history by shifting the history down, then updating index=0 with the new observation/action
+        # If use index=0 for all time, then there is no delay
+        # But we can sample delay index to simulate stochastic delay
+        # Need to be careful on reset, need to flush the history with the first obs/action
+
+        # The object state history is similar, but we want to have more delay on object state than the rest of the observations because it is
+        # More noise and more latency/delay with FoundationPose and more likely to be incorrect in the real world
+        # So we want to have more delay on object state than the rest of the observations
+        # These will store the object state WITHOUT any noise
+        # If we want to add noise to these, we will add noise on top of it after the object state is sampled from the history
+        OBJECT_STATE_HISTORY_LENGTH = 10
+        self.object_state_history = torch.zeros(self.num_envs, OBJECT_STATE_HISTORY_LENGTH, 13, dtype=torch.float, device=self.device)
 
     def _init_tyler_curriculum(self):
         self._tyler_curriculum_scale = 0.0
