@@ -10,7 +10,7 @@
       <!-- torque = gainprm * pos + (biasprm[0] + biasprm[1] * target + biasprm[2] * vel) -->
 
       <!-- kp = 300, kd = 20 seems to be the best for stability and matching real -->
-      <general gaintype="fixed" biastype="affine" gainprm="300" biasprm="0 -300 -20"/>
+      <!-- <general gaintype="fixed" biastype="affine" gainprm="300" biasprm="0 -300 -20"/> -->
 
       <!-- kp = 2000, kd = 200 (original from Mujoco Menagerie) -->
       <!-- <general gaintype="fixed" biastype="affine" gainprm="2000" biasprm="0 -2000 -200"/> -->
@@ -166,13 +166,41 @@
   </contact>
 
   <actuator>
-    <general name="actuator1" joint="joint1" class="joint1"/>
-    <general name="actuator2" joint="joint2" class="joint2"/>
-    <general name="actuator3" joint="joint3" class="joint1"/>
-    <general name="actuator4" joint="joint4" class="joint2"/>
-    <general name="actuator5" joint="joint5" class="joint1"/>
-    <general name="actuator6" joint="joint6" class="joint2"/>
-    <general name="actuator7" joint="joint7" class="joint3"/>
+    <general name="actuator1" joint="joint1" class="joint1"
+            gaintype="fixed" biastype="affine"
+            gainprm="600" biasprm="0 -600 -27.03"/>
+
+    <general name="actuator2" joint="joint2" class="joint2"
+            gaintype="fixed" biastype="affine"
+            gainprm="600" biasprm="0 -600 -27.03"/>
+
+    <general name="actuator3" joint="joint3" class="joint1"
+            gaintype="fixed" biastype="affine"
+            gainprm="500" biasprm="0 -500 -24.67"/>
+
+    <general name="actuator4" joint="joint4" class="joint2"
+            gaintype="fixed" biastype="affine"
+            gainprm="400" biasprm="0 -400 -22.07"/>
+
+    <general name="actuator5" joint="joint5" class="joint1"
+            gaintype="fixed" biastype="affine"
+            gainprm="200" biasprm="0 -200 -9.75"/>
+
+    <general name="actuator6" joint="joint6" class="joint2"
+            gaintype="fixed" biastype="affine"
+            gainprm="200" biasprm="0 -200 -9.15"/>
+
+    <general name="actuator7" joint="joint7" class="joint3"
+            gaintype="fixed" biastype="affine"
+            gainprm="200" biasprm="0 -200 -9.15"/>
+
+    <!-- <general name="actuator1" joint="joint1" class="joint1"/> -->
+    <!-- <general name="actuator2" joint="joint2" class="joint2"/> -->
+    <!-- <general name="actuator3" joint="joint3" class="joint1"/> -->
+    <!-- <general name="actuator4" joint="joint4" class="joint2"/> -->
+    <!-- <general name="actuator5" joint="joint5" class="joint1"/> -->
+    <!-- <general name="actuator6" joint="joint6" class="joint2"/> -->
+    <!-- <general name="actuator7" joint="joint7" class="joint3"/> -->
   </actuator>
 
   <keyframe>
