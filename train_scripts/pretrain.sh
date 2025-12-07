@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CUSTOM_EXPERIMENT_NAME="BASELINE_RUN"
+CUSTOM_EXPERIMENT_NAME="BASELINE"
 WANDB_GROUP="PRETRAIN"
 
 WANDB_ENTITY="kk837"
@@ -48,5 +48,6 @@ task.env.stateList=["joint_pos","joint_vel","palm_pos","palm_rot","palm_vel","ob
 task.env.obsList=["joint_pos","joint_vel","palm_pos","palm_rot","palm_vel","object_rot","object_vel","fingertip_pos_rel_palm","keypoints_rel_palm","keypoints_rel_goal","object_scales","closest_keypoint_max_dist","closest_fingertip_dist","lifted_object","progress","successes","reward"] \
 task.env.kukaActionsPenaltyScale=0.003 \
 task.env.allegroActionsPenaltyScale=0.0003 \
+task.env.controlFrequencyInv=1 \
 # task.env.observationType=asymmetric \
 # task=AllegroKukaLSTMAsymmetric \
