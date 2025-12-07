@@ -496,6 +496,9 @@ class MujocoSim:
             actual_prev_estimated_joint_torques = actual_kps * prev_pos_error + actual_kds * prev_vel_error + dampings * prev_vel_error + frictionlosses * np.sign(prev_vel_error)
             actual_percent_error = np.round(np.abs(actual_prev_estimated_joint_torques - applied_joint_torques) / np.abs(applied_joint_torques) * 100.0, 2)
 
+            kd_percent_error = np.round(np.abs(actual_kds - kds) / np.abs(kds) * 100.0, 2)
+            print(f"kd_percent_error: {kd_percent_error} (max is {np.max(kd_percent_error)})")
+
             print(f"JOINT_NAMES: {JOINT_NAMES}")
             print(f"joint_positions: {joint_positions}")
             print(f"joint_pos_targets: {joint_pos_targets}")
