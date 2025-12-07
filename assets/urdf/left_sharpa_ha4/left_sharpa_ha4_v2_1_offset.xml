@@ -49,9 +49,9 @@
   <worldbody>
     <!-- <body name="left_hand_C_MC" pos="0 0 0"> -->
 
-    <!-- Offset by z=0.04 -->
+    <!-- Offset by z=0.05 -->
     <!-- Offset by yaw of -75 degrees = quat="0.793353 0 0 -0.608761" -->
-    <body name="left_hand_C_MC" pos="0 0 0.04" quat="0.793353 0 0 -0.608761">
+    <body name="left_hand_C_MC" pos="0 0 0.05" quat="0.793353 0 0 -0.608761">
 
       <inertial pos="0.0060282 0.00091891 0.038914" mass="0.72045" diaginertia="0.00071328 0.00081371 0.00020795"/>
       <geom type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.79216 0.81961 0.93333 1" mesh="left_hand_C_MC_visual" name="left_hand_C_MC_visual"/>

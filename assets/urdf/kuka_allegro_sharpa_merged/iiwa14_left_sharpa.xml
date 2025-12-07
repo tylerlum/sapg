@@ -195,7 +195,7 @@
                     <geom class="collision" size="0.06" pos="0 0 0.001"/>
                     <site name="attachment_site" pos="0 0 0.045"/>
                     <body name="palmworld" pos="0 0 0.045">
-                      <body name="palmleft_hand_C_MC" pos="0 0 0.04" quat="0.793353 0 0 -0.608761">
+                      <body name="palmleft_hand_C_MC" pos="0 0 0.05" quat="0.793353 0 0 -0.608761">
                         <inertial pos="0.0060282 0.00091891 0.038914" mass="0.72045" diaginertia="0.00071328 0.00081371 0.00020795"/>
                         <geom name="palmleft_hand_C_MC_visual" type="mesh" contype="0" conaffinity="0" group="1" density="0" rgba="0.79216 0.81961 0.93333 1" mesh="palmleft_hand_C_MC_visual"/>
                         <geom name="palmleft_hand_C_MC" type="mesh" group="3" rgba="0.79216 0.81961 0.93333 1" mesh="palmleft_hand_C_MC"/>
