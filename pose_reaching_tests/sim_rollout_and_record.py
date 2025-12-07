@@ -65,7 +65,7 @@ class IsaacEnvNoRosJointPosTargets:
             q=q,
             qd=qd,
             joint_targets=joint_targets,
-            reward=reward,
+            reward=reward * 0,
         )
         return new_obs, reward, done, info
 
@@ -182,12 +182,17 @@ def main():
     assert len(nominal_joint_targets) == 29
 
     # sampled_joint_targets = nominal_joint_targets + np.random.normal(0, 0.1, 29)
-    sampled_joint_targets = np.array([
-        -1.271,  1.871,  0.3  ,  1.676,  0.3  ,  1.785,  1.608,  0.3  ,
-        0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,
-        0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,
-        0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3 
-    ])
+    # sampled_joint_targets = np.array([
+    #     -1.271,  1.871,  0.3  ,  1.676,  0.3  ,  1.785,  1.608,  0.3  ,
+    #     0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,
+    #     0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,
+    #     0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3 
+    # ])
+    sampled_joint_targets = np.array([-1.52132858, 1.55717357, 0.06476885, 1.52830299, -0.02341534, 1.4615863,
+      2.51592128, 0.07674347, -0.04694744, 0.054256, -0.04634177, -0.04657298,
+      0.02419623, -0.19132802, -0.17249178, -0.05622875, -0.10128311, 0.03142473,
+      -0.09080241, -0.14123037, 0.14656488, -0.02257763, 0.00675282, -0.14247482,
+      -0.05443827, 0.01109226, -0.11509936, 0.0375698, -0.06006387])
     joint_targets = np.clip(sampled_joint_targets, Q_LOWER_LIMITS_np, Q_UPPER_LIMITS_np)
     joint_targets = torch.from_numpy(joint_targets).float().to(DEVICE)
     

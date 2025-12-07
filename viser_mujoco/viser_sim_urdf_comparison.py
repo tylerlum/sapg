@@ -5,7 +5,7 @@ import viser
 from viser.extras import ViserUrdf
 
 from isaacgymenvs.utils.utils import get_repo_root_dir
-from sim2sim.mujoco_sim.mujoco_sim import INIT_JOINT_POS, MujocoSim, MujocoSimConfig
+from sim2sim.mujoco_sim.mujoco_sim_sharpa import INIT_JOINT_POS, MujocoSim, MujocoSimConfig
 from viser_mujoco.viser_sim import ViserMujocoSim
 
 
@@ -18,7 +18,7 @@ def main():
         wxyz=(1, 0, 0, 0),
     )
     urdf_path = (
-        get_repo_root_dir() / "assets/urdf/kuka_allegro_description/iiwa14_real.urdf"
+        get_repo_root_dir() / "assets/urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted_restricted.urdf"
     )
     viser_urdf = ViserUrdf(
         server,

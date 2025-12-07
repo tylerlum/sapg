@@ -124,7 +124,7 @@ class MujocoSim:
         self.set_robot_joint_positions(INIT_JOINT_POS)
 
     def _init_scene(self) -> None:
-        USE_MERGED_XML = True
+        USE_MERGED_XML = False
         if not USE_MERGED_XML:
             # Robot
             iiwa_xml_path = get_repo_root_dir() / "assets/mjcf/kuka_iiwa_14/scene.xml"
