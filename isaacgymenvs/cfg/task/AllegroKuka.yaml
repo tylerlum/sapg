@@ -142,6 +142,11 @@ env:
   curriculumSuccessRatio: 0.6
   resetWhenDropped: False
 
+  # related to Asymmetric Observation
+  stateList: ["joint_pos", "joint_vel", "palm_pos", "palm_rot", "palm_vel", "object_rot", "object_vel", "fingertip_pos_rel_palm", "keypoints_rel_palm", "keypoints_rel_goal", "object_scales", "closest_keypoint_max_dist", "closest_fingertip_dist", "lifted_object", "progress", "successes", "reward"]
+
+  obsList: ["joint_pos", "joint_vel", "palm_pos", "palm_rot", "palm_vel", "object_rot", "object_vel", "fingertip_pos_rel_palm", "keypoints_rel_palm", "keypoints_rel_goal", "object_scales", "closest_keypoint_max_dist", "closest_fingertip_dist", "lifted_object", "progress", "successes", "reward"]
+
   # some pose_reaching_env specific settings
   use_green_robot: True
   sanity_check_controls: False

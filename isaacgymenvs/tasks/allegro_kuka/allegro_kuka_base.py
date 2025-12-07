@@ -221,6 +221,7 @@ class AllegroKukaBase(VecTask):
         self.obs_type_size_dict = {
             "joint_pos": self.num_hand_arm_dofs,
             "joint_vel": self.num_hand_arm_dofs,
+            "prev_action_targets": self.num_hand_arm_dofs,
             "palm_pos": 3,
             "palm_rot": 4,
             "palm_vel": 6,
@@ -238,24 +239,26 @@ class AllegroKukaBase(VecTask):
             "reward": 1,
         }
 
-        self.full_obs_list = ["joint_pos", "joint_vel", "palm_pos", "palm_rot", "palm_vel", "object_rot", "object_vel", "fingertip_pos_rel_palm", "keypoints_rel_palm", "keypoints_rel_goal", "object_scales", "closest_keypoint_max_dist", "closest_fingertip_dist", "lifted_object", "progress", "successes", "reward"]
+        self.state_list = self.cfg["env"]["stateList"]
+        self.obs_list = self.cfg["env"]["obsList"]
 
-        self.asymmetric_obs_list = ["joint_pos", "joint_vel", "palm_pos", "palm_rot", "object_rot", "fingertip_pos_rel_palm", "keypoints_rel_palm", "keypoints_rel_goal", "object_scales"]
+        # assert that all obs in state_list and obs_list are keys of self.obs_type_size_dict
+        for obs_type in self.state_list + self.obs_list:
+            assert obs_type in self.obs_type_size_dict, f"Obs type {obs_type} not found in obs_type_size_dict"
 
-        self.full_state_size = sum([self.obs_type_size_dict[obs_type] for obs_type in self.full_obs_list])
-        self.asymmetric_state_size = sum([self.obs_type_size_dict[obs_type] for obs_type in self.asymmetric_obs_list])
+        # assert that all obs in obs_list are also in state_list
+        for obs_type in self.obs_list:
+            assert obs_type in self.state_list, f"Obs type {obs_type} not found in state_list but is in obs_list"
 
-        self.num_obs_dict = {
-            "full_state": self.full_state_size,
-            "asymmetric": self.asymmetric_state_size,
-        }
+        self.full_state_size = sum([self.obs_type_size_dict[obs_type] for obs_type in self.state_list])
+        self.full_obs_size = sum([self.obs_type_size_dict[obs_type] for obs_type in self.obs_list])
 
         self.up_axis = "z"
 
         self.fingertip_obs = True
 
-        self.cfg["env"]["numObservations"] = self.num_obs_dict[self.obs_type]
         self.cfg["env"]["numStates"] = self.full_state_size
+        self.cfg["env"]["numObservations"] = self.full_obs_size
         self.cfg["env"]["numActions"] = self.num_allegro_kuka_actions
 
         self.cfg["device_type"] = sim_device.split(":")[0] if sim_device.find(":") != -1 else sim_device
@@ -1847,6 +1850,8 @@ class AllegroKukaBase(VecTask):
         obs_dict["joint_pos"] = unscale(self.arm_hand_dof_pos[:, :num_dofs], self.arm_hand_dof_lower_limits[:num_dofs],self.arm_hand_dof_upper_limits[:num_dofs],)
         # dof velocities
         obs_dict["joint_vel"] = self.arm_hand_dof_vel[:, :num_dofs]
+        # prev action targets
+        obs_dict["prev_action_targets"] = self.prev_targets.clone()
         # palm pos
         obs_dict["palm_pos"] = self.palm_center_pos
         # palm rot
@@ -1879,13 +1884,8 @@ class AllegroKukaBase(VecTask):
         obs_dict["successes"] = torch.log(self.successes + 1).unsqueeze(-1) * self.turn_off_extra_obs_scale
         # this is where we will add the reward observation
         obs_dict["reward"] = self.rew_buf * self.turn_off_extra_obs_scale
-        self.states_buf = torch.cat([obs_dict[k].reshape(self.num_envs, -1) for k in self.full_obs_list], dim=-1)
-        if self.obs_type == "full_state":
-            self.obs_buf = torch.cat([obs_dict[k].reshape(self.num_envs, -1) for k in self.full_obs_list], dim=-1)
-        elif self.obs_type == "asymmetric":
-            self.obs_buf = torch.cat([obs_dict[k].reshape(self.num_envs, -1) for k in self.asymmetric_obs_list], dim=-1)
-        else:
-            raise ValueError(f"Unknown observation type: {self.obs_type}")
+        self.states_buf = torch.cat([obs_dict[k].reshape(self.num_envs, -1) for k in self.state_list], dim=-1)
+        self.obs_buf = torch.cat([obs_dict[k].reshape(self.num_envs, -1) for k in self.obs_list], dim=-1)
 
         # Default CHECK_WITH_COMPUTED_OBS = False
         # Set to True to check if the observations are computed correctly
@@ -2681,8 +2681,9 @@ class AllegroKukaBase(VecTask):
         reward_obs_scale = 0.01
         # obs_buf[:, reward_obs_ofs : reward_obs_ofs + 1] = rewards.unsqueeze(-1) * reward_obs_scale * self.turn_off_extra_obs_scale
         # print(f"obs_buf: {obs_buf[0]}")
-        self.states_buf[:, -1:] = rewards.unsqueeze(-1) * reward_obs_scale * self.turn_off_extra_obs_scale
-        if self.obs_type == "full_state":
+        if "reward" in self.state_list:
+            self.states_buf[:, -1:] = rewards.unsqueeze(-1) * reward_obs_scale * self.turn_off_extra_obs_scale
+        if "reward" in self.obs_list:
             self.obs_buf[:, -1:] = rewards.unsqueeze(-1) * reward_obs_scale * self.turn_off_extra_obs_scale
 
         self.clamp_obs()
