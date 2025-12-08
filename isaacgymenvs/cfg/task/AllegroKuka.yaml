@@ -135,12 +135,15 @@ env:
   turn_off_object_vel_obs: False
   turn_off_object_vel_obs_slowly: False
 
+  # related to Tyler Curriculum
   use_obs_dropout: False
   init_tyler_curriculum_scale: 0.0
   VISUALIZE_PD_TARGET_AS_BLUE_ROBOT: False
   withTableForceSensor: False
   curriculumSuccessRatio: 0.6
   resetWhenDropped: False
+  timeToUpdateTylerCurriculum: 5
+  updateStepSizeTylerCurriculum: 0.01
 
   # related to Asymmetric Observation
   stateList: ["joint_pos", "joint_vel", "palm_pos", "palm_rot", "palm_vel", "object_rot", "object_vel", "fingertip_pos_rel_palm", "keypoints_rel_palm", "keypoints_rel_goal", "object_scales", "closest_keypoint_max_dist", "closest_fingertip_dist", "lifted_object", "progress", "successes", "reward"]

@@ -2790,9 +2790,13 @@ class AllegroKukaBase(VecTask):
         success_ratio = mean_successes / self.max_consecutive_successes
         curriculum_success_ratio = self.cfg["env"]["curriculumSuccessRatio"]
         doing_well = success_ratio > curriculum_success_ratio
-        enough_time_since_last_update = minutes_elapsed_since_last_update > 5
+
+        time_to_update = self.cfg["env"]["timeToUpdateTylerCurriculum"]
+        update_step_size = self.cfg["env"]["updateStepSizeTylerCurriculum"]
+
+        enough_time_since_last_update = minutes_elapsed_since_last_update > time_to_update
         if doing_well and enough_time_since_last_update:
-            self._tyler_curriculum_scale += 0.01
+            self._tyler_curriculum_scale += update_step_size
             if self._tyler_curriculum_scale > 1.0:
                 self._tyler_curriculum_scale = 1.0
             self._last_tyler_curriculum_update = time.time()

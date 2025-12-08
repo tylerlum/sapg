@@ -1,15 +1,15 @@
 #!/bin/bash
 
-CUSTOM_EXPERIMENT_NAME="BASELINE"
+CUSTOM_EXPERIMENT_NAME="MLP_ASYMMETRIC_prevActions_4cmBaseSize_10xPenalty"
 WANDB_GROUP="PRETRAIN"
 
 WANDB_ENTITY="kk837"
-WANDB_PROJECT="ABLATIONS"
+WANDB_PROJECT="FINAL_ASYMMETRIC_RUNS"
 OBJECT_TYPE="cuboid"
 
 DATETIME=$(date +"%Y-%m-%d_%H-%M-%S")
 EXPERIMENT_NAME="${CUSTOM_EXPERIMENT_NAME}_$DATETIME"
-HYDRA_RUN_DIR=./train_dir/ABLATIONS/${WANDB_GROUP}/${EXPERIMENT_NAME}
+HYDRA_RUN_DIR=./train_dir/${WANDB_PROJECT}/${WANDB_GROUP}/${EXPERIMENT_NAME}
 
 python -m isaacgymenvs.train \
 task/env=reorientation \
@@ -42,12 +42,12 @@ task.env.useRelativeControl=False \
 task.task.randomize=False \
 task.task.randomization_params.actor_params.object.scale.range=[0.999,1.001] \
 task.task.randomization_params.actor_params.allegro.scale.range=[0.999,1.001] \
-task=AllegroKukaLSTM \
-task.env.objectBaseSize=0.05 \
-task.env.stateList=["joint_pos","joint_vel","palm_pos","palm_rot","palm_vel","object_rot","object_vel","fingertip_pos_rel_palm","keypoints_rel_palm","keypoints_rel_goal","object_scales","closest_keypoint_max_dist","closest_fingertip_dist","lifted_object","progress","successes","reward"] \
-task.env.obsList=["joint_pos","joint_vel","palm_pos","palm_rot","palm_vel","object_rot","object_vel","fingertip_pos_rel_palm","keypoints_rel_palm","keypoints_rel_goal","object_scales","closest_keypoint_max_dist","closest_fingertip_dist","lifted_object","progress","successes","reward"] \
-task.env.kukaActionsPenaltyScale=0.003 \
-task.env.allegroActionsPenaltyScale=0.0003 \
+task=AllegroKukaMLPAsymmetric \
+task.env.objectBaseSize=0.04 \
+task.env.stateList=["joint_pos","joint_vel","palm_pos","palm_rot","palm_vel","object_rot","object_vel","fingertip_pos_rel_palm","keypoints_rel_palm","keypoints_rel_goal","object_scales","closest_keypoint_max_dist","closest_fingertip_dist","lifted_object","progress","successes","reward","prev_action_targets"] \
+task.env.obsList=["joint_pos","joint_vel","palm_pos","palm_rot","object_rot","fingertip_pos_rel_palm","keypoints_rel_palm","keypoints_rel_goal","object_scales","prev_action_targets"] \
+task.env.kukaActionsPenaltyScale=0.03 \
+task.env.allegroActionsPenaltyScale=0.003 \
 task.env.controlFrequencyInv=1 \
 # task.env.observationType=asymmetric \
-# task=AllegroKukaLSTMAsymmetric \
+# task=AllegroKukaLSTM \

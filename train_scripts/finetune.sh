@@ -1,7 +1,7 @@
 #!/bin/bash
 
 CHECKPOINT=/share/portal/kk837/sapg/train_dir/final_asymmetric_runs/PRETRAIN/SYMMETRIC_ORIG_OBS_2025-12-05_21-03-15/runs/00_SYMMETRIC_ORIG_OBS_2025-12-05_21-03-15/last/model.pth
-CUSTOM_EXPERIMENT_NAME="DELTA"
+CUSTOM_EXPERIMENT_NAME="FASTER_TYLER_CURRICULUM_DELTA_GOAL"
 WANDB_GROUP="hyperparamChanges"
 
 WANDB_ENTITY="kk837"
@@ -54,11 +54,12 @@ task.task.randomize=False \
 task.env.init_tyler_curriculum_scale=0.0 \
 task.env.episodeLength=600 \
 task.env.controlFrequencyInv=1 \
-task.env.goalSamplingType=absolute \
+task.env.goalSamplingType=delta \
 task.env.targetVolumeRegionScale=1.0 \
-task.env.deltaGoalDistance=0.05 \
-task.env.deltaRotationDegrees=20.0 \
-
+task.env.deltaGoalDistance=0.1 \
+task.env.deltaRotationDegrees=45.0 \
+task.env.timeToUpdateTylerCurriculum=5 \
+task.env.updateStepSizeTylerCurriculum=0.1 \
 # task.task.randomization_params.actor_params.object.scale.range=[0.9,1.1] \
 # task.task.randomization_params.actor_params.allegro.scale.range=[0.9,1.1] \
 # task.env.withTableForceSensor=True \
