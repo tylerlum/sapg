@@ -154,6 +154,12 @@ env:
   jointVelocityPenaltyScale: 0.0
   jointAccelerationPenaltyScale: 0.0
 
+  # goal sampling settings
+  goalSamplingType: "absolute" # "absolute" or "delta" or "coin_flip"
+  targetVolumeRegionScale: 1.0 # scale the target volume region by this factor
+  deltaGoalDistance: 0.05 # distance to the goal in meters
+  deltaRotationDegrees: 20.0 # rotation of the goal in degrees
+
   asset:
     # Whis was the original kuka_allegro asset.
     # This URDF has some issues, i.e. weights of fingers are too high and the mass of the Allegro hand is too

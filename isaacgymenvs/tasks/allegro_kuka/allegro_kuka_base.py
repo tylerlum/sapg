@@ -2006,8 +2006,8 @@ class AllegroKukaBase(VecTask):
 
         return new_rot
 
-    def reset_target_pose(self, env_ids: Tensor, reset_buf_idxs=None, tensor_reset=True) -> None:
-        self._reset_target(env_ids, reset_buf_idxs, tensor_reset=tensor_reset)
+    def reset_target_pose(self, env_ids: Tensor, reset_buf_idxs=None, tensor_reset=True, goal_only=False) -> None:
+        self._reset_target(env_ids, reset_buf_idxs, tensor_reset=tensor_reset, goal_only=goal_only)
         
         if tensor_reset:
             self.reset_goal_buf[env_ids] = 0
@@ -2142,7 +2142,7 @@ class AllegroKukaBase(VecTask):
                 self.max_table_sensor_force_norm_smoothed[env_ids] = 0
 
         # randomize start object poses
-        self.reset_target_pose(env_ids, reset_buf_idxs, tensor_reset=tensor_reset)
+        self.reset_target_pose(env_ids, reset_buf_idxs, tensor_reset=tensor_reset, goal_only=True)
 
         # reset rigid body forces
         if tensor_reset:
@@ -2270,7 +2270,7 @@ class AllegroKukaBase(VecTask):
         combined_random_env_ids = torch.cat([random_reset_env_ids, random_reset_goal_env_ids, random_reset_goal_env_ids])
         uniques, counts = combined_random_env_ids.unique(return_counts=True)
         random_reset_goal_env_ids = uniques[counts == 2]
-        self.reset_target_pose(random_reset_goal_env_ids, None)
+        self.reset_target_pose(random_reset_goal_env_ids, None, goal_only=True)
         self.reset_idx(good_reset_goal_env_ids, reset_buf_idxs, False)
 
         if len(reset_env_ids) > 0:

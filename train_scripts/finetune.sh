@@ -1,16 +1,16 @@
 #!/bin/bash
 
-CHECKPOINT=/share/portal/kk837/sapg/train_dir/allegro_kuka_reorientation/CUBOID_FINETUNING/00_RESTART_DR_NoObs_Slow_2025-11-20_21-01-53/runs/00_RESTART_DR_NoObs_Slow_2025-11-20_21-01-53/last/model.pth
-CUSTOM_EXPERIMENT_NAME="BASELINE_RUN"
+CHECKPOINT=/share/portal/kk837/sapg/train_dir/final_asymmetric_runs/PRETRAIN/SYMMETRIC_ORIG_OBS_2025-12-05_21-03-15/runs/00_SYMMETRIC_ORIG_OBS_2025-12-05_21-03-15/last/model.pth
+CUSTOM_EXPERIMENT_NAME="DELTA"
 WANDB_GROUP="hyperparamChanges"
 
 WANDB_ENTITY="kk837"
-WANDB_PROJECT="improveSimPerformance"
+WANDB_PROJECT="NEW_FINETUNING"
 OBJECT_TYPE="cuboid"
 
 DATETIME=$(date +"%Y-%m-%d_%H-%M-%S")
 EXPERIMENT_NAME="${CUSTOM_EXPERIMENT_NAME}_$DATETIME"
-HYDRA_RUN_DIR=./train_dir/improveSimPerformance/${WANDB_GROUP}/${EXPERIMENT_NAME}
+HYDRA_RUN_DIR=./train_dir/${WANDB_PROJECT}/${WANDB_GROUP}/${EXPERIMENT_NAME}
 
 python -m isaacgymenvs.train \
 task=AllegroKukaLSTM \
@@ -50,10 +50,14 @@ task.env.dofSpeedScale=10 \
 task.env.dofSpeedScaleFinal=2.5 \
 task.env.curriculumSuccessRatio=0.1 \
 task.env.forceScale=0.0 \
-task.task.randomize=True \
-task.env.init_tyler_curriculum_scale=0.87 \
+task.task.randomize=False \
+task.env.init_tyler_curriculum_scale=0.0 \
 task.env.episodeLength=600 \
 task.env.controlFrequencyInv=1 \
+task.env.goalSamplingType=absolute \
+task.env.targetVolumeRegionScale=1.0 \
+task.env.deltaGoalDistance=0.05 \
+task.env.deltaRotationDegrees=20.0 \
 
 # task.task.randomization_params.actor_params.object.scale.range=[0.9,1.1] \
 # task.task.randomization_params.actor_params.allegro.scale.range=[0.9,1.1] \
