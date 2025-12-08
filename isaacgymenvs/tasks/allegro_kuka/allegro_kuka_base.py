@@ -1778,13 +1778,13 @@ class AllegroKukaBase(VecTask):
 
         # Update object state history
         # Roll the history down by 1, then update index=0 with the new object state
-        self.object_state_history[:, 1:] = self.object_state_history[:, :-1]
+        self.object_state_history[:, 1:] = self.object_state_history[:, :-1].clone()
         self.object_state_history[:, 0] = self.object_state.clone()
         USE_OBJECT_STATE_DELAY = False
         if USE_OBJECT_STATE_DELAY:
             # Sample a delay index from the history
             delay_index = torch.randint(0, self.object_state_history.shape[1], (self.num_envs,), device=self.device)
-            self.observed_object_state[:] = self.object_state_history[torch.arange(self.num_envs), delay_index]
+            self.observed_object_state[:] = self.object_state_history[torch.arange(self.num_envs), delay_index].clone()
         USE_OBJECT_STATE_NOISE = False
         if USE_OBJECT_STATE_NOISE:
             def add_noise_to_quat(quat_xyzw: Tensor, noise_std: float) -> Tensor:
@@ -1970,11 +1970,11 @@ class AllegroKukaBase(VecTask):
         ofs += 3
 
         # object rot, linvel, ang vel
-        buf[:, ofs : ofs + 4] = self.observed_object_rot[:, 3:7]
+        buf[:, ofs : ofs + 4] = self.observed_object_state[:, 3:7]
         ofs += 4
-        buf[:, ofs : ofs + 3] = self.observed_object_linvel[:, 7:10] * self.turn_off_object_vel_obs_scale
+        buf[:, ofs : ofs + 3] = self.observed_object_state[:, 7:10] * self.turn_off_object_vel_obs_scale
         ofs += 3
-        buf[:, ofs : ofs + 3] = self.observed_object_angvel[:, 10:13] * self.turn_off_object_vel_obs_scale
+        buf[:, ofs : ofs + 3] = self.observed_object_state[:, 10:13] * self.turn_off_object_vel_obs_scale
         ofs += 3
 
         # fingertip pos relative to the palm of the hand
@@ -2387,13 +2387,13 @@ class AllegroKukaBase(VecTask):
 
         # Update actions history
         # Roll the history down by 1, then update index=0 with the new action
-        self.action_history[:, 1:] = self.action_history[:, :-1]
+        self.action_history[:, 1:] = self.action_history[:, :-1].clone()
         self.action_history[:, 0] = actions.clone()
         USE_ACTION_DELAY = False
         if USE_ACTION_DELAY:
             # Sample a delay index from the history
             delay_index = torch.randint(0, self.action_history.shape[1], (self.num_envs,), device=self.device)
-            actions = self.action_history[torch.arange(self.num_envs), delay_index]
+            actions = self.action_history[torch.arange(self.num_envs), delay_index].clone()
 
         self.actions = actions.clone()
 
@@ -2836,13 +2836,13 @@ class AllegroKukaBase(VecTask):
 
         # Update obs history
         # Roll the history down by 1, then update index=0 with the new obs
-        self.obs_history[:, 1:] = self.obs_history[:, :-1]
+        self.obs_history[:, 1:] = self.obs_history[:, :-1].clone()
         self.obs_history[:, 0] = obs_buf.clone()
         USE_OBS_DELAY = False
         if USE_OBS_DELAY:
             # Sample a delay index from the history
             delay_index = torch.randint(0, self.obs_history.shape[1], (self.num_envs,), device=self.device)
-            obs_buf[:] = self.obs_history[torch.arange(self.num_envs), delay_index]
+            obs_buf[:] = self.obs_history[torch.arange(self.num_envs), delay_index].clone()
 
         self._eval_stats(is_success)
 

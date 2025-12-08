@@ -92,7 +92,7 @@ def main():
         device=DEVICE,
         episode_length=T*2,  # Make it not reset before finishing the trajectory
         overrides={
-            "task.env.asset.kukaAllegro": "urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted.urdf",
+            "task.env.asset.kukaAllegro": "urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted_restricted.urdf",
             "task.task.randomize": False,
             "task.env.VISUALIZE_PD_TARGET_AS_BLUE_ROBOT": True,
         },

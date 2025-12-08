@@ -66,7 +66,7 @@ class DofParameters:
 def populate_dof_properties(hand_arm_dof_props, params: DofParameters, arm_dofs: int, hand_dofs: int) -> None:
     assert len(hand_arm_dof_props["stiffness"]) == arm_dofs + hand_dofs
 
-    USE_CORRECT_GAINS = True
+    USE_CORRECT_GAINS = False
     if USE_CORRECT_GAINS:
         kuka_stiffnesses =  [600, 600, 500, 400, 200, 200, 200]
         kuka_dampings = [27.03, 27.03, 24.67, 22.07, 9.75, 9.15, 9.15]

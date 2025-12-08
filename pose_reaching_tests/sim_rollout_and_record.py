@@ -138,8 +138,8 @@ def main():
         # "/juno/u/kedia/sapg/train_dir/checkpoints/pose_reaching/baseline_best.pth"
         f"/juno/u/kedia/sapg/train_dir/checkpoints/pose_reaching/{CHECKPOINT_NAME}.pth"
     )
-    # STIFFNESS_MULTIPLIER, DAMPING_MULTIPLIER = 1, 1
-    STIFFNESS_MULTIPLIER, DAMPING_MULTIPLIER = 1.3, 0.7
+    STIFFNESS_MULTIPLIER, DAMPING_MULTIPLIER = 1, 1
+    # STIFFNESS_MULTIPLIER, DAMPING_MULTIPLIER = 1.3, 0.7
     assert CHECKPOINT_PATH.exists()
 
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"

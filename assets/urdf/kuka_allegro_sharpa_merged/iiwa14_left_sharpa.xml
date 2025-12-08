@@ -1,7 +1,7 @@
 <mujoco model="iiwa14 scene">
   <compiler angle="radian" meshdir="assets/"/>
 
-  <option timestep="0.001" integrator="implicitfast"/>
+  <option timestep="0.00166667" integrator="implicitfast"/>
 
   <size nkey="1"/>
 
