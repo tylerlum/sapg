@@ -1,6 +1,6 @@
 from isaacgymenvs.tasks.allegro_kuka.allegro_kuka_base import AllegroKukaBase  # isort:skip
 import numpy as np
-from recorded_data_scripts.recorded_data import RecordedData
+from recorded_data_scripts.recorded_data_sharpa import RecordedData
 import time
 from pathlib import Path
 from typing import Tuple
