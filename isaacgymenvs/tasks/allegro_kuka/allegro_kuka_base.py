@@ -2931,8 +2931,8 @@ class AllegroKukaBase(VecTask):
 
     def _init_obs_action_history(self):
         HISTORY_LENGTH = 3
-        self.obs_history = torch.zeros(self.num_envs, HISTORY_LENGTH, self.obs_buf.shape[1], dtype=torch.float, device=self.device)
-        self.action_history = torch.zeros(self.num_envs, HISTORY_LENGTH, self.actions.shape[1], dtype=torch.float, device=self.device)
+        self.obs_history = torch.zeros(self.num_envs, HISTORY_LENGTH, self.num_observations, dtype=torch.float, device=self.device)
+        self.action_history = torch.zeros(self.num_envs, HISTORY_LENGTH, self.num_actions, dtype=torch.float, device=self.device)
 
         # Along HISTORY_LENGTH dimension, index=0 is the most recent observation/action
         # At each step, we update the history by shifting the history down, then updating index=0 with the new observation/action
