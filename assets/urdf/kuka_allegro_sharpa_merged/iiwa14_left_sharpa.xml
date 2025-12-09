@@ -359,7 +359,6 @@
     <exclude body1="link3" body2="link5"/>
     <exclude body1="link4" body2="link7"/>
     <exclude body1="link5" body2="link7"/>
-    <exclude body1="palmleft_hand_C_MC" body2="palmleft_hand_C_MC"/>
     <exclude body1="palmleft_hand_C_MC" body2="palmleft_thumb_CMC_VL"/>
     <exclude body1="palmleft_hand_C_MC" body2="palmleft_thumb_MC"/>
     <exclude body1="palmleft_hand_C_MC" body2="palmleft_index_MCP_VL"/>
@@ -369,6 +368,7 @@
     <exclude body1="palmleft_hand_C_MC" body2="palmleft_ring_MCP_VL"/>
     <exclude body1="palmleft_hand_C_MC" body2="palmleft_ring_PP"/>
     <exclude body1="palmleft_hand_C_MC" body2="palmleft_pinky_MC"/>
+    <exclude body1="palmleft_thumb_CMC_VL" body2="palmleft_thumb_MC"/>
     <exclude body1="palmleft_thumb_MC" body2="palmleft_thumb_MCP_VL"/>
     <exclude body1="palmleft_thumb_MC" body2="palmleft_thumb_PP"/>
     <exclude body1="palmleft_thumb_MCP_VL" body2="palmleft_thumb_PP"/>
