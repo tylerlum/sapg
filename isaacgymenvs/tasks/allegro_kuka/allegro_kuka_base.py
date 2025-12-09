@@ -62,6 +62,7 @@ from isaacgymenvs.utils.object_trajectories import (
     get_eraser_trajectory,
     get_phone_trajectory,
 )
+from pytorch3d.transforms import quaternion_to_matrix, matrix_to_quaternion, axis_angle_to_matrix
 
 DATETIME_STR = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
@@ -1811,9 +1812,9 @@ class AllegroKukaBase(VecTask):
 
             # Add noise to the observed object state
             xyz_noise_std = self.cfg["env"]["objectStateXyzNoiseStd"]
-            quat_noise_std = self.cfg["env"]["objectStateQuatNoiseStd"]
+            rotation_noise_degrees = self.cfg["env"]["objectStateRotationNoiseDegrees"]
             self.observed_object_state[:, 0:3] += torch.randn_like(self.observed_object_state[:, 0:3]) * xyz_noise_std
-            self.observed_object_state[:, 3:7] = self.add_noise_to_quat(self.observed_object_state[:, 3:7], quat_noise_std)
+            self.observed_object_state[:, 3:7] = self.sample_delta_quat_xyzw(input_quat_xyzw=self.observed_object_state[:, 3:7], delta_rotation_degrees=rotation_noise_degrees)
 
         self.observed_object_pose = self.observed_object_state[:, 0:7]
         self.observed_object_pos = self.observed_object_state[:, 0:3]
@@ -3356,3 +3357,28 @@ class AllegroKukaBase(VecTask):
         if "VISUALIZE_PD_TARGET_AS_BLUE_ROBOT" in self.cfg["env"]:
             return self.cfg["env"]["VISUALIZE_PD_TARGET_AS_BLUE_ROBOT"]
         return False
+
+    def sample_random_unit_axis(self, shape) -> Tensor:
+        v = torch_rand_float(0.0, 1.0, shape, device=self.device)
+        v = v / torch.norm(v, dim=-1, keepdim=True)
+        return v
+
+    def sample_delta_quat_xyzw(self, input_quat_xyzw: Tensor, delta_rotation_degrees: float) -> Tensor:
+        N, D = input_quat_xyzw.shape
+        assert D == 4, f"input_quat_xyzw.shape: {input_quat_xyzw.shape}, expected: (N, 4)"
+
+        quat_wxyz = torch.cat((input_quat_xyzw[:, 3:], input_quat_xyzw[:, :3]), dim=1)
+        quat_matrix = quaternion_to_matrix(quat_wxyz)
+
+        delta_rotation_radians = delta_rotation_degrees * np.pi / 180.0
+        random_direction = self.sample_random_unit_axis(shape=(N, 3))
+        sampled_rotation_magnitude = torch_rand_float(-delta_rotation_radians, delta_rotation_radians, (N, 1), device=input_quat_xyzw.device)
+        sampled_rotation_axis_angles = random_direction * sampled_rotation_magnitude
+        sampled_rotation_matrix = axis_angle_to_matrix(sampled_rotation_axis_angles)
+        new_matrix = quat_matrix @ sampled_rotation_matrix
+
+        new_quat_wxyz = matrix_to_quaternion(new_matrix)
+        new_quat_xyzw = torch.cat((new_quat_wxyz[:, 1:], new_quat_wxyz[:, 0:1]), dim=1).clone()
+        assert new_quat_xyzw.shape == (N, 4), f"new_quat_xyzw.shape: {new_quat_xyzw.shape}, expected: (N, 4)"
+        return new_quat_xyzw
+

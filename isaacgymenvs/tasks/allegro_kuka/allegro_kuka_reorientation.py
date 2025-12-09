@@ -37,7 +37,6 @@ from isaacgymenvs.utils.torch_jit_utils import to_torch, torch_rand_float
 from isaacgymenvs.tasks.allegro_kuka.allegro_kuka_base import AllegroKukaBase
 from isaacgymenvs.tasks.allegro_kuka.allegro_kuka_utils import tolerance_curriculum, tolerance_successes_objective
 import transforms3d
-from pytorch3d.transforms import quaternion_to_matrix, matrix_to_quaternion, matrix_to_euler_angles, euler_angles_to_matrix, axis_angle_to_matrix
 import numpy as np
 
 GREEN = (0.0, 1.0, 0.0)
@@ -110,61 +109,21 @@ class AllegroKukaReorientation(AllegroKukaBase):
     def _extra_reset_rules(self, resets):
         return resets
 
-        # Moved to the base class for better logging
-        # ones = torch.ones_like(self.reset_buf)
-        # zeros = torch.zeros_like(self.reset_buf)
-
-        # # hand far from the object
-        # hand_far_from_object = torch.where(
-        #     self.curr_fingertip_distances.max(dim=-1).values > 1.5, ones, zeros
-        # )
-        # resets = resets | hand_far_from_object
-
-        # # Print resets when there is only one environment
-        # if self.num_envs == 1 and resets.item():
-        #     print(f"hand_far_from_object: {hand_far_from_object.item()}")
-        #     print(f"resets: {resets.item()}")
-
-        # return resets
-
-    def _quat_to_euler(self, quat):
-        return matrix_to_euler_angles(quaternion_to_matrix(quat), "XYZ")
-
-    def _euler_to_quat(self, euler):
-        return matrix_to_quaternion(euler_angles_to_matrix(euler, "XYZ"))
-
-    def random_unit_axis(self, shape):
-        v = torch_rand_float(0.0, 1.0, shape, device=self.device)
-        v = v / torch.norm(v, dim=-1, keepdim=True)
-        return v
-
     def _sample_delta_goal(self, goal_states, delta_goal_distance, delta_rotation_degrees):
         # get the target volume origin and extent
         target_volume_origin = self.target_volume_origin
         target_volume_extent = self.target_volume_extent
         target_volume_min_coord = target_volume_origin + target_volume_extent[:, 0]
         target_volume_max_coord = target_volume_origin + target_volume_extent[:, 1]
-        target_volume_size = target_volume_max_coord - target_volume_min_coord
 
         last_goal = goal_states.clone()
         last_goal_pos = last_goal[:, :3]
         last_goal_quat_xyzw = last_goal[:, 3:7]
-        last_goal_quat_wxyz = torch.cat((last_goal_quat_xyzw[:, 3:], last_goal_quat_xyzw[:, :3]), dim=1)
-        last_goal_matrix = quaternion_to_matrix(last_goal_quat_wxyz)
 
         new_goal_pos = last_goal_pos + torch_rand_float(-delta_goal_distance, delta_goal_distance, (goal_states.shape[0], 3), device=self.device)
         new_goal_pos = torch.clamp(new_goal_pos, target_volume_min_coord, target_volume_max_coord)
 
-        delta_rotation_radians = delta_rotation_degrees * np.pi / 180.0
-        random_direction = self.random_unit_axis(shape=(goal_states.shape[0], 3))
-        sampled_rotation_magnitude = torch_rand_float(-delta_rotation_radians, delta_rotation_radians, (goal_states.shape[0], 1), device=self.device)
-        sampled_rotation_axis_angles = random_direction * sampled_rotation_magnitude
-        sampled_rotation_matrix = axis_angle_to_matrix(sampled_rotation_axis_angles)
-        new_goal_matrix = last_goal_matrix @ sampled_rotation_matrix
-
-        # clamp the rotation to be between -180 and 180 degrees
-        new_goal_quat_wxyz = matrix_to_quaternion(new_goal_matrix)
-        new_goal_quat_xyzw = torch.cat((new_goal_quat_wxyz[:, 1:], new_goal_quat_wxyz[:, 0:1]), dim=1).clone()
+        new_goal_quat_xyzw = self.sample_delta_quat_xyzw(input_quat_xyzw=last_goal_quat_xyzw, delta_rotation_degrees=delta_rotation_degrees)
         goal_states[:, 0:3] = new_goal_pos
         goal_states[:, 3:7] = new_goal_quat_xyzw
         return goal_states

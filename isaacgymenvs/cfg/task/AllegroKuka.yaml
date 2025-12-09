@@ -164,16 +164,16 @@ env:
   deltaRotationDegrees: 20.0 # rotation of the goal in degrees
 
   # Delays
-  useObsDelay: False
+  useObsDelay: True
   obsDelayMax: 3
 
-  useActionDelay: False
+  useActionDelay: True
   actionDelayMax: 3
 
-  useObjectStateDelayNoise: False
+  useObjectStateDelayNoise: True
   objectStateDelayMax: 10
   objectStateXyzNoiseStd: 0.01
-  objectStateQuatNoiseStd: 0.01
+  objectStateRotationNoiseDegrees: 5.0
 
   jointVelocityObsNoiseStd: 0.1
 
