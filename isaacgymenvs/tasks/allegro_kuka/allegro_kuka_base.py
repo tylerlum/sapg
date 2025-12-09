@@ -1724,42 +1724,6 @@ class AllegroKukaBase(VecTask):
                 plt.savefig(f"{self.eval_summary_dir}/successes_histogram.png")
                 plt.clf()
 
-
-    def add_noise_to_quat(self, quat_xyzw: Tensor, noise_std: float) -> Tensor:
-        assert quat_xyzw.shape == (self.num_envs, 4)
-
-        # Extract components in XYZW order
-        w = quat_xyzw[:, 3]
-        xyz = quat_xyzw[:, 0:3]
-
-        # Convert quaternion → rotation vector
-        angle = 2 * torch.acos(torch.clamp(w, -1.0, 1.0))
-        sin_half = torch.sin(angle / 2).unsqueeze(-1)
-        axis = xyz / (sin_half + 1e-8)
-
-        rotvec = axis * angle.unsqueeze(-1)
-
-        # Add small Gaussian noise in rotation vector space
-        noise = torch.randn_like(rotvec) * noise_std
-        rotvec_noisy = rotvec + noise
-
-        # Convert rotation vector → quaternion
-        new_angle = torch.norm(rotvec_noisy, dim=-1)
-        axis_noisy = rotvec_noisy / (new_angle.unsqueeze(-1) + 1e-8)
-        half = new_angle / 2
-
-        w_new = torch.cos(half)
-        xyz_new = axis_noisy * torch.sin(half).unsqueeze(-1)
-
-        # Put back into XYZW order
-        quat_xyzw_with_noise = torch.cat([xyz_new, w_new.unsqueeze(-1)], dim=-1)
-
-        # Normalize for safety
-        quat_xyzw_with_noise = quat_xyzw_with_noise / quat_xyzw_with_noise.norm(dim=-1, keepdim=True)
-
-        assert quat_xyzw_with_noise.shape == (self.num_envs, 4)
-        return quat_xyzw_with_noise
-
     def populate_sim_buffers(self) -> Tuple[Tensor, int]:
         self.gym.refresh_dof_state_tensor(self.sim)
         self.gym.refresh_actor_root_state_tensor(self.sim)
@@ -1819,8 +1783,6 @@ class AllegroKukaBase(VecTask):
         self.observed_object_pose = self.observed_object_state[:, 0:7]
         self.observed_object_pos = self.observed_object_state[:, 0:3]
         self.observed_object_rot = self.observed_object_state[:, 3:7]
-        self.observed_object_linvel = self.observed_object_state[:, 7:10]
-        self.observed_object_angvel = self.observed_object_state[:, 10:13]
 
         self.goal_pose = self.goal_states[:, 0:7]
         self.goal_pos = self.goal_states[:, 0:3]
