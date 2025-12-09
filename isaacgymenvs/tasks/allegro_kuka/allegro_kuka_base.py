@@ -1984,6 +1984,8 @@ class AllegroKukaBase(VecTask):
             obs_dict["keypoints_rel_palm"] = self.observed_keypoints_rel_palm.reshape(self.num_envs, keypoint_rel_pos_size)
             obs_dict["keypoints_rel_goal"] = self.observed_keypoints_rel_goal.reshape(self.num_envs, keypoint_rel_pos_size)
 
+        # Add noise to joint velocities
+        obs_dict["joint_vel"] += torch.randn_like(obs_dict["joint_vel"]) * self.cfg["env"]["jointVelocityObsNoiseStd"]
         # palm linvel, ang vel
         obs_dict["palm_vel"] = self._palm_state[:, 7:13] * self.turn_off_palm_vel_obs_scale
         # object vel

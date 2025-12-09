@@ -175,6 +175,8 @@ env:
   objectStateXyzNoiseStd: 0.01
   objectStateQuatNoiseStd: 0.01
 
+  jointVelocityObsNoiseStd: 0.1
+
   asset:
     # Whis was the original kuka_allegro asset.
     # This URDF has some issues, i.e. weights of fingers are too high and the mass of the Allegro hand is too
