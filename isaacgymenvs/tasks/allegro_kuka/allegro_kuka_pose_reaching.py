@@ -267,7 +267,6 @@ class AllegroKukaPoseReaching(AllegroKukaBase):
         noise = torch_rand_float(-1.0, 1.0, (len(env_ids), self.num_hand_arm_dofs), device=self.device)
         target = target + noise * self.joint_target_noise
         target = torch.clamp(target, self.arm_hand_dof_lower_limits[: self.num_hand_arm_dofs], self.arm_hand_dof_upper_limits[: self.num_hand_arm_dofs])
-
         self.joint_targets[env_ids] = target
 
     def _reset_target(self, env_ids: Tensor, reset_buf_idxs=None, tensor_reset=True, is_first_goal=True) -> None:

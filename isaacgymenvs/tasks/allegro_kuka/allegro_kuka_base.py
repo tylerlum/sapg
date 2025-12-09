@@ -62,6 +62,7 @@ from isaacgymenvs.utils.object_trajectories import (
     get_eraser_trajectory,
     get_phone_trajectory,
 )
+from pytorch3d.transforms import quaternion_to_matrix, matrix_to_quaternion, axis_angle_to_matrix
 
 DATETIME_STR = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
@@ -387,6 +388,9 @@ class AllegroKukaBase(VecTask):
         self.goal_keypoint_pos = torch.zeros(
             (self.num_envs, self.num_keypoints, 3), dtype=torch.float, device=self.device
         )
+        self.observed_obj_keypoint_pos = torch.zeros(
+            (self.num_envs, self.num_keypoints, 3), dtype=torch.float, device=self.device
+        )
 
         # how many steps we were within the goal tolerance
         self.near_goal_steps = torch.zeros(self.num_envs, dtype=torch.int, device=self.device)
@@ -468,6 +472,8 @@ class AllegroKukaBase(VecTask):
             self.max_table_sensor_force_norm_smoothed = torch.zeros((self.num_envs), dtype=torch.float, device=self.device)
 
         self._init_tyler_curriculum()
+
+        self._init_obs_action_queue()
 
     ##### KEYBOARD START #####
     def _subscribe_to_keyboard_events(self) -> None:
@@ -784,7 +790,6 @@ class AllegroKukaBase(VecTask):
                 self.__dict__[key] = value
             print(f"Loaded env state value {key}:{value}")
         
-        print(self._extra_object_indices(None)[0][0].shape)
         self.arm_hand_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, : self.num_hand_arm_dofs]
         self.arm_hand_dof_pos = self.arm_hand_dof_state[..., 0]
         self.arm_hand_dof_vel = self.arm_hand_dof_state[..., 1]
@@ -1758,6 +1763,27 @@ class AllegroKukaBase(VecTask):
         self.object_linvel = self.root_state_tensor[self.object_indices, 7:10]
         self.object_angvel = self.root_state_tensor[self.object_indices, 10:13]
 
+        # Update object state queue
+        self.object_state_queue = self.update_queue(queue=self.object_state_queue, current_values=self.object_state)
+
+        # Observed object state
+        self.observed_object_state = self.object_state.clone()
+        use_object_state_delay_noise = self.cfg["env"]["useObjectStateDelayNoise"]
+        if use_object_state_delay_noise:
+            # Sample a delay index from the queue
+            delay_index = torch.randint(0, self.object_state_queue.shape[1], (self.num_envs,), device=self.device)
+            self.observed_object_state[:] = self.object_state_queue[torch.arange(self.num_envs), delay_index].clone()
+
+            # Add noise to the observed object state
+            xyz_noise_std = self.cfg["env"]["objectStateXyzNoiseStd"]
+            rotation_noise_degrees = self.cfg["env"]["objectStateRotationNoiseDegrees"]
+            self.observed_object_state[:, 0:3] += torch.randn_like(self.observed_object_state[:, 0:3]) * xyz_noise_std
+            self.observed_object_state[:, 3:7] = self.sample_delta_quat_xyzw(input_quat_xyzw=self.observed_object_state[:, 3:7], delta_rotation_degrees=rotation_noise_degrees)
+
+        self.observed_object_pose = self.observed_object_state[:, 0:7]
+        self.observed_object_pos = self.observed_object_state[:, 0:3]
+        self.observed_object_rot = self.observed_object_state[:, 3:7]
+
         self.goal_pose = self.goal_states[:, 0:7]
         self.goal_pos = self.goal_states[:, 0:3]
         self.goal_rot = self.goal_states[:, 3:7]
@@ -1823,11 +1849,16 @@ class AllegroKukaBase(VecTask):
             self.goal_keypoint_pos[:, i] = self.goal_pos + quat_rotate(
                 self.goal_rot, self.object_keypoint_offsets[:, i]
             )
+            self.observed_obj_keypoint_pos[:, i] = self.observed_object_pos + quat_rotate(
+                self.observed_object_rot, self.object_keypoint_offsets[:, i]
+            )
 
         self.keypoints_rel_goal = self.obj_keypoint_pos - self.goal_keypoint_pos
+        self.observed_keypoints_rel_goal = self.observed_obj_keypoint_pos - self.goal_keypoint_pos
 
         palm_center_repeat = self.palm_center_pos.unsqueeze(1).repeat(1, self.num_keypoints, 1)
         self.keypoints_rel_palm = self.obj_keypoint_pos - palm_center_repeat
+        self.observed_keypoints_rel_palm = self.observed_obj_keypoint_pos - palm_center_repeat
 
         self.keypoint_distances_l2 = torch.norm(self.keypoints_rel_goal, dim=-1)
 
@@ -1843,6 +1874,11 @@ class AllegroKukaBase(VecTask):
     def populate_obs_and_states_buffers(self) -> None:
         num_dofs = self.num_hand_arm_dofs
         obs_dict = {}
+
+        # We first fill in the obs_dict with the values that should be given to the critic, which are clean
+        # Then after creating state_buf, we add the noisy delayed object state observations and other observation changes to the policy's obs_buf
+
+        ## POLICY OBSERVATIONS ##
         # dof positions
         obs_dict["joint_pos"] = unscale(self.arm_hand_dof_pos[:, :num_dofs], self.arm_hand_dof_lower_limits[:num_dofs],self.arm_hand_dof_upper_limits[:num_dofs],)
         # dof velocities
@@ -1853,22 +1889,60 @@ class AllegroKukaBase(VecTask):
         obs_dict["palm_pos"] = self.palm_center_pos
         # palm rot
         obs_dict["palm_rot"] = self._palm_state[:, 3:7]
-        # palm linvel, ang vel
-        obs_dict["palm_vel"] = self._palm_state[:, 7:13]*self.turn_off_extra_obs_scale
         # object rot
         obs_dict["object_rot"] = self.object_state[:, 3:7]
-        # object vel
-        obs_dict["object_vel"] = self.object_state[:, 7:13]*self.turn_off_extra_obs_scale
-        # fingertip pos relative to the palm of the hand
-        fingertip_rel_pos_size = 3 * self.num_allegro_fingertips
-        obs_dict["fingertip_pos_rel_palm"] = self.fingertip_pos_rel_palm.reshape(self.num_envs, fingertip_rel_pos_size)
         # keypoint distances relative to the palm of the hand
         keypoint_rel_pos_size = 3 * self.num_keypoints
         obs_dict["keypoints_rel_palm"] = self.keypoints_rel_palm.reshape(self.num_envs, keypoint_rel_pos_size)
         # keypoint distances relative to the goal
         obs_dict["keypoints_rel_goal"] = self.keypoints_rel_goal.reshape(self.num_envs, keypoint_rel_pos_size)
+        # fingertip pos relative to the palm of the hand
+        fingertip_rel_pos_size = 3 * self.num_allegro_fingertips
+        obs_dict["fingertip_pos_rel_palm"] = self.fingertip_pos_rel_palm.reshape(self.num_envs, fingertip_rel_pos_size)
         # object scales
         obs_dict["object_scales"] = self.object_scales
+
+        ## CRITIC OBSERVATIONS ##
+        # palm linvel, ang vel
+        obs_dict["palm_vel"] = self._palm_state[:, 7:13]
+        # object vel
+        obs_dict["object_vel"] = self.object_state[:, 7:13]
+        # closest distance to the furthest keypoint, achieved so far in this episode
+        obs_dict["closest_keypoint_max_dist"] = self.closest_keypoint_max_dist.unsqueeze(-1)
+        # closest distance between a fingertip and an object achieved since last target reset
+        # this should help the critic predict the anticipated fingertip reward
+        obs_dict["closest_fingertip_dist"] = self.closest_fingertip_dist.unsqueeze(-1)
+        # indicates whether we already lifted the object from the table or not, should help the critic be more accurate
+        obs_dict["lifted_object"] = self.lifted_object.unsqueeze(-1)
+        # this should help the critic predict the future rewards better and anticipate the episode termination
+        obs_dict["progress"] = torch.log(self.progress_buf / 10 + 1).unsqueeze(-1)
+        obs_dict["successes"] = torch.log(self.successes + 1).unsqueeze(-1)
+        # this is where we will add the reward observation
+        reward_obs_scale = 0.01
+        obs_dict["reward"] = reward_obs_scale * self.rew_buf
+
+        # ##############################################################################################################
+        # Create state_buf
+        # ##############################################################################################################
+        self.states_buf = torch.cat([obs_dict[k].reshape(self.num_envs, -1) for k in self.state_list], dim=-1)
+
+        # Policy observations
+        # Add noisy delayed object state observations
+        use_object_state_delay_noise = self.cfg["env"]["useObjectStateDelayNoise"]
+        if use_object_state_delay_noise:
+            # Add noise
+            obs_dict["object_rot"] = self.observed_object_state[:, 3:7]
+            obs_dict["object_vel"] = self.observed_object_state[:, 7:13] * self.turn_off_object_vel_obs_scale
+            keypoint_rel_pos_size = 3 * self.num_keypoints
+            obs_dict["keypoints_rel_palm"] = self.observed_keypoints_rel_palm.reshape(self.num_envs, keypoint_rel_pos_size)
+            obs_dict["keypoints_rel_goal"] = self.observed_keypoints_rel_goal.reshape(self.num_envs, keypoint_rel_pos_size)
+
+        # Add noise to joint velocities
+        obs_dict["joint_vel"] += torch.randn_like(obs_dict["joint_vel"]) * self.cfg["env"]["jointVelocityObsNoiseStd"]
+        # palm linvel, ang vel
+        obs_dict["palm_vel"] = self._palm_state[:, 7:13] * self.turn_off_palm_vel_obs_scale
+        # object vel
+        obs_dict["object_vel"] = self.object_state[:, 7:13] * self.turn_off_object_vel_obs_scale
         # closest distance to the furthest keypoint, achieved so far in this episode
         obs_dict["closest_keypoint_max_dist"] = self.closest_keypoint_max_dist.unsqueeze(-1) * self.turn_off_extra_obs_scale
         # closest distance between a fingertip and an object achieved since last target reset
@@ -1882,8 +1956,21 @@ class AllegroKukaBase(VecTask):
         # this is where we will add the reward observation
         reward_obs_scale = 0.01
         obs_dict["reward"] = reward_obs_scale * self.rew_buf * self.turn_off_extra_obs_scale
-        self.states_buf = torch.cat([obs_dict[k].reshape(self.num_envs, -1) for k in self.state_list], dim=-1)
+
+        # ##############################################################################################################
+        # Create obs_buf
+        # ##############################################################################################################
         self.obs_buf = torch.cat([obs_dict[k].reshape(self.num_envs, -1) for k in self.obs_list], dim=-1)
+
+        # Update obs queue
+        self.obs_queue = self.update_queue(queue=self.obs_queue, current_values=self.obs_buf)
+
+        # Modify obs to be delayed
+        use_obs_delay = self.cfg["env"]["useObsDelay"]
+        if use_obs_delay:
+            # Sample a delay index from the queue
+            delay_index = torch.randint(0, self.obs_queue.shape[1], (self.num_envs,), device=self.device)
+            self.obs_buf[:] = self.obs_queue[torch.arange(self.num_envs), delay_index].clone()
 
         # Default CHECK_WITH_COMPUTED_OBS = False
         # Set to True to check if the observations are computed correctly
@@ -2193,7 +2280,6 @@ class AllegroKukaBase(VecTask):
             self.prev_targets[env_ids, : self.num_hand_arm_dofs] = allegro_pos
             self.cur_targets[env_ids, : self.num_hand_arm_dofs] = allegro_pos
 
-
         if self.should_load_initial_states:
             if len(env_ids) > self.num_initial_states:
                 print(f"Not enough initial states to load {len(env_ids)}/{self.num_initial_states}...")
@@ -2224,6 +2310,24 @@ class AllegroKukaBase(VecTask):
         self.deferred_set_dof_state_tensor_indexed([hand_indices])
         self.deferred_set_actor_root_state_tensor_indexed(self._extra_object_indices(env_ids))
 
+    def update_queue(self, queue: torch.Tensor, current_values: torch.Tensor) -> torch.Tensor:
+        N, T, D = queue.shape
+        assert current_values.shape == (N, D), f"current_values.shape: {current_values.shape}, expected: ({N}, {D})"
+
+        # Update queue
+        # queue is reset on episode start
+        # This means we need to fill the entire queue with the current values
+        # queue shape is (N, T, D), where N is num envs, T is queue length, D is dimension of the buffer
+        is_episode_start = self.progress_buf == 1
+        assert is_episode_start.shape == (N,), f"is_episode_start.shape: {is_episode_start.shape}, expected: ({N})"
+
+        queue[:] = torch.where(is_episode_start.unsqueeze(1).unsqueeze(1), current_values.unsqueeze(1).repeat_interleave(T, dim=1), queue)
+
+        # Roll the queue down by 1, then update index=0 with the new action
+        queue[:, 1:] = queue[:, :-1].clone()
+        queue[:, 0] = current_values.clone()
+        return queue
+
     def pre_physics_step(self, actions, joint_pos_targets: Optional[torch.Tensor] = None):
         # print(f"joint_names = {self.joint_names}")
         # print(f"self.joint_lower_limits = {self.joint_lower_limits}")
@@ -2242,6 +2346,16 @@ class AllegroKukaBase(VecTask):
             self.last_time = time.time()
 
         actions = actions.to(self.device)
+
+        # Update actions queue
+        self.action_queue = self.update_queue(queue=self.action_queue, current_values=actions)
+
+        # Modify actions to be delayed
+        use_action_delay = self.cfg["env"]["useActionDelay"]
+        if use_action_delay:
+            # Sample a delay index from the queue
+            delay_index = torch.randint(0, self.action_queue.shape[1], (self.num_envs,), device=self.device)
+            actions = self.action_queue[torch.arange(self.num_envs), delay_index].clone()
 
         self.actions = actions.clone()
 
@@ -2745,6 +2859,26 @@ class AllegroKukaBase(VecTask):
                 self._draw_transform(transform=object_transform, env_idx=i)
                 # self._draw_transform(transform=goal_transform, env_idx=i)
 
+    def _init_obs_action_queue(self):
+        obs_queue_length = self.cfg["env"]["obsDelayMax"]
+        action_queue_length = self.cfg["env"]["actionDelayMax"]
+        object_state_queue_length = self.cfg["env"]["objectStateDelayMax"]
+        self.obs_queue = torch.zeros(self.num_envs, obs_queue_length, self.num_observations, dtype=torch.float, device=self.device)
+        self.action_queue = torch.zeros(self.num_envs, action_queue_length, self.num_actions, dtype=torch.float, device=self.device)
+
+        # Along QUEUE_LENGTH dimension, index=0 is the most recent observation/action
+        # At each step, we update the queue by shifting the queue down, then updating index=0 with the new observation/action
+        # If use index=0 for all time, then there is no delay
+        # But we can sample delay index to simulate stochastic delay
+        # Need to be careful on reset, need to flush the queue with the first obs/action
+
+        # The object state queue is similar, but we want to have more delay on object state than the rest of the observations because it is
+        # More noise and more latency/delay with FoundationPose and more likely to be incorrect in the real world
+        # So we want to have more delay on object state than the rest of the observations
+        # These will store the object state WITHOUT any noise
+        # If we want to add noise to these, we will add noise on top of it after the object state is sampled from the queue
+        self.object_state_queue = torch.zeros(self.num_envs, object_state_queue_length, 13, dtype=torch.float, device=self.device)
+
     def _init_tyler_curriculum(self):
         self._tyler_curriculum_scale = 0.0
         self._last_tyler_curriculum_update = time.time()
@@ -3185,3 +3319,28 @@ class AllegroKukaBase(VecTask):
         if "VISUALIZE_PD_TARGET_AS_BLUE_ROBOT" in self.cfg["env"]:
             return self.cfg["env"]["VISUALIZE_PD_TARGET_AS_BLUE_ROBOT"]
         return False
+
+    def sample_random_unit_axis(self, shape) -> Tensor:
+        v = torch_rand_float(0.0, 1.0, shape, device=self.device)
+        v = v / torch.norm(v, dim=-1, keepdim=True)
+        return v
+
+    def sample_delta_quat_xyzw(self, input_quat_xyzw: Tensor, delta_rotation_degrees: float) -> Tensor:
+        N, D = input_quat_xyzw.shape
+        assert D == 4, f"input_quat_xyzw.shape: {input_quat_xyzw.shape}, expected: (N, 4)"
+
+        quat_wxyz = torch.cat((input_quat_xyzw[:, 3:], input_quat_xyzw[:, :3]), dim=1)
+        quat_matrix = quaternion_to_matrix(quat_wxyz)
+
+        delta_rotation_radians = delta_rotation_degrees * np.pi / 180.0
+        random_direction = self.sample_random_unit_axis(shape=(N, 3))
+        sampled_rotation_magnitude = torch_rand_float(-delta_rotation_radians, delta_rotation_radians, (N, 1), device=self.device)
+        sampled_rotation_axis_angles = random_direction * sampled_rotation_magnitude
+        sampled_rotation_matrix = axis_angle_to_matrix(sampled_rotation_axis_angles)
+        new_matrix = quat_matrix @ sampled_rotation_matrix
+
+        new_quat_wxyz = matrix_to_quaternion(new_matrix)
+        new_quat_xyzw = torch.cat((new_quat_wxyz[:, 1:], new_quat_wxyz[:, 0:1]), dim=1).clone()
+        assert new_quat_xyzw.shape == (N, 4), f"new_quat_xyzw.shape: {new_quat_xyzw.shape}, expected: (N, 4)"
+        return new_quat_xyzw
+

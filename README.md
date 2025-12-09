@@ -29,6 +29,9 @@ pip install \
   pyvirtualdisplay sentry-sdk setproctitle shortuuid smmap tensorboardx termcolor transforms3d \
   trimesh urdfpy wandb warp-lang
 
+# pytorch3d
+pip install pytorch3d
+
 # Imageio for saving video
 pip install "imageio[ffmpeg]"
 

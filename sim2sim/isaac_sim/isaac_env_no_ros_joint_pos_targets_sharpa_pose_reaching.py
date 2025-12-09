@@ -16,13 +16,14 @@ from isaacgymenvs.utils.observation_action_utils_sharpa_pose_reaching import (
 from sim2sim.isaac_sim.isaac_env import create_env
 import numpy as np
 from datetime import datetime
+import os
 
-N_OBS = 109
+N_OBS = 133
 N_ACT = 29
 
 HAND_MOVING_AVERAGE = 0.1
-ARM_MOVING_AVERAGE = 0.01
-HAND_DOF_SPEED_SCALE = 10.0
+ARM_MOVING_AVERAGE = 0.05
+HAND_DOF_SPEED_SCALE = 2.5
 
 
 def warn(message: str):
@@ -60,6 +61,7 @@ class IsaacEnvNoRosJointPosTargets:
             q=q,
             qd=qd,
             joint_targets=joint_targets,
+            reward=reward,
         )
         return new_obs, reward, done, info
 
@@ -134,7 +136,8 @@ def main():
         # "/juno/u/kedia/sapg/train_dir/checkpoints/dr_hammer_slow.pth"
 
         # Pose reaching
-        "/juno/u/kedia/sapg/train_dir/checkpoints/pose_reaching.pth"
+        # "/juno/u/kedia/sapg/train_dir/checkpoints/pose_reaching/joint_accel.pth"
+        "/juno/u/kedia/sapg/train_dir/checkpoints/pose_reaching/joint_accel.pth"
     )
     assert CHECKPOINT_PATH.exists()
 
@@ -212,11 +215,10 @@ def main():
     data['robot_joint_positions_array'] = np.array(data['robot_joint_positions_array'])
     data['robot_joint_pos_targets_array'] = np.array(data['robot_joint_pos_targets_array'])
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    np.savez_compressed(
-        f'/juno/u/kedia/sapg/recorded_robot_state/sim_rollout_{timestamp}.npz',
-        **data
-    )
-    print(f"Saved data to /juno/u/kedia/sapg/recorded_robot_state/sim_rollout_{timestamp}.npz")
+    npz_dir = f'/juno/u/kedia/sapg/recorded_robot_states/pose_reaching_test/{CHECKPOINT_PATH.stem}'
+    os.makedirs(npz_dir, exist_ok=True)
+    np.savez_compressed(os.path.join(npz_dir, f'{timestamp}.npz'), **data)
+    print(f"Saved data to {os.path.join(npz_dir, f'{timestamp}.npz')}")
 
 if __name__ == "__main__":
     main()

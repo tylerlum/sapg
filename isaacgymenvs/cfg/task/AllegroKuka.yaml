@@ -146,9 +146,9 @@ env:
   updateStepSizeTylerCurriculum: 0.01
 
   # related to Asymmetric Observation
-  stateList: ["joint_pos", "joint_vel", "palm_pos", "palm_rot", "palm_vel", "object_rot", "object_vel", "fingertip_pos_rel_palm", "keypoints_rel_palm", "keypoints_rel_goal", "object_scales", "closest_keypoint_max_dist", "closest_fingertip_dist", "lifted_object", "progress", "successes", "reward"]
+  stateList: ["joint_pos", "joint_vel", "prev_action_targets", "palm_pos", "palm_rot", "palm_vel", "object_rot", "object_vel", "fingertip_pos_rel_palm", "keypoints_rel_palm", "keypoints_rel_goal", "object_scales", "closest_keypoint_max_dist", "closest_fingertip_dist", "lifted_object", "progress", "successes", "reward"]
 
-  obsList: ["joint_pos", "joint_vel", "palm_pos", "palm_rot", "palm_vel", "object_rot", "object_vel", "fingertip_pos_rel_palm", "keypoints_rel_palm", "keypoints_rel_goal", "object_scales", "closest_keypoint_max_dist", "closest_fingertip_dist", "lifted_object", "progress", "successes", "reward"]
+  obsList: ["joint_pos", "joint_vel", "prev_action_targets", "palm_pos", "palm_rot", "palm_vel", "object_rot", "object_vel", "fingertip_pos_rel_palm", "keypoints_rel_palm", "keypoints_rel_goal", "object_scales", "closest_keypoint_max_dist", "closest_fingertip_dist", "lifted_object", "progress", "successes", "reward"]
 
   # some pose_reaching_env specific settings
   use_green_robot: True
@@ -162,6 +162,21 @@ env:
   targetVolumeRegionScale: 1.0 # scale the target volume region by this factor
   deltaGoalDistance: 0.05 # distance to the goal in meters
   deltaRotationDegrees: 20.0 # rotation of the goal in degrees
+
+  # Delays and noise
+  useObsDelay: False
+  obsDelayMax: 3
+
+  useActionDelay: False
+  actionDelayMax: 3
+
+  useObjectStateDelayNoise: False
+  objectStateDelayMax: 10
+  objectStateXyzNoiseStd: 0.01
+  objectStateRotationNoiseDegrees: 5.0
+
+  # jointVelocityObsNoiseStd: 0.1
+  jointVelocityObsNoiseStd: 0.0
 
   asset:
     # Whis was the original kuka_allegro asset.
@@ -214,11 +229,11 @@ task:
 
     actor_params:
       allegro:
-        scale:
-          range: [0.999, 1.001]
-          operation: "scaling"
-          distribution: "uniform"
-          setup_only: True # Property will only be randomized once before simulation is started. See Domain Randomization Documentation for more info.
+        # scale:
+        #   range: [0.999, 1.001]
+        #   operation: "scaling"
+        #   distribution: "uniform"
+        #   setup_only: True # Property will only be randomized once before simulation is started. See Domain Randomization Documentation for more info.
         color: True
         dof_properties:
           damping:
@@ -269,12 +284,12 @@ task:
             operation: "additive"
             distribution: "uniform"
       object:
-        scale:
-          # range: [0.7, 1.3]
-          range: [0.999, 1.001]
-          operation: "scaling"
-          distribution: "uniform"
-          setup_only: True # Property will only be randomized once before simulation is started. See Domain Randomization Documentation for more info.
+        # scale:
+        #   # range: [0.7, 1.3]
+        #   range: [0.999, 1.001]
+        #   operation: "scaling"
+        #   distribution: "uniform"
+        #   setup_only: True # Property will only be randomized once before simulation is started. See Domain Randomization Documentation for more info.
         rigid_body_properties:
           mass:
             range: [0.7, 1.3] # after fixing the API expand it even more

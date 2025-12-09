@@ -75,9 +75,9 @@ OBS_NAME_TO_NAMES = {
     "q": [f"{name}_q" for name in JOINT_NAMES_ISAACGYM],
     "qd": [f"{name}_qd" for name in JOINT_NAMES_ISAACGYM],
     "joint_targets": [f"{name}_joint_target" for name in JOINT_NAMES_ISAACGYM],
-    "zeros": [f"zeros_{i}" for i in range(22)],
+    "zeros": [f"zeros_{i}" for i in range(46)],
 }
-N_OBS = 109
+N_OBS = 133
 OBS_NAMES = sum(OBS_NAME_TO_NAMES.values(), [])
 assert len(OBS_NAMES) == N_OBS, f"len(OBS_NAMES): {len(OBS_NAMES)}, expected: {N_OBS}"
 
@@ -134,6 +134,7 @@ def compute_observation(
     q: Tensor,
     qd: Tensor,
     joint_targets: Tensor,
+    reward: Tensor,
 ) -> Tensor:
     # Assume q and qd are in the order of JOINT_NAMES_ISAACGYM
     # object_pose, goal_object_pose are the pose of the object and goal in world frame (xyz_xyzw)
@@ -150,7 +151,7 @@ def compute_observation(
     obs[:, :J] = q
     obs[:, J:2*J] = qd
     obs[:, 2*J:3*J] = joint_targets
-
+    obs[:, -1] = reward*0.01
     assert obs.shape == (N, N_OBS), f"obs.shape: {obs.shape}, expected: (N, {N_OBS})"
     return obs
 
