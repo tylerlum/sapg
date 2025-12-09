@@ -88,9 +88,6 @@ def T_to_pos_quat_xyzw(T: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     return pos, quat_xyzw
 
 
-FABRIC_MODE: Literal["PCA", "ALL"] = "PCA"
-
-
 class RLPolicyNode:
     def __init__(self):
         # Initialize the ROS node

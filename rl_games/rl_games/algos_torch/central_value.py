@@ -12,7 +12,7 @@ from rl_games.common import schedulers
 class CentralValueTrain(nn.Module):
 
     def __init__(self, state_shape, value_size, ppo_device, num_agents, horizon_length, num_actors, num_actions, 
-                seq_length, normalize_value, network, config, writter, max_epochs, multi_gpu, zero_rnn_on_done):
+                seq_length, normalize_value, network, config, writter, max_epochs, multi_gpu, zero_rnn_on_done, type, coef_ids=None, coef_id_idx=None):
         nn.Module.__init__(self)
 
         self.ppo_device = ppo_device
@@ -27,7 +27,9 @@ class CentralValueTrain(nn.Module):
         self.config = config
         self.normalize_input = config['normalize_input']
         self.zero_rnn_on_done = zero_rnn_on_done
-
+        self.type = type
+        self.coef_ids = coef_ids
+        self.coef_id_idx = coef_id_idx
         state_config = {
             'value_size' : value_size,
             'input_shape' : state_shape,
@@ -36,8 +38,11 @@ class CentralValueTrain(nn.Module):
             'num_seqs' : num_actors,
             'normalize_input' : self.normalize_input,
             'normalize_value': self.normalize_value,
+            'type': self.type,
         }
-
+        if self.coef_ids is not None:
+            state_config['coef_ids'] = self.coef_ids
+            state_config['coef_id_idx'] = self.coef_id_idx
         self.model = network.build(state_config)
         self.lr = float(config['learning_rate'])
         self.linear_lr = config.get('lr_schedule') == 'linear'

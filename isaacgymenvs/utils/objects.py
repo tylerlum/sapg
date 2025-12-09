@@ -24,14 +24,14 @@ class Object:
     def __post_init__(self):
         assert self.filepath.exists(), f"Filepath {self.filepath} does not exist"
 
-        if self.coacd_filepaths is not None:
-            assert len(self.coacd_filepaths) > 0, (
-                f"coacd_filepaths is empty: {self.coacd_filepaths}"
-            )
-            for coacd_filepath in self.coacd_filepaths:
-                assert coacd_filepath.exists(), (
-                    f"COACD file {coacd_filepath} does not exist"
-                )
+        # if self.coacd_filepaths is not None:
+        #     assert len(self.coacd_filepaths) > 0, (
+        #         f"coacd_filepaths is empty: {self.coacd_filepaths}"
+        #     )
+        #     for coacd_filepath in self.coacd_filepaths:
+        #         assert coacd_filepath.exists(), (
+        #             f"COACD file {coacd_filepath} does not exist"
+        #         )
 
     def get_object_mesh_path_and_scale(self) -> Tuple[Path, np.ndarray]:
         from yourdfpy import URDF
@@ -76,8 +76,72 @@ NAME_TO_OBJECT = {
         filepath=(
             get_repo_root_dir() / "assets/urdf/tyler_objects/blue_cuboid/blue_cuboid.urdf"
         ),
-        coacd_filepaths=None,
+        coacd_filepaths=list(
+            (
+                get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/blue_cuboid"
+            ).glob("decomp_*.obj")
+        ),
         scale=(4.0, 0.75, 1.0),
+        need_vhacd=False,
+    ),
+    "blue_cuboid_real_iphone": Object(
+        filepath=(
+            get_repo_root_dir() / "assets/urdf/tyler_objects/blue_cuboid_real_iphone/blue_cuboid_real_iphone.urdf"
+        ),
+        coacd_filepaths=(
+            [get_repo_root_dir() / "assets/urdf/tyler_objects/blue_cuboid_real_iphone/cuboid.obj"]
+        ),
+        scale=(3.0, 1.4, 0.2),
+        need_vhacd=False,
+    ),
+    "blue_cuboid_fake_iphone": Object(
+        filepath=(
+            get_repo_root_dir() / "assets/urdf/tyler_objects/blue_cuboid_fake_iphone/blue_cuboid_fake_iphone.urdf"
+        ),
+        coacd_filepaths=(
+            [get_repo_root_dir() / "assets/urdf/tyler_objects/blue_cuboid_fake_iphone/cuboid.obj"]
+        ),
+        scale=(2.0, 1.25, 0.5),
+        need_vhacd=False,
+    ),
+    "blue_cuboid_real_hammer": Object(
+        filepath=(
+            get_repo_root_dir() / "assets/urdf/tyler_objects/blue_cuboid_real_hammer/blue_cuboid_real_hammer.urdf"
+        ),
+        coacd_filepaths=(
+            [get_repo_root_dir() / "assets/urdf/tyler_objects/blue_cuboid_real_hammer/cuboid.obj"]
+        ),
+        scale=(2.0, 0.55, 0.35),
+        need_vhacd=False,
+    ),
+    "blue_cuboid_fake_hammer": Object(
+        filepath=(
+            get_repo_root_dir() / "assets/urdf/tyler_objects/blue_cuboid_fake_hammer/blue_cuboid_fake_hammer.urdf"
+        ),
+        coacd_filepaths=(
+            [get_repo_root_dir() / "assets/urdf/tyler_objects/blue_cuboid_fake_hammer/cuboid.obj"]
+        ),
+        scale=(2.5, 0.75, 0.65),
+        need_vhacd=False,
+    ),
+    "blue_cuboid_real_screwdriver": Object(
+        filepath=(
+            get_repo_root_dir() / "assets/urdf/tyler_objects/blue_cuboid_real_screwdriver/blue_cuboid_real_screwdriver.urdf"
+        ),
+        coacd_filepaths=(
+            [get_repo_root_dir() / "assets/urdf/tyler_objects/blue_cuboid_real_screwdriver/cuboid.obj"]
+        ),
+        scale=(1.3, 0.7, 0.5),
+        need_vhacd=False,
+    ),
+    "blue_cuboid_thick": Object(
+        filepath=(
+            get_repo_root_dir() / "assets/urdf/tyler_objects/blue_cuboid_thick/blue_cuboid_thick.urdf"
+        ),
+        coacd_filepaths=(
+            [get_repo_root_dir() / "assets/urdf/tyler_objects/blue_cuboid_thick/cuboid.obj"]
+        ),
+        scale=(3.0, 2.0, 1.25),
         need_vhacd=False,
     ),
     "scanned_hammer_1": Object(

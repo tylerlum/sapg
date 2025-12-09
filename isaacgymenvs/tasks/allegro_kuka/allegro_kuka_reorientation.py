@@ -36,6 +36,9 @@ from torch import Tensor
 from isaacgymenvs.utils.torch_jit_utils import to_torch, torch_rand_float
 from isaacgymenvs.tasks.allegro_kuka.allegro_kuka_base import AllegroKukaBase
 from isaacgymenvs.tasks.allegro_kuka.allegro_kuka_utils import tolerance_curriculum, tolerance_successes_objective
+import transforms3d
+from pytorch3d.transforms import quaternion_to_matrix, matrix_to_quaternion, matrix_to_euler_angles, euler_angles_to_matrix, axis_angle_to_matrix
+import numpy as np
 
 GREEN = (0.0, 1.0, 0.0)
 
@@ -44,8 +47,13 @@ class AllegroKukaReorientation(AllegroKukaBase):
     def __init__(self, cfg, rl_device, sim_device, graphics_device_id, headless, virtual_screen_capture, force_render):
         self.goal_object_indices = []
         self.goal_assets = []
+        self.goal_sampling_type = cfg["env"]["goalSamplingType"]
+        self.target_volume_region_scale = cfg["env"]["targetVolumeRegionScale"]
+        self.delta_goal_distance = cfg["env"]["deltaGoalDistance"]
+        self.delta_rotation_degrees = cfg["env"]["deltaRotationDegrees"]
 
         super().__init__(cfg, rl_device, sim_device, graphics_device_id, headless, virtual_screen_capture, force_render)
+        self.target_volume_extent = self.target_volume_extent * self.target_volume_region_scale
 
     def _object_keypoint_offsets(self):
         return [
@@ -119,7 +127,49 @@ class AllegroKukaReorientation(AllegroKukaBase):
 
         # return resets
 
-    def _reset_target(self, env_ids: Tensor, reset_buf_idxs=None, tensor_reset=True) -> None:
+    def _quat_to_euler(self, quat):
+        return matrix_to_euler_angles(quaternion_to_matrix(quat), "XYZ")
+
+    def _euler_to_quat(self, euler):
+        return matrix_to_quaternion(euler_angles_to_matrix(euler, "XYZ"))
+
+    def random_unit_axis(self, shape):
+        v = torch_rand_float(0.0, 1.0, shape, device=self.device)
+        v = v / torch.norm(v, dim=-1, keepdim=True)
+        return v
+
+    def _sample_delta_goal(self, goal_states, delta_goal_distance, delta_rotation_degrees):
+        # get the target volume origin and extent
+        target_volume_origin = self.target_volume_origin
+        target_volume_extent = self.target_volume_extent
+        target_volume_min_coord = target_volume_origin + target_volume_extent[:, 0]
+        target_volume_max_coord = target_volume_origin + target_volume_extent[:, 1]
+        target_volume_size = target_volume_max_coord - target_volume_min_coord
+
+        last_goal = goal_states.clone()
+        last_goal_pos = last_goal[:, :3]
+        last_goal_quat_xyzw = last_goal[:, 3:7]
+        last_goal_quat_wxyz = torch.cat((last_goal_quat_xyzw[:, 3:], last_goal_quat_xyzw[:, :3]), dim=1)
+        last_goal_matrix = quaternion_to_matrix(last_goal_quat_wxyz)
+
+        new_goal_pos = last_goal_pos + torch_rand_float(-delta_goal_distance, delta_goal_distance, (goal_states.shape[0], 3), device=self.device)
+        new_goal_pos = torch.clamp(new_goal_pos, target_volume_min_coord, target_volume_max_coord)
+
+        delta_rotation_radians = delta_rotation_degrees * np.pi / 180.0
+        random_direction = self.random_unit_axis(shape=(goal_states.shape[0], 3))
+        sampled_rotation_magnitude = torch_rand_float(-delta_rotation_radians, delta_rotation_radians, (goal_states.shape[0], 1), device=self.device)
+        sampled_rotation_axis_angles = random_direction * sampled_rotation_magnitude
+        sampled_rotation_matrix = axis_angle_to_matrix(sampled_rotation_axis_angles)
+        new_goal_matrix = last_goal_matrix @ sampled_rotation_matrix
+
+        # clamp the rotation to be between -180 and 180 degrees
+        new_goal_quat_wxyz = matrix_to_quaternion(new_goal_matrix)
+        new_goal_quat_xyzw = torch.cat((new_goal_quat_wxyz[:, 1:], new_goal_quat_wxyz[:, 0:1]), dim=1).clone()
+        goal_states[:, 0:3] = new_goal_pos
+        goal_states[:, 3:7] = new_goal_quat_xyzw
+        return goal_states
+
+    def _reset_target(self, env_ids: Tensor, reset_buf_idxs=None, tensor_reset=True, is_first_goal=True) -> None:
         if len(env_ids) > 0 and reset_buf_idxs is None and tensor_reset:
             USE_FIXED_SET_OF_GOAL_STATES = self.cfg["env"]["use_fixed_set_of_goal_states"]
             if USE_FIXED_SET_OF_GOAL_STATES:
@@ -127,6 +177,14 @@ class AllegroKukaReorientation(AllegroKukaBase):
                 current_subgoal_idx = (self.successes[env_ids] % len(self.trajectory_states)).long()
                 batch_indices = torch.arange(len(env_ids), device=self.device)
                 self.goal_states[env_ids, 0:7] = trajectory_state[batch_indices, current_subgoal_idx, 0:7]
+            elif not is_first_goal and self.goal_sampling_type == "delta":
+                self.goal_states[env_ids, 0:7] = self._sample_delta_goal(self.goal_states[env_ids, 0:7], self.delta_goal_distance, self.delta_rotation_degrees)
+            elif not is_first_goal and self.goal_sampling_type == "coin_flip":
+                # flip a coin. 50% of envs only get delta translation, 0 rotation and 50% get delta rotation, 0 translation
+                coin_flips = torch_rand_float(0.0, 1.0, (len(env_ids), 1), device=self.device)
+                translation_only_goal_states = self._sample_delta_goal(self.goal_states[env_ids, 0:7], self.delta_goal_distance, 0.0)
+                rotation_only_goal_states = self._sample_delta_goal(self.goal_states[env_ids, 0:7], 0.0, self.delta_rotation_degrees)
+                self.goal_states[env_ids, 0:7] = torch.where(coin_flips < 0.5, translation_only_goal_states, rotation_only_goal_states)
             else:
                 # Randomly sample a target pose
                 target_volume_origin = self.target_volume_origin
@@ -216,7 +274,6 @@ class AllegroKukaReorientation(AllegroKukaBase):
         for key, value in isaacgym_to_blender_name.items():
             rigid_body_idx = self.rigid_body_name_to_idx[key]
             pose = self.rigid_body_states[env_idx, rigid_body_idx,0:7].cpu().numpy()
-            import transforms3d
             
             pos = pose[0:3]
             quat = pose[3:7]

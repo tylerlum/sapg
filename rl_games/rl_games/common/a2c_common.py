@@ -600,6 +600,7 @@ class A2CBase(BaseAlgorithm):
         tr_obs = self.obs_to_tensors(obs)
         if self.intr_reward_coef_embd is not None:
             tr_obs['obs'] = torch.cat([tr_obs['obs'], self.intr_reward_coef_embd], dim=1)
+            tr_obs['states'] = torch.cat([tr_obs['states'], self.intr_reward_coef_embd], dim=1)
         
         return tr_obs, rewards, intr_rewards, dones, infos
 
@@ -608,6 +609,7 @@ class A2CBase(BaseAlgorithm):
         obs = self.obs_to_tensors(obs)
         if self.intr_reward_coef_embd is not None:
             obs['obs'] = torch.cat([obs['obs'], self.intr_reward_coef_embd], dim=1)
+            obs['states'] = torch.cat([obs['states'], self.intr_reward_coef_embd], dim=1)
         return obs
 
     def discount_values(self, fdones, last_extrinsic_values, mb_fdones, mb_extrinsic_values, mb_rewards):
@@ -994,6 +996,13 @@ class A2CBase(BaseAlgorithm):
                     mask = filter_leader(mask, len(val), repeat_idxs, num_blocks)
                 new_batch_dict[key] = obses
                 new_batch_dict['off_policy_mask'] = mask
+            elif key == 'states':
+                intr_coef_embd = torch.cat([torch.roll(self.intr_reward_coef_embd, self.intr_coef_block_size*i, dims=0) for i in repeat_idxs], dim=0)
+                states = torch.cat([val]*len(repeat_idxs), dim=0)
+                states[:, -self.intr_reward_coef_embd.shape[-1]:] = intr_coef_embd.repeat_interleave(self.horizon_length, dim=0)
+                if self.use_others_experience == 'lf':
+                    states = filter_leader(states, len(val), repeat_idxs, num_blocks)
+                new_batch_dict[key] = states
             elif key in ['values', 'returns']:
                 pass  # handled below
             elif key == 'rnn_states':

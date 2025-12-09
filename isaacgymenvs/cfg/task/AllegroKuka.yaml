@@ -1,6 +1,6 @@
 defaults:
   - _self_
-  - env: reorientation
+  - env: pose_reaching
 
 name: AllegroKuka
 
@@ -135,12 +135,33 @@ env:
   turn_off_object_vel_obs: False
   turn_off_object_vel_obs_slowly: False
 
+  # related to Tyler Curriculum
   use_obs_dropout: False
   init_tyler_curriculum_scale: 0.0
   VISUALIZE_PD_TARGET_AS_BLUE_ROBOT: False
   withTableForceSensor: False
   curriculumSuccessRatio: 0.6
   resetWhenDropped: False
+  timeToUpdateTylerCurriculum: 5
+  updateStepSizeTylerCurriculum: 0.01
+
+  # related to Asymmetric Observation
+  stateList: ["joint_pos", "joint_vel", "palm_pos", "palm_rot", "palm_vel", "object_rot", "object_vel", "fingertip_pos_rel_palm", "keypoints_rel_palm", "keypoints_rel_goal", "object_scales", "closest_keypoint_max_dist", "closest_fingertip_dist", "lifted_object", "progress", "successes", "reward"]
+
+  obsList: ["joint_pos", "joint_vel", "palm_pos", "palm_rot", "palm_vel", "object_rot", "object_vel", "fingertip_pos_rel_palm", "keypoints_rel_palm", "keypoints_rel_goal", "object_scales", "closest_keypoint_max_dist", "closest_fingertip_dist", "lifted_object", "progress", "successes", "reward"]
+
+  # some pose_reaching_env specific settings
+  use_green_robot: True
+  sanity_check_controls: False
+  add_prev_targets_to_obs: False
+  jointVelocityPenaltyScale: 0.0
+  jointAccelerationPenaltyScale: 0.0
+
+  # goal sampling settings
+  goalSamplingType: "absolute" # "absolute" or "delta" or "coin_flip"
+  targetVolumeRegionScale: 1.0 # scale the target volume region by this factor
+  deltaGoalDistance: 0.05 # distance to the goal in meters
+  deltaRotationDegrees: 20.0 # rotation of the goal in degrees
 
   asset:
     # Whis was the original kuka_allegro asset.
