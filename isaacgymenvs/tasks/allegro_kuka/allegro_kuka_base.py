@@ -1799,19 +1799,10 @@ class AllegroKukaBase(VecTask):
         self.object_angvel = self.root_state_tensor[self.object_indices, 10:13]
 
         # Update object state queue
-        # queue is reset on episode start
-        # This means we need to fill the entire queue with the current values
-        # queue shape is (N, T, D), where N is num envs, T is queue length, D is dimension of the buffer
-        is_episode_start = self.progress_buf == 1
-        self.object_state_queue = torch.where(is_episode_start, self.object_state.unsqueeze(1).repeat_interleave(self.object_state_queue.shape[1], dim=1), self.object_state_queue)
-
-        # Roll the queue down by 1, then update index=0 with the new object state
-        self.object_state_queue[:, 1:] = self.object_state_queue[:, :-1].clone()
-        self.object_state_queue[:, 0] = self.object_state.clone()
+        self.object_state_queue = self.update_queue(queue=self.object_state_queue, current_values=self.object_state)
 
         # Observed object state
         self.observed_object_state = self.object_state.clone()
-
         use_object_state_delay_noise = self.cfg["env"]["useObjectStateDelayNoise"]
         if use_object_state_delay_noise:
             # Sample a delay index from the queue
@@ -1972,6 +1963,13 @@ class AllegroKukaBase(VecTask):
         # ##############################################################################################################
         self.states_buf = torch.cat([obs_dict[k].reshape(self.num_envs, -1) for k in self.state_list], dim=-1)
 
+        print("INPUTS TO STATE BUFFER:")
+        for k in self.state_list:
+            print(f"{k}: {obs_dict[k][0]}")
+        print()
+        from copy import deepcopy
+        state_dict = deepcopy(obs_dict)
+
         # Policy observations
 
         # Add noisy delayed object state observations
@@ -2004,23 +2002,48 @@ class AllegroKukaBase(VecTask):
         reward_obs_scale = 0.01
         obs_dict["reward"] = reward_obs_scale * self.rew_buf * self.turn_off_extra_obs_scale
 
+        print("INPUTS TO OBS BUFFER:")
+        for k in self.obs_list:
+            print(f"{k}: {obs_dict[k][0]}")
+        print()
+
+        print("COMPARISON OF STATE AND OBS DICTS:")
+        for k in self.obs_list:
+            obs__ = obs_dict[k][0]
+            state__ = state_dict[k][0]
+            diff__ = obs__ - state__
+            max_abs_diff = diff__.abs().max().item()
+            print(f"{k}: obs__: {obs__}, state__: {state__}, diff__: {diff__} (max_abs_diff: {max_abs_diff})")
+
+        print("OBJECT STATE QUEUE:")
+        N, T, D = self.object_state_queue.shape
+        for i in range(T):
+            print(f"Frame {i}: {self.object_state_queue[0, i]}")
+        print(f"state_dict['object_rot']: {state_dict['object_rot'][0]}")
+        print(f"obs_dict['object_rot']: {obs_dict['object_rot'][0]}")
+        print()
+
+        print(f"progress_buf: {self.progress_buf[0].item()}")
+        if (self.progress_buf == 1)[0].item():
+            print("Progress buffer is 1 for env 0")
+            breakpoint()
+
+        print()
+        print("="*100)
+        print()
+
+       
+
+
         # ##############################################################################################################
         # Create obs_buf
         # ##############################################################################################################
         self.obs_buf = torch.cat([obs_dict[k].reshape(self.num_envs, -1) for k in self.obs_list], dim=-1)
 
         # Update obs queue
-        # queue is reset on episode start
-        # This means we need to fill the entire queue with the current values
-        # queue shape is (N, T, D), where N is num envs, T is queue length, D is dimension of the buffer
-        is_episode_start = self.progress_buf == 1
-        self.obs_queue = torch.where(is_episode_start, self.obs_buf.unsqueeze(1).repeat_interleave(self.obs_queue.shape[1], dim=1), self.obs_queue)
+        self.obs_queue = self.update_queue(queue=self.obs_queue, current_values=self.obs_buf)
 
-        # Roll the queue down by 1, then update index=0 with the new obs
-        self.obs_queue[:, 1:] = self.obs_queue[:, :-1].clone()
-        self.obs_queue[:, 0] = self.obs_buf.clone()
-
-        # Modify actions to be delayed
+        # Modify obs to be delayed
         use_obs_delay = self.cfg["env"]["useObsDelay"]
         if use_obs_delay:
             # Sample a delay index from the queue
@@ -2365,6 +2388,24 @@ class AllegroKukaBase(VecTask):
         self.deferred_set_dof_state_tensor_indexed([hand_indices])
         self.deferred_set_actor_root_state_tensor_indexed(self._extra_object_indices(env_ids))
 
+    def update_queue(self, queue: torch.Tensor, current_values: torch.Tensor) -> torch.Tensor:
+        N, T, D = queue.shape
+        assert current_values.shape == (N, D), f"current_values.shape: {current_values.shape}, expected: ({N}, {D})"
+
+        # Update queue
+        # queue is reset on episode start
+        # This means we need to fill the entire queue with the current values
+        # queue shape is (N, T, D), where N is num envs, T is queue length, D is dimension of the buffer
+        is_episode_start = self.progress_buf == 1
+        assert is_episode_start.shape == (N,), f"is_episode_start.shape: {is_episode_start.shape}, expected: ({N})"
+
+        queue[:] = torch.where(is_episode_start.unsqueeze(1).unsqueeze(1), current_values.unsqueeze(1).repeat_interleave(T, dim=1), queue)
+
+        # Roll the queue down by 1, then update index=0 with the new action
+        queue[:, 1:] = queue[:, :-1].clone()
+        queue[:, 0] = current_values.clone()
+        return queue
+
     def pre_physics_step(self, actions, joint_pos_targets: Optional[torch.Tensor] = None):
         # print(f"joint_names = {self.joint_names}")
         # print(f"self.joint_lower_limits = {self.joint_lower_limits}")
@@ -2385,15 +2426,7 @@ class AllegroKukaBase(VecTask):
         actions = actions.to(self.device)
 
         # Update actions queue
-        # queue is reset on episode start
-        # This means we need to fill the entire queue with the current values
-        # queue shape is (N, T, D), where N is num envs, T is queue length, D is dimension of the buffer
-        is_episode_start = self.progress_buf == 1
-        self.action_queue = torch.where(is_episode_start, actions.unsqueeze(1).repeat_interleave(self.action_queue.shape[1], dim=1), self.action_queue)
-
-        # Roll the queue down by 1, then update index=0 with the new action
-        self.action_queue[:, 1:] = self.action_queue[:, :-1].clone()
-        self.action_queue[:, 0] = actions.clone()
+        self.action_queue = self.update_queue(queue=self.action_queue, current_values=actions)
 
         # Modify actions to be delayed
         use_action_delay = self.cfg["env"]["useActionDelay"]
