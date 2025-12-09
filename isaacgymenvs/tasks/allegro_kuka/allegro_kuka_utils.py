@@ -83,7 +83,7 @@ def populate_dof_properties(hand_arm_dof_props, params: DofParameters, arm_dofs:
 
         hand_arm_dof_props["stiffness"][0:arm_dofs] = kuka_stiffnesses
         hand_arm_dof_props["damping"][0:arm_dofs] = kuka_dampings
-        hand_arm_dof_props["armature"][0:arm_dofs] = kuka_armatures
+        # hand_arm_dof_props["armature"][0:arm_dofs] = kuka_armatures
         hand_arm_dof_props["effort"][0:arm_dofs] = kuka_efforts
 
         # Assumes hand order

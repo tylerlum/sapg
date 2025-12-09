@@ -128,15 +128,18 @@ def main():
         # "/home/tylerlum/github_repos/sapg/recorded_data/2025-11-06_17-09-47_None_550.npz"  # Slow sliced
         # "/home/tylerlum/github_repos/sapg/recorded_robot_state/2025-11-07_13-43-59_slowpolicyopenloop.npz"  # Real world policy open loop
         # "/home/tylerlum/github_repos/sapg/recorded_robot_state/2025-11-07_14-07-41_slowpolicytargets.npz"  # Real world policy targets
-        "/home/tylerlum/github_repos/sapg/recorded_robot_state/2025-11-09_15-22-31_sharpa_sin_wave.npz"  # Sharpa sin wave
+        # "/home/tylerlum/github_repos/sapg/recorded_robot_state/2025-11-09_15-22-31_sharpa_sin_wave.npz"  # Sharpa sin wave
+        "/home/tylerlum/github_repos/sapg/recorded_robot_state/2025-11-02_18-42-11_sin_wave_arm_10-0s_1-0s_0-1rad.npz"  # Arm sin wave
     )
     assert RECORDED_DATA_PATH.exists()
     recorded_data = RecordedData.from_file(RECORDED_DATA_PATH)
     joint_pos_targets_array = recorded_data.robot_joint_pos_targets_array
     T = joint_pos_targets_array.shape[0]
+    joint_pos_targets_array = np.concatenate([joint_pos_targets_array[:, :7], np.zeros((T, 22))], axis=1)
     assert joint_pos_targets_array.shape == (T, N_ACT), f"joint_pos_targets_array.shape: {joint_pos_targets_array.shape}, expected: ({T}, {N_ACT})"
 
     joint_positions_array = recorded_data.robot_joint_positions_array
+    joint_positions_array = np.concatenate([joint_positions_array[:, :7], np.zeros((T, 22))], axis=1)
     T = joint_pos_targets_array.shape[0]
     assert joint_pos_targets_array.shape == (T, N_ACT), f"joint_pos_targets_array.shape: {joint_pos_targets_array.shape}, expected: ({T}, {N_ACT})"
     assert joint_positions_array.shape == (T, N_ACT), f"joint_positions_array.shape: {joint_positions_array.shape}, expected: ({T}, {N_ACT})"

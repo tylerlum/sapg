@@ -1,7 +1,7 @@
 <mujoco model="iiwa14 scene">
   <compiler angle="radian" meshdir="assets/"/>
 
-  <option timestep="0.00166667" integrator="implicitfast"/>
+  <option timestep="0.000166667" integrator="implicitfast"/>
 
   <size nkey="1"/>
 
@@ -38,19 +38,19 @@
     </default>
     <default class="palmmain">
       <default class="palmCMC_joint">
-        <joint armature="0.0032" damping="4.2e-05" frictionloss="0.132"/>
+        <joint damping="4.2e-05" frictionloss="0.132"/>
       </default>
       <default class="palmPCMC_joint">
-        <joint armature="0.00012" damping="4.2e-05" frictionloss="0.012"/>
+        <joint damping="4.2e-05" frictionloss="0.012"/>
       </default>
       <default class="palmMCP_joint">
-        <joint armature="0.00265" damping="2.38e-05" frictionloss="0.07456"/>
+        <joint damping="2.38e-05" frictionloss="0.07456"/>
       </default>
       <default class="palmPIP_joint">
-        <joint armature="0.0006" damping="4.06e-06" frictionloss="0.01276"/>
+        <joint damping="4.06e-06" frictionloss="0.01276"/>
       </default>
       <default class="palmDIP_joint">
-        <joint armature="0.00042" damping="1.21e-06" frictionloss="0.00378738"/>
+        <joint damping="1.21e-06" frictionloss="0.00378738"/>
       </default>
       <default class="palmelastomer_geom">
         <geom solref="0.06 0.9"/>
@@ -118,7 +118,7 @@
       <geom class="collision" size="0.1" pos="0 0 0.14"/>
       <body name="link1" pos="0 0 0.1575">
         <inertial pos="0 -0.03 0.12" mass="5.76" diaginertia="0.0333 0.033 0.0123"/>
-        <joint name="joint1" class="joint1" pos="0 0 0" axis="0 0 1" armature="3.38176"/>
+        <joint name="joint1" class="joint1" pos="0 0 0" axis="0 0 1"/>
         <geom class="visual" mesh="link_1"/>
         <geom class="collision" size="0.08" pos="0 0 -0.0005"/>
         <geom class="collision" size="0.075" pos="0.01 -0.025 0.0425"/>
@@ -127,7 +127,7 @@
         <geom class="collision" size="0.07" pos="-0.01 -0.045 0.1025"/>
         <body name="link2" pos="0 0 0.2025" quat="0 0 0.707107 0.707107">
           <inertial pos="0.0003 0.059 0.042" quat="0 0 0.707107 0.707107" mass="6.35" diaginertia="0.0305 0.0304 0.011"/>
-          <joint name="joint2" class="joint2" pos="0 0 0" axis="0 0 1" armature="3.38176"/>
+          <joint name="joint2" class="joint2" pos="0 0 0" axis="0 0 1"/>
           <geom class="visual" material="orange" mesh="link_2_orange"/>
           <geom class="visual" mesh="link_2_grey"/>
           <geom class="collision" size="0.095" pos="0 0 -0.01"/>
@@ -141,7 +141,7 @@
           <geom class="collision" size="0.075" pos="0 0.18 0"/>
           <body name="link3" pos="0 0.2045 0" quat="0 0 0.707107 0.707107">
             <inertial pos="0 0.03 0.13" mass="3.5" diaginertia="0.025 0.0238 0.0076"/>
-            <joint name="joint3" class="joint1" pos="0 0 0" axis="0 0 1" armature="3.38176"/>
+            <joint name="joint3" class="joint1" pos="0 0 0" axis="0 0 1"/>
             <geom class="visual" mesh="link_3"/>
             <geom class="visual" material="light_gray" mesh="band"/>
             <geom class="visual" material="black" mesh="kuka"/>
@@ -156,7 +156,7 @@
             <geom class="collision" size="0.075" pos="0 0 0.2155"/>
             <body name="link4" pos="0 0 0.2155" quat="0.707107 0.707107 0 0">
               <inertial pos="0 0.067 0.034" quat="0.707107 0.707107 0 0" mass="3.5" diaginertia="0.017 0.0164 0.006"/>
-              <joint name="joint4" class="joint2" pos="0 0 0" axis="0 0 1" armature="3.38176"/>
+              <joint name="joint4" class="joint2" pos="0 0 0" axis="0 0 1"/>
               <geom class="visual" material="orange" mesh="link_4_orange"/>
               <geom class="visual" mesh="link_4_grey"/>
               <geom class="collision" size="0.078" pos="0 0.01 0.046"/>
@@ -167,7 +167,7 @@
               <geom class="collision" size="0.075" pos="0 0.184 0"/>
               <body name="link5" pos="0 0.1845 0" quat="0 0 0.707107 0.707107">
                 <inertial pos="0.0001 0.021 0.076" mass="3.5" diaginertia="0.01 0.0087 0.00449"/>
-                <joint name="joint5" class="joint1" pos="0 0 0" axis="0 0 1" armature="1.321"/>
+                <joint name="joint5" class="joint1" pos="0 0 0" axis="0 0 1"/>
                 <geom class="visual" mesh="link_5"/>
                 <geom class="visual" material="light_gray" mesh="band"/>
                 <geom class="visual" material="black" mesh="kuka"/>
@@ -182,7 +182,7 @@
                 <geom class="collision" size="0.035" pos="0.012 0.065 0.1855"/>
                 <body name="link6" pos="0 0 0.2155" quat="0.707107 0.707107 0 0">
                   <inertial pos="0 0.0006 0.0004" quat="0.707107 0.707107 0 0" mass="1.8" diaginertia="0.0049 0.0047 0.0036"/>
-                  <joint name="joint6" class="joint2" pos="0 0 0" axis="0 0 1" armature="1.16224"/>
+                  <joint name="joint6" class="joint2" pos="0 0 0" axis="0 0 1"/>
                   <geom class="visual" material="orange" mesh="link_6_orange"/>
                   <geom class="visual" mesh="link_6_grey"/>
                   <geom class="collision" size="0.055" pos="0 0 -0.059"/>
@@ -190,7 +190,7 @@
                   <geom class="collision" size="0.08"/>
                   <body name="link7" pos="0 0.081 0" quat="0 0 0.707107 0.707107">
                     <inertial pos="0 0 0.02" mass="1.2" diaginertia="0.001 0.001 0.001"/>
-                    <joint name="joint7" class="joint3" pos="0 0 0" axis="0 0 1" armature="1.16224"/>
+                    <joint name="joint7" class="joint3" pos="0 0 0" axis="0 0 1"/>
                     <geom class="visual" mesh="link_7"/>
                     <geom class="collision" size="0.06" pos="0 0 0.001"/>
                     <site name="attachment_site" pos="0 0 0.045"/>
@@ -397,28 +397,28 @@
     <general name="actuator5" class="joint1" joint="joint5" biastype="affine" gainprm="200" biasprm="0 -200 -9.75"/>
     <general name="actuator6" class="joint2" joint="joint6" biastype="affine" gainprm="200" biasprm="0 -200 -9.15"/>
     <general name="actuator7" class="joint3" joint="joint7" biastype="affine" gainprm="200" biasprm="0 -200 -9.15"/>
-    <general name="palmleft_thumb_CMC_FE_ctrl" joint="palmleft_thumb_CMC_FE" ctrlrange="-0.1745 1.9199" biastype="affine" gainprm="6.95" biasprm="0 -6.95 0.9"/>
-    <general name="palmleft_thumb_CMC_AA_ctrl" joint="palmleft_thumb_CMC_AA" ctrlrange="-0.3491 0.3491" biastype="affine" gainprm="13.2" biasprm="0 -13.2 0.9"/>
-    <general name="palmleft_thumb_MCP_FE_ctrl" joint="palmleft_thumb_MCP_FE" ctrlrange="-0.5236 1.3963" biastype="affine" gainprm="4.76" biasprm="0 -4.76 0.9"/>
-    <general name="palmleft_thumb_MCP_AA_ctrl" joint="palmleft_thumb_MCP_AA" ctrlrange="-0.3491 0.3491" biastype="affine" gainprm="6.62" biasprm="0 -6.62 0.9"/>
-    <general name="palmleft_thumb_IP_ctrl" joint="palmleft_thumb_IP" ctrlrange="0 1.7453" biastype="affine" gainprm="0.9" biasprm="0 -0.9 0.9"/>
-    <general name="palmleft_index_MCP_FE_ctrl" joint="palmleft_index_MCP_FE" ctrlrange="-0.174533 1.5708" biastype="affine" gainprm="4.76" biasprm="0 -4.76 0.9"/>
-    <general name="palmleft_index_MCP_AA_ctrl" joint="palmleft_index_MCP_AA" ctrlrange="-0.3491 0.3491" biastype="affine" gainprm="6.62" biasprm="0 -6.62 0.9"/>
-    <general name="palmleft_index_PIP_ctrl" joint="palmleft_index_PIP" ctrlrange="0 1.7453" biastype="affine" gainprm="0.9" biasprm="0 -0.9 0.9"/>
-    <general name="palmleft_index_DIP_ctrl" joint="palmleft_index_DIP" ctrlrange="0 1.3963" biastype="affine" gainprm="0.9" biasprm="0 -0.9 0.9"/>
-    <general name="palmleft_middle_MCP_FE_ctrl" joint="palmleft_middle_MCP_FE" ctrlrange="-0.174533 1.5708" biastype="affine" gainprm="4.76" biasprm="0 -4.76 0.9"/>
-    <general name="palmleft_middle_MCP_AA_ctrl" joint="palmleft_middle_MCP_AA" ctrlrange="-0.3491 0.3491" biastype="affine" gainprm="6.62" biasprm="0 -6.62 0.9"/>
-    <general name="palmleft_middle_PIP_ctrl" joint="palmleft_middle_PIP" ctrlrange="0 1.7453" biastype="affine" gainprm="0.9" biasprm="0 -0.9 0.9"/>
-    <general name="palmleft_middle_DIP_ctrl" joint="palmleft_middle_DIP" ctrlrange="0 1.3963" biastype="affine" gainprm="0.9" biasprm="0 -0.9 0.9"/>
-    <general name="palmleft_ring_MCP_FE_ctrl" joint="palmleft_ring_MCP_FE" ctrlrange="-0.174533 1.5708" biastype="affine" gainprm="4.76" biasprm="0 -4.76 0.9"/>
-    <general name="palmleft_ring_MCP_AA_ctrl" joint="palmleft_ring_MCP_AA" ctrlrange="-0.3491 0.3491" biastype="affine" gainprm="6.62" biasprm="0 -6.62 0.9"/>
-    <general name="palmleft_ring_PIP_ctrl" joint="palmleft_ring_PIP" ctrlrange="0 1.7453" biastype="affine" gainprm="0.9" biasprm="0 -0.9 0.9"/>
-    <general name="palmleft_ring_DIP_ctrl" joint="palmleft_ring_DIP" ctrlrange="0 1.3963" biastype="affine" gainprm="0.9" biasprm="0 -0.9 0.9"/>
-    <general name="palmleft_pinky_CMC_ctrl" joint="palmleft_pinky_CMC" ctrlrange="0 0.2618" biastype="affine" gainprm="1.38" biasprm="0 -1.38 0.9"/>
-    <general name="palmleft_pinky_MCP_FE_ctrl" joint="palmleft_pinky_MCP_FE" ctrlrange="-0.174533 1.5708" biastype="affine" gainprm="4.76" biasprm="0 -4.76 0.9"/>
-    <general name="palmleft_pinky_MCP_AA_ctrl" joint="palmleft_pinky_MCP_AA" ctrlrange="-0.3491 0.3491" biastype="affine" gainprm="6.62" biasprm="0 -6.62 0.9"/>
-    <general name="palmleft_pinky_PIP_ctrl" joint="palmleft_pinky_PIP" ctrlrange="0 1.7453" biastype="affine" gainprm="0.9" biasprm="0 -0.9 0.9"/>
-    <general name="palmleft_pinky_DIP_ctrl" joint="palmleft_pinky_DIP" ctrlrange="0 1.3963" biastype="affine" gainprm="0.9" biasprm="0 -0.9 0.9"/>
+    <general name="palmleft_thumb_CMC_FE_ctrl" joint="palmleft_thumb_CMC_FE" ctrlrange="-0.1745 1.9199" biastype="affine" gainprm="6.95" biasprm="0 -6.95 -0.286768"/>
+    <general name="palmleft_thumb_CMC_AA_ctrl" joint="palmleft_thumb_CMC_AA" ctrlrange="-0.3491 0.3491" biastype="affine" gainprm="13.2" biasprm="0 -13.2 -0.408451"/>
+    <general name="palmleft_thumb_MCP_FE_ctrl" joint="palmleft_thumb_MCP_FE" ctrlrange="-0.5236 1.3963" biastype="affine" gainprm="4.76" biasprm="0 -4.76 -0.203941"/>
+    <general name="palmleft_thumb_MCP_AA_ctrl" joint="palmleft_thumb_MCP_AA" ctrlrange="-0.3491 0.3491" biastype="affine" gainprm="6.62" biasprm="0 -6.62 -0.240444"/>
+    <general name="palmleft_thumb_IP_ctrl" joint="palmleft_thumb_IP" ctrlrange="0 1.7453" biastype="affine" gainprm="0.9" biasprm="0 -0.9 -0.0419072"/>
+    <general name="palmleft_index_MCP_FE_ctrl" joint="palmleft_index_MCP_FE" ctrlrange="-0.174533 1.5708" biastype="affine" gainprm="4.76" biasprm="0 -4.76 -0.208592"/>
+    <general name="palmleft_index_MCP_AA_ctrl" joint="palmleft_index_MCP_AA" ctrlrange="-0.3491 0.3491" biastype="affine" gainprm="6.62" biasprm="0 -6.62 -0.245955"/>
+    <general name="palmleft_index_PIP_ctrl" joint="palmleft_index_PIP" ctrlrange="0 1.7453" biastype="affine" gainprm="0.9" biasprm="0 -0.9 -0.0424319"/>
+    <general name="palmleft_index_DIP_ctrl" joint="palmleft_index_DIP" ctrlrange="0 1.3963" biastype="affine" gainprm="0.9" biasprm="0 -0.9 -0.0350446"/>
+    <general name="palmleft_middle_MCP_FE_ctrl" joint="palmleft_middle_MCP_FE" ctrlrange="-0.174533 1.5708" biastype="affine" gainprm="4.76" biasprm="0 -4.76 -0.208592"/>
+    <general name="palmleft_middle_MCP_AA_ctrl" joint="palmleft_middle_MCP_AA" ctrlrange="-0.3491 0.3491" biastype="affine" gainprm="6.62" biasprm="0 -6.62 -0.245955"/>
+    <general name="palmleft_middle_PIP_ctrl" joint="palmleft_middle_PIP" ctrlrange="0 1.7453" biastype="affine" gainprm="0.9" biasprm="0 -0.9 -0.0424319"/>
+    <general name="palmleft_middle_DIP_ctrl" joint="palmleft_middle_DIP" ctrlrange="0 1.3963" biastype="affine" gainprm="0.9" biasprm="0 -0.9 -0.0350446"/>
+    <general name="palmleft_ring_MCP_FE_ctrl" joint="palmleft_ring_MCP_FE" ctrlrange="-0.174533 1.5708" biastype="affine" gainprm="4.76" biasprm="0 -4.76 -0.208592"/>
+    <general name="palmleft_ring_MCP_AA_ctrl" joint="palmleft_ring_MCP_AA" ctrlrange="-0.3491 0.3491" biastype="affine" gainprm="6.62" biasprm="0 -6.62 -0.245955"/>
+    <general name="palmleft_ring_PIP_ctrl" joint="palmleft_ring_PIP" ctrlrange="0 1.7453" biastype="affine" gainprm="0.9" biasprm="0 -0.9 -0.0424318"/>
+    <general name="palmleft_ring_DIP_ctrl" joint="palmleft_ring_DIP" ctrlrange="0 1.3963" biastype="affine" gainprm="0.9" biasprm="0 -0.9 -0.0350446"/>
+    <general name="palmleft_pinky_CMC_ctrl" joint="palmleft_pinky_CMC" ctrlrange="0 0.2618" biastype="affine" gainprm="1.38" biasprm="0 -1.38 -0.0278234"/>
+    <general name="palmleft_pinky_MCP_FE_ctrl" joint="palmleft_pinky_MCP_FE" ctrlrange="-0.174533 1.5708" biastype="affine" gainprm="4.76" biasprm="0 -4.76 -0.208592"/>
+    <general name="palmleft_pinky_MCP_AA_ctrl" joint="palmleft_pinky_MCP_AA" ctrlrange="-0.3491 0.3491" biastype="affine" gainprm="6.62" biasprm="0 -6.62 -0.245955"/>
+    <general name="palmleft_pinky_PIP_ctrl" joint="palmleft_pinky_PIP" ctrlrange="0 1.7453" biastype="affine" gainprm="0.9" biasprm="0 -0.9 -0.0424318"/>
+    <general name="palmleft_pinky_DIP_ctrl" joint="palmleft_pinky_DIP" ctrlrange="0 1.3963" biastype="affine" gainprm="0.9" biasprm="0 -0.9 -0.0350446"/>
   </actuator>
 
   <keyframe>

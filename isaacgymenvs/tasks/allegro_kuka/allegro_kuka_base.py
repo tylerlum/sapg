@@ -1110,6 +1110,7 @@ class AllegroKukaBase(VecTask):
         table_pose.p = gymapi.Vec3()
         table_pose.p.x = allegro_pose.p.x
         table_pose_dy, table_pose_dz = -0.8, 0.38
+        # table_pose_dy, table_pose_dz = -0.8, 0.38 - 0.3
         table_pose.p.y = allegro_pose.p.y + table_pose_dy
         table_pose.p.z = allegro_pose.p.z + table_pose_dz
 
@@ -2404,29 +2405,16 @@ class AllegroKukaBase(VecTask):
         reset_env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
         reset_goal_env_ids = self.reset_goal_buf.nonzero(as_tuple=False).squeeze(-1)
 
-        if self.good_reset_boundary > 0 and self.buffer_length > 0:
-            good_reset_env_ids = reset_env_ids[reset_env_ids < self.good_reset_boundary]
-            random_reset_env_ids = reset_env_ids[reset_env_ids >= self.good_reset_boundary]
-            good_reset_goal_env_ids = reset_goal_env_ids[reset_goal_env_ids < self.good_reset_boundary]
-            random_reset_goal_env_ids = reset_goal_env_ids[reset_goal_env_ids >= self.good_reset_boundary]
-            reset_buf_idxs = torch.randint(0, self.buffer_length, (self.num_envs,), device=self.device)
-        else:
-            good_reset_env_ids = torch.tensor([], device=self.device, dtype=reset_env_ids.dtype)
-            random_reset_env_ids = reset_env_ids
-            good_reset_goal_env_ids = torch.tensor([], device=self.device, dtype=reset_goal_env_ids.dtype)
-            random_reset_goal_env_ids = reset_goal_env_ids
-            reset_buf_idxs = None
+        random_reset_env_ids = reset_env_ids
+        random_reset_goal_env_ids = reset_goal_env_ids
         
         combined_random_env_ids = torch.cat([random_reset_env_ids, random_reset_goal_env_ids, random_reset_goal_env_ids])
         uniques, counts = combined_random_env_ids.unique(return_counts=True)
         random_reset_goal_env_ids = uniques[counts == 2]
         self.reset_target_pose(random_reset_goal_env_ids, None)
-        self.reset_idx(good_reset_goal_env_ids, reset_buf_idxs, False)
 
         if len(reset_env_ids) > 0:
             self.reset_idx(random_reset_env_ids, None)
-            self.reset_idx(good_reset_env_ids, reset_buf_idxs)
-            
 
         self.set_actor_root_state_tensor_indexed()
 

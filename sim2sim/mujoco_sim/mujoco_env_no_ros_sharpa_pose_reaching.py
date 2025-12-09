@@ -154,8 +154,8 @@ def main():
     assert Path(CONFIG_PATH).exists()
     # CHECKPOINT_PATH = Path("/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-10-22_slow-action-obs-randomize-all_slower-curriculum/00_slowarmhand_slowobs_hammer_2025-10-23_00-48-56/runs/00_slowarmhand_slowobs_hammer_2025-10-23_00-48-56/last/model.pth")
     # CHECKPOINT_PATH = Path("/juno/u/kedia/sapg/train_dir/checkpoints/hammer/absoluteControl_0.5.pth")
-    CHECKPOINT_NAME = "baseline_best"
-    # CHECKPOINT_NAME = "joint_vel_best"
+    # CHECKPOINT_NAME = "baseline_best"
+    CHECKPOINT_NAME = "joint_vel_best"
     CHECKPOINT_PATH = Path(
         # "/juno/u/kedia/sapg/train_dir/checkpoints/hammer/relativeControl_5.pth"
         # "/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-11-05_hairbrush/00_smooth-arm-hand_speed-10_dropout-obs_2025-11-05_05-20-24/runs/00_smooth-arm-hand_speed-10_dropout-obs_2025-11-05_05-20-24/last/model.pth"
