@@ -40,8 +40,6 @@ task.env.object_type=${OBJECT_TYPE} \
 task.env.dofSpeedScale=10 \
 task.env.useRelativeControl=False \
 task.task.randomize=False \
-task.task.randomization_params.actor_params.object.scale.range=[0.999,1.001] \
-task.task.randomization_params.actor_params.allegro.scale.range=[0.999,1.001] \
 task=AllegroKukaMLPAsymmetric \
 task.env.objectBaseSize=0.04 \
 task.env.stateList=["joint_pos","joint_vel","palm_pos","palm_rot","palm_vel","object_rot","object_vel","fingertip_pos_rel_palm","keypoints_rel_palm","keypoints_rel_goal","object_scales","closest_keypoint_max_dist","closest_fingertip_dist","lifted_object","progress","successes","reward","prev_action_targets"] \
@@ -51,3 +49,6 @@ task.env.allegroActionsPenaltyScale=0.003 \
 task.env.controlFrequencyInv=1 \
 # task.env.observationType=asymmetric \
 # task=AllegroKukaLSTM \
+
+# task.task.randomization_params.actor_params.object.scale.range=[0.999,1.001] \
+# task.task.randomization_params.actor_params.allegro.scale.range=[0.999,1.001] \
