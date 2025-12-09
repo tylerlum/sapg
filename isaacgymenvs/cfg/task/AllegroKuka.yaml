@@ -163,6 +163,18 @@ env:
   deltaGoalDistance: 0.05 # distance to the goal in meters
   deltaRotationDegrees: 20.0 # rotation of the goal in degrees
 
+  # Delays
+  useObsDelay: False
+  obsDelayMax: 3
+
+  useActionDelay: False
+  actionDelayMax: 3
+
+  useObjectStateDelayNoise: False
+  objectStateDelayMax: 10
+  objectStateXyzNoiseStd: 0.01
+  objectStateQuatNoiseStd: 0.01
+
   asset:
     # Whis was the original kuka_allegro asset.
     # This URDF has some issues, i.e. weights of fingers are too high and the mass of the Allegro hand is too
