@@ -1963,15 +1963,7 @@ class AllegroKukaBase(VecTask):
         # ##############################################################################################################
         self.states_buf = torch.cat([obs_dict[k].reshape(self.num_envs, -1) for k in self.state_list], dim=-1)
 
-        print("INPUTS TO STATE BUFFER:")
-        for k in self.state_list:
-            print(f"{k}: {obs_dict[k][0]}")
-        print()
-        from copy import deepcopy
-        state_dict = deepcopy(obs_dict)
-
         # Policy observations
-
         # Add noisy delayed object state observations
         use_object_state_delay_noise = self.cfg["env"]["useObjectStateDelayNoise"]
         if use_object_state_delay_noise:
@@ -2001,39 +1993,6 @@ class AllegroKukaBase(VecTask):
         # this is where we will add the reward observation
         reward_obs_scale = 0.01
         obs_dict["reward"] = reward_obs_scale * self.rew_buf * self.turn_off_extra_obs_scale
-
-        print("INPUTS TO OBS BUFFER:")
-        for k in self.obs_list:
-            print(f"{k}: {obs_dict[k][0]}")
-        print()
-
-        print("COMPARISON OF STATE AND OBS DICTS:")
-        for k in self.obs_list:
-            obs__ = obs_dict[k][0]
-            state__ = state_dict[k][0]
-            diff__ = obs__ - state__
-            max_abs_diff = diff__.abs().max().item()
-            print(f"{k}: obs__: {obs__}, state__: {state__}, diff__: {diff__} (max_abs_diff: {max_abs_diff})")
-
-        print("OBJECT STATE QUEUE:")
-        N, T, D = self.object_state_queue.shape
-        for i in range(T):
-            print(f"Frame {i}: {self.object_state_queue[0, i]}")
-        print(f"state_dict['object_rot']: {state_dict['object_rot'][0]}")
-        print(f"obs_dict['object_rot']: {obs_dict['object_rot'][0]}")
-        print()
-
-        print(f"progress_buf: {self.progress_buf[0].item()}")
-        if (self.progress_buf == 1)[0].item():
-            print("Progress buffer is 1 for env 0")
-            breakpoint()
-
-        print()
-        print("="*100)
-        print()
-
-       
-
 
         # ##############################################################################################################
         # Create obs_buf
