@@ -224,8 +224,8 @@
   </actuator>
   <contact>
     <exclude body1="left_hand_C_MC" body2="left_thumb_CMC_VL"/>
-    <exclude body1="left_hand_C_MC" body2="left_hand_C_MC"/>
     <exclude body1="left_hand_C_MC" body2="left_thumb_MC"/>
+    <exclude body1="left_thumb_CMC_VL" body2="left_thumb_MC"/>
     <exclude body1="left_thumb_MC" body2="left_thumb_MCP_VL"/>
     <exclude body1="left_thumb_MC" body2="left_thumb_PP"/>
     <exclude body1="left_thumb_MCP_VL" body2="left_thumb_PP"/>

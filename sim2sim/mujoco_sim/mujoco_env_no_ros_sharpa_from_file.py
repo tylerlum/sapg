@@ -181,6 +181,7 @@ def main():
     print(f"Done no moving for {NO_MOVE_FIRST_N_STEPS} steps")
 
     joint_pos_history = []
+    joint_vel_history = []
     robot_base_root_states_history = []
     object_root_states_history = []
     table_root_states_history = []
@@ -192,6 +193,7 @@ def main():
         mujoco_env_no_ros.step(joint_pos_targets_array[idx])
         sim_state = mujoco_env_no_ros.sim.get_sim_state()
         joint_pos_history.append(sim_state["joint_positions"])
+        joint_vel_history.append(sim_state["joint_velocities"])
 
         robot_base_pos = sim_state["robot_base_pos"]
         robot_base_quat_wxyz = sim_state["robot_base_quat_wxyz"]
@@ -211,13 +213,16 @@ def main():
         idx += 1
         if idx >= T:
             joint_pos_history = np.array(joint_pos_history)
+            joint_vel_history = np.array(joint_vel_history)
             robot_base_root_states_history = np.array(robot_base_root_states_history)
             object_root_states_history = np.array(object_root_states_history)
             table_root_states_history = np.array(table_root_states_history)
             print(f"Reached end of trajectory!")
             print(f"joint_pos_history.shape: {joint_pos_history.shape}")
+            print(f"joint_vel_history.shape: {joint_vel_history.shape}")
             print(f"joint_pos_targets_array.shape: {joint_pos_targets_array.shape}")
             assert joint_pos_history.shape == joint_pos_targets_array.shape, f"joint_pos_history.shape: {joint_pos_history.shape}, expected: {joint_pos_targets_array.shape}"
+            assert joint_vel_history.shape == joint_pos_targets_array.shape, f"joint_vel_history.shape: {joint_vel_history.shape}, expected: {joint_pos_targets_array.shape}"
             # robot_root_states_array = np.zeros((T, 13))
             # robot_root_states_array[:, 6] = 1.0  # quaternion xyzw has w=1
             # object_root_states_array = np.zeros((T, 13))
@@ -229,6 +234,7 @@ def main():
                 robot_root_states_array=robot_base_root_states_history,
                 object_root_states_array=object_root_states_history,
                 robot_joint_positions_array=joint_pos_history,
+                robot_joint_velocities_array=joint_vel_history,
                 time_array=time_array,
                 robot_joint_names=robot_joint_names,
                 robot_joint_pos_targets_array=joint_pos_targets_array,

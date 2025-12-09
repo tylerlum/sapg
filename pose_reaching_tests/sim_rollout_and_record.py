@@ -64,6 +64,7 @@ class IsaacEnvNoRosJointPosTargets:
         new_obs = compute_observation(
             q=q,
             qd=qd,
+            # qd=qd * 0,
             joint_targets=joint_targets,
             reward=reward * 0,
         )
@@ -71,6 +72,7 @@ class IsaacEnvNoRosJointPosTargets:
 
     def reset(self) -> torch.Tensor:
         obs, _, _, _ = self.env.step(torch.zeros((1, N_ACT), device=self.device))
+        # obs['obs'][29:58] = 0.0
         return obs["obs"]
 
     def step_with_joint_pos_targets(
@@ -98,11 +100,16 @@ class IsaacEnvNoRosJointPosTargets:
             print(f"qd = {qd}")
             breakpoint()
 
+        # qd_with_noise = qd + torch.randn_like(qd) * 0.1
+        qd_with_noise = qd.clone()
+        # qd_with_noise[:, 7:] += torch.randn_like(qd[:, 7:]) * 0.1
         new_obs = compute_observation(
             q=q,
-            qd=qd,
+            qd=qd_with_noise,
+            # qd=qd_with_noise * 0,
             joint_targets=joint_targets,
-            reward=reward,
+            reward=reward * 0,
+            # reward=reward,
         )
 
         DEBUG = False
@@ -131,8 +138,8 @@ def main():
         "/juno/u/kedia/sapg/closed_loop_testing/pose_reaching.yaml"
     )
     assert Path(CONFIG_PATH).exists()
-    CHECKPOINT_NAME = "joint_vel_best"
-    # CHECKPOINT_NAME = "baseline_best"
+    # CHECKPOINT_NAME = "joint_vel_best"
+    CHECKPOINT_NAME = "baseline_best"
     CHECKPOINT_PATH = Path(
         # Pose reaching
         # "/juno/u/kedia/sapg/train_dir/checkpoints/pose_reaching/baseline_best.pth"
@@ -192,11 +199,17 @@ def main():
     #     0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,
     #     0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3 
     # ])
-    sampled_joint_targets = np.array([-1.52132858, 1.55717357, 0.06476885, 1.52830299, -0.02341534, 1.4615863,
-      2.51592128, 0.07674347, -0.04694744, 0.054256, -0.04634177, -0.04657298,
-      0.02419623, -0.19132802, -0.17249178, -0.05622875, -0.10128311, 0.03142473,
-      -0.09080241, -0.14123037, 0.14656488, -0.02257763, 0.00675282, -0.14247482,
-      -0.05443827, 0.01109226, -0.11509936, 0.0375698, -0.06006387])
+    sampled_joint_targets = np.array([
+        -1.2710,  1.8710,  0.3000,  1.6760,  0.3000,  1.7850,  1.6080,  0.3000,
+        0.1309,  0.3000,  0.3000,  0.3000,  0.3000,  0.0349,  0.3000,  0.3000,
+        0.3000,  0.0349,  0.3000,  0.3000,  0.3000,  0.0349,  0.3000,  0.3000,
+        0.2618,  0.3000,  0.0349,  0.3000,  0.3000
+    ])
+    # sampled_joint_targets = np.array([-1.52132858, 1.55717357, 0.06476885, 1.52830299, -0.02341534, 1.4615863,
+    #   2.51592128, 0.07674347, -0.04694744, 0.054256, -0.04634177, -0.04657298,
+    #   0.02419623, -0.19132802, -0.17249178, -0.05622875, -0.10128311, 0.03142473,
+    #   -0.09080241, -0.14123037, 0.14656488, -0.02257763, 0.00675282, -0.14247482,
+    #   -0.05443827, 0.01109226, -0.11509936, 0.0375698, -0.06006387])
     joint_targets = np.clip(sampled_joint_targets, Q_LOWER_LIMITS_np, Q_UPPER_LIMITS_np)
     joint_targets = torch.from_numpy(joint_targets).float().to(DEVICE)
     
@@ -217,6 +230,7 @@ def main():
         isaac_env_no_ros_joint_pos_targets.env.joint_targets = joint_targets[None].clone()
         start_time = time.time()
         joint_accelerations = (observation[0][29:58].cpu().numpy() - prev_joint_velocities) / CONTROL_DT
+        print(f"joint_accelerations = {joint_accelerations}")
         data['robot_joint_positions_array'].append(observation[0][:29].cpu().numpy())
         data['robot_joint_velocities_array'].append(observation[0][29:58].cpu().numpy())
         data['robot_joint_accelerations_array'].append(joint_accelerations[:])
@@ -238,7 +252,8 @@ def main():
         # print(f"Step {current_step}, Success = {success}")
         current_step += 1
         # if success:
-        if False:
+        # if False:
+        if current_step == 300:
             current_step = 0
             break
         end_time = time.time()
@@ -246,10 +261,9 @@ def main():
         if sleep_time > 0:
             time.sleep(sleep_time)
         else:
-            pass
-            # print(
-            #     f"Control loop too slow! Desired FPS: {1.0 / CONTROL_DT:.1f}, Actual FPS: {1.0 / (end_time - start_time):.1f}"
-            # )
+            print(
+                f"Control loop too slow! Desired FPS: {1.0 / CONTROL_DT:.1f}, Actual FPS: {1.0 / (end_time - start_time):.1f}"
+            )
 
     data['robot_joint_positions_array'] = np.array(data['robot_joint_positions_array'])
     data['robot_joint_velocities_array'] = np.array(data['robot_joint_velocities_array'])
@@ -264,10 +278,14 @@ def main():
     print(f"Mean Squared Joint Accelerations = {np.mean(data['robot_joint_accelerations_array']**2)}")
     print(f"Mean Squared Hand Joint Velocities = {np.mean(data['hand_joint_velocities_array']**2)}")
     print(f"Mean Squared Hand Joint Accelerations = {np.mean(data['hand_joint_accelerations_array']**2)}")
+    breakpoint()
+    print(f"data['hand_joint_accelerations_array'] = {data['hand_joint_accelerations_array']}")
     hand_mean_mse_error = np.sqrt(np.mean(data['hand_joint_accelerations_array']**2))
     rounded_hand_mean_mse_error = round(hand_mean_mse_error, 1)
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    npz_dir = f'/juno/u/kedia/sapg/recorded_robot_states/pose_reaching_FINAL/{CHECKPOINT_NAME}_{STIFFNESS_MULTIPLIER}_{DAMPING_MULTIPLIER}'
+    # npz_dir = f'/juno/u/kedia/sapg/recorded_robot_states/pose_reaching_FINAL/{CHECKPOINT_NAME}_{STIFFNESS_MULTIPLIER}_{DAMPING_MULTIPLIER}'
+    # npz_dir = f'/juno/u/tylerlum/sapg/recorded_robot_states/pose_reaching_FINAL/{CHECKPOINT_NAME}_{STIFFNESS_MULTIPLIER}_{DAMPING_MULTIPLIER}'
+    npz_dir = f'recorded_robot_states/pose_reaching_FINAL/isaac/{CHECKPOINT_NAME}_{STIFFNESS_MULTIPLIER}_{DAMPING_MULTIPLIER}'
     os.makedirs(npz_dir, exist_ok=True)
     np.savez_compressed(os.path.join(npz_dir, f'{rounded_hand_mean_mse_error}.npz'), **data)
     print(f"Saved data to {os.path.join(npz_dir, f'{rounded_hand_mean_mse_error}.npz')}")

@@ -172,7 +172,7 @@ class MujocoSim:
         # Table
         WHITE_RGBA = np.array([1.0, 1.0, 1.0, 1.0])
         TABLE_LEN_X, TABLE_LEN_Y, TABLE_LEN_Z = 0.475, 0.4, 0.3
-        TABLE_POS_X, TABLE_POS_Y, TABLE_POS_Z = 0.0, 0.0, 0.38
+        TABLE_POS_X, TABLE_POS_Y, TABLE_POS_Z = 5, 0.0, 0.38
         table_body = spec.worldbody.add_body()
         table_body.name = "table"
         table_body.pos = np.array([TABLE_POS_X, TABLE_POS_Y, TABLE_POS_Z])
@@ -188,7 +188,7 @@ class MujocoSim:
 
         # Object
         GREY_RGBA = np.array([0.5, 0.5, 0.5, 1.0])
-        OBJECT_POS_X, OBJECT_POS_Y, OBJECT_POS_Z = 0.0, 0.0, 0.38 + 0.3
+        OBJECT_POS_X, OBJECT_POS_Y, OBJECT_POS_Z = 5, 0.0, 0.38 + 0.3
         object_body = spec.worldbody.add_body()
         object_body.name = "object"
         object_body.pos = np.array([OBJECT_POS_X, OBJECT_POS_Y, OBJECT_POS_Z])

@@ -1,7 +1,7 @@
 <mujoco model="iiwa14 scene">
   <compiler angle="radian" meshdir="assets/"/>
 
-  <option timestep="0.00166667" integrator="implicitfast"/>
+  <option timestep="0.00833333" integrator="implicitfast"/>
 
   <size nkey="1"/>
 
@@ -19,7 +19,7 @@
       <site size="0.001 0.005 0.005" group="4" rgba="1 0 0 1"/>
       <default class="joint1">
         <joint range="-2.96706 2.96706"/>
-        <general ctrlrange="-2.96706 2.96706" forcerange="-300 300"/>
+        <general ctrlrange="-2.96706 2.96706"/>
         <default class="joint2">
           <joint range="-2.0944 2.0944"/>
           <general ctrlrange="-2.0944 2.0944"/>
@@ -27,7 +27,7 @@
       </default>
       <default class="joint3">
         <joint range="-3.05433 3.05433"/>
-        <general ctrlrange="-3.05433 3.05433" forcerange="-300 300"/>
+        <general ctrlrange="-3.05433 3.05433"/>
       </default>
       <default class="visual">
         <geom type="mesh" contype="0" conaffinity="0" group="2" material="gray"/>
@@ -118,7 +118,7 @@
       <geom class="collision" size="0.1" pos="0 0 0.14"/>
       <body name="link1" pos="0 0 0.1575">
         <inertial pos="0 -0.03 0.12" mass="5.76" diaginertia="0.0333 0.033 0.0123"/>
-        <joint name="joint1" class="joint1" pos="0 0 0" axis="0 0 1" armature="3.38176"/>
+        <joint name="joint1" class="joint1" pos="0 0 0" axis="0 0 1"/>
         <geom class="visual" mesh="link_1"/>
         <geom class="collision" size="0.08" pos="0 0 -0.0005"/>
         <geom class="collision" size="0.075" pos="0.01 -0.025 0.0425"/>
@@ -127,7 +127,7 @@
         <geom class="collision" size="0.07" pos="-0.01 -0.045 0.1025"/>
         <body name="link2" pos="0 0 0.2025" quat="0 0 0.707107 0.707107">
           <inertial pos="0.0003 0.059 0.042" quat="0 0 0.707107 0.707107" mass="6.35" diaginertia="0.0305 0.0304 0.011"/>
-          <joint name="joint2" class="joint2" pos="0 0 0" axis="0 0 1" armature="3.38176"/>
+          <joint name="joint2" class="joint2" pos="0 0 0" axis="0 0 1"/>
           <geom class="visual" material="orange" mesh="link_2_orange"/>
           <geom class="visual" mesh="link_2_grey"/>
           <geom class="collision" size="0.095" pos="0 0 -0.01"/>
@@ -141,7 +141,7 @@
           <geom class="collision" size="0.075" pos="0 0.18 0"/>
           <body name="link3" pos="0 0.2045 0" quat="0 0 0.707107 0.707107">
             <inertial pos="0 0.03 0.13" mass="3.5" diaginertia="0.025 0.0238 0.0076"/>
-            <joint name="joint3" class="joint1" pos="0 0 0" axis="0 0 1" armature="3.38176"/>
+            <joint name="joint3" class="joint1" pos="0 0 0" axis="0 0 1"/>
             <geom class="visual" mesh="link_3"/>
             <geom class="visual" material="light_gray" mesh="band"/>
             <geom class="visual" material="black" mesh="kuka"/>
@@ -156,7 +156,7 @@
             <geom class="collision" size="0.075" pos="0 0 0.2155"/>
             <body name="link4" pos="0 0 0.2155" quat="0.707107 0.707107 0 0">
               <inertial pos="0 0.067 0.034" quat="0.707107 0.707107 0 0" mass="3.5" diaginertia="0.017 0.0164 0.006"/>
-              <joint name="joint4" class="joint2" pos="0 0 0" axis="0 0 1" armature="3.38176"/>
+              <joint name="joint4" class="joint2" pos="0 0 0" axis="0 0 1"/>
               <geom class="visual" material="orange" mesh="link_4_orange"/>
               <geom class="visual" mesh="link_4_grey"/>
               <geom class="collision" size="0.078" pos="0 0.01 0.046"/>
@@ -167,7 +167,7 @@
               <geom class="collision" size="0.075" pos="0 0.184 0"/>
               <body name="link5" pos="0 0.1845 0" quat="0 0 0.707107 0.707107">
                 <inertial pos="0.0001 0.021 0.076" mass="3.5" diaginertia="0.01 0.0087 0.00449"/>
-                <joint name="joint5" class="joint1" pos="0 0 0" axis="0 0 1" armature="1.321"/>
+                <joint name="joint5" class="joint1" pos="0 0 0" axis="0 0 1"/>
                 <geom class="visual" mesh="link_5"/>
                 <geom class="visual" material="light_gray" mesh="band"/>
                 <geom class="visual" material="black" mesh="kuka"/>
@@ -182,7 +182,7 @@
                 <geom class="collision" size="0.035" pos="0.012 0.065 0.1855"/>
                 <body name="link6" pos="0 0 0.2155" quat="0.707107 0.707107 0 0">
                   <inertial pos="0 0.0006 0.0004" quat="0.707107 0.707107 0 0" mass="1.8" diaginertia="0.0049 0.0047 0.0036"/>
-                  <joint name="joint6" class="joint2" pos="0 0 0" axis="0 0 1" armature="1.16224"/>
+                  <joint name="joint6" class="joint2" pos="0 0 0" axis="0 0 1"/>
                   <geom class="visual" material="orange" mesh="link_6_orange"/>
                   <geom class="visual" mesh="link_6_grey"/>
                   <geom class="collision" size="0.055" pos="0 0 -0.059"/>
@@ -190,7 +190,7 @@
                   <geom class="collision" size="0.08"/>
                   <body name="link7" pos="0 0.081 0" quat="0 0 0.707107 0.707107">
                     <inertial pos="0 0 0.02" mass="1.2" diaginertia="0.001 0.001 0.001"/>
-                    <joint name="joint7" class="joint3" pos="0 0 0" axis="0 0 1" armature="1.16224"/>
+                    <joint name="joint7" class="joint3" pos="0 0 0" axis="0 0 1"/>
                     <geom class="visual" mesh="link_7"/>
                     <geom class="collision" size="0.06" pos="0 0 0.001"/>
                     <site name="attachment_site" pos="0 0 0.045"/>
@@ -359,7 +359,6 @@
     <exclude body1="link3" body2="link5"/>
     <exclude body1="link4" body2="link7"/>
     <exclude body1="link5" body2="link7"/>
-    <exclude body1="palmleft_hand_C_MC" body2="palmleft_hand_C_MC"/>
     <exclude body1="palmleft_hand_C_MC" body2="palmleft_thumb_CMC_VL"/>
     <exclude body1="palmleft_hand_C_MC" body2="palmleft_thumb_MC"/>
     <exclude body1="palmleft_hand_C_MC" body2="palmleft_index_MCP_VL"/>
@@ -369,6 +368,7 @@
     <exclude body1="palmleft_hand_C_MC" body2="palmleft_ring_MCP_VL"/>
     <exclude body1="palmleft_hand_C_MC" body2="palmleft_ring_PP"/>
     <exclude body1="palmleft_hand_C_MC" body2="palmleft_pinky_MC"/>
+    <exclude body1="palmleft_thumb_CMC_VL" body2="palmleft_thumb_MC"/>
     <exclude body1="palmleft_thumb_MC" body2="palmleft_thumb_MCP_VL"/>
     <exclude body1="palmleft_thumb_MC" body2="palmleft_thumb_PP"/>
     <exclude body1="palmleft_thumb_MCP_VL" body2="palmleft_thumb_PP"/>
