@@ -111,6 +111,7 @@ def main():
     )
     observation = isaac_env_no_ros_joint_pos_targets_from_file.reset()
     joint_pos_history = []
+    joint_vel_history = []
     # joint_pos_history.append(isaac_env_no_ros_joint_pos_targets_from_file.env.arm_hand_dof_pos.clone().cpu().numpy()[0])
 
     idx = 0
@@ -121,14 +122,18 @@ def main():
             isaac_env_no_ros_joint_pos_targets_from_file.step_with_joint_pos_targets(torch.from_numpy(joint_pos_targets_array[idx]).to(DEVICE).float().unsqueeze(0))
         )
         joint_pos_history.append(isaac_env_no_ros_joint_pos_targets_from_file.env.arm_hand_dof_pos.clone().cpu().numpy()[0])
+        joint_vel_history.append(isaac_env_no_ros_joint_pos_targets_from_file.env.arm_hand_dof_vel.clone().cpu().numpy()[0])
         idx += 1
         # idx -= 1   #HACK
         if idx >= T:
             joint_pos_history = np.array(joint_pos_history)
+            joint_vel_history = np.array(joint_vel_history)
             print(f"Reached end of trajectory!")
             print(f"joint_pos_history.shape: {joint_pos_history.shape}")
+            print(f"joint_vel_history.shape: {joint_vel_history.shape}")
             print(f"joint_pos_targets_array.shape: {joint_pos_targets_array.shape}")
             assert joint_pos_history.shape == joint_pos_targets_array.shape, f"joint_pos_history.shape: {joint_pos_history.shape}, expected: {joint_pos_targets_array.shape}"
+            assert joint_vel_history.shape == joint_pos_targets_array.shape, f"joint_vel_history.shape: {joint_vel_history.shape}, expected: {joint_pos_targets_array.shape}"
             robot_root_states_array = np.zeros((T, 13))
             robot_root_states_array[:, 6] = 1.0  # quaternion xyzw has w=1
             object_root_states_array = np.zeros((T, 13))
@@ -169,6 +174,7 @@ def main():
                 robot_root_states_array=robot_root_states_array,
                 object_root_states_array=object_root_states_array,
                 robot_joint_positions_array=joint_pos_history,
+                robot_joint_velocities_array=joint_vel_history,
                 time_array=time_array,
                 robot_joint_names=robot_joint_names,
                 robot_joint_pos_targets_array=joint_pos_targets_array,
