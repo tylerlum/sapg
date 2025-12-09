@@ -72,14 +72,19 @@ def populate_dof_properties(hand_arm_dof_props, params: DofParameters, arm_dofs:
 
         kuka_efforts = [300, 300, 300, 300, 300, 300, 300]
         kuka_stiffnesses =  [600, 600, 500, 400, 200, 200, 200]
-        kuka_dampings = [27.03, 27.03, 24.67, 22.07, 9.75, 9.15, 9.15]
+        kuka_dampings = [27.027026473513512, 27.027026473513512, 24.672186769721083, 22.067474708266914, 9.752538131173853, 9.147747263670984, 9.147747263670984]
         kuka_gear_ratios = [160, 160, 160, 160, 100, 160, 160]
         kuka_rotor_inertias = [0.0001321, 0.0001321, 0.0001321, 0.0001321, 0.0001321, 0.0000454, 0.0000454]
+
         assert len(kuka_stiffnesses) == len(kuka_dampings) == len(kuka_gear_ratios) == len(kuka_rotor_inertias) == arm_dofs, f"{len(kuka_stiffnesses)} != {len(kuka_dampings)} != {len(kuka_gear_ratios)} != {len(kuka_rotor_inertias)} != {arm_dofs}"
         kuka_reflected_inertias = [n * n * J for n, J in zip(kuka_gear_ratios, kuka_rotor_inertias)]
         computed_kuka_armatures = kuka_reflected_inertias
         kuka_armatures = [3.3817600000000003, 3.3817600000000003, 3.3817600000000003, 3.3817600000000003, 1.3210000000000002, 1.16224, 1.16224]
         assert np.allclose(computed_kuka_armatures, kuka_armatures), f"computed_kuka_armatures: {computed_kuka_armatures}, kuka_armatures: {kuka_armatures}"
+
+        kuka_damping_ratio = 0.3
+        computed_kuka_dampings = [2 * kuka_damping_ratio * np.sqrt(kuka_stiffnesses[i] * kuka_armatures[i]) for i in range(arm_dofs)]
+        assert np.allclose(computed_kuka_dampings, kuka_dampings), f"computed_kuka_dampings: {computed_kuka_dampings}, kuka_dampings: {kuka_dampings}"
 
         hand_arm_dof_props["stiffness"][0:arm_dofs] = kuka_stiffnesses
         hand_arm_dof_props["damping"][0:arm_dofs] = kuka_dampings

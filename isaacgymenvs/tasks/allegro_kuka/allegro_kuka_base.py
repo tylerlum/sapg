@@ -3372,7 +3372,7 @@ class AllegroKukaBase(VecTask):
 
         delta_rotation_radians = delta_rotation_degrees * np.pi / 180.0
         random_direction = self.sample_random_unit_axis(shape=(N, 3))
-        sampled_rotation_magnitude = torch_rand_float(-delta_rotation_radians, delta_rotation_radians, (N, 1), device=input_quat_xyzw.device)
+        sampled_rotation_magnitude = torch_rand_float(-delta_rotation_radians, delta_rotation_radians, (N, 1), device=self.device)
         sampled_rotation_axis_angles = random_direction * sampled_rotation_magnitude
         sampled_rotation_matrix = axis_angle_to_matrix(sampled_rotation_axis_angles)
         new_matrix = quat_matrix @ sampled_rotation_matrix
