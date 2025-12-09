@@ -270,7 +270,7 @@ class AllegroKukaPoseReaching(AllegroKukaBase):
 
         self.joint_targets[env_ids] = target
 
-    def _reset_target(self, env_ids: Tensor, reset_buf_idxs=None, tensor_reset=True) -> None:
+    def _reset_target(self, env_ids: Tensor, reset_buf_idxs=None, tensor_reset=True, is_first_goal=True) -> None:
         if len(env_ids) == 0:
             return
         self._sample_joint_targets(env_ids)
@@ -278,7 +278,7 @@ class AllegroKukaPoseReaching(AllegroKukaBase):
     def reset_object_pose(self, env_ids: Tensor, reset_buf_idxs=None, tensor_reset=True):
         return
 
-    def compute_observations(self):
+    def populate_sim_buffers(self):
         self.gym.refresh_dof_state_tensor(self.sim)
         self.gym.refresh_actor_root_state_tensor(self.sim)
         self.gym.refresh_rigid_body_state_tensor(self.sim)
@@ -286,10 +286,11 @@ class AllegroKukaPoseReaching(AllegroKukaBase):
         self.joint_pos = self.arm_hand_dof_pos[:, : self.num_hand_arm_dofs]
         self.joint_vel = self.arm_hand_dof_vel[:, : self.num_hand_arm_dofs]
         is_ep_start = self.progress_buf == 1 # dim (num_envs)
-        self.prev_joint_velocity = self.joint_vel.clone()*is_ep_start[:, None]
+        self.prev_joint_velocity = torch.where(is_ep_start[:, None], self.joint_vel.clone(), self.prev_joint_velocity)
         self.joint_acceleration = (self.joint_vel - self.prev_joint_velocity) / self.dt
         self.prev_joint_velocity = self.joint_vel.clone()
         
+    def populate_obs_and_states_buffers(self):
         prev_targets = self.prev_targets[:, : self.num_hand_arm_dofs].clone()
         obs = torch.cat([self.joint_pos, self.joint_vel, self.joint_targets], dim=-1)
         if self.add_prev_targets_to_obs:
@@ -297,6 +298,7 @@ class AllegroKukaPoseReaching(AllegroKukaBase):
         self.obs_buf.zero_()
         cols = obs.shape[1]
         self.obs_buf[:, :cols] = obs[:, :cols]
+        self.states_buf = self.obs_buf.clone()
 
         CHECK_WITH_COMPUTED_OBS = False
         if CHECK_WITH_COMPUTED_OBS:
@@ -310,8 +312,6 @@ class AllegroKukaPoseReaching(AllegroKukaBase):
             diff = (self.obs_buf - computed_obs).abs().max()
             print(f"diff: {diff}")
             breakpoint()
-
-        return self.obs_buf, self.reward_obs_offset
 
     def compute_kuka_reward(self):
         mean_joint_error = torch.mean(torch.abs(self.joint_targets - self.joint_pos), dim=1)
@@ -401,32 +401,13 @@ class AllegroKukaPoseReaching(AllegroKukaBase):
         reset_env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
         reset_goal_env_ids = self.reset_goal_buf.nonzero(as_tuple=False).squeeze(-1)
 
-        if self.good_reset_boundary > 0 and self.buffer_length > 0:
-            good_reset_env_ids = reset_env_ids[reset_env_ids < self.good_reset_boundary]
-            random_reset_env_ids = reset_env_ids[reset_env_ids >= self.good_reset_boundary]
-            good_reset_goal_env_ids = reset_goal_env_ids[reset_goal_env_ids < self.good_reset_boundary]
-            random_reset_goal_env_ids = reset_goal_env_ids[reset_goal_env_ids >= self.good_reset_boundary]
-            reset_buf_idxs = torch.randint(0, self.buffer_length, (self.num_envs,), device=self.device)
-        else:
-            good_reset_env_ids = torch.tensor([], device=self.device, dtype=reset_env_ids.dtype)
-            random_reset_env_ids = reset_env_ids
-            good_reset_goal_env_ids = torch.tensor([], device=self.device, dtype=reset_goal_env_ids.dtype)
-            random_reset_goal_env_ids = reset_goal_env_ids
-            reset_buf_idxs = None
-        
-        combined_random_env_ids = torch.cat([random_reset_env_ids, random_reset_goal_env_ids, random_reset_goal_env_ids])
+        combined_random_env_ids = torch.cat([reset_env_ids, reset_goal_env_ids, reset_goal_env_ids])
         uniques, counts = combined_random_env_ids.unique(return_counts=True)
-        random_reset_goal_env_ids = uniques[counts == 2]
-        self.reset_target_pose(random_reset_goal_env_ids, None)
-        self.reset_idx(good_reset_goal_env_ids, reset_buf_idxs, False)
-        # if env 0 is reset, then print a message
-        if 0 in reset_env_ids:
-            print("Environment 0 was reset--------------------------------")
-
+        reset_goal_env_ids = uniques[counts == 2]
+        
+        self.reset_target_pose(reset_goal_env_ids, None)
         if len(reset_env_ids) > 0:
-            self.reset_idx(random_reset_env_ids, None)
-            self.reset_idx(good_reset_env_ids, reset_buf_idxs)
-            
+            self.reset_idx(reset_env_ids, None)
         self.set_actor_root_state_tensor_indexed()
 
         if self.use_relative_control:

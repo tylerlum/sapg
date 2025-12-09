@@ -707,7 +707,7 @@ class AllegroKukaBase(VecTask):
     def _extra_reset_rules(self, resets):
         return resets
 
-    def _reset_target(self, env_ids: Tensor, reset_buf_idxs=None, tensor_reset=True) -> None:
+    def _reset_target(self, env_ids: Tensor, reset_buf_idxs=None, tensor_reset=True, is_first_goal=True) -> None:
         raise NotImplementedError()
 
     def _extra_object_indices(self, env_ids: Tensor) -> List[Tensor]:
@@ -1719,12 +1719,11 @@ class AllegroKukaBase(VecTask):
                 plt.savefig(f"{self.eval_summary_dir}/successes_histogram.png")
                 plt.clf()
 
-    def compute_observations(self) -> Tuple[Tensor, int]:
+    def populate_sim_buffers(self) -> Tuple[Tensor, int]:
         self.gym.refresh_dof_state_tensor(self.sim)
         self.gym.refresh_actor_root_state_tensor(self.sim)
         self.gym.refresh_rigid_body_state_tensor(self.sim)
 
-        # if self.obs_type == "full_state":
         if self.with_fingertip_force_sensors or self.with_table_force_sensor:
             self.gym.refresh_force_sensor_tensor(self.sim)
         if self.with_dof_force_sensors:
@@ -1841,9 +1840,7 @@ class AllegroKukaBase(VecTask):
             self.closest_keypoint_max_dist < 0.0, self.keypoints_max_dist, self.closest_keypoint_max_dist
         )
 
-        self.compute_full_state()
-
-    def compute_full_state(self) -> None:
+    def populate_obs_and_states_buffers(self) -> None:
         num_dofs = self.num_hand_arm_dofs
         obs_dict = {}
         # dof positions
@@ -2006,8 +2003,8 @@ class AllegroKukaBase(VecTask):
 
         return new_rot
 
-    def reset_target_pose(self, env_ids: Tensor, reset_buf_idxs=None, tensor_reset=True, goal_only=False) -> None:
-        self._reset_target(env_ids, reset_buf_idxs, tensor_reset=tensor_reset, goal_only=goal_only)
+    def reset_target_pose(self, env_ids: Tensor, reset_buf_idxs=None, tensor_reset=True, is_first_goal=True) -> None:
+        self._reset_target(env_ids, reset_buf_idxs, tensor_reset=tensor_reset, is_first_goal=is_first_goal)
         
         if tensor_reset:
             self.reset_goal_buf[env_ids] = 0
@@ -2042,8 +2039,8 @@ class AllegroKukaBase(VecTask):
             if USE_FIXED_INIT_OBJECT_POSE:
                 new_object_rot[:] = 0.0 #HACK
                 new_object_rot[:, -1] = 1.0 #HACK  xyzw
-
-                from scipy.spatial.transform import Rotation as R
+                # HACK: Rotate the object by 180 degrees around the z-axis to go from right handed to left handed robot
+                from scipy.spatial.transform import Rotation as  R
                 new_object_rot[:] = torch.from_numpy(R.from_euler("z", 180, degrees=True).as_quat()).float().to(self.device)[None]
 
             # indices 3,4,5,6 correspond to the rotation quaternion
@@ -2142,7 +2139,7 @@ class AllegroKukaBase(VecTask):
                 self.max_table_sensor_force_norm_smoothed[env_ids] = 0
 
         # randomize start object poses
-        self.reset_target_pose(env_ids, reset_buf_idxs, tensor_reset=tensor_reset, goal_only=True)
+        self.reset_target_pose(env_ids, reset_buf_idxs, tensor_reset=tensor_reset, is_first_goal=True)
 
         # reset rigid body forces
         if tensor_reset:
@@ -2253,31 +2250,13 @@ class AllegroKukaBase(VecTask):
 
         reset_env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
         reset_goal_env_ids = self.reset_goal_buf.nonzero(as_tuple=False).squeeze(-1)
-
-        if self.good_reset_boundary > 0 and self.buffer_length > 0:
-            good_reset_env_ids = reset_env_ids[reset_env_ids < self.good_reset_boundary]
-            random_reset_env_ids = reset_env_ids[reset_env_ids >= self.good_reset_boundary]
-            good_reset_goal_env_ids = reset_goal_env_ids[reset_goal_env_ids < self.good_reset_boundary]
-            random_reset_goal_env_ids = reset_goal_env_ids[reset_goal_env_ids >= self.good_reset_boundary]
-            reset_buf_idxs = torch.randint(0, self.buffer_length, (self.num_envs,), device=self.device)
-        else:
-            good_reset_env_ids = torch.tensor([], device=self.device, dtype=reset_env_ids.dtype)
-            random_reset_env_ids = reset_env_ids
-            good_reset_goal_env_ids = torch.tensor([], device=self.device, dtype=reset_goal_env_ids.dtype)
-            random_reset_goal_env_ids = reset_goal_env_ids
-            reset_buf_idxs = None
         
-        combined_random_env_ids = torch.cat([random_reset_env_ids, random_reset_goal_env_ids, random_reset_goal_env_ids])
+        combined_random_env_ids = torch.cat([reset_env_ids, reset_goal_env_ids, reset_goal_env_ids])
         uniques, counts = combined_random_env_ids.unique(return_counts=True)
-        random_reset_goal_env_ids = uniques[counts == 2]
-        self.reset_target_pose(random_reset_goal_env_ids, None, goal_only=True)
-        self.reset_idx(good_reset_goal_env_ids, reset_buf_idxs, False)
-
+        reset_goal_env_ids = uniques[counts == 2]
+        self.reset_target_pose(reset_goal_env_ids, None, is_first_goal=False)
         if len(reset_env_ids) > 0:
-            self.reset_idx(random_reset_env_ids, None)
-            self.reset_idx(good_reset_env_ids, reset_buf_idxs)
-            
-
+            self.reset_idx(reset_env_ids, None)
         self.set_actor_root_state_tensor_indexed()
 
         if self.use_relative_control:
@@ -2643,8 +2622,9 @@ class AllegroKukaBase(VecTask):
 
         self._update_tyler_curriculum()
 
-        self.compute_observations()
+        self.populate_sim_buffers()
         rewards, is_success = self.compute_kuka_reward()
+        self.populate_obs_and_states_buffers()
         
         if self.good_reset_boundary > 0:
             add_indices = torch.where(is_success)[0]
@@ -2679,12 +2659,6 @@ class AllegroKukaBase(VecTask):
 
         # add rewards to observations
         reward_obs_scale = 0.01
-        # obs_buf[:, reward_obs_ofs : reward_obs_ofs + 1] = rewards.unsqueeze(-1) * reward_obs_scale * self.turn_off_extra_obs_scale
-        # print(f"obs_buf: {obs_buf[0]}")
-        if "reward" in self.state_list:
-            self.states_buf[:, -1:] = rewards.unsqueeze(-1) * reward_obs_scale * self.turn_off_extra_obs_scale
-        if "reward" in self.obs_list:
-            self.obs_buf[:, -1:] = rewards.unsqueeze(-1) * reward_obs_scale * self.turn_off_extra_obs_scale
 
         self.clamp_obs()
 
