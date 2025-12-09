@@ -1880,7 +1880,8 @@ class AllegroKukaBase(VecTask):
         obs_dict["progress"] = torch.log(self.progress_buf / 10 + 1).unsqueeze(-1) * self.turn_off_extra_obs_scale
         obs_dict["successes"] = torch.log(self.successes + 1).unsqueeze(-1) * self.turn_off_extra_obs_scale
         # this is where we will add the reward observation
-        obs_dict["reward"] = self.rew_buf * self.turn_off_extra_obs_scale
+        reward_obs_scale = 0.01
+        obs_dict["reward"] = reward_obs_scale * self.rew_buf * self.turn_off_extra_obs_scale
         self.states_buf = torch.cat([obs_dict[k].reshape(self.num_envs, -1) for k in self.state_list], dim=-1)
         self.obs_buf = torch.cat([obs_dict[k].reshape(self.num_envs, -1) for k in self.obs_list], dim=-1)
 
@@ -2656,9 +2657,6 @@ class AllegroKukaBase(VecTask):
             
             self.temp_buffer_index[torch.where(is_success)[0]] = 0
             self.temp_buffer_index[torch.where(self.reset_buf)[0]] = 0
-
-        # add rewards to observations
-        reward_obs_scale = 0.01
 
         self.clamp_obs()
 
