@@ -29,6 +29,8 @@ HAND_MOVING_AVERAGE = 0.1
 ARM_MOVING_AVERAGE = 0.05
 HAND_DOF_SPEED_SCALE = 2.5
 
+FORCE_QD_ZERO = False
+
 
 def warn(message: str):
     print(colored(message, "yellow"))
@@ -63,7 +65,7 @@ class IsaacEnvNoRosJointPosTargets:
 
         new_obs = compute_observation(
             q=q,
-            qd=qd,
+            qd=qd if not FORCE_QD_ZERO else qd * 0,
             joint_targets=joint_targets,
             reward=reward * 0,
         )
@@ -71,6 +73,8 @@ class IsaacEnvNoRosJointPosTargets:
 
     def reset(self) -> torch.Tensor:
         obs, _, _, _ = self.env.step(torch.zeros((1, N_ACT), device=self.device))
+        if FORCE_QD_ZERO:
+            obs['obs'][29:58] = 0.0
         return obs["obs"]
 
     def step_with_joint_pos_targets(
@@ -100,7 +104,7 @@ class IsaacEnvNoRosJointPosTargets:
 
         new_obs = compute_observation(
             q=q,
-            qd=qd,
+            qd=qd if not FORCE_QD_ZERO else qd * 0,
             joint_targets=joint_targets,
             reward=reward * 0,
         )
