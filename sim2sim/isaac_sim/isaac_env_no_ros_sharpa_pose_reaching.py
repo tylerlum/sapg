@@ -63,7 +63,6 @@ def main():
         # Slow
         # "/juno/u/kedia/sapg/train_dir/checkpoints/SLOW_CUBOID/model.pth"
         # "/juno/u/kedia/sapg/train_dir/checkpoints/dr_hammer_slow.pth"
-
         # Pose reaching
         "/juno/u/kedia/sapg/train_dir/checkpoints/pose_reaching.pth"
     )

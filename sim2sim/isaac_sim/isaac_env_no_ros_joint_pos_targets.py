@@ -119,19 +119,20 @@ class IsaacEnvNoRosJointPosTargets:
 
         DEBUG = False
         if DEBUG:
-            diff= (obs['obs'] - new_obs).abs()[0]
+            diff = (obs["obs"] - new_obs).abs()[0]
             print(f"diff = {diff}")
             print(f"diff.max() = {diff.max()}")
             print(f"diff.argsort() = {diff.argsort()}")
 
             from isaacgymenvs.utils.observation_action_utils import OBS_NAMES
+
             idxs = diff.argsort()
             for idx in idxs:
                 print(f"OBS_NAMES[{idx}] = {OBS_NAMES[idx]}")
                 print(f"obs['obs'][{idx}] = {obs['obs'][0, idx]}")
                 print(f"new_obs[{idx}] = {new_obs[0, idx]}")
                 print(f"diff[{idx}] = {diff[idx]}")
-                print(f"--------------------------------")
+                print("--------------------------------")
 
             breakpoint()
         return new_obs, reward, done, info

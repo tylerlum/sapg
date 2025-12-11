@@ -4,12 +4,10 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Optional
 
 import numpy as np
 import rospy
-import trimesh
 import viser
 from geometry_msgs.msg import Pose, PoseStamped
 from scipy.spatial.transform import Rotation as R
@@ -202,7 +200,10 @@ class ViserVisualizationNode:
 
         # Create a real robot (simulating real robot) and a command robot (visualizing commands)
         # Load robot URDF with a fixed base
-        robot_urdf_path = get_repo_root_dir() / "assets/urdf/kuka_allegro_description/iiwa14_real.urdf"
+        robot_urdf_path = (
+            get_repo_root_dir()
+            / "assets/urdf/kuka_allegro_description/iiwa14_real.urdf"
+        )
         # robot_urdf_path = get_repo_root_dir() / "assets/urdf/kuka_allegro_description/kuka_allegro_touch_sensor.urdf"
         assert robot_urdf_path.exists(), f"robot_urdf_path not found: {robot_urdf_path}"
 
@@ -271,6 +272,7 @@ class ViserVisualizationNode:
         # Load the object mesh
         FAR_AWAY_OBJECT_POSITION = np.ones(3)
         from isaacgymenvs.utils.objects import NAME_TO_OBJECT
+
         object_name = rospy.get_param("/object_name", None)
         if object_name is None:
             DEFAULT_OBJECT_NAME = "blue_cuboid"

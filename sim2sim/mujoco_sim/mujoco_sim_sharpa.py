@@ -7,6 +7,7 @@ from pathlib import Path
 import mujoco
 import mujoco.viewer
 import numpy as np
+
 from isaacgymenvs.utils.utils import get_repo_root_dir
 
 # ############################################################
@@ -41,18 +42,52 @@ assert (
 N_SHARPA_JOINTS = 22
 SHARPA_INIT_JOINT_POS = np.zeros(22)
 SHARPA_JOINT_NAMES = [
-    'palmleft_thumb_CMC_FE', 'palmleft_thumb_CMC_AA', 'palmleft_thumb_MCP_FE', 'palmleft_thumb_MCP_AA', 'palmleft_thumb_IP',
-    'palmleft_index_MCP_FE', 'palmleft_index_MCP_AA', 'palmleft_index_PIP', 'palmleft_index_DIP',
-    'palmleft_middle_MCP_FE', 'palmleft_middle_MCP_AA', 'palmleft_middle_PIP', 'palmleft_middle_DIP',
-    'palmleft_ring_MCP_FE', 'palmleft_ring_MCP_AA', 'palmleft_ring_PIP', 'palmleft_ring_DIP',
-    'palmleft_pinky_CMC', 'palmleft_pinky_MCP_FE', 'palmleft_pinky_MCP_AA', 'palmleft_pinky_PIP', 'palmleft_pinky_DIP',
+    "palmleft_thumb_CMC_FE",
+    "palmleft_thumb_CMC_AA",
+    "palmleft_thumb_MCP_FE",
+    "palmleft_thumb_MCP_AA",
+    "palmleft_thumb_IP",
+    "palmleft_index_MCP_FE",
+    "palmleft_index_MCP_AA",
+    "palmleft_index_PIP",
+    "palmleft_index_DIP",
+    "palmleft_middle_MCP_FE",
+    "palmleft_middle_MCP_AA",
+    "palmleft_middle_PIP",
+    "palmleft_middle_DIP",
+    "palmleft_ring_MCP_FE",
+    "palmleft_ring_MCP_AA",
+    "palmleft_ring_PIP",
+    "palmleft_ring_DIP",
+    "palmleft_pinky_CMC",
+    "palmleft_pinky_MCP_FE",
+    "palmleft_pinky_MCP_AA",
+    "palmleft_pinky_PIP",
+    "palmleft_pinky_DIP",
 ]
 SHARPA_ACTUATOR_NAMES = [
-    'palmleft_thumb_CMC_FE_ctrl', 'palmleft_thumb_CMC_AA_ctrl', 'palmleft_thumb_MCP_FE_ctrl', 'palmleft_thumb_MCP_AA_ctrl', 'palmleft_thumb_IP_ctrl',
-    'palmleft_index_MCP_FE_ctrl', 'palmleft_index_MCP_AA_ctrl', 'palmleft_index_PIP_ctrl', 'palmleft_index_DIP_ctrl',
-    'palmleft_middle_MCP_FE_ctrl', 'palmleft_middle_MCP_AA_ctrl', 'palmleft_middle_PIP_ctrl', 'palmleft_middle_DIP_ctrl',
-    'palmleft_ring_MCP_FE_ctrl', 'palmleft_ring_MCP_AA_ctrl', 'palmleft_ring_PIP_ctrl', 'palmleft_ring_DIP_ctrl',
-    'palmleft_pinky_CMC_ctrl', 'palmleft_pinky_MCP_FE_ctrl', 'palmleft_pinky_MCP_AA_ctrl', 'palmleft_pinky_PIP_ctrl', 'palmleft_pinky_DIP_ctrl',
+    "palmleft_thumb_CMC_FE_ctrl",
+    "palmleft_thumb_CMC_AA_ctrl",
+    "palmleft_thumb_MCP_FE_ctrl",
+    "palmleft_thumb_MCP_AA_ctrl",
+    "palmleft_thumb_IP_ctrl",
+    "palmleft_index_MCP_FE_ctrl",
+    "palmleft_index_MCP_AA_ctrl",
+    "palmleft_index_PIP_ctrl",
+    "palmleft_index_DIP_ctrl",
+    "palmleft_middle_MCP_FE_ctrl",
+    "palmleft_middle_MCP_AA_ctrl",
+    "palmleft_middle_PIP_ctrl",
+    "palmleft_middle_DIP_ctrl",
+    "palmleft_ring_MCP_FE_ctrl",
+    "palmleft_ring_MCP_AA_ctrl",
+    "palmleft_ring_PIP_ctrl",
+    "palmleft_ring_DIP_ctrl",
+    "palmleft_pinky_CMC_ctrl",
+    "palmleft_pinky_MCP_FE_ctrl",
+    "palmleft_pinky_MCP_AA_ctrl",
+    "palmleft_pinky_PIP_ctrl",
+    "palmleft_pinky_DIP_ctrl",
 ]
 assert (
     len(SHARPA_INIT_JOINT_POS)
@@ -73,7 +108,41 @@ assert len(INIT_JOINT_POS) == len(JOINT_NAMES) == len(ACTUATOR_NAMES) == N_JOINT
 
 N_BODY_NAMES = 35
 BODY_NAMES = [
-    'world', 'base', 'link1', 'link2', 'link3', 'link4', 'link5', 'link6', 'link7', 'palmworld', 'palmleft_hand_C_MC', 'palmleft_thumb_CMC_VL', 'palmleft_thumb_MC', 'palmleft_thumb_MCP_VL', 'palmleft_thumb_PP', 'palmleft_thumb_DP', 'palmleft_index_MCP_VL', 'palmleft_index_PP', 'palmleft_index_MP', 'palmleft_index_DP', 'palmleft_middle_MCP_VL', 'palmleft_middle_PP', 'palmleft_middle_MP', 'palmleft_middle_DP', 'palmleft_ring_MCP_VL', 'palmleft_ring_PP', 'palmleft_ring_MP', 'palmleft_ring_DP', 'palmleft_pinky_MC', 'palmleft_pinky_MCP_VL', 'palmleft_pinky_PP', 'palmleft_pinky_MP', 'palmleft_pinky_DP', 'table', 'object'
+    "world",
+    "base",
+    "link1",
+    "link2",
+    "link3",
+    "link4",
+    "link5",
+    "link6",
+    "link7",
+    "palmworld",
+    "palmleft_hand_C_MC",
+    "palmleft_thumb_CMC_VL",
+    "palmleft_thumb_MC",
+    "palmleft_thumb_MCP_VL",
+    "palmleft_thumb_PP",
+    "palmleft_thumb_DP",
+    "palmleft_index_MCP_VL",
+    "palmleft_index_PP",
+    "palmleft_index_MP",
+    "palmleft_index_DP",
+    "palmleft_middle_MCP_VL",
+    "palmleft_middle_PP",
+    "palmleft_middle_MP",
+    "palmleft_middle_DP",
+    "palmleft_ring_MCP_VL",
+    "palmleft_ring_PP",
+    "palmleft_ring_MP",
+    "palmleft_ring_DP",
+    "palmleft_pinky_MC",
+    "palmleft_pinky_MCP_VL",
+    "palmleft_pinky_PP",
+    "palmleft_pinky_MP",
+    "palmleft_pinky_DP",
+    "table",
+    "object",
 ]
 assert len(BODY_NAMES) == N_BODY_NAMES, (
     f"len(BODY_NAMES): {len(BODY_NAMES)}, expected: {N_BODY_NAMES}"
@@ -134,7 +203,10 @@ class MujocoSim:
             spec = mujoco.MjSpec.from_file(str(iiwa_xml_path))
             spec.option.timestep = self.config.sim_dt
 
-            sharpa_xml_path = get_repo_root_dir() / "assets/urdf/left_sharpa_ha4/left_sharpa_ha4_v2_1_offset.xml"
+            sharpa_xml_path = (
+                get_repo_root_dir()
+                / "assets/urdf/left_sharpa_ha4/left_sharpa_ha4_v2_1_offset.xml"
+            )
             assert sharpa_xml_path.exists(), (
                 f"Sharpa XML path does not exist: {sharpa_xml_path}"
             )
@@ -144,15 +216,23 @@ class MujocoSim:
 
             SAVE_MERGED_XML = True
             if SAVE_MERGED_XML:
-                MERGED_XML_PATH = get_repo_root_dir() / "assets/urdf/kuka_allegro_sharpa_merged/iiwa14_left_sharpa.xml"
+                MERGED_XML_PATH = (
+                    get_repo_root_dir()
+                    / "assets/urdf/kuka_allegro_sharpa_merged/iiwa14_left_sharpa.xml"
+                )
                 MERGED_XML_PATH.parent.mkdir(parents=True, exist_ok=True)
                 with open(MERGED_XML_PATH, "w") as f:
                     f.write(spec.to_xml())
                 print(f"Saved to file: {MERGED_XML_PATH}")
 
         else:
-            MERGED_XML_PATH = get_repo_root_dir() / "assets/urdf/kuka_allegro_sharpa_merged/iiwa14_left_sharpa.xml"
-            assert MERGED_XML_PATH.exists(), f"Merged path does not exist: {MERGED_XML_PATH}"
+            MERGED_XML_PATH = (
+                get_repo_root_dir()
+                / "assets/urdf/kuka_allegro_sharpa_merged/iiwa14_left_sharpa.xml"
+            )
+            assert MERGED_XML_PATH.exists(), (
+                f"Merged path does not exist: {MERGED_XML_PATH}"
+            )
             spec = mujoco.MjSpec.from_file(str(MERGED_XML_PATH))
             spec.option.timestep = self.config.sim_dt
 
@@ -215,10 +295,15 @@ class MujocoSim:
             # Use run_coacd.py to generate convex decomp meshes
 
             from isaacgymenvs.utils.objects import NAME_TO_OBJECT
+
             object_name = self.config.object_name
             mesh_paths = NAME_TO_OBJECT[object_name].coacd_filepaths
-            assert mesh_paths is not None, f"mesh_paths is None for object_name: {object_name}"
-            assert len(mesh_paths) > 0, f"len(mesh_paths) is 0 for object_name: {object_name}"
+            assert mesh_paths is not None, (
+                f"mesh_paths is None for object_name: {object_name}"
+            )
+            assert len(mesh_paths) > 0, (
+                f"len(mesh_paths) is 0 for object_name: {object_name}"
+            )
             # mesh_paths = list((get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/044_flat_screwdriver").glob("decomp_*.obj"))
 
             for mesh_path in mesh_paths:
@@ -300,12 +385,14 @@ class MujocoSim:
     def set_object_position(self, pos: np.ndarray) -> None:
         assert pos.shape == (3,), f"pos.shape: {pos.shape}, expected: (3,)"
         qpos_adr = self.mj_model.joint(name="object_free_joint").qposadr[0]
-        self.mj_data.qpos[qpos_adr:qpos_adr+3] = pos
+        self.mj_data.qpos[qpos_adr : qpos_adr + 3] = pos
 
     def set_object_quat_wxyz(self, quat_wxyz: np.ndarray) -> None:
-        assert quat_wxyz.shape == (4,), f"quat_wxyz.shape: {quat_wxyz.shape}, expected: (4,)"
+        assert quat_wxyz.shape == (4,), (
+            f"quat_wxyz.shape: {quat_wxyz.shape}, expected: (4,)"
+        )
         qpos_adr = self.mj_model.joint(name="object_free_joint").qposadr[0]
-        self.mj_data.qpos[qpos_adr+3:qpos_adr+7] = quat_wxyz
+        self.mj_data.qpos[qpos_adr + 3 : qpos_adr + 7] = quat_wxyz
 
     # ############################################################
     # Getting body poses and simulation state

@@ -3,10 +3,9 @@
 import copy
 import time
 from pathlib import Path
-from typing import Literal, Optional, Tuple
+from typing import Optional, Tuple
 
 import numpy as np
-import pytorch_kinematics as pk
 import rospy
 import torch
 from geometry_msgs.msg import Pose, PoseStamped
@@ -15,46 +14,101 @@ from scipy.spatial.transform import Rotation as R
 from sensor_msgs.msg import JointState
 from termcolor import colored
 
-
 USE_BETWEEN = True
 if USE_BETWEEN:
+    from isaacgymenvs.utils.observation_action_utils_sharpa_between import (
+        Q_LOWER_LIMITS_restricted_np as Q_LOWER_LIMITS_np_between,
+    )
+    from isaacgymenvs.utils.observation_action_utils_sharpa_between import (
+        Q_UPPER_LIMITS_restricted_np as Q_UPPER_LIMITS_np_between,
+    )
     from isaacgymenvs.utils.observation_action_utils_sharpa_between import (
         compute_joint_pos_targets,
         compute_observation,
         create_chain_and_serial_chain,
-        Q_LOWER_LIMITS_restricted_np as Q_LOWER_LIMITS_np_between,
-        Q_UPPER_LIMITS_restricted_np as Q_UPPER_LIMITS_np_between,
     )
 else:
     from isaacgymenvs.utils.observation_action_utils_sharpa import (
-    compute_joint_pos_targets,
-    compute_observation,
-    create_chain_and_serial_chain,
-    Q_LOWER_LIMITS_restricted_np as Q_LOWER_LIMITS_np_between,
-    Q_UPPER_LIMITS_restricted_np as Q_UPPER_LIMITS_np_between,
-)
+        Q_LOWER_LIMITS_restricted_np as Q_LOWER_LIMITS_np_between,
+    )
+    from isaacgymenvs.utils.observation_action_utils_sharpa import (
+        Q_UPPER_LIMITS_restricted_np as Q_UPPER_LIMITS_np_between,
+    )
+    from isaacgymenvs.utils.observation_action_utils_sharpa import (
+        compute_joint_pos_targets,
+        compute_observation,
+        create_chain_and_serial_chain,
+    )
 
 
 T_W_R = np.eye(4)
 T_W_R[:3, 3] = np.array([0.0, 0.8, 0.0])
 
 BETWEEN_JOINT_ORDER = [
-    'iiwa14_joint_1', 'iiwa14_joint_2', 'iiwa14_joint_3', 'iiwa14_joint_4', 'iiwa14_joint_5', 'iiwa14_joint_6', 'iiwa14_joint_7',
-    'left_index_MCP_FE', 'left_index_MCP_AA', 'left_index_PIP', 'left_index_DIP',
-    'left_middle_MCP_FE', 'left_middle_MCP_AA', 'left_middle_PIP', 'left_middle_DIP',
-    'left_pinky_CMC', 'left_pinky_MCP_FE', 'left_pinky_MCP_AA', 'left_pinky_PIP', 'left_pinky_DIP',
-    'left_ring_MCP_FE', 'left_ring_MCP_AA', 'left_ring_PIP', 'left_ring_DIP',
-    'left_thumb_CMC_FE', 'left_thumb_CMC_AA', 'left_thumb_MCP_FE', 'left_thumb_MCP_AA', 'left_thumb_IP',
+    "iiwa14_joint_1",
+    "iiwa14_joint_2",
+    "iiwa14_joint_3",
+    "iiwa14_joint_4",
+    "iiwa14_joint_5",
+    "iiwa14_joint_6",
+    "iiwa14_joint_7",
+    "left_index_MCP_FE",
+    "left_index_MCP_AA",
+    "left_index_PIP",
+    "left_index_DIP",
+    "left_middle_MCP_FE",
+    "left_middle_MCP_AA",
+    "left_middle_PIP",
+    "left_middle_DIP",
+    "left_pinky_CMC",
+    "left_pinky_MCP_FE",
+    "left_pinky_MCP_AA",
+    "left_pinky_PIP",
+    "left_pinky_DIP",
+    "left_ring_MCP_FE",
+    "left_ring_MCP_AA",
+    "left_ring_PIP",
+    "left_ring_DIP",
+    "left_thumb_CMC_FE",
+    "left_thumb_CMC_AA",
+    "left_thumb_MCP_FE",
+    "left_thumb_MCP_AA",
+    "left_thumb_IP",
 ]
 
 ADJUSTED_JOINT_ORDER = [
-    'iiwa14_joint_1', 'iiwa14_joint_2', 'iiwa14_joint_3', 'iiwa14_joint_4', 'iiwa14_joint_5', 'iiwa14_joint_6', 'iiwa14_joint_7',
-    'left_thumb_CMC_FE', 'left_thumb_CMC_AA', 'left_thumb_MCP_FE', 'left_thumb_MCP_AA', 'left_thumb_IP',
-    'left_index_MCP_FE', 'left_index_MCP_AA', 'left_index_PIP', 'left_index_DIP',
-    'left_middle_MCP_FE', 'left_middle_MCP_AA', 'left_middle_PIP', 'left_middle_DIP',
-    'left_ring_MCP_FE', 'left_ring_MCP_AA', 'left_ring_PIP', 'left_ring_DIP',
-    'left_pinky_CMC', 'left_pinky_MCP_FE', 'left_pinky_MCP_AA', 'left_pinky_PIP', 'left_pinky_DIP',
+    "iiwa14_joint_1",
+    "iiwa14_joint_2",
+    "iiwa14_joint_3",
+    "iiwa14_joint_4",
+    "iiwa14_joint_5",
+    "iiwa14_joint_6",
+    "iiwa14_joint_7",
+    "left_thumb_CMC_FE",
+    "left_thumb_CMC_AA",
+    "left_thumb_MCP_FE",
+    "left_thumb_MCP_AA",
+    "left_thumb_IP",
+    "left_index_MCP_FE",
+    "left_index_MCP_AA",
+    "left_index_PIP",
+    "left_index_DIP",
+    "left_middle_MCP_FE",
+    "left_middle_MCP_AA",
+    "left_middle_PIP",
+    "left_middle_DIP",
+    "left_ring_MCP_FE",
+    "left_ring_MCP_AA",
+    "left_ring_PIP",
+    "left_ring_DIP",
+    "left_pinky_CMC",
+    "left_pinky_MCP_FE",
+    "left_pinky_MCP_AA",
+    "left_pinky_PIP",
+    "left_pinky_DIP",
 ]
+
+
 def change_joint_order(
     q: np.ndarray,
     from_order: list[str],
@@ -64,9 +118,7 @@ def change_joint_order(
     assert len(to_order) == J, (
         f"Expected to_order to have the same length as from_order, got {len(to_order)} and {len(from_order)}"
     )
-    assert q.shape == (J,), (
-        f"Expected q to have length {J}, got {q.shape}"
-    )
+    assert q.shape == (J,), f"Expected q to have length {J}, got {q.shape}"
 
     assert set(to_order) == set(from_order), (
         f"Expected to_order to be the same as from_order, got to_order: {to_order} and from_order: {from_order}. Only in to_order: {set(to_order) - set(from_order)}"
@@ -92,6 +144,7 @@ def adjusted_to_between(q: np.ndarray) -> np.ndarray:
     else:
         return q
 
+
 def between_to_adjusted(q: np.ndarray) -> np.ndarray:
     if USE_BETWEEN:
         return change_joint_order(
@@ -109,15 +162,14 @@ def between_to_adjusted(q: np.ndarray) -> np.ndarray:
 #         from_order=ADJUSTED_JOINT_ORDER,
 #         to_order=BETWEEN_JOINT_ORDER,
 #     )
-# 
-# 
+#
+#
 # def between_to_adjusted(q: np.ndarray) -> np.ndarray:
 #     return change_joint_order(
 #         q=q,
 #         from_order=BETWEEN_JOINT_ORDER,
 #         to_order=ADJUSTED_JOINT_ORDER,
 #     )
-
 
 
 def warn(message: str):
@@ -205,20 +257,28 @@ class RLPolicyNode:
 
         # Subscribers
         self.object_pose_sub = rospy.Subscriber(
-            "/robot_frame/current_object_pose", PoseStamped, self.object_pose_callback,
-            queue_size=1
+            "/robot_frame/current_object_pose",
+            PoseStamped,
+            self.object_pose_callback,
+            queue_size=1,
         )
         self.goal_object_pose_sub = rospy.Subscriber(
-            "/robot_frame/goal_object_pose", Pose, self.goal_object_pose_callback,
-            queue_size=1
+            "/robot_frame/goal_object_pose",
+            Pose,
+            self.goal_object_pose_callback,
+            queue_size=1,
         )
         self.iiwa_joint_state_sub = rospy.Subscriber(
-            "/iiwa/joint_states", JointState, self.iiwa_joint_state_callback,
-            queue_size=1
+            "/iiwa/joint_states",
+            JointState,
+            self.iiwa_joint_state_callback,
+            queue_size=1,
         )
         self.sharpa_joint_state_sub = rospy.Subscriber(
-            "/sharpa/joint_states", JointState, self.sharpa_joint_state_callback,
-            queue_size=1
+            "/sharpa/joint_states",
+            JointState,
+            self.sharpa_joint_state_callback,
+            queue_size=1,
         )
 
         # RL Player setup
@@ -240,13 +300,10 @@ class RLPolicyNode:
             # "/juno/u/kedia/sapg/train_dir/checkpoints/SLOW_CUBOID/model.pth"
             # "/juno/u/kedia/sapg/train_dir/checkpoints/dr_hammer_slow.pth"
             # "/juno/u/kedia/sapg/train_dir/checkpoints/hammer_slowest.pth"
-
             # DR 4.075 speed
             # "/juno/u/kedia/sapg/train_dir/checkpoints/2025_11_17_checkpoints/hammer_dr_4.075/00_DR_REAL_FINETUNING_SLOW_2025-11-15_13-49-55.pth"
-
             # NODR 2.5 speed
             # "/juno/u/kedia/sapg/train_dir/checkpoints/2025_11_17_checkpoints/hammer_nodr_2.5/00_REAL_FINETUNING_SLOW_2025-11-15_13-51-31.pth"
-
             # Cuboid
             "/juno/u/kedia/sapg/train_dir/checkpoints/2025_11_17_checkpoints/cuboid_nodr_5/00_SLOW_CUBOID_2025-11-14_11-59-02.pth"
         )
@@ -456,7 +513,9 @@ class RLPolicyNode:
                     first_observations_received = True
 
                 if self.prev_targets is None:
-                    self.prev_targets = torch.from_numpy(q_between).float().to(self.device)[None]
+                    self.prev_targets = (
+                        torch.from_numpy(q_between).float().to(self.device)[None]
+                    )
 
                 assert_equals(obs.shape, (1, self.num_observations))
 
@@ -489,8 +548,12 @@ class RLPolicyNode:
                 # Clamp
                 joint_pos_targets = torch.clip(
                     joint_pos_targets,
-                    min=torch.from_numpy(Q_LOWER_LIMITS_np_between).float().to(self.device)[None],
-                    max=torch.from_numpy(Q_UPPER_LIMITS_np_between).float().to(self.device)[None],
+                    min=torch.from_numpy(Q_LOWER_LIMITS_np_between)
+                    .float()
+                    .to(self.device)[None],
+                    max=torch.from_numpy(Q_UPPER_LIMITS_np_between)
+                    .float()
+                    .to(self.device)[None],
                 )
 
                 # Publish the targets
@@ -513,7 +576,7 @@ class RLPolicyNode:
             PRINT_FPS_EVERY_N_SECONDS = 5.0
             PRINT_FPS_EVERY_N_STEPS = int(PRINT_FPS_EVERY_N_SECONDS / self.dt)
             if len(loop_dts) == PRINT_FPS_EVERY_N_STEPS:
-            # if True:
+                # if True:
                 loop_dt_array = np.array(loop_dts)
                 loop_no_sleep_dt_array = np.array(loop_no_sleep_dts)
                 fps_array = 1.0 / loop_dt_array
@@ -562,7 +625,6 @@ class RLPolicyNode:
         # object_scales = np.array([1.3, 0.7, 0.5])
 
         return object_scales
-
 
 
 if __name__ == "__main__":

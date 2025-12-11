@@ -3,7 +3,7 @@
 import copy
 import time
 from pathlib import Path
-from typing import Literal, Optional, Tuple
+from typing import Optional, Tuple
 
 import numpy as np
 import pytorch_kinematics as pk
@@ -371,7 +371,7 @@ class RLPolicyNode:
             PRINT_FPS_EVERY_N_SECONDS = 5.0
             PRINT_FPS_EVERY_N_STEPS = int(PRINT_FPS_EVERY_N_SECONDS / self.dt)
             if len(loop_dts) == PRINT_FPS_EVERY_N_STEPS:
-            # if True:
+                # if True:
                 loop_dt_array = np.array(loop_dts)
                 loop_no_sleep_dt_array = np.array(loop_no_sleep_dts)
                 fps_array = 1.0 / loop_dt_array

@@ -1,25 +1,25 @@
-from pathlib import Path
-
-SHARPA_SDK_PATH = Path("/juno/u/tylerlum/Sharpa/SDK/SharpaWaveSDK_4.3.4/python")
-assert SHARPA_SDK_PATH.exists(), f"SHARPA_SDK_PATH: {SHARPA_SDK_PATH} does not exist"
-
 import sys
-
-# import sharpa.so from SharpaWaveSDK python folder
-sys.path.insert(0, str(SHARPA_SDK_PATH))
-
 import time
 from copy import deepcopy
+from pathlib import Path
 
 import numpy as np
 import rospy
 from sensor_msgs.msg import JointState
+from termcolor import colored
+
+SHARPA_SDK_PATH = Path("/juno/u/tylerlum/Sharpa/SDK/SharpaWaveSDK_4.3.4/python")
+assert SHARPA_SDK_PATH.exists(), f"SHARPA_SDK_PATH: {SHARPA_SDK_PATH} does not exist"
+
+
+# import sharpa.so from SharpaWaveSDK python folder
+sys.path.insert(0, str(SHARPA_SDK_PATH))
+
 from sharpa import (
     ControlMode,
     ControlSource,
     SharpaWaveManager,
 )
-from termcolor import colored
 
 # Joint names (indices 0..21)
 JOINT_NAMES = [
@@ -73,8 +73,10 @@ ANGLE_RANGES = [
     (0, 20),  # Pinky DIP Flexion/Extension
 ]
 
+
 def warn(message: str):
     print(colored(message, "yellow"))
+
 
 def info(message: str):
     print(colored(message, "green"))

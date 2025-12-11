@@ -6,7 +6,10 @@ from typing import Tuple
 from sim2real.rl_player import RlPlayer
 
 import torch  # isort:skip
-import pytorch_kinematics as pk
+import os
+from datetime import datetime
+
+import numpy as np
 from termcolor import colored
 
 from isaacgymenvs.utils.observation_action_utils_sharpa_pose_reaching import (
@@ -14,9 +17,6 @@ from isaacgymenvs.utils.observation_action_utils_sharpa_pose_reaching import (
     compute_observation,
 )
 from sim2sim.isaac_sim.isaac_env import create_env
-import numpy as np
-from datetime import datetime
-import os
 
 N_OBS = 133
 N_ACT = 29
@@ -74,7 +74,7 @@ class IsaacEnvNoRosJointPosTargets:
     ) -> Tuple[torch.Tensor, float, bool, dict]:
         joint_pos_targets = compute_joint_pos_targets(
             actions=action,
-            prev_targets=self.env.prev_targets[:, :self.env.num_hand_arm_dofs],
+            prev_targets=self.env.prev_targets[:, : self.env.num_hand_arm_dofs],
             hand_moving_average=HAND_MOVING_AVERAGE,
             arm_moving_average=ARM_MOVING_AVERAGE,
             hand_dof_speed_scale=HAND_DOF_SPEED_SCALE,
@@ -102,19 +102,20 @@ class IsaacEnvNoRosJointPosTargets:
 
         DEBUG = False
         if DEBUG:
-            diff= (obs['obs'] - new_obs).abs()[0]
+            diff = (obs["obs"] - new_obs).abs()[0]
             print(f"diff = {diff}")
             print(f"diff.max() = {diff.max()}")
             print(f"diff.argsort() = {diff.argsort()}")
 
             from isaacgymenvs.utils.observation_action_utils_sharpa import OBS_NAMES
+
             idxs = diff.argsort()
             for idx in idxs:
                 print(f"OBS_NAMES[{idx}] = {OBS_NAMES[idx]}")
                 print(f"obs['obs'][{idx}] = {obs['obs'][0, idx]}")
                 print(f"new_obs[{idx}] = {new_obs[0, idx]}")
                 print(f"diff[{idx}] = {diff[idx]}")
-                print(f"--------------------------------")
+                print("--------------------------------")
 
             breakpoint()
         return new_obs, reward, done, info, joint_pos_targets
@@ -134,7 +135,6 @@ def main():
         # Slow
         # "/juno/u/kedia/sapg/train_dir/checkpoints/SLOW_CUBOID/model.pth"
         # "/juno/u/kedia/sapg/train_dir/checkpoints/dr_hammer_slow.pth"
-
         # Pose reaching
         # "/juno/u/kedia/sapg/train_dir/checkpoints/pose_reaching/joint_accel.pth"
         "/juno/u/kedia/sapg/train_dir/checkpoints/pose_reaching/joint_accel.pth"
@@ -168,35 +168,64 @@ def main():
         control_dt=CONTROL_DT,
         device=DEVICE,
     )
-    joint_targets = np.array([
-        -1.271,  1.871,  0.3  ,  1.676,  0.3  ,  1.785,  1.608,  0.3  ,
-        0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,
-        0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,
-        0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3 
-    ])
+    joint_targets = np.array(
+        [
+            -1.271,
+            1.871,
+            0.3,
+            1.676,
+            0.3,
+            1.785,
+            1.608,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+        ]
+    )
     # joint_targets = joint_targets.repeat(1, 29)
     joint_targets = torch.from_numpy(joint_targets).float().to(DEVICE)
-    
+
     isaac_env_no_ros_joint_pos_targets.env.joint_targets = joint_targets[None].clone()
     observation = isaac_env_no_ros_joint_pos_targets.reset()
     current_step = 0
 
     data = {
-        'robot_joint_positions_array': [],
-        'robot_joint_pos_targets_array': [],
+        "robot_joint_positions_array": [],
+        "robot_joint_pos_targets_array": [],
     }
     while True:
-        isaac_env_no_ros_joint_pos_targets.env.joint_targets = joint_targets[None].clone()
+        isaac_env_no_ros_joint_pos_targets.env.joint_targets = joint_targets[
+            None
+        ].clone()
         start_time = time.time()
-        data['robot_joint_positions_array'].append(observation[0][:29].cpu().numpy())
+        data["robot_joint_positions_array"].append(observation[0][:29].cpu().numpy())
         action = policy.get_normalized_action(observation, deterministic_actions=True)
         observation, _, done, _, joint_pos_targets = (
             isaac_env_no_ros_joint_pos_targets.step_with_joint_pos_targets(action)
         )
         print(f"Step {current_step}, done = {done}")
         current_step += 1
-        
-        data['robot_joint_pos_targets_array'].append(joint_pos_targets[0].cpu().numpy())
+
+        data["robot_joint_pos_targets_array"].append(joint_pos_targets[0].cpu().numpy())
         if done.item():
             observation = isaac_env_no_ros_joint_pos_targets.reset()
             joint_pos_targets = torch.zeros((1, N_ACT), device=DEVICE)
@@ -212,13 +241,16 @@ def main():
             #     f"Control loop too slow! Desired FPS: {1.0 / CONTROL_DT:.1f}, Actual FPS: {1.0 / (end_time - start_time):.1f}"
             # )
 
-    data['robot_joint_positions_array'] = np.array(data['robot_joint_positions_array'])
-    data['robot_joint_pos_targets_array'] = np.array(data['robot_joint_pos_targets_array'])
+    data["robot_joint_positions_array"] = np.array(data["robot_joint_positions_array"])
+    data["robot_joint_pos_targets_array"] = np.array(
+        data["robot_joint_pos_targets_array"]
+    )
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    npz_dir = f'/juno/u/kedia/sapg/recorded_robot_states/pose_reaching_test/{CHECKPOINT_PATH.stem}'
+    npz_dir = f"/juno/u/kedia/sapg/recorded_robot_states/pose_reaching_test/{CHECKPOINT_PATH.stem}"
     os.makedirs(npz_dir, exist_ok=True)
-    np.savez_compressed(os.path.join(npz_dir, f'{timestamp}.npz'), **data)
+    np.savez_compressed(os.path.join(npz_dir, f"{timestamp}.npz"), **data)
     print(f"Saved data to {os.path.join(npz_dir, f'{timestamp}.npz')}")
+
 
 if __name__ == "__main__":
     main()

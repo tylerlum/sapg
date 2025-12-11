@@ -2,15 +2,17 @@ import time
 from pathlib import Path
 
 import numpy as np
-import pytorch_kinematics as pk
 import torch
 from termcolor import colored
 
+from isaacgymenvs.utils.observation_action_utils_sharpa import (
+    Q_LOWER_LIMITS_np,
+    Q_UPPER_LIMITS_np,
+)
 from isaacgymenvs.utils.observation_action_utils_sharpa_pose_reaching import (
     compute_joint_pos_targets,
     compute_observation,
 )
-from isaacgymenvs.utils.observation_action_utils_sharpa import Q_LOWER_LIMITS_np, Q_UPPER_LIMITS_np
 from sim2real.rl_player import RlPlayer
 from sim2sim.mujoco_sim.mujoco_sim_sharpa import (
     MujocoSim,
@@ -22,6 +24,7 @@ N_ACT = 29
 
 FORCE_QD_ZERO = False
 
+
 def warn(message: str):
     print(colored(message, "yellow"))
 
@@ -30,27 +33,80 @@ def info(message: str):
     print(colored(message, "green"))
 
 
-NOMINAL_JOINT_TARGETS = np.array([
-    -1.571, 1.571, -0.000, 1.376, -0.000, 1.485, 2.358,
-    0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0,
-    0, 0
-])
+NOMINAL_JOINT_TARGETS = np.array(
+    [
+        -1.571,
+        1.571,
+        -0.000,
+        1.376,
+        -0.000,
+        1.485,
+        2.358,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+    ]
+)
 assert len(NOMINAL_JOINT_TARGETS) == 29
 np.random.seed(42)
 
 # SAMPLED_JOINT_TARGETS = NOMINAL_JOINT_TARGETS + np.random.normal(0, 0.1, 29)
-SAMPLED_JOINT_TARGETS = np.array([
-    -1.271,  1.871,  0.3  ,  1.676,  0.3  ,  1.785,  1.608,  0.3  ,
-    0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,
-    0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3  ,
-    0.3  ,  0.3  ,  0.3  ,  0.3  ,  0.3
-])
+SAMPLED_JOINT_TARGETS = np.array(
+    [
+        -1.271,
+        1.871,
+        0.3,
+        1.676,
+        0.3,
+        1.785,
+        1.608,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+    ]
+)
 JOINT_TARGETS = np.clip(SAMPLED_JOINT_TARGETS, Q_LOWER_LIMITS_np, Q_UPPER_LIMITS_np)
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 JOINT_TARGETS = torch.from_numpy(JOINT_TARGETS).float().to(DEVICE)
+
 
 class MujocoEnvNoRosSharpa:
     def __init__(
@@ -89,7 +145,9 @@ class MujocoEnvNoRosSharpa:
 
         observation = compute_observation(
             q=torch.from_numpy(q).float().to(self.device)[None],
-            qd=torch.from_numpy(qd if not FORCE_QD_ZERO else qd * 0).float().to(self.device)[None],
+            qd=torch.from_numpy(qd if not FORCE_QD_ZERO else qd * 0)
+            .float()
+            .to(self.device)[None],
             joint_targets=JOINT_TARGETS[None],
             reward=torch.zeros(1, device=self.device)[None],
         )
@@ -159,16 +217,12 @@ def main():
     CHECKPOINT_PATH = Path(
         # "/juno/u/kedia/sapg/train_dir/checkpoints/hammer/relativeControl_5.pth"
         # "/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-11-05_hairbrush/00_smooth-arm-hand_speed-10_dropout-obs_2025-11-05_05-20-24/runs/00_smooth-arm-hand_speed-10_dropout-obs_2025-11-05_05-20-24/last/model.pth"
-
         # DR 4.075 speed
         # "/juno/u/kedia/sapg/train_dir/checkpoints/2025_11_17_checkpoints/hammer_dr_4.075/00_DR_REAL_FINETUNING_SLOW_2025-11-15_13-49-55.pth"
-
         # NODR 2.5 speed
         # "/juno/u/kedia/sapg/train_dir/checkpoints/2025_11_17_checkpoints/hammer_nodr_2.5/00_REAL_FINETUNING_SLOW_2025-11-15_13-51-31.pth"
-
         # Cuboid
         # "/juno/u/kedia/sapg/train_dir/checkpoints/2025_11_17_checkpoints/cuboid_nodr_5/00_SLOW_CUBOID_2025-11-14_11-59-02.pth"
-
         # Pose reaching
         f"/juno/u/kedia/sapg/train_dir/checkpoints/pose_reaching/{CHECKPOINT_NAME}.pth"
         # f"/juno/u/kedia/sapg/train_dir/checkpoints/pose_reaching/baseline_best.pth"
@@ -177,7 +231,11 @@ def main():
     assert CHECKPOINT_PATH.exists()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    sim = MujocoSim(MujocoSimConfig(enable_viewer=True, sim_dt=SIM_DT, object_name="scanned_hammer_2"))
+    sim = MujocoSim(
+        MujocoSimConfig(
+            enable_viewer=True, sim_dt=SIM_DT, object_name="scanned_hammer_2"
+        )
+    )
     # sim = MujocoSim(MujocoSimConfig(enable_viewer=True, sim_dt=SIM_DT, object_name="mallet"))
     policy = RlPlayer(
         num_observations=N_OBS,
@@ -186,7 +244,6 @@ def main():
         checkpoint_path=CHECKPOINT_PATH,
         device=device,
     )
-
 
     mujoco_env_no_ros = MujocoEnvNoRosSharpa(
         sim=sim,
@@ -199,12 +256,12 @@ def main():
     )
 
     data = {
-        'robot_joint_positions_array': [],
-        'robot_joint_velocities_array': [],
-        'robot_joint_accelerations_array': [],
-        'robot_joint_pos_targets_array': [],
-        'hand_joint_velocities_array': [],
-        'hand_joint_accelerations_array': [],
+        "robot_joint_positions_array": [],
+        "robot_joint_velocities_array": [],
+        "robot_joint_accelerations_array": [],
+        "robot_joint_pos_targets_array": [],
+        "hand_joint_velocities_array": [],
+        "hand_joint_accelerations_array": [],
     }
     prev_joint_velocities = np.zeros(29)
     joint_targets = JOINT_TARGETS
@@ -213,21 +270,25 @@ def main():
         start_time = time.time()
         # Get observation, get action, step simulation
         observation = mujoco_env_no_ros.compute_observation()
-        joint_accelerations = (observation[0][29:58].cpu().numpy() - prev_joint_velocities) / CONTROL_DT
-        data['robot_joint_positions_array'].append(observation[0][:29].cpu().numpy())
-        data['robot_joint_velocities_array'].append(observation[0][29:58].cpu().numpy())
-        data['robot_joint_accelerations_array'].append(joint_accelerations[:])
-        data['hand_joint_velocities_array'].append(observation[0][36:65].cpu().numpy())
-        data['hand_joint_accelerations_array'].append(joint_accelerations[7:])
+        joint_accelerations = (
+            observation[0][29:58].cpu().numpy() - prev_joint_velocities
+        ) / CONTROL_DT
+        data["robot_joint_positions_array"].append(observation[0][:29].cpu().numpy())
+        data["robot_joint_velocities_array"].append(observation[0][29:58].cpu().numpy())
+        data["robot_joint_accelerations_array"].append(joint_accelerations[:])
+        data["hand_joint_velocities_array"].append(observation[0][36:65].cpu().numpy())
+        data["hand_joint_accelerations_array"].append(joint_accelerations[7:])
         prev_joint_velocities = observation[0][29:58].cpu().numpy()
         error = (joint_targets - observation[0][:29]).abs().cpu().numpy()
-        mean_kuka_mse_error = np.mean(error[:7]**2)
-        mean_hand_mse_error = np.mean(error[7:]**2)
+        mean_kuka_mse_error = np.mean(error[:7] ** 2)
+        mean_hand_mse_error = np.mean(error[7:] ** 2)
 
         action = policy.get_normalized_action(
             observation, deterministic_actions=True
         )  # Careful about deterministic_actions=True here!
-        data['robot_joint_pos_targets_array'].append(mujoco_env_no_ros.sim.robot_joint_pos_targets)
+        data["robot_joint_pos_targets_array"].append(
+            mujoco_env_no_ros.sim.robot_joint_pos_targets
+        )
         mujoco_env_no_ros.step(action)
         end_time = time.time()
         current_step += 1
@@ -244,29 +305,51 @@ def main():
                 f"Control loop too slow! Desired FPS: {1.0 / CONTROL_DT:.1f}, Actual FPS: {1.0 / (end_time - start_time):.1f}"
             )
 
-    data['robot_joint_positions_array'] = np.array(data['robot_joint_positions_array'])
-    data['robot_joint_velocities_array'] = np.array(data['robot_joint_velocities_array'])
-    data['robot_joint_accelerations_array'] = np.array(data['robot_joint_accelerations_array'])
-    data['robot_joint_pos_targets_array'] = np.array(data['robot_joint_pos_targets_array'])
-    data['hand_joint_velocities_array'] = np.array(data['hand_joint_velocities_array'])
-    data['hand_joint_accelerations_array'] = np.array(data['hand_joint_accelerations_array'])
+    data["robot_joint_positions_array"] = np.array(data["robot_joint_positions_array"])
+    data["robot_joint_velocities_array"] = np.array(
+        data["robot_joint_velocities_array"]
+    )
+    data["robot_joint_accelerations_array"] = np.array(
+        data["robot_joint_accelerations_array"]
+    )
+    data["robot_joint_pos_targets_array"] = np.array(
+        data["robot_joint_pos_targets_array"]
+    )
+    data["hand_joint_velocities_array"] = np.array(data["hand_joint_velocities_array"])
+    data["hand_joint_accelerations_array"] = np.array(
+        data["hand_joint_accelerations_array"]
+    )
     # print mean squared joint velocities and accelerations
     # breakpoint()
-    print(f"Mean Squared Joint Velocities = {np.mean(data['robot_joint_velocities_array']**2)}")
-    print(f"Mean Squared Joint Accelerations = {np.mean(data['robot_joint_accelerations_array']**2)}")
-    print(f"Mean Squared Hand Joint Velocities = {np.mean(data['hand_joint_velocities_array']**2)}")
-    print(f"Mean Squared Hand Joint Accelerations = {np.mean(data['hand_joint_accelerations_array']**2)}")
-    hand_mean_mse_error = np.sqrt(np.mean(data['hand_joint_accelerations_array']**2))
+    print(
+        f"Mean Squared Joint Velocities = {np.mean(data['robot_joint_velocities_array'] ** 2)}"
+    )
+    print(
+        f"Mean Squared Joint Accelerations = {np.mean(data['robot_joint_accelerations_array'] ** 2)}"
+    )
+    print(
+        f"Mean Squared Hand Joint Velocities = {np.mean(data['hand_joint_velocities_array'] ** 2)}"
+    )
+    print(
+        f"Mean Squared Hand Joint Accelerations = {np.mean(data['hand_joint_accelerations_array'] ** 2)}"
+    )
+    hand_mean_mse_error = np.sqrt(np.mean(data["hand_joint_accelerations_array"] ** 2))
     rounded_hand_mean_mse_error = round(hand_mean_mse_error, 1)
     from datetime import datetime
+
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     # npz_dir = f'/juno/u/kedia/sapg/recorded_robot_states/pose_reaching_FINAL/{CHECKPOINT_NAME}_{STIFFNESS_MULTIPLIER}_{DAMPING_MULTIPLIER}'
     # npz_dir = f'/juno/u/tylerlum/sapg/recorded_robot_states/pose_reaching_FINAL/{CHECKPOINT_NAME}_{STIFFNESS_MULTIPLIER}_{DAMPING_MULTIPLIER}'
-    npz_dir = f'recorded_robot_states/pose_reaching_FINAL/mujoco/{CHECKPOINT_NAME}'
+    npz_dir = f"recorded_robot_states/pose_reaching_FINAL/mujoco/{CHECKPOINT_NAME}"
     import os
+
     os.makedirs(npz_dir, exist_ok=True)
-    np.savez_compressed(os.path.join(npz_dir, f'{rounded_hand_mean_mse_error}.npz'), **data)
-    print(f"Saved data to {os.path.join(npz_dir, f'{rounded_hand_mean_mse_error}.npz')}")
+    np.savez_compressed(
+        os.path.join(npz_dir, f"{rounded_hand_mean_mse_error}.npz"), **data
+    )
+    print(
+        f"Saved data to {os.path.join(npz_dir, f'{rounded_hand_mean_mse_error}.npz')}"
+    )
 
 
 if __name__ == "__main__":

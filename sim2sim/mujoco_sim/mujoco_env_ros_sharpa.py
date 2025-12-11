@@ -234,13 +234,15 @@ class MujocoEnvRosSharpa:
 
 
 def main():
-    sim = MujocoSim(MujocoSimConfig(
-        enable_viewer=False,
-        sim_dt=1.0 / 500.0,
-        # sim_dt=1.0 / 2000.0,
-        # object_name="blue_cuboid_real_iphone",
-        object_name="blue_cuboid",
-    ))
+    sim = MujocoSim(
+        MujocoSimConfig(
+            enable_viewer=False,
+            sim_dt=1.0 / 500.0,
+            # sim_dt=1.0 / 2000.0,
+            # object_name="blue_cuboid_real_iphone",
+            object_name="blue_cuboid",
+        )
+    )
     mujoco_env_ros = MujocoEnvRosSharpa(sim)
     mujoco_env_ros.run()
 

@@ -128,9 +128,7 @@ def move_to_pose(
             sys.exit(0)
 
         start_time = rospy.Time.now()
-        publish_joint_pos_targets(
-            target_pos, pub_iiwa=pub_iiwa, pub_sharpa=pub_sharpa
-        )
+        publish_joint_pos_targets(target_pos, pub_iiwa=pub_iiwa, pub_sharpa=pub_sharpa)
         end_time = rospy.Time.now()
 
         loop_without_sleep_dt = (end_time - start_time).to_sec()
@@ -155,7 +153,7 @@ def main():
         "/sharpa/joint_states",
         JointState,
         current_joint_pos_sharpa_callback,
-        queue_size=1
+        queue_size=1,
     )
     pub_iiwa = rospy.Publisher("/iiwa/joint_cmd", JointState, queue_size=1)
     pub_sharpa = rospy.Publisher("/sharpa/joint_cmd", JointState, queue_size=1)
