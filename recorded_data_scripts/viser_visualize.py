@@ -133,6 +133,7 @@ def main():
         goal_frame = SERVER.scene.add_frame(
             "/goal", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS
         )
+        # _goal_object_viser = ViserUrdf(SERVER, OBJECT_URDF_PATH, root_node_name="/goal")
 
     # Palm
     palm_frame = SERVER.scene.add_frame(
@@ -289,7 +290,33 @@ def main():
         # ###########
         # Sleep and update frame index
         # ###########
-        time.sleep(recorded_data.dt)
+        # print(f"Sleeping for {recorded_data.dt} seconds")
+        # print(f"recorded_data.time_array: {recorded_data.time_array}")
+        # print(f"np.diff(recorded_data.time_array): {np.diff(recorded_data.time_array)}")
+        # import matplotlib.pyplot as plt
+        # plt.plot(recorded_data.time_array)
+        # plt.title("recorded_data.time_array")
+        # plt.xlabel("Frame Index")
+        # plt.ylabel("Time (s)")
+        # plt.show()
+        # plt.plot(np.diff(recorded_data.time_array))
+        # plt.title("np.diff(recorded_data.time_array)")
+        # plt.xlabel("Frame Index")
+        # plt.ylabel("Time Difference (s)")
+        # plt.show()
+        # object_positions = recorded_data.object_root_states_array[:, :3]
+        # distances = np.linalg.norm(object_positions[1:] - object_positions[:-1], axis=-1)
+        # plt.plot(distances)
+        # plt.title("distances")
+        # plt.xlabel("Frame Index")
+        # plt.ylabel("Distance (m)")
+        # plt.show()
+        # breakpoint()
+
+        # plt.show()
+        # breakpoint()
+        # time.sleep(recorded_data.dt)
+        time.sleep(1/60)
         if not PAUSED:
             frame_idx_slider.value = int(
                 np.clip(
