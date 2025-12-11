@@ -45,35 +45,6 @@ class IsaacEnvNoRosJointPosTargets:
         self.device = device
         self.chain = chain
 
-    def step(self, action: torch.Tensor) -> Tuple[torch.Tensor, float, bool, dict]:
-        obs, reward, done, info = self.env.step(action)
-        q = self.env.arm_hand_dof_pos
-        qd = self.env.arm_hand_dof_vel
-        object_pose = self.env.object_pose
-        goal_object_pose = self.env.goal_pose
-        object_scales = self.env.object_scales
-
-        DEBUG = False
-        if DEBUG:
-            print(f"q = {q}")
-            print(f"qd = {qd}")
-            print(f"object_pose = {object_pose}")
-            print(f"goal_object_pose = {goal_object_pose}")
-            print(f"object_scales = {object_scales}")
-            breakpoint()
-
-        new_obs = compute_observation(
-            q=q,
-            qd=qd,
-            prev_action_targets=self.env.prev_targets,
-            object_pose=object_pose,
-            goal_object_pose=goal_object_pose,
-            object_scales=object_scales,
-            chain=self.chain,
-            obs_list=self.env.obs_list,
-        )
-        return new_obs, reward, done, info
-
     def reset(self) -> torch.Tensor:
         obs, _, _, _ = self.env.step(torch.zeros((1, N_ACT), device=self.device))
         return obs["obs"]
