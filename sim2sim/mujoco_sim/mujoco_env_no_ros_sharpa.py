@@ -86,6 +86,15 @@ class MujocoEnvNoRosSharpa:
             chain=self.chain,
             obs_list=self.obs_list,
         )
+        # print(f"q = {q}")
+        # print(f"qd = {qd}")
+        # print(f"prev_action_targets = {self.sim.robot_joint_pos_targets}")
+        # print(f"object_pose = {object_pose_W}")
+        # print(f"goal_object_pose = {goal_object_pose_W}")
+        # print(f"object_scales = {self.object_scales}")
+        # print(f"observation = {observation}")
+        # breakpoint()
+
         assert observation.shape == (
             1,
             N_OBS,
@@ -120,14 +129,15 @@ class MujocoEnvNoRosSharpa:
 
 def main():
     # Parameters
-    SIM_DT = 1.0 / 600.0  # Mujoco sim step (needs to be small to get stable physics)
+    SIM_DT = 1.0 / 120.0  # Mujoco sim step (needs to be small to get stable physics)
     CONTROL_DT = 1.0 / 60.0  # Control loop frequency (policy loop rate)
-    HAND_MOVING_AVERAGE = 0.1
-    ARM_MOVING_AVERAGE = 0.1
+    HAND_MOVING_AVERAGE = 0.2
+    ARM_MOVING_AVERAGE = 0.05
     HAND_DOF_SPEED_SCALE = 2.5
 
     # Cuboid
-    OBJECT_SCALES = np.array([4.0000, 0.7500, 1.0000])
+    # OBJECT_SCALES = np.array([4.0000, 0.7500, 1.0000])
+    OBJECT_SCALES = np.array([4.0000, 0.7500, 1.0000]) * 1.25
 
     CONFIG_PATH = Path(
         "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"
@@ -139,7 +149,8 @@ def main():
     assert CHECKPOINT_PATH.exists()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    sim = MujocoSim(MujocoSimConfig(enable_viewer=True, sim_dt=SIM_DT, object_name="cuboid_4_0.75_1"))
+    # sim = MujocoSim(MujocoSimConfig(enable_viewer=True, sim_dt=SIM_DT, object_name="cuboid_4_0.75_1"))
+    sim = MujocoSim(MujocoSimConfig(enable_viewer=True, sim_dt=SIM_DT, object_name="cuboid_5_0.9375_1.25"))
     policy = RlPlayer(
         num_observations=N_OBS,
         num_actions=N_ACT,
