@@ -71,7 +71,7 @@ def main():
         f"KUKA_ALLEGRO_URDF_PATH not found: {KUKA_ALLEGRO_URDF_PATH}"
     )
     from isaacgymenvs.utils.objects import NAME_TO_OBJECT
-    DEFAULT_OBJECT_NAME = "044_flat_screwdriver"
+    DEFAULT_OBJECT_NAME = "blue_cuboid"
     object_name = DEFAULT_OBJECT_NAME
     if recorded_data.object_name is None:
         print(f"Using default object name: {DEFAULT_OBJECT_NAME}")
@@ -99,7 +99,7 @@ def main():
 
     # Robot
     kuka_allegro_frame = SERVER.scene.add_frame(
-        "/robot/state", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS
+        "/robot/state", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS,
     )
     kuka_allegro_viser = ViserUrdf(
         SERVER, KUKA_ALLEGRO_URDF_PATH, root_node_name="/robot/state"
@@ -108,7 +108,7 @@ def main():
     # Target robot
     if recorded_data.robot_joint_pos_targets_array is not None:
         target_kuka_allegro_frame = SERVER.scene.add_frame(
-            "/target_robot/state", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS
+            "/target_robot/state", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS,
         )
         BLUE_RGBA = (0, 0, 255, 0.5)
         target_kuka_allegro_viser = ViserUrdf(
@@ -236,7 +236,7 @@ def main():
         # Update viser objects
         # ###########
         # Robot
-        kuka_allegro_frame.position = robot_root_state[:3]
+        kuka_allegro_frame.position = robot_root_state[:3] + np.array([0.0, 0.8, 0.0])
         kuka_allegro_frame.wxyz = xyzw_to_wxyz(robot_root_state[3:7])
         kuka_allegro_joint_pos_viser_order = RecordedData.change_joint_order(
             robot_joint_position,
@@ -248,7 +248,7 @@ def main():
         # Target robot
         if recorded_data.robot_joint_pos_targets_array is not None:
             robot_joint_pos_target = recorded_data.robot_joint_pos_targets_array[FRAME_IDX]
-            target_kuka_allegro_frame.position = robot_root_state[:3]
+            target_kuka_allegro_frame.position = robot_root_state[:3] + np.array([0.0, 0.8, 0.0])
             target_kuka_allegro_frame.wxyz = xyzw_to_wxyz(robot_root_state[3:7])
             target_kuka_allegro_joint_pos_viser_order = robot_joint_pos_target
             target_kuka_allegro_viser.update_cfg(target_kuka_allegro_joint_pos_viser_order)
