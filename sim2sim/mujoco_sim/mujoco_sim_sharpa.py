@@ -217,6 +217,7 @@ class MujocoSim:
             assert scales.shape == (3,), f"scales.shape: {scales.shape}, expected: (3,)"
             BASE_SIZE = 0.04
             BOX_LEN_X, BOX_LEN_Y, BOX_LEN_Z = scales * BASE_SIZE
+            print(f"BOX_LEN_X: {BOX_LEN_X}, BOX_LEN_Y: {BOX_LEN_Y}, BOX_LEN_Z: {BOX_LEN_Z}")
 
             object_geom = object_body.add_geom()
             object_geom.name = "object_geom"

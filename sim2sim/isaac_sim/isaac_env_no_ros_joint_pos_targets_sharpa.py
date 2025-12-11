@@ -83,6 +83,7 @@ class IsaacEnvNoRosJointPosTargets:
 
         # HACK: Overwrite
         goal_object_pose[:] = torch.tensor([0.,  0.,  0.88, 0.,  0.,  0.,  1.], device=self.device)[None]
+        object_scales[:] = torch.tensor([5.0, 0.9375, 1.25], device=self.device)[None]
 
         new_obs = compute_observation(
             q=q,
@@ -148,6 +149,7 @@ def main():
             "task.env.resetDofPosRandomIntervalFingers": 0.0,
             "task.env.resetDofPosRandomIntervalArm": 0.0,
             "task.env.resetDofVelRandomInterval": 0.0,
+            "task.env.object_type": "blue_cuboid",
         },
     )
 
