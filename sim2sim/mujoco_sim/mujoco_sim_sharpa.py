@@ -197,9 +197,15 @@ class MujocoSim:
         object_free_joint.name = "object_free_joint"
         object_free_joint.type = mujoco.mjtJoint.mjJNT_FREE
 
-        ADD_BOX_OBJECT = True
+        object_name = self.config.object_name
+        ADD_BOX_OBJECT = "cuboid" in object_name
         if ADD_BOX_OBJECT:
-            BOX_LEN_X, BOX_LEN_Y, BOX_LEN_Z = 0.20, 0.05, 0.0375
+            # Example: cuboid_4_0.75_1
+            scales = object_name.split("_")[1:]
+            scales = np.array(scales, dtype=float)
+            assert scales.shape == (3,), f"scales.shape: {scales.shape}, expected: (3,)"
+            BASE_SIZE = 0.04
+            BOX_LEN_X, BOX_LEN_Y, BOX_LEN_Z = scales * BASE_SIZE
 
             object_geom = object_body.add_geom()
             object_geom.name = "object_geom"
@@ -215,7 +221,6 @@ class MujocoSim:
             # Use run_coacd.py to generate convex decomp meshes
 
             from isaacgymenvs.utils.objects import NAME_TO_OBJECT
-            object_name = self.config.object_name
             mesh_paths = NAME_TO_OBJECT[object_name].coacd_filepaths
             assert mesh_paths is not None, f"mesh_paths is None for object_name: {object_name}"
             assert len(mesh_paths) > 0, f"len(mesh_paths) is 0 for object_name: {object_name}"

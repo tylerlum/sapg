@@ -17,7 +17,7 @@ from sim2sim.mujoco_sim.mujoco_sim_sharpa import (
     MujocoSimConfig,
 )
 
-N_OBS = 133
+N_OBS = 140
 N_ACT = 29
 
 
@@ -57,13 +57,15 @@ class MujocoEnvNoRosSharpa:
 
         object_pos = sim_state["object_pos"]
         object_quat_wxyz = sim_state["object_quat_wxyz"]
-        object_pose_R = np.concatenate([object_pos, object_quat_wxyz])
+        object_quat_xyzw = object_quat_wxyz[[1, 2, 3, 0]]
+        object_pose_W = np.concatenate([object_pos, object_quat_xyzw])
 
         table_pos = sim_state["table_pos"]
         table_quat_wxyz = sim_state["table_quat_wxyz"]
         goal_object_pos = table_pos + np.array([0.0, 0.0, 0.5])
         goal_object_quat_wxyz = table_quat_wxyz
-        goal_object_pose_R = np.concatenate([goal_object_pos, goal_object_quat_wxyz])
+        goal_object_quat_xyzw = goal_object_quat_wxyz[[1, 2, 3, 0]]
+        goal_object_pose_W = np.concatenate([goal_object_pos, goal_object_quat_xyzw])
 
         q = sim_state["joint_positions"]
         qd = sim_state["joint_velocities"]
@@ -74,9 +76,9 @@ class MujocoEnvNoRosSharpa:
             prev_action_targets=torch.from_numpy(self.sim.robot_joint_pos_targets)
             .float()
             .to(self.device)[None],
-            object_pose=torch.from_numpy(object_pose_R).float().to(self.device)[None],
+            object_pose=torch.from_numpy(object_pose_W).float().to(self.device)[None],
             goal_object_pose=(
-                torch.from_numpy(goal_object_pose_R).float().to(self.device)[None]
+                torch.from_numpy(goal_object_pose_W).float().to(self.device)[None]
             ),
             object_scales=(
                 torch.from_numpy(self.object_scales).float().to(self.device)[None]
@@ -122,20 +124,22 @@ def main():
     CONTROL_DT = 1.0 / 60.0  # Control loop frequency (policy loop rate)
     HAND_MOVING_AVERAGE = 0.1
     ARM_MOVING_AVERAGE = 0.1
-    HAND_DOF_SPEED_SCALE = 4.075
+    HAND_DOF_SPEED_SCALE = 2.5
 
-    # Hammer 2
-    OBJECT_SCALES = np.array([3.0, 0.25, 0.2])
+    # Cuboid
+    OBJECT_SCALES = np.array([4.0000, 0.7500, 1.0000])
 
     CONFIG_PATH = Path(
+        "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"
     )
     assert Path(CONFIG_PATH).exists()
     CHECKPOINT_PATH = Path(
+        "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/newGains.pth"
     )
     assert CHECKPOINT_PATH.exists()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    sim = MujocoSim(MujocoSimConfig(enable_viewer=True, sim_dt=SIM_DT, object_name="mallet"))
+    sim = MujocoSim(MujocoSimConfig(enable_viewer=True, sim_dt=SIM_DT, object_name="cuboid_4_0.75_1"))
     policy = RlPlayer(
         num_observations=N_OBS,
         num_actions=N_ACT,
@@ -148,7 +152,7 @@ def main():
         device=device, robot_name="iiwa14_left_sharpa_adjusted_restricted"
     )
 
-    obs_list = policy.cfg.task.env.obsList
+    obs_list = policy.cfg["task"]["env"]["obsList"]
     print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     print(f"obs_list: {obs_list}")
     print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
