@@ -112,7 +112,9 @@ class MujocoEnvNoRosSharpa:
             hand_dof_speed_scale=self.hand_dof_speed_scale,
             dt=self.control_dt,
         )
-        self.sim.set_robot_joint_pos_targets(joint_pos_targets.squeeze(dim=0).cpu().numpy())
+        self.sim.set_robot_joint_pos_targets(
+            joint_pos_targets.squeeze(dim=0).cpu().numpy()
+        )
 
         for _ in range(self.sim_steps_per_control_step):
             self.sim.sim_step()
@@ -151,7 +153,11 @@ def main():
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     # sim = MujocoSim(MujocoSimConfig(enable_viewer=True, sim_dt=SIM_DT, object_name="cuboid_4_0.75_1"))
-    sim = MujocoSim(MujocoSimConfig(enable_viewer=True, sim_dt=SIM_DT, object_name="cuboid_5_0.9375_1.25"))
+    sim = MujocoSim(
+        MujocoSimConfig(
+            enable_viewer=True, sim_dt=SIM_DT, object_name="cuboid_5_0.9375_1.25"
+        )
+    )
     policy = RlPlayer(
         num_observations=N_OBS,
         num_actions=N_ACT,
@@ -185,9 +191,7 @@ def main():
         start_time = time.time()
         # Get observation, get action, step simulation
         observation = mujoco_env_no_ros.compute_observation()
-        action = policy.get_normalized_action(
-            observation, deterministic_actions=True
-        )
+        action = policy.get_normalized_action(observation, deterministic_actions=True)
         mujoco_env_no_ros.step(action)
         end_time = time.time()
 
