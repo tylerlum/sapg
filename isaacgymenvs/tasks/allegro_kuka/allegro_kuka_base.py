@@ -1977,27 +1977,27 @@ class AllegroKukaBase(VecTask):
         CHECK_WITH_COMPUTED_OBS = False
         if CHECK_WITH_COMPUTED_OBS:
             import pytorch_kinematics as pk
-            # Create chain and palm_serial_chain from URDF
-            if not hasattr(self, "chain") or not hasattr(self, "palm_serial_chain"):
-                # self.chain, self.palm_serial_chain = create_chain_and_serial_chain(device=self.device, robot_name="iiwa14_left_sharpa_between")
-                self.chain, self.palm_serial_chain = create_chain_and_serial_chain(device=self.device, robot_name="iiwa14_left_sharpa_adjusted_restricted")
+            # Create chain from URDF
+            if not hasattr(self, "chain"):
+                self.chain, _ = create_chain_and_serial_chain(device=self.device, robot_name="iiwa14_left_sharpa_adjusted_restricted")
 
             computed_obs = compute_observation(
                 q=self.arm_hand_dof_pos,
                 qd=self.arm_hand_dof_vel,
+                prev_action_targets=self.prev_targets,
                 object_pose=self.object_pose,
                 goal_object_pose=self.goal_pose,
                 object_scales=self.object_scales,
                 chain=self.chain,
-                palm_serial_chain=self.palm_serial_chain,
+                obs_list=self.obs_list,
             )
 
             # Validate
             assert computed_obs.shape == (self.num_envs, len(OBS_NAMES)), f"computed_obs.shape: {computed_obs.shape}, expected: ({self.num_envs}, {len(OBS_NAMES)})"
-            assert buf.shape == computed_obs.shape, f"buf.shape: {buf.shape}, expected: {computed_obs.shape}"
+            assert self.obs_buf.shape == computed_obs.shape, f"self.obs_buf.shape: {self.obs_buf.shape}, expected: {computed_obs.shape}"
             num_errors = 0
             for i, name in enumerate(OBS_NAMES):
-                val_orig = buf[0, i].item()
+                val_orig = self.obs_buf[0, i].item()
                 val_computed = computed_obs[0, i].item()
                 print(f"{name}: original: {val_orig}, computed: {val_computed}, diff: {val_orig - val_computed}")
                 # Note that there are some reasonably large 2e-3 differences in the palm vel computation

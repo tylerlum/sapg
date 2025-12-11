@@ -486,7 +486,7 @@ def _compute_keypoint_positions(
     assert pose.shape == (N, 7), f"pose.shape: {pose.shape}, expected: (N, 7)"
     assert scales.shape == (N, 3), f"scales.shape: {scales.shape}, expected: (N, 3)"
 
-    OBJECT_BASE_SIZE = 0.05
+    OBJECT_BASE_SIZE = 0.04
     KEYPOINT_SCALE = 1.5
     object_keypoint_offsets = (
         torch.from_numpy(OBJECT_KEYPOINT_OFFSETS_np)
