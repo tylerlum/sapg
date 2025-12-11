@@ -25,6 +25,7 @@ from isaacgymenvs.utils.observation_action_utils_sharpa import (
 )
 
 SAVE_INPUTS_TO_FILE = True
+HACK_USE_TARGETS_FROM_FILE = True
 
 
 T_W_R = np.eye(4)
@@ -189,6 +190,17 @@ class RLPolicyNode:
 
         # State: prev_targets
         self.prev_targets = None
+
+        if HACK_USE_TARGETS_FROM_FILE:
+            from recorded_data_scripts.recorded_data_sharpa import RecordedData
+            data_path = Path("recorded_robot_inputs/2025-12-11_14-35-06.npz")
+            assert data_path.exists(), f"File {data_path} does not exist"
+            data = RecordedData.from_file(data_path)
+            self.q_targets_from_file = torch.from_numpy(data.robot_joint_pos_targets_array).float().to(self.device)
+            T, D = self.q_targets_from_file.shape
+            print(f"T: {T}, D: {D}")
+            assert D == 29, f"D: {D}, expected: 29"
+            self.current_step = 0
 
     def object_pose_callback(self, msg: PoseStamped):
         self.object_pose_msg = msg.pose
@@ -376,8 +388,8 @@ class RLPolicyNode:
                 assert_equals(normalized_action.shape, (1, self.num_actions))
 
                 HAND_MOVING_AVERAGE = 0.1
-                ARM_MOVING_AVERAGE = 0.05
-                # ARM_MOVING_AVERAGE = 0.01
+                # ARM_MOVING_AVERAGE = 0.05
+                ARM_MOVING_AVERAGE = 0.01
                 HAND_DOF_SPEED_SCALE = 2.5
                 DT = 1 / 60
                 joint_pos_targets = compute_joint_pos_targets(
@@ -396,6 +408,14 @@ class RLPolicyNode:
                     min=torch.from_numpy(Q_LOWER_LIMITS_np).float().to(self.device)[None],
                     max=torch.from_numpy(Q_UPPER_LIMITS_np).float().to(self.device)[None],
                 )
+
+                if HACK_USE_TARGETS_FROM_FILE:
+                    if self.current_step >= self.q_targets_from_file.shape[0]:
+                        self.current_step = self.q_targets_from_file.shape[0] - 1
+                        info("Reached end of targets, holding last target")
+                    assert self.current_step < self.q_targets_from_file.shape[0], f"current_step: {self.current_step}, expected: < {self.q_targets_from_file.shape[0]}"
+                    joint_pos_targets = self.q_targets_from_file[self.current_step].unsqueeze(0)
+                    self.current_step += 1
 
                 # Publish the targets
                 self.publish_targets(joint_pos_targets)
