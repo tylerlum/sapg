@@ -490,6 +490,7 @@ class RLPolicyNode:
 
         T = len(self.time_history)
         robot_root_states_array = np.zeros((T, 13))
+        robot_root_states_array[:, 1] = 0.8
         robot_root_states_array[:, 6] = 1.0  # quaternion xyzw has w=1
         object_root_states_array = np.zeros((T, 13))
         object_root_states_array[:, :7] = np.array(self.object_pose_history)

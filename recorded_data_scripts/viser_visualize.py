@@ -236,7 +236,7 @@ def main():
         # Update viser objects
         # ###########
         # Robot
-        kuka_allegro_frame.position = robot_root_state[:3] + np.array([0.0, 0.8, 0.0])
+        kuka_allegro_frame.position = robot_root_state[:3]
         kuka_allegro_frame.wxyz = xyzw_to_wxyz(robot_root_state[3:7])
         kuka_allegro_joint_pos_viser_order = RecordedData.change_joint_order(
             robot_joint_position,
@@ -248,7 +248,7 @@ def main():
         # Target robot
         if recorded_data.robot_joint_pos_targets_array is not None:
             robot_joint_pos_target = recorded_data.robot_joint_pos_targets_array[FRAME_IDX]
-            target_kuka_allegro_frame.position = robot_root_state[:3] + np.array([0.0, 0.8, 0.0])
+            target_kuka_allegro_frame.position = robot_root_state[:3]
             target_kuka_allegro_frame.wxyz = xyzw_to_wxyz(robot_root_state[3:7])
             target_kuka_allegro_joint_pos_viser_order = robot_joint_pos_target
             target_kuka_allegro_viser.update_cfg(target_kuka_allegro_joint_pos_viser_order)
