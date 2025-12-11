@@ -1,7 +1,7 @@
 #!/bin/bash
 
-CUSTOM_EXPERIMENT_NAME="MLP_ASYMMETRIC_prevActions_4cmBaseSize_10xPenalty"
-WANDB_GROUP="PRETRAIN"
+CUSTOM_EXPERIMENT_NAME="2.5_Speed_controlFreqInv_4_successSteps_2_delta"
+WANDB_GROUP="NEW_GAINS"
 
 WANDB_ENTITY="kk837"
 WANDB_PROJECT="FINAL_ASYMMETRIC_RUNS"
@@ -37,18 +37,29 @@ seed=0 \
 experiment=00_${EXPERIMENT_NAME} \
 hydra.run.dir=${HYDRA_RUN_DIR} \
 task.env.object_type=${OBJECT_TYPE} \
-task.env.dofSpeedScale=10 \
 task.env.useRelativeControl=False \
 task.task.randomize=False \
-task=AllegroKukaMLPAsymmetric \
+task.env.stateList=["joint_pos","joint_vel","prev_action_targets","palm_pos","palm_rot","palm_vel","object_rot","object_vel","fingertip_pos_rel_palm","keypoints_rel_palm","keypoints_rel_goal","object_scales","closest_keypoint_max_dist","closest_fingertip_dist","lifted_object","progress","successes","reward"] \
+task.env.obsList=["joint_pos","joint_vel","prev_action_targets","palm_pos","palm_rot","object_rot","fingertip_pos_rel_palm","keypoints_rel_palm","keypoints_rel_goal","object_scales"] \
+task=AllegroKukaLSTMAsymmetric \
 task.env.objectBaseSize=0.04 \
-task.env.stateList=["joint_pos","joint_vel","palm_pos","palm_rot","palm_vel","object_rot","object_vel","fingertip_pos_rel_palm","keypoints_rel_palm","keypoints_rel_goal","object_scales","closest_keypoint_max_dist","closest_fingertip_dist","lifted_object","progress","successes","reward","prev_action_targets"] \
-task.env.obsList=["joint_pos","joint_vel","palm_pos","palm_rot","object_rot","fingertip_pos_rel_palm","keypoints_rel_palm","keypoints_rel_goal","object_scales","prev_action_targets"] \
 task.env.kukaActionsPenaltyScale=0.03 \
 task.env.allegroActionsPenaltyScale=0.003 \
-task.env.controlFrequencyInv=1 \
-# task.env.observationType=asymmetric \
-# task=AllegroKukaLSTM \
-
+task.env.dofSpeedScale=2.5 \
+task.env.controlFrequencyInv=4 \
+task.env.armMovingAverage=0.3 \
+task.env.handMovingAverage=0.3 \
+task.env.episodeLength=200 \
+task.env.successSteps=10 \
+task.env.goalSamplingType=delta \
+task.env.useObsDelay=False \
+task.env.obsDelayMax=3 \
+task.env.useActionDelay=False \
+task.env.actionDelayMax=3 \
+task.env.useObjectStateDelayNoise=False \
+task.env.objectStateDelayMax=10 \
+task.env.objectStateXyzNoiseStd=0.01 \
+task.env.objectStateRotationNoiseDegrees=5.0 \
+task.env.jointVelocityObsNoiseStd=0 \
 # task.task.randomization_params.actor_params.object.scale.range=[0.999,1.001] \
 # task.task.randomization_params.actor_params.allegro.scale.range=[0.999,1.001] \
