@@ -580,6 +580,16 @@ class AllegroKukaBase(VecTask):
         object_start_pose.p.y = allegro_pose.p.y + pose_dy
         object_start_pose.p.z = allegro_pose.p.z + pose_dz
 
+        # HACK: Overwrite
+        # # object_pose_W = [0.   0.   0.68 0.   0.   0.   1.  ]
+        object_start_pose.p.x = 0.0
+        object_start_pose.p.y = 0.0
+        object_start_pose.p.z = 0.68
+        object_start_pose.r.x = 0.0
+        object_start_pose.r.y = 0.0
+        object_start_pose.r.z = 0.0
+        object_start_pose.r.w = 1.0
+
         return object_start_pose
 
     def _main_object_assets_and_scales(self, object_asset_root, tmp_assets_dir):
@@ -1170,12 +1180,14 @@ class AllegroKukaBase(VecTask):
             self.object_rb_handles = list(range(2*self.num_hand_arm_bodies, 2*self.num_hand_arm_bodies + object_rb_count))
 
         # Set asset rigid shape properties (friction)
-        MODIFY_ASSET_FRICTIONS = True
+        MODIFY_ASSET_FRICTIONS = False
         if MODIFY_ASSET_FRICTIONS:
             self.set_allegro_kuka_asset_rigid_shape_properties(
                 allegro_kuka_asset=allegro_kuka_asset,
                 friction=0.5,
                 fingertip_friction=1.5,
+                # friction=0.5,
+                # fingertip_friction=1.5,
             )
             self.set_table_asset_rigid_shape_properties(
                 table_asset=table_asset,
@@ -1293,20 +1305,22 @@ class AllegroKukaBase(VecTask):
             self.allegro_hands.append(allegro_actor)
             self.objects.append(object_handle)
 
+        # Get mass and inertia of object
+        original_masses, original_inertias = [], []
+        for env, object in zip(self.envs, self.objects):
+            object_rb_props = self.gym.get_actor_rigid_body_properties(env, object)
+            assert len(object_rb_props) == 1, f"Expected 1 rigid body, got {len(object_rb_props)}"
+            object_rb_prop = object_rb_props[0]
+            original_mass = object_rb_prop.mass
+            original_inertia = (object_rb_prop.inertia.x.x, object_rb_prop.inertia.y.y, object_rb_prop.inertia.z.z)
+            original_masses.append(original_mass)
+            original_inertias.append(original_inertia)
+        print(f"Original masses: {original_masses[0]}")
+        print(f"Original inertias: {original_inertias[0]}")
+
         # Set mass and inertia of object
         MODIFY_OBJECT_MASS_AND_INERTIA = False
         if MODIFY_OBJECT_MASS_AND_INERTIA:
-            original_masses, original_inertias = [], []
-            for env, object in zip(self.envs, self.objects):
-                object_rb_props = self.gym.get_actor_rigid_body_properties(env, object)
-                assert len(object_rb_props) == 1, f"Expected 1 rigid body, got {len(object_rb_props)}"
-                object_rb_prop = object_rb_props[0]
-                original_mass = object_rb_prop.mass
-                original_inertia = (object_rb_prop.inertia.x.x, object_rb_prop.inertia.y.y, object_rb_prop.inertia.z.z)
-                original_masses.append(original_mass)
-                original_inertias.append(original_inertia)
-            print(f"Original masses: {original_masses[0]}")
-            print(f"Original inertias: {original_inertias[0]}")
             self.set_object_masses_and_inertias(
                 envs=self.envs,
                 objects=self.objects,
@@ -2132,7 +2146,7 @@ class AllegroKukaBase(VecTask):
                 new_object_rot[:] = torch.from_numpy(R.from_euler("z", 180, degrees=True).as_quat()).float().to(self.device)[None]
 
             # indices 3,4,5,6 correspond to the rotation quaternion
-            self.root_state_tensor[obj_indices, 3:7] = new_object_rot
+            # self.root_state_tensor[obj_indices, 3:7] = new_object_rot
 
             self.root_state_tensor[obj_indices, 7:13] = torch.zeros_like(self.root_state_tensor[obj_indices, 7:13])
         
