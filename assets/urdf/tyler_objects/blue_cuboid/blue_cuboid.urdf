@@ -8,12 +8,13 @@
                 <contact_erp value="1.0"/>
             </contact>
             <inertial>
-                <mass value="0.104"/>
-                <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+                <!-- <mass value="0.104"/> -->
+                <!-- <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/> -->
+                <density value="400.0"/>
             </inertial>
             <visual>
             <geometry>
-                <mesh filename="cuboid.obj" scale="1 1 1"/>
+                <mesh filename="cuboid_rotated.obj" scale="1 1 1"/>
             </geometry>
             <!-- The following material makes the object white in Isaac Gym, so we comment it out.
             <material name="white"> <color rgba="1. 1. 1. 1."/> </material>
@@ -21,7 +22,7 @@
             </visual>
             <collision>
             <geometry>
-                <mesh filename="cuboid.obj" scale="1 1 1"/>
+                <mesh filename="cuboid_rotated.obj" scale="1 1 1"/>
             </geometry>
             </collision>
         </link>
