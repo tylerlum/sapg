@@ -233,6 +233,11 @@ def main():
     while True:
         # Get data
         robot_root_state = recorded_data.robot_root_states_array[FRAME_IDX]
+        # DELAY_AMOUNT = 1
+        # delay_idx = int(FRAME_IDX//DELAY_AMOUNT)*DELAY_AMOUNT
+        # print(f"FRAME_IDX: {FRAME_IDX}")
+        # print(f"delay_idx: {delay_idx}")
+        # object_root_state = recorded_data.object_root_states_array[delay_idx]
         object_root_state = recorded_data.object_root_states_array[FRAME_IDX]
         robot_joint_position = recorded_data.robot_joint_positions_array[FRAME_IDX]
 
