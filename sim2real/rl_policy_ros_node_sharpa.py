@@ -139,8 +139,8 @@ class RLPolicyNode:
         )
         assert Path(CONFIG_PATH).exists()
         CHECKPOINT_PATH = Path(
-            # "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/newGains.pth"
-            "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/noisyInput.pth"
+            "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/newGains.pth"
+            # "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/noisyInput.pth"
         )
         assert CHECKPOINT_PATH.exists()
 
@@ -311,16 +311,7 @@ class RLPolicyNode:
 
         loop_no_sleep_dts, loop_dts = [], []
 
-        # CURRENT_STEP = 0
         while not rospy.is_shutdown():
-            # print(f"Current step: {CURRENT_STEP}")
-            # if CURRENT_STEP > 1500:
-            #     print("Exiting")
-            #     import sys
-
-            #     sys.exit(0)
-            # CURRENT_STEP += 1
-
             start_time = rospy.Time.now()
 
             # Create observation from the latest messages
@@ -348,7 +339,6 @@ class RLPolicyNode:
 
                 HAND_MOVING_AVERAGE = 0.1
                 # ARM_MOVING_AVERAGE = 0.05
-                # ARM_MOVING_AVERAGE = 0.05
                 ARM_MOVING_AVERAGE = 0.01
                 HAND_DOF_SPEED_SCALE = 2.5
                 DT = 1 / 60
@@ -371,9 +361,6 @@ class RLPolicyNode:
 
                 # Publish the targets
                 self.publish_targets(joint_pos_targets)
-                # print(f"CURRENT_STEP: {CURRENT_STEP}")
-                # print(f"joint_pos_targets: {joint_pos_targets}")
-                # print()
                 self.prev_targets = joint_pos_targets.clone()
 
             # Sleep to maintain loop rate
@@ -411,11 +398,6 @@ class RLPolicyNode:
 
     @property
     def object_scales(self) -> np.ndarray:
-        # object_scales = np.array([0.1, 0.035, 0.025]) * 20
-        # object_scales = np.array([3.0, 0.5, 0.5])
-        # object_scales = np.array([4.0, 0.75, 1.0])
-        # object_scales = np.array([4.0, 0.75, 1.0]) * 1.25
-
         # Hammer 2
         # object_scales = np.array([3.0, 0.25, 0.2])
 
