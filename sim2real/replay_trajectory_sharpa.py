@@ -120,9 +120,7 @@ def move_to_pose(
             sys.exit(0)
 
         start_time = rospy.Time.now()
-        publish_joint_pos_targets(
-            target_pos, pub_iiwa=pub_iiwa, pub_sharpa=pub_sharpa
-        )
+        publish_joint_pos_targets(target_pos, pub_iiwa=pub_iiwa, pub_sharpa=pub_sharpa)
         end_time = rospy.Time.now()
 
         loop_without_sleep_dt = (end_time - start_time).to_sec()
@@ -143,24 +141,20 @@ def main():
         # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-27_16-23-09.npz"
         # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-27_16-23-31.npz"
         # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-27_17-18-32.npz"
-
         # Arm sin waves
         # "/home/tylerlum/github_repos/sapg/2025-11-02_sin_waves/sin_wave_arm_10-0s_2-0s_0-1rad.npz"
         # "/home/tylerlum/github_repos/sapg/2025-11-02_sin_waves/sin_wave_arm_10-0s_2-0s_0-2rad.npz"
         # "/home/tylerlum/github_repos/sapg/2025-11-02_sin_waves/sin_wave_arm_10-0s_1-0s_0-1rad.npz"
         # "/home/tylerlum/github_repos/sapg/2025-11-02_sin_waves/sin_wave_arm_10-0s_1-0s_0-2rad.npz"
-
         # Hand sin waves
         # "/home/tylerlum/github_repos/sapg/2025-11-02_sin_waves/sin_wave_hand_10-0s_2-0s_0-1rad.npz"
         # "/home/tylerlum/github_repos/sapg/2025-11-02_sin_waves/sin_wave_hand_10-0s_2-0s_0-2rad.npz"
         # "/home/tylerlum/github_repos/sapg/2025-11-02_sin_waves/sin_wave_hand_10-0s_1-0s_0-1rad.npz"
         # "/home/tylerlum/github_repos/sapg/2025-11-02_sin_waves/sin_wave_hand_10-0s_1-0s_0-2rad.npz"
-
         # Policy
         # "/home/tylerlum/github_repos/sapg/recorded_data/2025-11-06_17-07-45.npz"  # Fast
         # "/home/tylerlum/github_repos/sapg/recorded_data/2025-11-06_17-09-47.npz"  # Slow
         # "/home/tylerlum/github_repos/sapg/recorded_data/2025-11-06_17-09-47_None_550.npz"  # Slow sliced
-
         # Sharpa sin wave
         "/home/tylerlum/github_repos/sapg/sharpa_sin_waves/sharpa_sin_wave_hand_10-0s_2-0s.npz"
     )
