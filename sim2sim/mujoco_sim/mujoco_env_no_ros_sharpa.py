@@ -131,7 +131,7 @@ def main():
     # Parameters
     SIM_DT = 1.0 / 120.0  # Mujoco sim step (needs to be small to get stable physics)
     CONTROL_DT = 1.0 / 60.0  # Control loop frequency (policy loop rate)
-    HAND_MOVING_AVERAGE = 0.2
+    HAND_MOVING_AVERAGE = 0.1
     ARM_MOVING_AVERAGE = 0.05
     HAND_DOF_SPEED_SCALE = 2.5
 
