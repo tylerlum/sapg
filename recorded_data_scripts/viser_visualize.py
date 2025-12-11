@@ -8,7 +8,7 @@ import numpy as np
 import viser
 from viser.extras import ViserUrdf
 
-from recorded_data_scripts.recorded_data import RecordedData
+from recorded_data_scripts.recorded_data_sharpa import RecordedData
 
 # ###########
 # Constants
@@ -65,7 +65,7 @@ def main():
     # Load assets into viser
     KUKA_ALLEGRO_URDF_PATH = Path(
         # "/home/tylerlum/github_repos/sapg/assets/urdf/kuka_allegro_description/kuka_allegro_touch_sensor.urdf"
-        "/home/tylerlum/github_repos/sapg/assets/urdf/kuka_allegro_description/iiwa14_real.urdf"
+        "/home/tylerlum/github_repos/sapg/assets/urdf/kuka_allegro_description/iiwa14_left_sharpa_between.urdf"
     )
     assert KUKA_ALLEGRO_URDF_PATH.exists(), (
         f"KUKA_ALLEGRO_URDF_PATH not found: {KUKA_ALLEGRO_URDF_PATH}"
@@ -139,26 +139,8 @@ def main():
         "/robot_palm", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS
     )
 
-    # Floating allegro hand
-    allegro_frame = SERVER.scene.add_frame(
-        "/allegro", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS
-    )
-    allegro_viser = ViserUrdf(SERVER, ALLEGRO_URDF_PATH, root_node_name="/allegro")
-
-    # Object relative to floating allegro hand
-    object_in_allegro_frame = SERVER.scene.add_frame(
-        "/allegro/object",
-        show_axes=True,
-        axes_length=AXES_LENGTH,
-        axes_radius=AXES_RADIUS,
-    )
-    _object_in_allegro_viser = ViserUrdf(
-        SERVER, OBJECT_URDF_PATH, root_node_name="/allegro/object"
-    )
-
     # Get joint names since the ordering of the urdf may not match the ordering of the robot_joint_names
     kuka_allegro_viser_joint_names = kuka_allegro_viser._urdf.actuated_joint_names
-    allegro_viser_joint_names = allegro_viser._urdf.actuated_joint_names
 
     # ###########
     # Add controls
@@ -289,15 +271,6 @@ def main():
                 recorded_data.goal_root_states_array[FRAME_IDX, 3:7]
             )
 
-        # Floating allegro hand
-        allegro_joint_pos_viser_order = RecordedData.change_joint_order(
-            robot_joint_position,
-            from_order=recorded_data.robot_joint_names,
-            to_order=allegro_viser_joint_names,
-            require_all_joints=False,
-        )
-        allegro_viser.update_cfg(allegro_joint_pos_viser_order)
-
         # Palm
         palm_pose_R = kuka_allegro_viser._urdf.get_transform(
             frame_to="allegro_mount"
@@ -312,27 +285,6 @@ def main():
         palm_xyz_xyzw = RecordedData.T_to_pose(T_W_P)
         palm_frame.position = palm_xyz_xyzw[:3]
         palm_frame.wxyz = xyzw_to_wxyz(palm_xyz_xyzw[3:7])
-
-        # By default MOVE_FLOATING_ALLEGRO_HAND = False so we can see how the object is moving wrt a fixed allegro hand
-        # Can set to True to debug and make sure that everything aligns
-        MOVE_FLOATING_ALLEGRO_HAND = False
-        if MOVE_FLOATING_ALLEGRO_HAND:
-            allegro_frame.position = palm_xyz_xyzw[:3]
-            allegro_frame.wxyz = xyzw_to_wxyz(palm_xyz_xyzw[3:7])
-        else:
-            # Keep floating allegro hand in a fixed position
-            allegro_frame.position = recorded_data.robot_root_states_array[
-                0, :3
-            ] + np.array([0.5, -0.8, 0.7])
-            allegro_frame.wxyz = np.array([1.0, 0.0, 0.0, 0.0])
-
-        # Object relative to floating allegro hand
-        T_W_O = RecordedData.pose_to_T(object_root_state[:7])
-        T_P_W = np.linalg.inv(T_W_P)
-        T_P_O = T_P_W @ T_W_O
-        object_xyz_xyzw_P = RecordedData.T_to_pose(T_P_O)
-        object_in_allegro_frame.position = object_xyz_xyzw_P[:3]
-        object_in_allegro_frame.wxyz = xyzw_to_wxyz(object_xyz_xyzw_P[3:7])
 
         # ###########
         # Sleep and update frame index

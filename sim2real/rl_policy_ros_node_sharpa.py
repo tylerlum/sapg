@@ -24,6 +24,8 @@ from isaacgymenvs.utils.observation_action_utils_sharpa import (
     Q_UPPER_LIMITS_restricted_np as Q_UPPER_LIMITS_np,
 )
 
+SAVE_INPUTS_TO_FILE = True
+
 
 T_W_R = np.eye(4)
 T_W_R[:3, 3] = np.array([0.0, 0.8, 0.0])
@@ -96,6 +98,26 @@ class RLPolicyNode:
     def __init__(self):
         # Initialize the ROS node
         rospy.init_node("rl_policy_node_sharpa")
+
+        if SAVE_INPUTS_TO_FILE:
+            # ##############################################################################
+            # Signal handling to save on shutdown
+            # When in progress saving to file, stop updating latest joint states and commands
+            # ##############################################################################
+            import signal
+            # Signal handling to save on shutdown
+            # When in progress saving to file, stop updating latest joint states and commands
+            self._is_in_progress_saving_to_file = False
+            signal.signal(signal.SIGINT, self._signal_handler)
+            signal.signal(signal.SIGTERM, self._signal_handler)
+
+            # Store history of joint states and commands
+            self.time_history: list[float] = []
+            self.q_history: list[np.ndarray] = []
+            self.qd_history: list[np.ndarray] = []
+            self.q_target_history: list[np.ndarray] = []
+            self.object_pose_history: list[np.ndarray] = []
+            self.goal_object_pose_history: list[np.ndarray] = []
 
         # Publisher for iiwa and sharpa joint commands
         self.iiwa_joint_cmd_pub = rospy.Publisher(
@@ -254,6 +276,22 @@ class RLPolicyNode:
             print(f"goal_object_pose_W: {goal_object_pose_W}")
             print(f"object_scales: {self.object_scales}")
             breakpoint()
+
+        # ##############################################################################
+        # Record time and joint states and commands and object pose and goal object pose
+        # ##############################################################################
+        if SAVE_INPUTS_TO_FILE:
+            if not hasattr(self, "start_run_time"):
+                self.start_run_time = time.time()
+            current_time = time.time()
+            dt = current_time - self.start_run_time
+
+            self.time_history.append(dt)
+            self.q_history.append(q)
+            self.qd_history.append(qd)
+            self.q_target_history.append(prev_action_targets.cpu().numpy()[0])
+            self.object_pose_history.append(object_pose_W)
+            self.goal_object_pose_history.append(goal_object_pose_W)
 
         return observation, q
 
@@ -424,6 +462,79 @@ class RLPolicyNode:
 
         return object_scales
 
+    def _signal_handler(self, signum, frame):
+        assert SAVE_INPUTS_TO_FILE, "SAVE_INPUTS_TO_FILE must be True to save to file"
+
+        import datetime
+        if self._is_in_progress_saving_to_file:
+            warn("Already in progress of saving to file, skipping")
+            return
+
+        self._is_in_progress_saving_to_file = True
+        if len(self.time_history) == 0:
+            warn("No data recorded, skipping")
+        else:
+            info(f"Received signal {signum}, saving to file")
+            datetime_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            output_path = Path("recorded_robot_inputs") / f"{datetime_str}.npz"
+            self.save_to_file(output_path)
+            info(f"Saved to file: {output_path}")
+
+        rospy.signal_shutdown("Shutting down")
+
+    def save_to_file(self, file_path: Path):
+        assert SAVE_INPUTS_TO_FILE, "SAVE_INPUTS_TO_FILE must be True to save to file"
+
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        info(f"Saving to file: {file_path}")
+
+        T = len(self.time_history)
+        robot_root_states_array = np.zeros((T, 13))
+        robot_root_states_array[:, 6] = 1.0  # quaternion xyzw has w=1
+        object_root_states_array = np.zeros((T, 13))
+        object_root_states_array[:, :7] = np.array(self.object_pose_history)
+        goal_root_states_array = np.zeros((T, 13))
+        goal_root_states_array[:, :7] = np.array(self.goal_object_pose_history)
+
+        robot_joint_positions = np.array(self.q_history)
+        robot_joint_velocities = np.array(self.qd_history)
+
+        robot_joint_pos_targets = np.array(self.q_target_history)
+        time_array = np.array(self.time_history)
+
+        assert robot_joint_positions.shape == (T, 29), (
+            f"robot_joint_positions.shape: {robot_joint_positions.shape}, expected: (T, 29)"
+        )
+        assert robot_joint_velocities.shape == (T, 29), (
+            f"robot_joint_velocities.shape: {robot_joint_velocities.shape}, expected: (T, 29)"
+        )
+        assert robot_joint_pos_targets.shape == (T, 29), (
+            f"robot_joint_pos_targets.shape: {robot_joint_pos_targets.shape}, expected: (T, 29)"
+        )
+        assert object_root_states_array.shape == (T, 13), (
+            f"object_root_states_array.shape: {object_root_states_array.shape}, expected: (T, 13)"
+        )
+        assert time_array.shape == (T,), (
+            f"time_array.shape: {time_array.shape}, expected: (T,)"
+        )
+
+        JOINT_NAMES = [
+'iiwa14_joint_1', 'iiwa14_joint_2', 'iiwa14_joint_3', 'iiwa14_joint_4', 'iiwa14_joint_5', 'iiwa14_joint_6', 'iiwa14_joint_7', 'left_thumb_CMC_FE', 'left_thumb_CMC_AA', 'left_thumb_MCP_FE', 'left_thumb_MCP_AA', 'left_thumb_IP', 'left_index_MCP_FE', 'left_index_MCP_AA', 'left_index_PIP', 'left_index_DIP', 'left_middle_MCP_FE', 'left_middle_MCP_AA', 'left_middle_PIP', 'left_middle_DIP', 'left_ring_MCP_FE', 'left_ring_MCP_AA', 'left_ring_PIP', 'left_ring_DIP', 'left_pinky_CMC', 'left_pinky_MCP_FE', 'left_pinky_MCP_AA', 'left_pinky_PIP', 'left_pinky_DIP'
+        ]
+
+        from recorded_data_scripts.recorded_data_sharpa import RecordedData
+
+        recorded_data = RecordedData(
+            robot_root_states_array=robot_root_states_array,
+            object_root_states_array=object_root_states_array,
+            robot_joint_positions_array=robot_joint_positions,
+            time_array=time_array,
+            robot_joint_names=JOINT_NAMES,
+            robot_joint_velocities_array=robot_joint_velocities,
+            robot_joint_pos_targets_array=robot_joint_pos_targets,
+            goal_root_states_array=goal_root_states_array,
+        )
+        recorded_data.to_file(file_path)
 
 
 if __name__ == "__main__":

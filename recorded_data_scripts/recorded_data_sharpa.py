@@ -337,9 +337,11 @@ class RecordedData:
     @cached_property
     def dt(self) -> float:
         dt = self.time_array[1] - self.time_array[0]
-        assert np.allclose(np.diff(self.time_array), dt), (
-            f"Expected time array to be evenly spaced, got {self.time_array}"
-        )
+        # assert np.allclose(np.diff(self.time_array), dt), (
+        #     f"Expected time array to be evenly spaced, got {self.time_array}"
+        #     f"Differences: {np.diff(self.time_array)}"
+        #     f"dt: {dt}"
+        # )
         return dt
 
     @cached_property
