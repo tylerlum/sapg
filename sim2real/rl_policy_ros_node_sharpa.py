@@ -139,7 +139,8 @@ class RLPolicyNode:
         )
         assert Path(CONFIG_PATH).exists()
         CHECKPOINT_PATH = Path(
-            "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/newGains.pth"
+            # "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/newGains.pth"
+            "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/noisyInput.pth"
         )
         assert CHECKPOINT_PATH.exists()
 
@@ -346,6 +347,7 @@ class RLPolicyNode:
                 assert_equals(normalized_action.shape, (1, self.num_actions))
 
                 HAND_MOVING_AVERAGE = 0.1
+                # ARM_MOVING_AVERAGE = 0.05
                 # ARM_MOVING_AVERAGE = 0.05
                 ARM_MOVING_AVERAGE = 0.01
                 HAND_DOF_SPEED_SCALE = 2.5

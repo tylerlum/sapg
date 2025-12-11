@@ -144,7 +144,8 @@ def main():
     )
     assert Path(CONFIG_PATH).exists()
     CHECKPOINT_PATH = Path(
-        "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/newGains.pth"
+        # "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/newGains.pth"
+        "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/noisyInput.pth"
     )
     assert CHECKPOINT_PATH.exists()
 
