@@ -376,8 +376,8 @@ class RLPolicyNode:
                 assert_equals(normalized_action.shape, (1, self.num_actions))
 
                 HAND_MOVING_AVERAGE = 0.1
-                # ARM_MOVING_AVERAGE = 0.05
-                ARM_MOVING_AVERAGE = 0.01
+                ARM_MOVING_AVERAGE = 0.05
+                # ARM_MOVING_AVERAGE = 0.01
                 HAND_DOF_SPEED_SCALE = 2.5
                 DT = 1 / 60
                 joint_pos_targets = compute_joint_pos_targets(
