@@ -133,7 +133,9 @@ def main():
         goal_frame = SERVER.scene.add_frame(
             "/goal", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS
         )
-        # _goal_object_viser = ViserUrdf(SERVER, OBJECT_URDF_PATH, root_node_name="/goal")
+        INCLUDE_GOAL_OBJECT = True
+        if INCLUDE_GOAL_OBJECT:
+            _goal_object_viser = ViserUrdf(SERVER, OBJECT_URDF_PATH, root_node_name="/goal")
 
     # Palm
     palm_frame = SERVER.scene.add_frame(
