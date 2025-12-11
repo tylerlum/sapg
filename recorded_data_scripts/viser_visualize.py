@@ -13,6 +13,7 @@ from recorded_data_scripts.recorded_data_sharpa import RecordedData
 # ###########
 # Constants
 # ###########
+GREEN_RGBA = (0, 255, 0, 0.5)
 AXES_LENGTH = 0.2
 AXES_RADIUS = 0.01
 
@@ -135,7 +136,7 @@ def main():
         )
         INCLUDE_GOAL_OBJECT = True
         if INCLUDE_GOAL_OBJECT:
-            _goal_object_viser = ViserUrdf(SERVER, OBJECT_URDF_PATH, root_node_name="/goal")
+            _goal_object_viser = ViserUrdf(SERVER, OBJECT_URDF_PATH, root_node_name="/goal", mesh_color_override=GREEN_RGBA)
 
     # Palm
     palm_frame = SERVER.scene.add_frame(
@@ -155,7 +156,7 @@ def main():
         fps = 1 / recorded_data.dt
         current_time = recorded_data.time_array[idx] - recorded_data.time_array[0]
         total_time = recorded_data.total_time
-        return f"{current_time:.2f}s/{total_time:.2f}s.Frame {idx}/{len(recorded_data)}. ({fps:.0f}fps)"
+        return f"{current_time:.3f}s/{total_time:.3f}s ({idx:04d}/{len(recorded_data):04d}) ({fps:.0f}fps)"
 
     with SERVER.gui.add_folder("Frame Controls"):
         frame_idx_slider = SERVER.gui.add_slider(
