@@ -131,7 +131,9 @@ def move_to_pose(
             sys.exit(0)
 
         start_time = rospy.Time.now()
-        publish_joint_pos_targets(target_pos, pub_iiwa=pub_iiwa, pub_sharpa=pub_sharpa)
+        publish_joint_pos_targets(
+            target_pos, pub_iiwa=pub_iiwa, pub_sharpa=pub_sharpa
+        )
         end_time = rospy.Time.now()
 
         loop_without_sleep_dt = (end_time - start_time).to_sec()

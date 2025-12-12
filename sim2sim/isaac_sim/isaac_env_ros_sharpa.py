@@ -2,12 +2,11 @@ from isaacgymenvs.tasks.allegro_kuka.allegro_kuka_base import AllegroKukaBase  #
 import time
 from pathlib import Path
 from typing import Dict
-
-import numpy as np
 import rospy
 from geometry_msgs.msg import Pose, PoseStamped
 from scipy.spatial.transform import Rotation as R
 from sensor_msgs.msg import JointState
+import numpy as np
 
 import torch  # isort:skip
 from termcolor import colored
@@ -127,9 +126,7 @@ class IsaacEnvRos:
         self.sharpa_pub.publish(sharpa_joint_msg)
 
     def reset(self) -> torch.Tensor:
-        obs, _, _, _ = self.env.step(
-            torch.zeros((1, self.env.num_actions), device=self.device)
-        )
+        obs, _, _, _ = self.env.step(torch.zeros((1, self.env.num_actions), device=self.device))
         return obs["obs"]
 
     def run(self):
@@ -171,11 +168,7 @@ class IsaacEnvRos:
                 # Get latest joint commands
                 iiwa_joint_cmd = self.latest_iiwa_joint_cmd.copy()
                 sharpa_joint_cmd = self.latest_sharpa_joint_cmd.copy()
-                joint_cmd[:] = (
-                    torch.from_numpy(np.concatenate([iiwa_joint_cmd, sharpa_joint_cmd]))
-                    .float()
-                    .to(self.device)[None]
-                )
+                joint_cmd[:] = torch.from_numpy(np.concatenate([iiwa_joint_cmd, sharpa_joint_cmd])).float().to(self.device)[None]
 
             # Step simulation
             _, _, _, _ = self.env.step(
@@ -205,7 +198,9 @@ class IsaacEnvRos:
 
             # Get FPS
             PRINT_FPS_EVERY_N_SECONDS = 5.0
-            PRINT_FPS_EVERY_N_STEPS = int(PRINT_FPS_EVERY_N_SECONDS / self.control_dt)
+            PRINT_FPS_EVERY_N_STEPS = int(
+                PRINT_FPS_EVERY_N_SECONDS / self.control_dt
+            )
             if len(loop_dts) == PRINT_FPS_EVERY_N_STEPS:
                 loop_dt_array = np.array(loop_dts)
                 loop_no_sleep_dt_array = np.array(loop_no_sleep_dts)
@@ -239,7 +234,6 @@ class IsaacEnvRos:
             "object_pos": object_pos,
             "object_quat_wxyz": object_quat_wxyz,
         }
-
 
 def main():
     CONTROL_DT = 1.0 / 60.0
@@ -278,3 +272,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

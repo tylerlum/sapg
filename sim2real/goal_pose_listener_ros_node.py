@@ -1,30 +1,25 @@
 #!/usr/bin/env python
-import json
 import signal
-import time
 from copy import deepcopy
 from datetime import datetime
-from pathlib import Path
 from typing import Optional
+from pathlib import Path
+import json
+import time
+from typing import Literal
+import torch
+from isaacgymenvs.utils.observation_action_utils_sharpa import _compute_keypoint_positions
 
 import numpy as np
 import rospy
-import torch
-from geometry_msgs.msg import Pose, PoseStamped
+from geometry_msgs.msg import PoseStamped, Pose
 from termcolor import colored
-
-from isaacgymenvs.utils.observation_action_utils_sharpa import (
-    _compute_keypoint_positions,
-)
-
 
 def info(message: str):
     print(colored(message, "green"))
 
-
 def warn(message: str):
     print(colored(message, "yellow"))
-
 
 def warn_every(message: str, n_seconds: float, key=None):
     """
@@ -43,9 +38,7 @@ def warn_every(message: str, n_seconds: float, key=None):
         last_times[key] = time.time()
 
 
-def keypoint_distance(
-    pose1_xyzw: np.ndarray, pose2_xyzw: np.ndarray, object_scales: np.ndarray
-) -> float:
+def keypoint_distance(pose1_xyzw: np.ndarray, pose2_xyzw: np.ndarray, object_scales: np.ndarray) -> float:
     """Compute the distance between two keypoints."""
     device = "cuda" if torch.cuda.is_available() else "cpu"
     object_pose1_xyzw = torch.from_numpy(pose1_xyzw).float().to(device)
@@ -88,11 +81,7 @@ class GoalPoseListenerNode:
         self.latest_current_object_pose: Optional[Pose] = None
 
         # Subscribers
-        self.current_object_pose_sub = rospy.Subscriber(
-            "/robot_frame/current_object_pose",
-            PoseStamped,
-            self.current_object_pose_callback,
-        )
+        self.current_object_pose_sub = rospy.Subscriber("/robot_frame/current_object_pose", PoseStamped, self.current_object_pose_callback)
 
         # Set control rate to 60Hz
         self.rate_hz = 60
@@ -107,17 +96,7 @@ class GoalPoseListenerNode:
         """Publish the goal object pose."""
         latest_current_object_pose = deepcopy(self.latest_current_object_pose)
         p = latest_current_object_pose
-        current_object_pose_xyzw = np.array(
-            [
-                p.position.x,
-                p.position.y,
-                p.position.z,
-                p.orientation.x,
-                p.orientation.y,
-                p.orientation.z,
-                p.orientation.w,
-            ]
-        )
+        current_object_pose_xyzw = np.array([p.position.x, p.position.y, p.position.z, p.orientation.x, p.orientation.y, p.orientation.z, p.orientation.w])
         self.goal_pose_history.append(current_object_pose_xyzw)
 
     def run(self):
@@ -198,6 +177,7 @@ class GoalPoseListenerNode:
         )
 
         json.dump(goal_pose_history.tolist(), self.output_path.open("w"))
+
 
 
 if __name__ == "__main__":
