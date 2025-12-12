@@ -178,7 +178,7 @@ env:
   # jointVelocityObsNoiseStd: 0.1
   jointVelocityObsNoiseStd: 0.0
 
-  forceNoReset: False  # If True, will not reset the environment
+  forceNoReset: False  # If True, will not reset the environment, useful for sim2sim testing
 
   asset:
     # Whis was the original kuka_allegro asset.
