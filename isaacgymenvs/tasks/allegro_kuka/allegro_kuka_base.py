@@ -1182,14 +1182,12 @@ class AllegroKukaBase(VecTask):
             self.object_rb_handles = list(range(2*self.num_hand_arm_bodies, 2*self.num_hand_arm_bodies + object_rb_count))
 
         # Set asset rigid shape properties (friction)
-        MODIFY_ASSET_FRICTIONS = False
+        MODIFY_ASSET_FRICTIONS = True
         if MODIFY_ASSET_FRICTIONS:
             self.set_allegro_kuka_asset_rigid_shape_properties(
                 allegro_kuka_asset=allegro_kuka_asset,
                 friction=0.5,
                 fingertip_friction=1.5,
-                # friction=0.5,
-                # fingertip_friction=1.5,
             )
             self.set_table_asset_rigid_shape_properties(
                 table_asset=table_asset,
@@ -1307,22 +1305,14 @@ class AllegroKukaBase(VecTask):
             self.allegro_hands.append(allegro_actor)
             self.objects.append(object_handle)
 
-        # Get mass and inertia of object
-        original_masses, original_inertias = [], []
-        for env, object in zip(self.envs, self.objects):
-            object_rb_props = self.gym.get_actor_rigid_body_properties(env, object)
-            assert len(object_rb_props) == 1, f"Expected 1 rigid body, got {len(object_rb_props)}"
-            object_rb_prop = object_rb_props[0]
-            original_mass = object_rb_prop.mass
-            original_inertia = (object_rb_prop.inertia.x.x, object_rb_prop.inertia.y.y, object_rb_prop.inertia.z.z)
-            original_masses.append(original_mass)
-            original_inertias.append(original_inertia)
-        print(f"Original masses: {original_masses[0]}")
-        print(f"Original inertias: {original_inertias[0]}")
-
         # Set mass and inertia of object
         MODIFY_OBJECT_MASS_AND_INERTIA = False
         if MODIFY_OBJECT_MASS_AND_INERTIA:
+            # Get mass and inertia of object
+            original_masses, original_inertias = self._get_original_object_masses_and_inertias()
+            print(f"Original masses: {original_masses[0]}")
+            print(f"Original inertias: {original_inertias[0]}")
+
             self.set_object_masses_and_inertias(
                 envs=self.envs,
                 objects=self.objects,
@@ -1371,6 +1361,18 @@ class AllegroKukaBase(VecTask):
             tmp_assets_dir.cleanup()
         except Exception:
             pass
+
+    def _get_original_object_masses_and_inertias(self) -> Tuple[List[float], List[Tuple[float, float, float]]]:
+        original_masses, original_inertias = [], []
+        for env, object in zip(self.envs, self.objects):
+            object_rb_props = self.gym.get_actor_rigid_body_properties(env, object)
+            assert len(object_rb_props) == 1, f"Expected 1 rigid body, got {len(object_rb_props)}"
+            object_rb_prop = object_rb_props[0]
+            original_mass = object_rb_prop.mass
+            original_inertia = (object_rb_prop.inertia.x.x, object_rb_prop.inertia.y.y, object_rb_prop.inertia.z.z)
+            original_masses.append(original_mass)
+            original_inertias.append(original_inertia)
+        return original_masses, original_inertias
 
     def _set_actor_color(self, env, actor, color: Tuple[float, float, float]) -> None:
         for rigid_body_idx in range(self.gym.get_actor_rigid_body_count(env, actor)):
