@@ -38,7 +38,7 @@ env:
   resetPositionNoiseX: 0.1
   resetPositionNoiseY: 0.1
   resetPositionNoiseZ: 0.02
-  resetRotationNoise: 1.0
+  randomizeObjectRotation: True
   resetDofPosRandomIntervalFingers: 0.1
   resetDofPosRandomIntervalArm: 0.1
   resetDofVelRandomInterval: 0.5

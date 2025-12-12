@@ -133,7 +133,7 @@ class AllegroKukaBase(VecTask):
         self.reset_position_noise_x = self.cfg["env"]["resetPositionNoiseX"]
         self.reset_position_noise_y = self.cfg["env"]["resetPositionNoiseY"]
         self.reset_position_noise_z = self.cfg["env"]["resetPositionNoiseZ"]
-        self.reset_rotation_noise = self.cfg["env"]["resetRotationNoise"]
+        self.randomize_object_rotation = self.cfg["env"]["randomizeObjectRotation"]
         self.reset_dof_pos_noise_fingers = self.cfg["env"]["resetDofPosRandomIntervalFingers"]
         self.reset_dof_pos_noise_arm = self.cfg["env"]["resetDofPosRandomIntervalArm"]
         self.reset_dof_vel_noise = self.cfg["env"]["resetDofVelRandomInterval"]
@@ -2145,16 +2145,18 @@ class AllegroKukaBase(VecTask):
             self.root_state_tensor[obj_indices, 2:3] = (
                 self.object_init_state[env_ids, 2:3] + self.reset_position_noise_z * rand_pos_floats[:, 2:3]
             )
-            new_object_rot = self.get_random_quat(env_ids)
-            if USE_FIXED_INIT_OBJECT_POSE:
-                new_object_rot[:] = 0.0 #HACK
-                new_object_rot[:, -1] = 1.0 #HACK  xyzw
-                # HACK: Rotate the object by 180 degrees around the z-axis to go from right handed to left handed robot
-                from scipy.spatial.transform import Rotation as  R
-                new_object_rot[:] = torch.from_numpy(R.from_euler("z", 180, degrees=True).as_quat()).float().to(self.device)[None]
 
-            # indices 3,4,5,6 correspond to the rotation quaternion
-            # self.root_state_tensor[obj_indices, 3:7] = new_object_rot
+            if self.randomize_object_rotation:
+                new_object_rot = self.get_random_quat(env_ids)
+                if USE_FIXED_INIT_OBJECT_POSE:
+                    new_object_rot[:] = 0.0 #HACK
+                    new_object_rot[:, -1] = 1.0 #HACK  xyzw
+                    # HACK: Rotate the object by 180 degrees around the z-axis to go from right handed to left handed robot
+                    from scipy.spatial.transform import Rotation as  R
+                    new_object_rot[:] = torch.from_numpy(R.from_euler("z", 180, degrees=True).as_quat()).float().to(self.device)[None]
+
+                # indices 3,4,5,6 correspond to the rotation quaternion
+                self.root_state_tensor[obj_indices, 3:7] = new_object_rot
 
             self.root_state_tensor[obj_indices, 7:13] = torch.zeros_like(self.root_state_tensor[obj_indices, 7:13])
         
