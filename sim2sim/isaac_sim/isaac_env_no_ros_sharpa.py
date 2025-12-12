@@ -66,6 +66,17 @@ def main():
         config_path=str(CONFIG_PATH),
         headless=False,
         device=DEVICE,
+        overrides={
+            "task.env.resetPositionNoiseX": 0.0,
+            "task.env.resetPositionNoiseY": 0.0,
+            "task.env.resetPositionNoiseZ": 0.0,
+            "task.env.resetRotationNoise": 0.0,
+            "task.env.resetDofPosRandomIntervalFingers": 0.0,
+            "task.env.resetDofPosRandomIntervalArm": 0.0,
+            "task.env.resetDofVelRandomInterval": 0.0,
+            "task.env.object_type": "blue_cuboid",
+            "task.env.forceNoReset": True,
+        },
     )
 
     # Set env state from checkpoint to match things like success_tolerance
