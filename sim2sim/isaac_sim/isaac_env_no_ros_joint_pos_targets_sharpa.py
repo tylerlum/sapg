@@ -151,6 +151,7 @@ def main():
             "task.env.resetDofPosRandomIntervalArm": 0.0,
             "task.env.resetDofVelRandomInterval": 0.0,
             "task.env.object_type": "blue_cuboid",
+            "task.env.forceNoReset": True,
         },
     )
 

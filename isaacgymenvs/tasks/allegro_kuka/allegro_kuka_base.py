@@ -1648,6 +1648,10 @@ class AllegroKukaBase(VecTask):
         resets = self._compute_resets(is_success)
         self.reset_buf[:] = resets
 
+        # HACK: Force no reset for isaac_env_ros type testing
+        if self.cfg["env"]["forceNoReset"]:
+            self.reset_buf[:] = False
+
         self.extras["successes"] = self.prev_episode_successes
         self.extras["success_ratio"] = self.prev_episode_successes.mean().item() / self.max_consecutive_successes
         self.extras["closest_keypoint_max_dist"] = self.prev_episode_closest_keypoint_max_dist
