@@ -8,9 +8,18 @@
                 <contact_erp value="1.0"/>
             </contact>
             <inertial>
+                <!-- This is the measured mass of the blue cuboid we printed -->
+                <!-- Given this mass and the size of the cuboid 0.2 x 0.0375 x 0.05, the density should be 277 kg/m^3 (assuming uniform density) -->
                 <!-- <mass value="0.104"/> -->
+
+                <!-- This is the density of the blue cuboid we printed (using measured mass and size) if we assume uniform density -->
+                <density value="277.0"/>
+
+                <!-- This is a default dummy inertia that is definitely wrong -->
                 <!-- <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/> -->
-                <density value="400.0"/>
+
+                <!-- This is the default density of the current cuboids in Isaac Gym -->
+                <!-- <density value="400.0"/> -->
             </inertial>
             <visual>
             <geometry>
