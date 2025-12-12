@@ -327,20 +327,32 @@ class RecordedData:
     @cached_property
     def dt(self) -> float:
         dt = self.time_array[1] - self.time_array[0]
-        all_close = np.allclose(np.diff(self.time_array), dt)
+
+        dt_array = np.diff(self.time_array)
+        all_close = np.allclose(dt_array, dt)
         if not all_close:
+            fps_array = 1.0 / dt_array
             WARN_EVERY_N_SECONDS = 100.0
+            warn_every("~" * 100, WARN_EVERY_N_SECONDS)
             warn_every("Time array is not evenly spaced", WARN_EVERY_N_SECONDS)
-            warn_every(f"Differences: {np.diff(self.time_array)}", WARN_EVERY_N_SECONDS)
+            warn_every(f"Differences: {dt_array}", WARN_EVERY_N_SECONDS)
             warn_every(f"dt: {dt}", WARN_EVERY_N_SECONDS)
-            warn_every(f"Min difference: {np.min(np.diff(self.time_array))}", WARN_EVERY_N_SECONDS)
-            warn_every(f"Median difference: {np.median(np.diff(self.time_array))}", WARN_EVERY_N_SECONDS)
-            warn_every(f"Mean difference: {np.mean(np.diff(self.time_array))}", WARN_EVERY_N_SECONDS)
-            warn_every(f"Max difference: {np.max(np.diff(self.time_array))}", WARN_EVERY_N_SECONDS)
+            warn_every(f"Min difference: {np.min(dt_array)}", WARN_EVERY_N_SECONDS)
+            warn_every(f"Median difference: {np.median(dt_array)}", WARN_EVERY_N_SECONDS)
+            warn_every(f"Mean difference: {np.mean(dt_array)}", WARN_EVERY_N_SECONDS)
+            warn_every(f"Max difference: {np.max(dt_array)}", WARN_EVERY_N_SECONDS)
+            warn_every(f"fps array: {fps_array}", WARN_EVERY_N_SECONDS)
+            warn_every(f"fps: {1.0 / dt}", WARN_EVERY_N_SECONDS)
+            warn_every(f"fps mean: {np.mean(fps_array)}", WARN_EVERY_N_SECONDS)
+            warn_every(f"fps median: {np.median(fps_array)}", WARN_EVERY_N_SECONDS)
+            warn_every(f"fps max: {np.max(fps_array)}", WARN_EVERY_N_SECONDS)
+            warn_every(f"fps min: {np.min(fps_array)}", WARN_EVERY_N_SECONDS)
+            warn_every(f"fps std: {np.std(fps_array)}", WARN_EVERY_N_SECONDS)
             USE_MEDIAN_DT = True
             if USE_MEDIAN_DT:
-                warn_every(f"Using median dt: {np.median(np.diff(self.time_array))}", WARN_EVERY_N_SECONDS)
-                dt = np.median(np.diff(self.time_array))
+                warn_every(f"Using median dt: {np.median(dt_array)}", WARN_EVERY_N_SECONDS)
+                dt = np.median(dt_array)
+            warn_every("~" * 100, WARN_EVERY_N_SECONDS)
 
         return dt
 
