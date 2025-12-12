@@ -1,15 +1,20 @@
 from isaacgymenvs.tasks.allegro_kuka.allegro_kuka_base import AllegroKukaBase  # isort:skip
+import numpy as np
+from recorded_data_scripts.recorded_data_sharpa import RecordedData
 import time
 from pathlib import Path
 from typing import Tuple
 
-import numpy as np
-
-from recorded_data_scripts.recorded_data_sharpa import RecordedData
+from sim2real.rl_player import RlPlayer
 
 import torch  # isort:skip
+import pytorch_kinematics as pk
 from termcolor import colored
 
+from isaacgymenvs.utils.observation_action_utils import (
+    compute_joint_pos_targets,
+    compute_observation,
+)
 from sim2sim.isaac_sim.isaac_env import create_env
 
 N_OBS = 117
@@ -50,8 +55,7 @@ class IsaacEnvNoRosJointPosTargetsFromFile:
         self, joint_pos_targets: torch.Tensor
     ) -> Tuple[torch.Tensor, float, bool, dict]:
         obs, reward, done, info = self.env.step(
-            torch.zeros((1, N_ACT), device=self.device),
-            joint_pos_targets=joint_pos_targets,
+            torch.zeros((1, N_ACT), device=self.device), joint_pos_targets=joint_pos_targets
         )
         return obs["obs"], reward, done, info
 
@@ -78,9 +82,7 @@ def main():
     recorded_data = RecordedData.from_file(RECORDED_DATA_PATH)
     joint_pos_targets_array = recorded_data.robot_joint_pos_targets_array
     T = joint_pos_targets_array.shape[0]
-    assert joint_pos_targets_array.shape == (T, N_ACT), (
-        f"joint_pos_targets_array.shape: {joint_pos_targets_array.shape}, expected: ({T}, {N_ACT})"
-    )
+    assert joint_pos_targets_array.shape == (T, N_ACT), f"joint_pos_targets_array.shape: {joint_pos_targets_array.shape}, expected: ({T}, {N_ACT})"
 
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
     # DEVICE = "cpu"  # "cpu" faster for single env, but some bugs with cpu like force sensors not working
@@ -88,7 +90,7 @@ def main():
         config_path=str(CONFIG_PATH),
         headless=False,
         device=DEVICE,
-        episode_length=T * 2,  # Make it not reset before finishing the trajectory
+        episode_length=T*2,  # Make it not reset before finishing the trajectory
         overrides={
             "task.env.asset.kukaAllegro": "urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted_restricted.urdf",
             "task.task.randomize": False,
@@ -117,38 +119,21 @@ def main():
         start_time = time.time()
         # print(f"idx: {idx}")
         observation, _, done, _ = (
-            isaac_env_no_ros_joint_pos_targets_from_file.step_with_joint_pos_targets(
-                torch.from_numpy(joint_pos_targets_array[idx])
-                .to(DEVICE)
-                .float()
-                .unsqueeze(0)
-            )
+            isaac_env_no_ros_joint_pos_targets_from_file.step_with_joint_pos_targets(torch.from_numpy(joint_pos_targets_array[idx]).to(DEVICE).float().unsqueeze(0))
         )
-        joint_pos_history.append(
-            isaac_env_no_ros_joint_pos_targets_from_file.env.arm_hand_dof_pos.clone()
-            .cpu()
-            .numpy()[0]
-        )
-        joint_vel_history.append(
-            isaac_env_no_ros_joint_pos_targets_from_file.env.arm_hand_dof_vel.clone()
-            .cpu()
-            .numpy()[0]
-        )
+        joint_pos_history.append(isaac_env_no_ros_joint_pos_targets_from_file.env.arm_hand_dof_pos.clone().cpu().numpy()[0])
+        joint_vel_history.append(isaac_env_no_ros_joint_pos_targets_from_file.env.arm_hand_dof_vel.clone().cpu().numpy()[0])
         idx += 1
         # idx -= 1   #HACK
         if idx >= T:
             joint_pos_history = np.array(joint_pos_history)
             joint_vel_history = np.array(joint_vel_history)
-            print("Reached end of trajectory!")
+            print(f"Reached end of trajectory!")
             print(f"joint_pos_history.shape: {joint_pos_history.shape}")
             print(f"joint_vel_history.shape: {joint_vel_history.shape}")
             print(f"joint_pos_targets_array.shape: {joint_pos_targets_array.shape}")
-            assert joint_pos_history.shape == joint_pos_targets_array.shape, (
-                f"joint_pos_history.shape: {joint_pos_history.shape}, expected: {joint_pos_targets_array.shape}"
-            )
-            assert joint_vel_history.shape == joint_pos_targets_array.shape, (
-                f"joint_vel_history.shape: {joint_vel_history.shape}, expected: {joint_pos_targets_array.shape}"
-            )
+            assert joint_pos_history.shape == joint_pos_targets_array.shape, f"joint_pos_history.shape: {joint_pos_history.shape}, expected: {joint_pos_targets_array.shape}"
+            assert joint_vel_history.shape == joint_pos_targets_array.shape, f"joint_vel_history.shape: {joint_vel_history.shape}, expected: {joint_pos_targets_array.shape}"
             robot_root_states_array = np.zeros((T, 13))
             robot_root_states_array[:, 6] = 1.0  # quaternion xyzw has w=1
             object_root_states_array = np.zeros((T, 13))
@@ -194,9 +179,7 @@ def main():
                 robot_joint_names=robot_joint_names,
                 robot_joint_pos_targets_array=joint_pos_targets_array,
             )
-            output_path = (
-                RECORDED_DATA_PATH.parent / f"{RECORDED_DATA_PATH.stem}_isaac.npz"
-            )
+            output_path = RECORDED_DATA_PATH.parent / f"{RECORDED_DATA_PATH.stem}_isaac.npz"
             output_path.parent.mkdir(parents=True, exist_ok=True)
             print(f"Saving recorded data to {output_path}")
             new_recorded_data.to_file(output_path)

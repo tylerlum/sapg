@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Optional
 
 import numpy as np
 import rospy
+import trimesh
 import viser
 from geometry_msgs.msg import Pose, PoseStamped
 from scipy.spatial.transform import Rotation as R
@@ -119,9 +121,7 @@ class RosSnapshot:
 
         if self.sharpa_joint_cmd is None:
             warn_every("sharpa_joint_cmd is None", n_seconds=1.0)
-            sharpa_joint_cmd = (
-                np.zeros(NUM_HAND_JOINTS) + 0.5
-            )  # Not 0 so it is obvious when not there
+            sharpa_joint_cmd = np.zeros(NUM_HAND_JOINTS) + 0.5  # Not 0 so it is obvious when not there
         else:
             sharpa_joint_cmd = self.sharpa_joint_cmd
 
@@ -218,10 +218,7 @@ class ViserVisualizationNode:
         # robot_urdf_path = get_repo_root_dir() / "assets/urdf/kuka_allegro_description/iiwa14_real.urdf"
         # robot_urdf_path = get_repo_root_dir() / "assets/urdf/kuka_allegro_description/kuka_allegro_touch_sensor.urdf"
         # robot_urdf_path = get_repo_root_dir() / "assets/urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted.urdf"
-        robot_urdf_path = (
-            get_repo_root_dir()
-            / "assets/urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted_restricted.urdf"
-        )
+        robot_urdf_path = get_repo_root_dir() / "assets/urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted_restricted.urdf"
         assert robot_urdf_path.exists(), f"robot_urdf_path not found: {robot_urdf_path}"
 
         SERVER.scene.add_frame(
@@ -265,7 +262,7 @@ class ViserVisualizationNode:
                 f"robot_cmd_mesh is not a MeshHandle, you must create ViserUrdf with mesh_color_override: {type(robot_cmd_mesh)}"
             )
             robot_cmd_mesh.opacity = 0.5
-
+        
         for robot_targets_mesh in self.robot_targets_viser._meshes:
             assert isinstance(robot_targets_mesh, viser.MeshHandle), (
                 f"robot_targets_mesh is not a MeshHandle, you must create ViserUrdf with mesh_color_override: {type(robot_targets_mesh)}"
@@ -307,7 +304,6 @@ class ViserVisualizationNode:
         # Load the object mesh
         FAR_AWAY_OBJECT_POSITION = np.ones(3)
         from isaacgymenvs.utils.objects import NAME_TO_OBJECT
-
         object_name = rospy.get_param("/object_name", None)
         if object_name is None:
             DEFAULT_OBJECT_NAME = "blue_cuboid"

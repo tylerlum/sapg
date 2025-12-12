@@ -3,9 +3,10 @@
 import copy
 import time
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Literal, Optional, Tuple
 
 import numpy as np
+import pytorch_kinematics as pk
 import rospy
 import torch
 from geometry_msgs.msg import Pose, PoseStamped
@@ -14,16 +15,13 @@ from scipy.spatial.transform import Rotation as R
 from sensor_msgs.msg import JointState
 from termcolor import colored
 
-from isaacgymenvs.utils.observation_action_utils_sharpa import (
-    Q_LOWER_LIMITS_restricted_np as Q_LOWER_LIMITS_np,
-)
-from isaacgymenvs.utils.observation_action_utils_sharpa import (
-    Q_UPPER_LIMITS_restricted_np as Q_UPPER_LIMITS_np,
-)
+
 from isaacgymenvs.utils.observation_action_utils_sharpa import (
     compute_joint_pos_targets,
     compute_observation,
     create_chain_and_serial_chain,
+    Q_LOWER_LIMITS_restricted_np as Q_LOWER_LIMITS_np,
+    Q_UPPER_LIMITS_restricted_np as Q_UPPER_LIMITS_np,
 )
 
 SAVE_INPUTS_TO_FILE = True
@@ -32,7 +30,6 @@ HACK_USE_TARGETS_FROM_FILE = False
 
 T_W_R = np.eye(4)
 T_W_R[:3, 3] = np.array([0.0, 0.8, 0.0])
-
 
 def warn(message: str):
     print(colored(message, "yellow"))
@@ -109,7 +106,6 @@ class RLPolicyNode:
             # When in progress saving to file, stop updating latest joint states and commands
             # ##############################################################################
             import signal
-
             # Signal handling to save on shutdown
             # When in progress saving to file, stop updating latest joint states and commands
             self._is_in_progress_saving_to_file = False
@@ -140,28 +136,20 @@ class RLPolicyNode:
 
         # Subscribers
         self.object_pose_sub = rospy.Subscriber(
-            "/robot_frame/current_object_pose",
-            PoseStamped,
-            self.object_pose_callback,
-            queue_size=1,
+            "/robot_frame/current_object_pose", PoseStamped, self.object_pose_callback,
+            queue_size=1
         )
         self.goal_object_pose_sub = rospy.Subscriber(
-            "/robot_frame/goal_object_pose",
-            Pose,
-            self.goal_object_pose_callback,
-            queue_size=1,
+            "/robot_frame/goal_object_pose", Pose, self.goal_object_pose_callback,
+            queue_size=1
         )
         self.iiwa_joint_state_sub = rospy.Subscriber(
-            "/iiwa/joint_states",
-            JointState,
-            self.iiwa_joint_state_callback,
-            queue_size=1,
+            "/iiwa/joint_states", JointState, self.iiwa_joint_state_callback,
+            queue_size=1
         )
         self.sharpa_joint_state_sub = rospy.Subscriber(
-            "/sharpa/joint_states",
-            JointState,
-            self.sharpa_joint_state_callback,
-            queue_size=1,
+            "/sharpa/joint_states", JointState, self.sharpa_joint_state_callback,
+            queue_size=1
         )
 
         # RL Player setup
@@ -207,15 +195,10 @@ class RLPolicyNode:
 
         if HACK_USE_TARGETS_FROM_FILE:
             from recorded_data_scripts.recorded_data_sharpa import RecordedData
-
             data_path = Path("recorded_robot_inputs/2025-12-11_14-35-06.npz")
             assert data_path.exists(), f"File {data_path} does not exist"
             data = RecordedData.from_file(data_path)
-            self.q_targets_from_file = (
-                torch.from_numpy(data.robot_joint_pos_targets_array)
-                .float()
-                .to(self.device)
-            )
+            self.q_targets_from_file = torch.from_numpy(data.robot_joint_pos_targets_array).float().to(self.device)
             T, D = self.q_targets_from_file.shape
             print(f"T: {T}, D: {D}")
             assert D == 29, f"D: {D}, expected: 29"
@@ -276,11 +259,7 @@ class RLPolicyNode:
         q = np.concatenate([iiwa_position, sharpa_position])
         qd = np.concatenate([iiwa_velocity, sharpa_velocity])
 
-        prev_action_targets = (
-            self.prev_targets
-            if self.prev_targets is not None
-            else torch.from_numpy(q).float().to(self.device)[None]
-        )
+        prev_action_targets = self.prev_targets if self.prev_targets is not None else torch.from_numpy(q).float().to(self.device)[None]
         observation = compute_observation(
             q=torch.from_numpy(q).float().to(self.device)[None],
             qd=torch.from_numpy(qd).float().to(self.device)[None],
@@ -398,9 +377,7 @@ class RLPolicyNode:
                     first_observations_received = True
 
                 if self.prev_targets is None:
-                    self.prev_targets = (
-                        torch.from_numpy(q).float().to(self.device)[None]
-                    )
+                    self.prev_targets = torch.from_numpy(q).float().to(self.device)[None]
 
                 assert_equals(obs.shape, (1, self.num_observations))
 
@@ -432,24 +409,16 @@ class RLPolicyNode:
                 # Clamp
                 joint_pos_targets = torch.clip(
                     joint_pos_targets,
-                    min=torch.from_numpy(Q_LOWER_LIMITS_np)
-                    .float()
-                    .to(self.device)[None],
-                    max=torch.from_numpy(Q_UPPER_LIMITS_np)
-                    .float()
-                    .to(self.device)[None],
+                    min=torch.from_numpy(Q_LOWER_LIMITS_np).float().to(self.device)[None],
+                    max=torch.from_numpy(Q_UPPER_LIMITS_np).float().to(self.device)[None],
                 )
 
                 if HACK_USE_TARGETS_FROM_FILE:
                     if self.current_step >= self.q_targets_from_file.shape[0]:
                         self.current_step = self.q_targets_from_file.shape[0] - 1
                         info("Reached end of targets, holding last target")
-                    assert self.current_step < self.q_targets_from_file.shape[0], (
-                        f"current_step: {self.current_step}, expected: < {self.q_targets_from_file.shape[0]}"
-                    )
-                    joint_pos_targets = self.q_targets_from_file[
-                        self.current_step
-                    ].unsqueeze(0)
+                    assert self.current_step < self.q_targets_from_file.shape[0], f"current_step: {self.current_step}, expected: < {self.q_targets_from_file.shape[0]}"
+                    joint_pos_targets = self.q_targets_from_file[self.current_step].unsqueeze(0)
                     self.current_step += 1
 
                 # Publish the targets
@@ -469,7 +438,7 @@ class RLPolicyNode:
             PRINT_FPS_EVERY_N_SECONDS = 5.0
             PRINT_FPS_EVERY_N_STEPS = int(PRINT_FPS_EVERY_N_SECONDS / self.dt)
             if len(loop_dts) == PRINT_FPS_EVERY_N_STEPS:
-                # if True:
+            # if True:
                 loop_dt_array = np.array(loop_dts)
                 loop_no_sleep_dt_array = np.array(loop_no_sleep_dts)
                 fps_array = 1.0 / loop_dt_array
@@ -521,7 +490,6 @@ class RLPolicyNode:
         assert SAVE_INPUTS_TO_FILE, "SAVE_INPUTS_TO_FILE must be True to save to file"
 
         import datetime
-
         if self._is_in_progress_saving_to_file:
             warn("Already in progress of saving to file, skipping")
             return
@@ -578,35 +546,7 @@ class RLPolicyNode:
         )
 
         JOINT_NAMES = [
-            "iiwa14_joint_1",
-            "iiwa14_joint_2",
-            "iiwa14_joint_3",
-            "iiwa14_joint_4",
-            "iiwa14_joint_5",
-            "iiwa14_joint_6",
-            "iiwa14_joint_7",
-            "left_thumb_CMC_FE",
-            "left_thumb_CMC_AA",
-            "left_thumb_MCP_FE",
-            "left_thumb_MCP_AA",
-            "left_thumb_IP",
-            "left_index_MCP_FE",
-            "left_index_MCP_AA",
-            "left_index_PIP",
-            "left_index_DIP",
-            "left_middle_MCP_FE",
-            "left_middle_MCP_AA",
-            "left_middle_PIP",
-            "left_middle_DIP",
-            "left_ring_MCP_FE",
-            "left_ring_MCP_AA",
-            "left_ring_PIP",
-            "left_ring_DIP",
-            "left_pinky_CMC",
-            "left_pinky_MCP_FE",
-            "left_pinky_MCP_AA",
-            "left_pinky_PIP",
-            "left_pinky_DIP",
+'iiwa14_joint_1', 'iiwa14_joint_2', 'iiwa14_joint_3', 'iiwa14_joint_4', 'iiwa14_joint_5', 'iiwa14_joint_6', 'iiwa14_joint_7', 'left_thumb_CMC_FE', 'left_thumb_CMC_AA', 'left_thumb_MCP_FE', 'left_thumb_MCP_AA', 'left_thumb_IP', 'left_index_MCP_FE', 'left_index_MCP_AA', 'left_index_PIP', 'left_index_DIP', 'left_middle_MCP_FE', 'left_middle_MCP_AA', 'left_middle_PIP', 'left_middle_DIP', 'left_ring_MCP_FE', 'left_ring_MCP_AA', 'left_ring_PIP', 'left_ring_DIP', 'left_pinky_CMC', 'left_pinky_MCP_FE', 'left_pinky_MCP_AA', 'left_pinky_PIP', 'left_pinky_DIP'
         ]
 
         from recorded_data_scripts.recorded_data_sharpa import RecordedData

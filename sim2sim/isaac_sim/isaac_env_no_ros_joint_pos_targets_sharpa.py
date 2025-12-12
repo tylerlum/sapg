@@ -61,12 +61,8 @@ class IsaacEnvNoRosJointPosTargets:
             dt=self.control_dt,
         )
 
-        self.env.root_state_tensor[self.env.goal_object_indices, 0:7] = torch.tensor(
-            [0.0, 0.0, 0.88, 0.0, 0.0, 0.0, 1.0], device=self.device
-        )[None]
-        self.env.deferred_set_actor_root_state_tensor_indexed(
-            [self.env.goal_object_indices]
-        )
+        self.env.root_state_tensor[self.env.goal_object_indices, 0:7] = torch.tensor([0.,  0.,  0.88, 0.,  0.,  0.,  1.], device=self.device)[None]
+        self.env.deferred_set_actor_root_state_tensor_indexed([self.env.goal_object_indices])
         obs, reward, done, info = self.env.step(
             action, joint_pos_targets=joint_pos_targets
         )
@@ -86,9 +82,7 @@ class IsaacEnvNoRosJointPosTargets:
             breakpoint()
 
         # HACK: Overwrite
-        goal_object_pose[:] = torch.tensor(
-            [0.0, 0.0, 0.88, 0.0, 0.0, 0.0, 1.0], device=self.device
-        )[None]
+        goal_object_pose[:] = torch.tensor([0.,  0.,  0.88, 0.,  0.,  0.,  1.], device=self.device)[None]
         object_scales[:] = torch.tensor([5.0, 0.9375, 1.25], device=self.device)[None]
 
         new_obs = compute_observation(
@@ -112,20 +106,19 @@ class IsaacEnvNoRosJointPosTargets:
 
         DEBUG = False
         if DEBUG:
-            diff = (obs["obs"] - new_obs).abs()[0]
+            diff= (obs['obs'] - new_obs).abs()[0]
             print(f"diff = {diff}")
             print(f"diff.max() = {diff.max()}")
             print(f"diff.argsort() = {diff.argsort()}")
 
             from isaacgymenvs.utils.observation_action_utils_sharpa import OBS_NAMES
-
             idxs = diff.argsort()
             for idx in idxs:
                 print(f"OBS_NAMES[{idx}] = {OBS_NAMES[idx]}")
                 print(f"obs['obs'][{idx}] = {obs['obs'][0, idx]}")
                 print(f"new_obs[{idx}] = {new_obs[0, idx]}")
                 print(f"diff[{idx}] = {diff[idx]}")
-                print("--------------------------------")
+                print(f"--------------------------------")
 
             breakpoint()
         return new_obs, reward, done, info
