@@ -348,6 +348,9 @@ class RecordedData:
             warn_every(f"fps max: {np.max(fps_array)}", WARN_EVERY_N_SECONDS)
             warn_every(f"fps min: {np.min(fps_array)}", WARN_EVERY_N_SECONDS)
             warn_every(f"fps std: {np.std(fps_array)}", WARN_EVERY_N_SECONDS)
+            ERROR = False
+            if ERROR:
+                raise ValueError("Time array is not evenly spaced")
             USE_MEDIAN_DT = True
             if USE_MEDIAN_DT:
                 warn_every(f"Using median dt: {np.median(dt_array)}", WARN_EVERY_N_SECONDS)
