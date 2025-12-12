@@ -143,21 +143,20 @@ def main():
     CHECKPOINT_PATH = Path(
         # "/juno/u/kedia/sapg/train_dir/checkpoints/hammer/relativeControl_5.pth"
         # "/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-11-05_hairbrush/00_smooth-arm-hand_speed-10_dropout-obs_2025-11-05_05-20-24/runs/00_smooth-arm-hand_speed-10_dropout-obs_2025-11-05_05-20-24/last/model.pth"
+
         # DR 4.075 speed
         "/juno/u/kedia/sapg/train_dir/checkpoints/2025_11_17_checkpoints/hammer_dr_4.075/00_DR_REAL_FINETUNING_SLOW_2025-11-15_13-49-55.pth"
+
         # NODR 2.5 speed
         # "/juno/u/kedia/sapg/train_dir/checkpoints/2025_11_17_checkpoints/hammer_nodr_2.5/00_REAL_FINETUNING_SLOW_2025-11-15_13-51-31.pth"
+
         # Cuboid
         # "/juno/u/kedia/sapg/train_dir/checkpoints/2025_11_17_checkpoints/cuboid_nodr_5/00_SLOW_CUBOID_2025-11-14_11-59-02.pth"
     )
     assert CHECKPOINT_PATH.exists()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    sim = MujocoSim(
-        MujocoSimConfig(
-            enable_viewer=True, sim_dt=SIM_DT, object_name="scanned_hammer_2"
-        )
-    )
+    sim = MujocoSim(MujocoSimConfig(enable_viewer=True, sim_dt=SIM_DT, object_name="scanned_hammer_2"))
     # sim = MujocoSim(MujocoSimConfig(enable_viewer=True, sim_dt=SIM_DT, object_name="mallet"))
     policy = RlPlayer(
         num_observations=N_OBS,

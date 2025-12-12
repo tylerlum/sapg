@@ -7,7 +7,6 @@ from pathlib import Path
 import mujoco
 import mujoco.viewer
 import numpy as np
-
 from isaacgymenvs.utils.utils import get_repo_root_dir
 
 # ############################################################
@@ -188,9 +187,7 @@ class MujocoSim:
         spec = mujoco.MjSpec.from_file(str(iiwa_xml_path))
         spec.option.timestep = self.config.sim_dt
 
-        allegro_xml_path = (
-            get_repo_root_dir() / "assets/mjcf/wonik_allegro/right_hand_offset.xml"
-        )
+        allegro_xml_path = get_repo_root_dir() / "assets/mjcf/wonik_allegro/right_hand_offset.xml"
         assert allegro_xml_path.exists(), (
             f"Allegro XML path does not exist: {allegro_xml_path}"
         )
@@ -257,15 +254,10 @@ class MujocoSim:
             # Use run_coacd.py to generate convex decomp meshes
 
             from isaacgymenvs.utils.objects import NAME_TO_OBJECT
-
             object_name = self.config.object_name
             mesh_paths = NAME_TO_OBJECT[object_name].coacd_filepaths
-            assert mesh_paths is not None, (
-                f"mesh_paths is None for object_name: {object_name}"
-            )
-            assert len(mesh_paths) > 0, (
-                f"len(mesh_paths) is 0 for object_name: {object_name}"
-            )
+            assert mesh_paths is not None, f"mesh_paths is None for object_name: {object_name}"
+            assert len(mesh_paths) > 0, f"len(mesh_paths) is 0 for object_name: {object_name}"
             # mesh_paths = list((get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/044_flat_screwdriver").glob("decomp_*.obj"))
 
             for mesh_path in mesh_paths:
@@ -347,14 +339,12 @@ class MujocoSim:
     def set_object_position(self, pos: np.ndarray) -> None:
         assert pos.shape == (3,), f"pos.shape: {pos.shape}, expected: (3,)"
         qpos_adr = self.mj_model.joint(name="object_free_joint").qposadr[0]
-        self.mj_data.qpos[qpos_adr : qpos_adr + 3] = pos
+        self.mj_data.qpos[qpos_adr:qpos_adr+3] = pos
 
     def set_object_quat_wxyz(self, quat_wxyz: np.ndarray) -> None:
-        assert quat_wxyz.shape == (4,), (
-            f"quat_wxyz.shape: {quat_wxyz.shape}, expected: (4,)"
-        )
+        assert quat_wxyz.shape == (4,), f"quat_wxyz.shape: {quat_wxyz.shape}, expected: (4,)"
         qpos_adr = self.mj_model.joint(name="object_free_joint").qposadr[0]
-        self.mj_data.qpos[qpos_adr + 3 : qpos_adr + 7] = quat_wxyz
+        self.mj_data.qpos[qpos_adr+3:qpos_adr+7] = quat_wxyz
 
     # ############################################################
     # Getting body poses and simulation state

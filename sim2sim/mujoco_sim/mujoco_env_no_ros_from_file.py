@@ -1,5 +1,6 @@
 import time
 from pathlib import Path
+from recorded_data_scripts.recorded_data import RecordedData
 
 import numpy as np
 import pytorch_kinematics as pk
@@ -7,10 +8,10 @@ import torch
 from termcolor import colored
 
 from isaacgymenvs.utils.observation_action_utils import (
+    compute_joint_pos_targets,
     compute_observation,
     create_chain_and_serial_chain,
 )
-from recorded_data_scripts.recorded_data import RecordedData
 from sim2real.rl_player import RlPlayer
 from sim2sim.mujoco_sim.mujoco_sim import (
     MujocoSim,
@@ -139,17 +140,11 @@ def main():
     joint_pos_targets_array = recorded_data.robot_joint_pos_targets_array
     joint_positions_array = recorded_data.robot_joint_positions_array
     T = joint_pos_targets_array.shape[0]
-    assert joint_pos_targets_array.shape == (T, N_ACT), (
-        f"joint_pos_targets_array.shape: {joint_pos_targets_array.shape}, expected: ({T}, {N_ACT})"
-    )
-    assert joint_positions_array.shape == (T, N_ACT), (
-        f"joint_positions_array.shape: {joint_positions_array.shape}, expected: ({T}, {N_ACT})"
-    )
+    assert joint_pos_targets_array.shape == (T, N_ACT), f"joint_pos_targets_array.shape: {joint_pos_targets_array.shape}, expected: ({T}, {N_ACT})"
+    assert joint_positions_array.shape == (T, N_ACT), f"joint_positions_array.shape: {joint_positions_array.shape}, expected: ({T}, {N_ACT})"
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    sim = MujocoSim(
-        MujocoSimConfig(enable_viewer=True, sim_dt=SIM_DT, object_name="hairbrush")
-    )
+    sim = MujocoSim(MujocoSimConfig(enable_viewer=True, sim_dt=SIM_DT, object_name="hairbrush"))
     policy = RlPlayer(
         num_observations=N_OBS,
         num_actions=N_ACT,
@@ -175,12 +170,8 @@ def main():
     mujoco_env_no_ros.sim.set_robot_joint_positions(joint_positions_array[0])
     mujoco_env_no_ros.sim.set_robot_joint_pos_targets(joint_pos_targets_array[0])
     # mujoco_env_no_ros.sim.set_object_position(recorded_data.object_root_states_array[0, :3] + np.array([0.0, -0.5, 0.0]))
-    mujoco_env_no_ros.sim.set_object_position(
-        recorded_data.object_root_states_array[0, :3]
-    )
-    mujoco_env_no_ros.sim.set_object_quat_wxyz(
-        recorded_data.object_root_states_array[0, 3:7][[3, 0, 1, 2]]
-    )
+    mujoco_env_no_ros.sim.set_object_position(recorded_data.object_root_states_array[0, :3])
+    mujoco_env_no_ros.sim.set_object_quat_wxyz(recorded_data.object_root_states_array[0, 3:7][[3, 0, 1, 2]])
 
     NO_MOVE_FIRST_N_STEPS = 100
     print(f"No moving for {NO_MOVE_FIRST_N_STEPS} steps")
@@ -213,9 +204,7 @@ def main():
         robot_base_pos = sim_state["robot_base_pos"]
         robot_base_quat_wxyz = sim_state["robot_base_quat_wxyz"]
         robot_base_quat_xyzw = robot_base_quat_wxyz[[1, 2, 3, 0]]
-        robot_base_root_states = np.concatenate(
-            [robot_base_pos, robot_base_quat_xyzw, np.zeros(6)]
-        )
+        robot_base_root_states = np.concatenate([robot_base_pos, robot_base_quat_xyzw, np.zeros(6)])
         robot_base_root_states_history.append(robot_base_root_states)
         object_pos = sim_state["object_pos"]
         object_quat_wxyz = sim_state["object_quat_wxyz"]
@@ -233,18 +222,15 @@ def main():
             robot_base_root_states_history = np.array(robot_base_root_states_history)
             object_root_states_history = np.array(object_root_states_history)
             table_root_states_history = np.array(table_root_states_history)
-            print("Reached end of trajectory!")
+            print(f"Reached end of trajectory!")
             print(f"joint_pos_history.shape: {joint_pos_history.shape}")
             print(f"joint_pos_targets_array.shape: {joint_pos_targets_array.shape}")
-            assert joint_pos_history.shape == joint_pos_targets_array.shape, (
-                f"joint_pos_history.shape: {joint_pos_history.shape}, expected: {joint_pos_targets_array.shape}"
-            )
+            assert joint_pos_history.shape == joint_pos_targets_array.shape, f"joint_pos_history.shape: {joint_pos_history.shape}, expected: {joint_pos_targets_array.shape}"
             # robot_root_states_array = np.zeros((T, 13))
             # robot_root_states_array[:, 6] = 1.0  # quaternion xyzw has w=1
             # object_root_states_array = np.zeros((T, 13))
             # object_root_states_array[:, 6] = 1.0
             from isaacgymenvs.utils.observation_action_utils import JOINT_NAMES_ISAACGYM
-
             robot_joint_names = JOINT_NAMES_ISAACGYM
             time_array = np.arange(T) * CONTROL_DT
             new_recorded_data = RecordedData(
@@ -258,9 +244,7 @@ def main():
                 object_name=sim.config.object_name,
             )
             # output_path = RECORDED_DATA_PATH.parent / f"{RECORDED_DATA_PATH.stem}_mujoco.npz"
-            output_path = (
-                RECORDED_DATA_PATH.parent / f"{RECORDED_DATA_PATH.stem}_mujoco.npz"
-            )
+            output_path = RECORDED_DATA_PATH.parent / f"{RECORDED_DATA_PATH.stem}_mujoco.npz"
             output_path.parent.mkdir(parents=True, exist_ok=True)
             print(f"Saving recorded data to {output_path}")
             new_recorded_data.to_file(output_path)

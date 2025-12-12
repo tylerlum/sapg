@@ -2,7 +2,7 @@
 from isaacgymenvs.tasks.allegro_kuka.allegro_kuka_base import AllegroKukaBase  # isort:skip
 
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Optional, Dict, Any
 
 import torch
 from hydra import compose, initialize
@@ -25,7 +25,7 @@ def create_env_from_cfg(
 ) -> AllegroKukaBase:
     if merge_with_default_config:
         cfg = merge_cfg_with_default_config(cfg)
-    return create_env_from_cfg_impl(
+    return create_env_from_cfg(
         cfg=cfg,
         headless=headless,
         enable_viewer_sync_at_start=enable_viewer_sync_at_start,
@@ -47,14 +47,13 @@ def create_env(
 
     if merge_with_default_config:
         cfg = merge_cfg_with_default_config(cfg)
-    return create_env_from_cfg_impl(
+    return create_env_from_cfg(
         cfg=cfg,
         headless=headless,
         enable_viewer_sync_at_start=enable_viewer_sync_at_start,
         episode_length=episode_length,
         overrides=overrides,
     )
-
 
 def merge_cfg_with_default_config(cfg: DictConfig) -> DictConfig:
     # Use this if the config from config path is missing fields
@@ -90,7 +89,7 @@ def merge_cfg_with_default_config(cfg: DictConfig) -> DictConfig:
     return merged_cfg
 
 
-def create_env_from_cfg_impl(
+def create_env_from_cfg(
     cfg: DictConfig,
     headless: bool = False,
     enable_viewer_sync_at_start: bool = True,

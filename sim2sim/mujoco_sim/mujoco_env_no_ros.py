@@ -137,9 +137,7 @@ def main():
     assert CHECKPOINT_PATH.exists()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    sim = MujocoSim(
-        MujocoSimConfig(enable_viewer=True, sim_dt=SIM_DT, object_name="hairbrush")
-    )
+    sim = MujocoSim(MujocoSimConfig(enable_viewer=True, sim_dt=SIM_DT, object_name="hairbrush"))
     policy = RlPlayer(
         num_observations=N_OBS,
         num_actions=N_ACT,
