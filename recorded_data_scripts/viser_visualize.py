@@ -56,7 +56,7 @@ def main():
         client.camera.look_at = (0, 0, 0.53)
 
     # Load assets into viser
-    KUKA_SHARPA_URDF_PATH = get_repo_root_dir() / "assets/urdf/kuka_allegro_description/iiwa14_left_sharpa_between.urdf"
+    KUKA_SHARPA_URDF_PATH = get_repo_root_dir() / "assets/urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted_restricted.urdf"
     assert KUKA_SHARPA_URDF_PATH.exists(), (
         f"KUKA_SHARPA_URDF_PATH not found: {KUKA_SHARPA_URDF_PATH}"
     )
@@ -73,7 +73,7 @@ def main():
         object_name = recorded_data.object_name
     OBJECT_URDF_PATH = NAME_TO_OBJECT[object_name].filepath
     assert OBJECT_URDF_PATH.exists(), f"OBJECT_URDF_PATH not found: {OBJECT_URDF_PATH}"
-    SHARPA_URDF_PATH = get_repo_root_dir() / "assets/urdf/left_sharpa_ha4/left_sharpa_ha4_v2_1.urdf"
+    SHARPA_URDF_PATH = get_repo_root_dir() / "assets/urdf/left_sharpa_ha4/left_sharpa_ha4_v2_1_adjusted_restricted.urdf"
     assert SHARPA_URDF_PATH.exists(), (
         f"SHARPA_URDF_PATH not found: {SHARPA_URDF_PATH}"
     )
@@ -135,11 +135,16 @@ def main():
     object_in_sharpa_frame = SERVER.scene.add_frame(
         "/floating_sharpa_hand/object", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS
     )
-    object_in_sharpa_viser = ViserUrdf(SERVER, OBJECT_URDF_PATH, root_node_name="/floating_sharpa_hand/object")
+    _object_in_sharpa_viser = ViserUrdf(SERVER, OBJECT_URDF_PATH, root_node_name="/floating_sharpa_hand/object")
 
     # Get joint names since the ordering of the urdf may not match the ordering of the robot_joint_names
     kuka_sharpa_viser_joint_names = kuka_sharpa_viser._urdf.actuated_joint_names
     sharpa_viser_joint_names = sharpa_viser._urdf.actuated_joint_names
+    assert set(sharpa_viser_joint_names).issubset(set(kuka_sharpa_viser_joint_names)), (
+        f"sharpa_viser_joint_names: {sharpa_viser_joint_names} is not a subset of kuka_sharpa_viser_joint_names: {kuka_sharpa_viser_joint_names}\n"
+        f"Only in sharpa_viser_joint_names: {set(sharpa_viser_joint_names) - set(kuka_sharpa_viser_joint_names)}\n"
+        f"Only in kuka_sharpa_viser_joint_names: {set(kuka_sharpa_viser_joint_names) - set(sharpa_viser_joint_names)}"
+    )
 
     # ###########
     # Add controls
@@ -318,32 +323,6 @@ def main():
         # ###########
         # Sleep and update frame index
         # ###########
-        # print(f"Sleeping for {recorded_data.dt} seconds")
-        # print(f"recorded_data.time_array: {recorded_data.time_array}")
-        # print(f"np.diff(recorded_data.time_array): {np.diff(recorded_data.time_array)}")
-        # import matplotlib.pyplot as plt
-        # plt.plot(recorded_data.time_array)
-        # plt.title("recorded_data.time_array")
-        # plt.xlabel("Frame Index")
-        # plt.ylabel("Time (s)")
-        # plt.show()
-        # plt.plot(np.diff(recorded_data.time_array))
-        # plt.title("np.diff(recorded_data.time_array)")
-        # plt.xlabel("Frame Index")
-        # plt.ylabel("Time Difference (s)")
-        # plt.show()
-        # object_positions = recorded_data.object_root_states_array[:, :3]
-        # distances = np.linalg.norm(object_positions[1:] - object_positions[:-1], axis=-1)
-        # plt.plot(distances)
-        # plt.title("distances")
-        # plt.xlabel("Frame Index")
-        # plt.ylabel("Distance (m)")
-        # plt.show()
-        # breakpoint()
-
-        # plt.show()
-        # breakpoint()
-        # time.sleep(recorded_data.dt)
         time.sleep(1/60)
         if not PAUSED:
             frame_idx_slider.value = int(

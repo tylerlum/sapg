@@ -30,38 +30,6 @@ ADJUSTED_JOINT_ORDER = [
 
 JOINT_NAMES_ISAACGYM = ADJUSTED_JOINT_ORDER
 
-# JOINT_NAMES_ISAACGYM = [
-#     "iiwa7_joint_1",
-#     "iiwa7_joint_2",
-#     "iiwa7_joint_3",
-#     "iiwa7_joint_4",
-#     "iiwa7_joint_5",
-#     "iiwa7_joint_6",
-#     "iiwa7_joint_7",
-#     "joint_0.0",
-#     "joint_1.0",
-#     "joint_2.0",
-#     "joint_3.0",
-#     "joint_4.0",
-#     "joint_5.0",
-#     "joint_6.0",
-#     "joint_7.0",
-#     "joint_8.0",
-#     "joint_9.0",
-#     "joint_10.0",
-#     "joint_11.0",
-#     "joint_12.0",
-#     "joint_13.0",
-#     "joint_14.0",
-#     "joint_15.0",
-#     "joint_16.0",
-#     "joint_17.0",
-#     "joint_18.0",
-#     "joint_19.0",
-#     "joint_20.0",
-#     "joint_21.0",
-# ]
-
 OBS_NAME_TO_NAMES = {
     "q": [f"{name}_q" for name in JOINT_NAMES_ISAACGYM],
     "qd": [f"{name}_qd" for name in JOINT_NAMES_ISAACGYM],
