@@ -9,6 +9,7 @@ import viser
 from viser.extras import ViserUrdf
 
 from recorded_data_scripts.recorded_data_sharpa import RecordedData
+from isaacgymenvs.utils.utils import get_repo_root_dir
 
 # ###########
 # Constants
@@ -37,15 +38,6 @@ def main():
     # ###########
     # Load recorded data
     # ###########
-    # file_path = Path(
-    #     # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-19_19-43-04.npz"
-    #     # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-19_19-42-41.npz"
-    #     # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-20_14-30-37.npz"
-    #     # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-20_14-32-39.npz"
-    #     # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-27_16-23-09.npz"
-    #     # "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-27_16-23-31.npz"
-    #     "/home/tylerlum/github_repos/sapg/recorded_data/2025-10-27_17-18-32.npz"
-    # )
     assert file_path.exists(), f"File {file_path} does not exist"
     recorded_data = RecordedData.from_file(file_path)
 
@@ -64,12 +56,9 @@ def main():
         client.camera.look_at = (0, 0, 0.53)
 
     # Load assets into viser
-    KUKA_ALLEGRO_URDF_PATH = Path(
-        # "/home/tylerlum/github_repos/sapg/assets/urdf/kuka_allegro_description/kuka_allegro_touch_sensor.urdf"
-        "/home/tylerlum/github_repos/sapg/assets/urdf/kuka_allegro_description/iiwa14_left_sharpa_between.urdf"
-    )
-    assert KUKA_ALLEGRO_URDF_PATH.exists(), (
-        f"KUKA_ALLEGRO_URDF_PATH not found: {KUKA_ALLEGRO_URDF_PATH}"
+    KUKA_SHARPA_URDF_PATH = get_repo_root_dir() / "assets/urdf/kuka_allegro_description/iiwa14_left_sharpa_between.urdf"
+    assert KUKA_SHARPA_URDF_PATH.exists(), (
+        f"KUKA_SHARPA_URDF_PATH not found: {KUKA_SHARPA_URDF_PATH}"
     )
     from isaacgymenvs.utils.objects import NAME_TO_OBJECT
     DEFAULT_OBJECT_NAME = "blue_cuboid"
@@ -83,37 +72,30 @@ def main():
     else:
         object_name = recorded_data.object_name
     OBJECT_URDF_PATH = NAME_TO_OBJECT[object_name].filepath
-    # OBJECT_URDF_PATH = Path(
-    #     "/home/tylerlum/github_repos/sapg/assets/urdf/tyler_objects/044_flat_screwdriver/044_flat_screwdriver.urdf"
-    # )
     assert OBJECT_URDF_PATH.exists(), f"OBJECT_URDF_PATH not found: {OBJECT_URDF_PATH}"
-    ALLEGRO_URDF_PATH = Path(
-        "/home/tylerlum/github_repos/sapg/assets/urdf/kuka_allegro_description/allegro_touch_sensor.urdf"
+    SHARPA_URDF_PATH = get_repo_root_dir() / "assets/urdf/left_sharpa_ha4/left_sharpa_ha4_v2_1.urdf"
+    assert SHARPA_URDF_PATH.exists(), (
+        f"SHARPA_URDF_PATH not found: {SHARPA_URDF_PATH}"
     )
-    assert ALLEGRO_URDF_PATH.exists(), (
-        f"ALLEGRO_URDF_PATH not found: {ALLEGRO_URDF_PATH}"
-    )
-    TABLE_URDF_PATH = Path(
-        "/home/tylerlum/github_repos/sapg/assets/urdf/table_narrow.urdf"
-    )
+    TABLE_URDF_PATH = get_repo_root_dir() / "assets/urdf/table_narrow.urdf"
     assert TABLE_URDF_PATH.exists(), f"TABLE_URDF_PATH not found: {TABLE_URDF_PATH}"
 
     # Robot
-    kuka_allegro_frame = SERVER.scene.add_frame(
+    kuka_sharpa_frame = SERVER.scene.add_frame(
         "/robot/state", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS,
     )
-    kuka_allegro_viser = ViserUrdf(
-        SERVER, KUKA_ALLEGRO_URDF_PATH, root_node_name="/robot/state"
+    kuka_sharpa_viser = ViserUrdf(
+        SERVER, KUKA_SHARPA_URDF_PATH, root_node_name="/robot/state"
     )
 
     # Target robot
     if recorded_data.robot_joint_pos_targets_array is not None:
-        target_kuka_allegro_frame = SERVER.scene.add_frame(
+        target_kuka_sharpa_frame = SERVER.scene.add_frame(
             "/target_robot/state", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS,
         )
         BLUE_RGBA = (0, 0, 255, 0.5)
-        target_kuka_allegro_viser = ViserUrdf(
-            SERVER, KUKA_ALLEGRO_URDF_PATH, root_node_name="/target_robot/state", mesh_color_override=BLUE_RGBA
+        target_kuka_sharpa_viser = ViserUrdf(
+            SERVER, KUKA_SHARPA_URDF_PATH, root_node_name="/target_robot/state", mesh_color_override=BLUE_RGBA
         )
 
     # Object
@@ -143,8 +125,21 @@ def main():
         "/robot_palm", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS
     )
 
+    # Floating sharpa hand
+    sharpa_frame = SERVER.scene.add_frame(
+        "/floating_sharpa_hand", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS
+    )
+    sharpa_viser = ViserUrdf(SERVER, SHARPA_URDF_PATH, root_node_name="/floating_sharpa_hand")
+
+    # Object relative to floating sharpa hand
+    object_in_sharpa_frame = SERVER.scene.add_frame(
+        "/floating_sharpa_hand/object", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS
+    )
+    object_in_sharpa_viser = ViserUrdf(SERVER, OBJECT_URDF_PATH, root_node_name="/floating_sharpa_hand/object")
+
     # Get joint names since the ordering of the urdf may not match the ordering of the robot_joint_names
-    kuka_allegro_viser_joint_names = kuka_allegro_viser._urdf.actuated_joint_names
+    kuka_sharpa_viser_joint_names = kuka_sharpa_viser._urdf.actuated_joint_names
+    sharpa_viser_joint_names = sharpa_viser._urdf.actuated_joint_names
 
     # ###########
     # Add controls
@@ -233,11 +228,6 @@ def main():
     while True:
         # Get data
         robot_root_state = recorded_data.robot_root_states_array[FRAME_IDX]
-        # DELAY_AMOUNT = 1
-        # delay_idx = int(FRAME_IDX//DELAY_AMOUNT)*DELAY_AMOUNT
-        # print(f"FRAME_IDX: {FRAME_IDX}")
-        # print(f"delay_idx: {delay_idx}")
-        # object_root_state = recorded_data.object_root_states_array[delay_idx]
         object_root_state = recorded_data.object_root_states_array[FRAME_IDX]
         robot_joint_position = recorded_data.robot_joint_positions_array[FRAME_IDX]
 
@@ -245,22 +235,22 @@ def main():
         # Update viser objects
         # ###########
         # Robot
-        kuka_allegro_frame.position = robot_root_state[:3]
-        kuka_allegro_frame.wxyz = xyzw_to_wxyz(robot_root_state[3:7])
-        kuka_allegro_joint_pos_viser_order = RecordedData.change_joint_order(
+        kuka_sharpa_frame.position = robot_root_state[:3]
+        kuka_sharpa_frame.wxyz = xyzw_to_wxyz(robot_root_state[3:7])
+        kuka_sharpa_joint_pos_viser_order = RecordedData.change_joint_order(
             robot_joint_position,
             from_order=recorded_data.robot_joint_names,
-            to_order=kuka_allegro_viser_joint_names,
+            to_order=kuka_sharpa_viser_joint_names,
         )
-        kuka_allegro_viser.update_cfg(kuka_allegro_joint_pos_viser_order)
+        kuka_sharpa_viser.update_cfg(kuka_sharpa_joint_pos_viser_order)
 
         # Target robot
         if recorded_data.robot_joint_pos_targets_array is not None:
             robot_joint_pos_target = recorded_data.robot_joint_pos_targets_array[FRAME_IDX]
-            target_kuka_allegro_frame.position = robot_root_state[:3]
-            target_kuka_allegro_frame.wxyz = xyzw_to_wxyz(robot_root_state[3:7])
-            target_kuka_allegro_joint_pos_viser_order = robot_joint_pos_target
-            target_kuka_allegro_viser.update_cfg(target_kuka_allegro_joint_pos_viser_order)
+            target_kuka_sharpa_frame.position = robot_root_state[:3]
+            target_kuka_sharpa_frame.wxyz = xyzw_to_wxyz(robot_root_state[3:7])
+            target_kuka_sharpa_joint_pos_viser_order = robot_joint_pos_target
+            target_kuka_sharpa_viser.update_cfg(target_kuka_sharpa_joint_pos_viser_order)
 
         # Object
         object_frame.position = object_root_state[:3]
@@ -280,9 +270,18 @@ def main():
                 recorded_data.goal_root_states_array[FRAME_IDX, 3:7]
             )
 
+        # Floating allegro hand
+        sharpa_joint_pos_viser_order = RecordedData.change_joint_order(
+            robot_joint_position,
+            from_order=recorded_data.robot_joint_names,
+            to_order=sharpa_viser_joint_names,
+            require_all_joints=False,
+        )
+        sharpa_viser.update_cfg(sharpa_joint_pos_viser_order)
+
         # Palm
-        palm_pose_R = kuka_allegro_viser._urdf.get_transform(
-            frame_to="allegro_mount"
+        palm_pose_R = kuka_sharpa_viser._urdf.get_transform(
+            frame_to="left_hand_C_MC"
         ).copy()
         assert palm_pose_R.shape == (
             4,
@@ -294,6 +293,27 @@ def main():
         palm_xyz_xyzw = RecordedData.T_to_pose(T_W_P)
         palm_frame.position = palm_xyz_xyzw[:3]
         palm_frame.wxyz = xyzw_to_wxyz(palm_xyz_xyzw[3:7])
+
+        # By default MOVE_FLOATING_SHARPA_HAND = False so we can see how the object is moving wrt a fixed sharpa hand
+        # Can set to True to debug and make sure that everything aligns
+        MOVE_FLOATING_SHARPA_HAND = False
+        if MOVE_FLOATING_SHARPA_HAND:
+            sharpa_frame.position = palm_xyz_xyzw[:3]
+            sharpa_frame.wxyz = xyzw_to_wxyz(palm_xyz_xyzw[3:7])
+        else:
+            # Keep floating sharpa hand in a fixed position
+            sharpa_frame.position = recorded_data.robot_root_states_array[
+                0, :3
+            ] + np.array([0.5, -0.8, 0.7])
+            sharpa_frame.wxyz = np.array([1.0, 0.0, 0.0, 0.0])
+
+        # Object relative to floating sharpa hand
+        T_W_O = RecordedData.pose_to_T(object_root_state[:7])
+        T_P_W = np.linalg.inv(T_W_P)
+        T_P_O = T_P_W @ T_W_O
+        object_xyz_xyzw_P = RecordedData.T_to_pose(T_P_O)
+        object_in_sharpa_frame.position = object_xyz_xyzw_P[:3]
+        object_in_sharpa_frame.wxyz = xyzw_to_wxyz(object_xyz_xyzw_P[3:7])
 
         # ###########
         # Sleep and update frame index
