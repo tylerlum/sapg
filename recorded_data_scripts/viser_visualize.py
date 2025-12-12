@@ -323,7 +323,7 @@ def main():
         # ###########
         # Sleep and update frame index
         # ###########
-        time.sleep(1/60)
+        time.sleep(recorded_data.dt)
         if not PAUSED:
             frame_idx_slider.value = int(
                 np.clip(

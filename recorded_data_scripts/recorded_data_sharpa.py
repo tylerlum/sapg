@@ -7,6 +7,7 @@ from typing import Optional
 
 import numpy as np
 from scipy.spatial.transform import Rotation as R
+from termcolor import colored
 
 OBSERVATIONS_DIM = 133
 ACTIONS_DIM = 29
@@ -64,6 +65,27 @@ OBS_NAME_TO_NAMES = {
 }
 OBS_NAMES = sum(OBS_NAME_TO_NAMES.values(), [])
 ACTION_NAMES = JOINT_NAMES_ISAACGYM
+
+def warn(message: str):
+    print(colored(message, "yellow"))
+
+
+def warn_every(message: str, n_seconds: float, key=None):
+    import time
+    """
+    Print a warning message at most once every n_seconds per unique key.
+    Stores state inside the function itself (no globals).
+    """
+    if not hasattr(warn_every, "_last_times"):
+        warn_every._last_times = {}  # create on first call
+
+    key = key or message
+    last_times = warn_every._last_times
+    last_time = last_times.get(key, 0)
+
+    if time.time() - last_time > n_seconds:
+        warn(message)
+        last_times[key] = time.time()
 
 
 @dataclass
@@ -305,11 +327,21 @@ class RecordedData:
     @cached_property
     def dt(self) -> float:
         dt = self.time_array[1] - self.time_array[0]
-        # assert np.allclose(np.diff(self.time_array), dt), (
-        #     f"Expected time array to be evenly spaced, got {self.time_array}"
-        #     f"Differences: {np.diff(self.time_array)}"
-        #     f"dt: {dt}"
-        # )
+        all_close = np.allclose(np.diff(self.time_array), dt)
+        if not all_close:
+            WARN_EVERY_N_SECONDS = 100.0
+            warn_every("Time array is not evenly spaced", WARN_EVERY_N_SECONDS)
+            warn_every(f"Differences: {np.diff(self.time_array)}", WARN_EVERY_N_SECONDS)
+            warn_every(f"dt: {dt}", WARN_EVERY_N_SECONDS)
+            warn_every(f"Min difference: {np.min(np.diff(self.time_array))}", WARN_EVERY_N_SECONDS)
+            warn_every(f"Median difference: {np.median(np.diff(self.time_array))}", WARN_EVERY_N_SECONDS)
+            warn_every(f"Mean difference: {np.mean(np.diff(self.time_array))}", WARN_EVERY_N_SECONDS)
+            warn_every(f"Max difference: {np.max(np.diff(self.time_array))}", WARN_EVERY_N_SECONDS)
+            USE_MEDIAN_DT = True
+            if USE_MEDIAN_DT:
+                warn_every(f"Using median dt: {np.median(np.diff(self.time_array))}", WARN_EVERY_N_SECONDS)
+                dt = np.median(np.diff(self.time_array))
+
         return dt
 
     @cached_property
