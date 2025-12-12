@@ -179,6 +179,7 @@ env:
   jointVelocityObsNoiseStd: 0.0
 
   forceNoReset: False  # If True, will not reset the environment, useful for sim2sim testing
+  objectStartPose: ${eval:"None"}  # If None, will use the default object start pose. Otherwise, a 7-element list of [x, y, z, qx, qy, qz, qw]
 
   asset:
     # Whis was the original kuka_allegro asset.

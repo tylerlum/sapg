@@ -581,14 +581,16 @@ class AllegroKukaBase(VecTask):
         object_start_pose.p.z = allegro_pose.p.z + pose_dz
 
         # HACK: Overwrite
-        # # object_pose_W = [0.   0.   0.68 0.   0.   0.   1.  ]
-        object_start_pose.p.x = 0.0
-        object_start_pose.p.y = 0.0
-        object_start_pose.p.z = 0.68
-        object_start_pose.r.x = 0.0
-        object_start_pose.r.y = 0.0
-        object_start_pose.r.z = 0.0
-        object_start_pose.r.w = 1.0
+        if self.cfg["env"]["objectStartPose"] is not None:
+            assert len(self.cfg["env"]["objectStartPose"]) == 7, f"objectStartPose must be a 7-element list, got {len(self.cfg['env']['objectStartPose'])}"
+            # Assumes [x, y, z, qx, qy, qz, qw]
+            object_start_pose.p.x = self.cfg["env"]["objectStartPose"][0]
+            object_start_pose.p.y = self.cfg["env"]["objectStartPose"][1]
+            object_start_pose.p.z = self.cfg["env"]["objectStartPose"][2]
+            object_start_pose.r.x = self.cfg["env"]["objectStartPose"][3]
+            object_start_pose.r.y = self.cfg["env"]["objectStartPose"][4]
+            object_start_pose.r.z = self.cfg["env"]["objectStartPose"][5]
+            object_start_pose.r.w = self.cfg["env"]["objectStartPose"][6]
 
         return object_start_pose
 
