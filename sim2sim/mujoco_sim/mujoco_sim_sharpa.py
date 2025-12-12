@@ -161,16 +161,25 @@ class MujocoSim:
         for body in spec.bodies:
             body.gravcomp = 1.0
 
-        geoms = [geom for geom in spec.geoms if len(geom.name) > 0]
-        geom_names = [geom.name for geom in geoms]
-        geom_frictions = [geom.friction for geom in geoms]
-        print(f"geom_names: {geom_names}")
-        print(f"geom_frictions: {geom_frictions}")
-        name_to_friction = {name: friction for name, friction in zip(geom_names, geom_frictions)}
-        for name, friction in name_to_friction.items():
-            print(f"name: {name}, friction: {friction}")
-        for geom in geoms:
-            geom.friction = np.array([1.5, 0.005, 0.0001])
+        # Set frictions of the robot
+        SET_ROBOT_FRICTION = False
+        if SET_ROBOT_FRICTION:
+            geoms = [geom for geom in spec.geoms if len(geom.name) > 0]
+
+            # Get current friction values
+            PRINT_CURRENT_FRICTION = False
+            if PRINT_CURRENT_FRICTION:
+                geom_names = [geom.name for geom in geoms]
+                geom_frictions = [geom.friction for geom in geoms]
+                print(f"geom_names: {geom_names}")
+                print(f"geom_frictions: {geom_frictions}")
+
+                name_to_friction = {name: friction for name, friction in zip(geom_names, geom_frictions)}
+                for name, friction in name_to_friction.items():
+                    print(f"name: {name}, friction: {friction}")
+
+            for geom in geoms:
+                geom.friction = np.array([1.5, 0.005, 0.0001])
 
         # Move robot base to desired position
         robot_base_bodies = [body for body in spec.bodies if body.name == "base"]
@@ -361,31 +370,9 @@ class MujocoSim:
     # Stepping simulation
     # ############################################################
     def sim_step(self):
-        # breakpoint()
-        # body_names = [self.mj_model.body(i).name for i in range(self.mj_model.nbody) if len(self.mj_model.body(i).name) > 0]
-        # body_ids = [self.mj_model.body(name=name).id for name in body_names]
-        # masses = [self.mj_model.body_mass[body_id] for body_id in body_ids]
-        # inertias = [self.mj_model.body_inertia[body_id] for body_id in body_ids]
-        # print(f"body_names: {body_names}")
-        # print(f"masses: {masses}")
-        # print(f"inertias: {inertias}")
-        # print(f"masses[-1]: {masses[-1]}")
-        # print(f"inertias[-1]: {inertias[-1]}")
-        # breakpoint()
-        # geom_names = [self.mj_model.geom(i).name for i in range(self.mj_model.ngeom) if len(self.mj_model.geom(i).name) > 0]
-        # print(f"geom_names: {geom_names}")
-        # breakpoint()
-        # print(dir(self.mj_model))
-        # geom_ids = [self.mj_model.geom(name=name).id for name in geom_names]
-        # densities = [self.mj_model.geom_density[geom_id] for geom_id in geom_ids]
-        # masses = [self.mj_model.geom_mass[geom_id] for geom_id in geom_ids]
-        # inertias = [self.mj_model.geom_inertia[geom_id] for geom_id in geom_ids]
-        # print(f"geom_names: {geom_names}")
-        # print(f"densities: {densities}")
-        # print(f"masses: {masses}")
-        # print(f"inertias: {inertias}")
-        # breakpoint()
-
+        DEBUG = False
+        if DEBUG:
+            self._print_debug_info()
 
         actuator_ids = [self.mj_model.actuator(name=name).id for name in ACTUATOR_NAMES]
         for i, actuator_id in enumerate(actuator_ids):
@@ -400,6 +387,33 @@ class MujocoSim:
             return self.viewer.is_running()
         else:
             return True
+
+    def _print_debug_info(self) -> None:
+        # Examples of getting masses and inertias in mujoco
+        breakpoint()
+        body_names = [self.mj_model.body(i).name for i in range(self.mj_model.nbody) if len(self.mj_model.body(i).name) > 0]
+        body_ids = [self.mj_model.body(name=name).id for name in body_names]
+        masses = [self.mj_model.body_mass[body_id] for body_id in body_ids]
+        inertias = [self.mj_model.body_inertia[body_id] for body_id in body_ids]
+        print(f"body_names: {body_names}")
+        print(f"masses: {masses}")
+        print(f"inertias: {inertias}")
+        print(f"masses[-1]: {masses[-1]}")
+        print(f"inertias[-1]: {inertias[-1]}")
+        breakpoint()
+        geom_names = [self.mj_model.geom(i).name for i in range(self.mj_model.ngeom) if len(self.mj_model.geom(i).name) > 0]
+        print(f"geom_names: {geom_names}")
+        breakpoint()
+        print(dir(self.mj_model))
+        geom_ids = [self.mj_model.geom(name=name).id for name in geom_names]
+        densities = [self.mj_model.geom_density[geom_id] for geom_id in geom_ids]
+        masses = [self.mj_model.geom_mass[geom_id] for geom_id in geom_ids]
+        inertias = [self.mj_model.geom_inertia[geom_id] for geom_id in geom_ids]
+        print(f"geom_names: {geom_names}")
+        print(f"densities: {densities}")
+        print(f"masses: {masses}")
+        print(f"inertias: {inertias}")
+        breakpoint()
 
     def run(self):
         loop_no_sleep_dts, loop_dts = [], []

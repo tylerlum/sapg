@@ -76,6 +76,9 @@ def main():
             "task.env.resetDofVelRandomInterval": 0.0,
             "task.env.object_type": "blue_cuboid",
             "task.env.forceNoReset": True,
+            "task.env.randomizeObjectRotation": False,
+            "task.env.objectStartPose": [0.,  0.,  0.68, 0.,  0.,  0.,  1.],  # x, y, z, qx, qy, qz, qw
+            "task.env.goalObjectPose": [0.,  0.,  0.88, 0.,  0.,  0.,  1.],  # x, y, z, qx, qy, qz, qw
         },
     )
 

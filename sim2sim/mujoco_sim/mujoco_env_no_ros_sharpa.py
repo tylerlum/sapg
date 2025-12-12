@@ -86,14 +86,6 @@ class MujocoEnvNoRosSharpa:
             chain=self.chain,
             obs_list=self.obs_list,
         )
-        # print(f"q = {q}")
-        # print(f"qd = {qd}")
-        # print(f"prev_action_targets = {self.sim.robot_joint_pos_targets}")
-        # print(f"object_pose = {object_pose_W}")
-        # print(f"goal_object_pose = {goal_object_pose_W}")
-        # print(f"object_scales = {self.object_scales}")
-        # print(f"observation = {observation}")
-        # breakpoint()
 
         assert observation.shape == (
             1,

@@ -169,6 +169,18 @@ class AllegroKukaReorientation(AllegroKukaBase):
             self.root_state_tensor[self.goal_object_indices[env_ids], :] = self.root_state_resets[reset_buf_idxs[env_ids].cpu(), self.goal_object_indices[env_ids].cpu() % rs_ofs, :].to(self.device)
             self.goal_states[env_ids, 0:7] = self.root_state_tensor[self.goal_object_indices[env_ids], 0:7]
 
+        # HACK: Force the goal object pose to be the specified value
+        if self.cfg["env"]["goalObjectPose"] is not None:
+            desired_goal_object_pose = self.cfg["env"]["goalObjectPose"]
+            assert len(desired_goal_object_pose) == 7, f"desired_goal_object_pose must be a 7-element list, got {len(desired_goal_object_pose)}"
+            self.goal_states[:, 0] = desired_goal_object_pose[0]
+            self.goal_states[:, 1] = desired_goal_object_pose[1]
+            self.goal_states[:, 2] = desired_goal_object_pose[2]
+            self.goal_states[:, 3] = desired_goal_object_pose[3]
+            self.goal_states[:, 4] = desired_goal_object_pose[4]
+            self.goal_states[:, 5] = desired_goal_object_pose[5]
+            self.goal_states[:, 6] = desired_goal_object_pose[6]
+
         self.deferred_set_actor_root_state_tensor_indexed([self.goal_object_indices[env_ids]])
 
     def _extra_object_indices(self, env_ids: Tensor) -> List[Tensor]:

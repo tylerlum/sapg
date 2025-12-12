@@ -61,8 +61,6 @@ class IsaacEnvNoRosJointPosTargets:
             dt=self.control_dt,
         )
 
-        self.env.root_state_tensor[self.env.goal_object_indices, 0:7] = torch.tensor([0.,  0.,  0.88, 0.,  0.,  0.,  1.], device=self.device)[None]
-        self.env.deferred_set_actor_root_state_tensor_indexed([self.env.goal_object_indices])
         obs, reward, done, info = self.env.step(
             action, joint_pos_targets=joint_pos_targets
         )
@@ -81,9 +79,9 @@ class IsaacEnvNoRosJointPosTargets:
             print(f"object_scales = {object_scales}")
             breakpoint()
 
-        # HACK: Overwrite
-        goal_object_pose[:] = torch.tensor([0.,  0.,  0.88, 0.,  0.,  0.,  1.], device=self.device)[None]
-        object_scales[:] = torch.tensor([5.0, 0.9375, 1.25], device=self.device)[None]
+        # # HACK: Overwrite
+        # goal_object_pose[:] = torch.tensor([0.,  0.,  0.88, 0.,  0.,  0.,  1.], device=self.device)[None]
+        # object_scales[:] = torch.tensor([5.0, 0.9375, 1.25], device=self.device)[None]
 
         new_obs = compute_observation(
             q=q,
@@ -95,14 +93,6 @@ class IsaacEnvNoRosJointPosTargets:
             chain=self.chain,
             obs_list=self.env.obs_list,
         )
-        # print(f"q = {q}")
-        # print(f"qd = {qd}")
-        # print(f"prev_action_targets = {self.env.prev_targets}")
-        # print(f"object_pose = {object_pose}")
-        # print(f"goal_object_pose = {goal_object_pose}")
-        # print(f"object_scales = {object_scales}")
-        # print(f"new_obs = {new_obs}")
-        # breakpoint()
 
         DEBUG = False
         if DEBUG:
@@ -152,6 +142,9 @@ def main():
             "task.env.resetDofVelRandomInterval": 0.0,
             "task.env.object_type": "blue_cuboid",
             "task.env.forceNoReset": True,
+            "task.env.randomizeObjectRotation": False,
+            "task.env.objectStartPose": [0.,  0.,  0.68, 0.,  0.,  0.,  1.],  # x, y, z, qx, qy, qz, qw
+            "task.env.goalObjectPose": [0.,  0.,  0.88, 0.,  0.,  0.,  1.],  # x, y, z, qx, qy, qz, qw
         },
     )
 
