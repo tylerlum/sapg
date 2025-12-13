@@ -80,7 +80,7 @@ def main():
             # "task.env.object_type": "blue_cuboid_fake_hammer",
             "task.env.forceNoReset": True,
             "task.env.randomizeObjectRotation": False,
-            "task.env.objectStartPose": [0.,  0.,  0.68, 0.,  0.,  0.,  1.],  # x, y, z, qx, qy, qz, qw
+            "task.env.objectStartPose": [0.,  0.,  0.58, 0.,  0.,  0.,  1.],  # x, y, z, qx, qy, qz, qw
             "task.env.goalObjectPose": [0.,  0.,  0.88, 0.,  0.,  0.,  1.],  # x, y, z, qx, qy, qz, qw
             "task.env.forceScale": 0.0,
         },
