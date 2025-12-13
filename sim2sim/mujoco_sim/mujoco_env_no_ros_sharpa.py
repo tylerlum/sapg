@@ -124,7 +124,7 @@ def main():
     SIM_DT = 1.0 / 600.0  # Mujoco sim step (needs to be small to get stable physics)
     CONTROL_DT = 1.0 / 60.0  # Control loop frequency (policy loop rate)
     HAND_MOVING_AVERAGE = 0.1
-    ARM_MOVING_AVERAGE = 0.05
+    ARM_MOVING_AVERAGE = 0.1
     HAND_DOF_SPEED_SCALE = 2.5
 
     # Cuboid
@@ -137,7 +137,9 @@ def main():
     assert Path(CONFIG_PATH).exists()
     CHECKPOINT_PATH = Path(
         # "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/newGains.pth"
-        "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/noisyInput.pth"
+        # "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/noisyInput.pth"
+        "/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/cleanInputs.pth"
+        # "/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/noisyInputs.pth"
     )
     assert CHECKPOINT_PATH.exists()
 
