@@ -74,11 +74,15 @@ def main():
             "task.env.resetDofPosRandomIntervalFingers": 0.0,
             "task.env.resetDofPosRandomIntervalArm": 0.0,
             "task.env.resetDofVelRandomInterval": 0.0,
+            # "task.env.object_type": "cuboid",
             "task.env.object_type": "blue_cuboid",
+            # "task.env.object_type": "blue_cuboid_real_hammer",
+            # "task.env.object_type": "blue_cuboid_fake_hammer",
             "task.env.forceNoReset": True,
             "task.env.randomizeObjectRotation": False,
             "task.env.objectStartPose": [0.,  0.,  0.68, 0.,  0.,  0.,  1.],  # x, y, z, qx, qy, qz, qw
             "task.env.goalObjectPose": [0.,  0.,  0.88, 0.,  0.,  0.,  1.],  # x, y, z, qx, qy, qz, qw
+            "task.env.forceScale": 0.0,
         },
     )
 

@@ -243,11 +243,11 @@ def main():
     )
     assert Path(CONFIG_PATH).exists()
 
-    DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-    # DEVICE = "cpu"  # "cpu" faster for single env, but some bugs with cpu like force sensors not working
+    # DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+    DEVICE = "cpu"  # "cpu" faster for single env, but some bugs with cpu like force sensors not working
     env = create_env(
         config_path=str(CONFIG_PATH),
-        headless=False,
+        headless=True,
         device=DEVICE,
         overrides={
             "task.env.resetPositionNoiseX": 0.0,
@@ -262,6 +262,7 @@ def main():
             "task.env.randomizeObjectRotation": False,
             "task.env.objectStartPose": [0.,  0.,  0.68, 0.,  0.,  0.,  1.],  # x, y, z, qx, qy, qz, qw
             "task.env.goalObjectPose": [0.,  0.,  0.88, 0.,  0.,  0.,  1.],  # x, y, z, qx, qy, qz, qw
+            "task.env.forceScale": 0.0,
         },
     )
 
