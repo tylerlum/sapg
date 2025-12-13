@@ -24,8 +24,6 @@ from isaacgymenvs.utils.observation_action_utils_sharpa import (
     Q_UPPER_LIMITS_restricted_np as Q_UPPER_LIMITS_np,
 )
 
-SAVE_INPUTS_TO_FILE = True
-
 
 T_W_R = np.eye(4)
 T_W_R[:3, 3] = np.array([0.0, 0.8, 0.0])
@@ -101,18 +99,20 @@ class RLPolicyNode:
         checkpoint_path: Path,
         hand_moving_average: float,
         arm_moving_average: float,
+        save_foldername: Optional[str] = None,
         overwrite_targets_filepath: Optional[Path] = None,
     ):
         self.config_path = config_path
         self.checkpoint_path = checkpoint_path
         self.hand_moving_average = hand_moving_average
         self.arm_moving_average = arm_moving_average
+        self.save_foldername = save_foldername
         self.overwrite_targets_filepath = overwrite_targets_filepath
 
         # Initialize the ROS node
         rospy.init_node("rl_policy_node_sharpa")
 
-        if SAVE_INPUTS_TO_FILE:
+        if self.save_foldername is not None:
             # ##############################################################################
             # Signal handling to save on shutdown
             # When in progress saving to file, stop updating latest joint states and commands
@@ -296,7 +296,7 @@ class RLPolicyNode:
         # ##############################################################################
         # Record time and joint states and commands and object pose and goal object pose
         # ##############################################################################
-        if SAVE_INPUTS_TO_FILE:
+        if self.save_foldername is not None:
             if not hasattr(self, "start_run_time"):
                 self.start_run_time = time.time()
             current_time = time.time()
@@ -549,7 +549,7 @@ class RLPolicyNode:
         return object_scales
 
     def _signal_handler(self, signum, frame):
-        assert SAVE_INPUTS_TO_FILE, "SAVE_INPUTS_TO_FILE must be True to save to file"
+        assert self.save_foldername is not None, "save_foldername must be set to save to file"
 
         import datetime
         if self._is_in_progress_saving_to_file:
@@ -564,14 +564,14 @@ class RLPolicyNode:
             datetime_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             # filename = datetime_str
             filename = f"{datetime_str}_{self.checkpoint_path.stem}_arm{self.arm_moving_average}"
-            output_path = Path("recorded_robot_inputs") / "isaac" /f"{filename}.npz"
+            output_path = Path("recorded_robot_inputs") / self.save_foldername /f"{filename}.npz"
             self.save_to_file(output_path)
             info(f"Saved to file: {output_path}")
 
         rospy.signal_shutdown("Shutting down")
 
     def save_to_file(self, file_path: Path):
-        assert SAVE_INPUTS_TO_FILE, "SAVE_INPUTS_TO_FILE must be True to save to file"
+        assert self.save_foldername is not None, "save_foldername must be set to save to file"
 
         file_path.parent.mkdir(parents=True, exist_ok=True)
         info(f"Saving to file: {file_path}")
@@ -642,6 +642,7 @@ if __name__ == "__main__":
             hand_moving_average=0.1,
             arm_moving_average=0.05,
             overwrite_targets_filepath=None,
+            save_foldername=None,
             # overwrite_targets_filepath=Path("recorded_robot_inputs/isaac/2025-12-12_19-34-25_noisyInputs_arm0.05.npz"),
         )
         rl_policy_node.run()
