@@ -180,9 +180,7 @@ class RLPolicyNode:
         self.obs_list = self.player.cfg["task"]["env"]["obsList"]
 
         # ROS rate
-        self.rate_hz = 60
-        self.dt = 1.0 / self.rate_hz
-        self.rate = rospy.Rate(self.rate_hz)
+        self.control_dt = 1.0 / 60
 
         # Set up chain
         robot_name = "iiwa14_left_sharpa_adjusted_restricted"
@@ -364,7 +362,7 @@ class RLPolicyNode:
         loop_no_sleep_dts, loop_dts = [], []
 
         while not rospy.is_shutdown():
-            start_time = rospy.Time.now()
+            start_loop_no_sleep_time = time.time()
 
             # Create observation from the latest messages
             obs, q = self.create_observation()
@@ -425,20 +423,25 @@ class RLPolicyNode:
                 self.publish_targets(joint_pos_targets)
                 self.prev_targets = joint_pos_targets.clone()
 
-            # Sleep to maintain loop rate
-            before_sleep_time = rospy.Time.now()
-            self.rate.sleep()
-            after_sleep_time = rospy.Time.now()
-
-            loop_no_sleep_dt = (before_sleep_time - start_time).to_sec()
+            # End of loop timekeeping
+            end_loop_no_sleep_time = time.time()
+            loop_no_sleep_dt = end_loop_no_sleep_time - start_loop_no_sleep_time
             loop_no_sleep_dts.append(loop_no_sleep_dt)
-            loop_dt = (after_sleep_time - start_time).to_sec()
+
+            sleep_dt = self.control_dt - loop_no_sleep_dt
+            if sleep_dt > 0:
+                time.sleep(sleep_dt)
+                loop_dt = loop_no_sleep_dt + sleep_dt
+            else:
+                loop_dt = loop_no_sleep_dt
+                warn(
+                    f"Simulation is running slower than real time, desired FPS = {1.0 / self.control_dt:.1f}, actual FPS = {1.0 / loop_dt:.1f}"
+                )
             loop_dts.append(loop_dt)
 
             PRINT_FPS_EVERY_N_SECONDS = 5.0
-            PRINT_FPS_EVERY_N_STEPS = int(PRINT_FPS_EVERY_N_SECONDS / self.dt)
+            PRINT_FPS_EVERY_N_STEPS = int(PRINT_FPS_EVERY_N_SECONDS / self.control_dt)
             if len(loop_dts) == PRINT_FPS_EVERY_N_STEPS:
-            # if True:
                 loop_dt_array = np.array(loop_dts)
                 loop_no_sleep_dt_array = np.array(loop_no_sleep_dts)
                 fps_array = 1.0 / loop_dt_array
