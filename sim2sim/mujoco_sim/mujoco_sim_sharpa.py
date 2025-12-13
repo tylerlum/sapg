@@ -156,6 +156,32 @@ class MujocoSim:
             spec = mujoco.MjSpec.from_file(str(MERGED_XML_PATH))
             spec.option.timestep = self.config.sim_dt
 
+        # Improve physics
+        spec.option.enableflags |= mujoco.mjtEnableBit.mjENBL_MULTICCD
+        spec.option.cone = mujoco.mjtCone.mjCONE_ELLIPTIC
+        spec.option.iterations = 20
+        spec.option.ls_iterations = 50
+        spec.option.o_solref[:] = np.array([0.02, 1.0])
+        # spec.option.o_solimp[:] = np.array([
+        #     0.0,
+        #     0.95,
+        #     0.03,
+        #     0.5,
+        #     2,
+        # ])
+        spec.option.o_solimp[:] = np.array([
+            0.9,
+            0.95,
+            0.001,
+            0.5,
+            2,
+        ])
+        spec.option.integrator = mujoco.mjtIntegrator.mjINT_IMPLICITFAST
+
+        assert spec.option.o_solref[0] >= 2 * self.config.sim_dt, (
+            f"spec.option.o_solref[0]: {spec.option.o_solref[0]}, expected: >= {2 * self.config.sim_dt}"
+        )
+
         # Enable gravity compensation for robot bodies
         # https://mujoco.readthedocs.io/en/3.1.2/XMLreference.html#body-gravcomp
         for body in spec.bodies:
@@ -208,7 +234,7 @@ class MujocoSim:
 
         # Object
         GREY_RGBA = np.array([0.5, 0.5, 0.5, 1.0])
-        OBJECT_POS_X, OBJECT_POS_Y, OBJECT_POS_Z = 0.0, 0.0, 0.38 + 0.3
+        OBJECT_POS_X, OBJECT_POS_Y, OBJECT_POS_Z = 0.0, 0.0, 0.38 + 0.2
         object_body = spec.worldbody.add_body()
         object_body.name = "object"
         object_body.pos = np.array([OBJECT_POS_X, OBJECT_POS_Y, OBJECT_POS_Z])
@@ -218,7 +244,7 @@ class MujocoSim:
         object_free_joint.type = mujoco.mjtJoint.mjJNT_FREE
 
         object_name = self.config.object_name
-        ADD_BOX_OBJECT = "cuboid" in object_name
+        ADD_BOX_OBJECT = object_name.startswith("cuboid")
         if ADD_BOX_OBJECT:
             # Example: cuboid_4_0.75_1
             scales = object_name.split("_")[1:]
@@ -264,6 +290,13 @@ class MujocoSim:
                 object_geom.friction = self.config.friction_array.copy()
                 object_geom.type = mujoco.mjtGeom.mjGEOM_MESH
                 object_geom.meshname = mesh.name
+
+                # Improve contact
+                # object_geom.condim = 6
+
+        # Improve contact
+        for geom in spec.geoms:
+            geom.condim = 6
 
         DISABLE_ROBOT_SELF_COLLISION = False
         if DISABLE_ROBOT_SELF_COLLISION:
