@@ -25,7 +25,6 @@ from isaacgymenvs.utils.observation_action_utils_sharpa import (
 )
 
 SAVE_INPUTS_TO_FILE = True
-HACK_USE_TARGETS_FROM_FILE = False
 
 
 T_W_R = np.eye(4)
@@ -96,7 +95,20 @@ def T_to_pos_quat_xyzw(T: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
 
 
 class RLPolicyNode:
-    def __init__(self):
+    def __init__(
+        self,
+        config_path: Path,
+        checkpoint_path: Path,
+        hand_moving_average: float,
+        arm_moving_average: float,
+        overwrite_targets_filepath: Optional[Path] = None,
+    ):
+        self.config_path = config_path
+        self.checkpoint_path = checkpoint_path
+        self.hand_moving_average = hand_moving_average
+        self.arm_moving_average = arm_moving_average
+        self.overwrite_targets_filepath = overwrite_targets_filepath
+
         # Initialize the ROS node
         rospy.init_node("rl_policy_node_sharpa")
 
@@ -157,24 +169,15 @@ class RLPolicyNode:
         self.num_observations = 140  # Update this number based on actual dimensions
         self.num_actions = 29
 
-        CONFIG_PATH = Path(
-            "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"
-        )
-        assert Path(CONFIG_PATH).exists()
-        CHECKPOINT_PATH = Path(
-            # "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/newGains.pth"
-            # "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/noisyInput.pth"
-            # "/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/cleanInputs.pth"
-            "/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/noisyInputs.pth"
-        )
-        assert CHECKPOINT_PATH.exists()
+        assert self.config_path.exists(), f"config_path: {self.config_path} does not exist"
+        assert self.checkpoint_path.exists(), f"checkpoint_path: {self.checkpoint_path} does not exist"
 
         # Create the RL player
         self.player = RlPlayer(
             num_observations=self.num_observations,
             num_actions=self.num_actions,
-            config_path=CONFIG_PATH,
-            checkpoint_path=CHECKPOINT_PATH,
+            config_path=str(self.config_path),
+            checkpoint_path=str(self.checkpoint_path),
             device=self.device,
         )
         self.obs_list = self.player.cfg["task"]["env"]["obsList"]
@@ -191,9 +194,10 @@ class RLPolicyNode:
         # State: prev_targets
         self.prev_targets = None
 
-        if HACK_USE_TARGETS_FROM_FILE:
+        if self.overwrite_targets_filepath is not None:
+            info(f"Overwriting targets from file: {self.overwrite_targets_filepath}")
             from recorded_data_scripts.recorded_data_sharpa import RecordedData
-            data_path = Path("recorded_robot_inputs/2025-12-11_14-35-06.npz")
+            data_path = self.overwrite_targets_filepath
             assert data_path.exists(), f"File {data_path} does not exist"
             data = RecordedData.from_file(data_path)
             self.q_targets_from_file = torch.from_numpy(data.robot_joint_pos_targets_array).float().to(self.device)
@@ -356,74 +360,119 @@ class RLPolicyNode:
         sharpa_msg.position = joint_pos_targets[7:].tolist()
         self.sharpa_joint_cmd_pub.publish(sharpa_msg)
 
+    def _wait_and_warmup(self):
+        # Wait
+        while not rospy.is_shutdown():
+            obs, q = self.create_observation()
+            if obs is not None and q is not None:
+                break
+            time.sleep(self.control_dt)
+
+        # Done waiting
+        info("=" * 100)
+        info("First observations received, starting to publish sim state")
+        info("=" * 100)
+
+        self.prev_targets = torch.from_numpy(q).float().to(self.device)[None]
+
+        # Warm up the policy and publishing
+        info("=" * 100)
+        info("Warming up policy and publishing current targets")
+        info("=" * 100)
+        # THIS IS NOT THE REAL LOOP, DON'T CARE ABOUT THESE NUMBERs
+        while not rospy.is_shutdown():
+            # Create observation from the latest messages
+            obs, q = self.create_observation()
+            assert obs is not None and q is not None, f"obs: {obs}, q: {q}"
+            assert_equals(obs.shape, (1, self.num_observations))
+
+            # Get the normalized action from the RL player
+            normalized_action = self.player.get_normalized_action(
+                obs=obs,
+                deterministic_actions=True,
+            )
+            # normalized_action = torch.zeros(1, self.num_actions, device=self.device)
+            assert_equals(normalized_action.shape, (1, self.num_actions))
+
+            _ = compute_joint_pos_targets(
+                actions=normalized_action,
+                prev_targets=self.prev_targets,
+                hand_moving_average=0.1,
+                arm_moving_average=0.1,
+                hand_dof_speed_scale=2.5,
+                dt=1/60,
+            )
+
+            # We do not actually use the joint pos targets computed by the policy, we use the actual joint states so it doesn't move
+            joint_pos_targets = torch.clip(
+                torch.from_numpy(q).float().to(self.device)[None],
+                min=torch.from_numpy(Q_LOWER_LIMITS_np).float().to(self.device)[None],
+                max=torch.from_numpy(Q_UPPER_LIMITS_np).float().to(self.device)[None],
+            )
+
+            # Publish the targets
+            self.publish_targets(joint_pos_targets)
+            self.prev_targets = joint_pos_targets.clone()
+            time.sleep(self.control_dt)
+
+        # Reset rnn state
+        self.player.reset()
+
+        # Done warming up
+        info("=" * 100)
+        info("Warmup complete")
+        info("=" * 100)
+
     def run(self):
-        first_observations_received = False
+        self._wait_and_warmup()
 
         loop_no_sleep_dts, loop_dts = [], []
-
         while not rospy.is_shutdown():
             start_loop_no_sleep_time = time.time()
 
             # Create observation from the latest messages
             obs, q = self.create_observation()
+            assert obs is not None and q is not None, f"obs: {obs}, q: {q}"
 
-            if obs is not None and q is not None:
-                if not first_observations_received:
-                    info("=" * 100)
-                    info("First observations received, starting to publish sim state")
-                    info("=" * 100)
-                    first_observations_received = True
+            assert_equals(obs.shape, (1, self.num_observations))
 
-                if self.prev_targets is None:
-                    self.prev_targets = torch.from_numpy(q).float().to(self.device)[None]
+            # Get the normalized action from the RL player
+            normalized_action = self.player.get_normalized_action(
+                obs=obs,
+                deterministic_actions=True,
+            )
+            assert_equals(normalized_action.shape, (1, self.num_actions))
 
-                assert_equals(obs.shape, (1, self.num_observations))
+            HAND_DOF_SPEED_SCALE = 2.5
+            DT = 1 / 60
+            joint_pos_targets = compute_joint_pos_targets(
+                actions=normalized_action,
+                prev_targets=self.prev_targets,
+                hand_moving_average=self.hand_moving_average,
+                arm_moving_average=self.arm_moving_average,
+                hand_dof_speed_scale=HAND_DOF_SPEED_SCALE,
+                dt=DT,
+            )
+            assert_equals(joint_pos_targets.shape, (1, self.num_actions))
 
-                # Get the normalized action from the RL player
-                normalized_action = self.player.get_normalized_action(
-                    obs=obs,
-                    deterministic_actions=True,
-                )
-                # normalized_action = torch.zeros(1, self.num_actions, device=self.device)
-                assert_equals(normalized_action.shape, (1, self.num_actions))
+            # Clamp
+            joint_pos_targets = torch.clip(
+                joint_pos_targets,
+                min=torch.from_numpy(Q_LOWER_LIMITS_np).float().to(self.device)[None],
+                max=torch.from_numpy(Q_UPPER_LIMITS_np).float().to(self.device)[None],
+            )
 
-                HAND_MOVING_AVERAGE = 0.1
-                # HAND_MOVING_AVERAGE = 0.05
-                # ARM_MOVING_AVERAGE = 0.1
-                ARM_MOVING_AVERAGE = 0.05
-                # ARM_MOVING_AVERAGE = 0.03
-                # ARM_MOVING_AVERAGE = 0.02
-                # ARM_MOVING_AVERAGE = 0.01
-                HAND_DOF_SPEED_SCALE = 2.5
-                DT = 1 / 60
-                joint_pos_targets = compute_joint_pos_targets(
-                    actions=normalized_action,
-                    prev_targets=self.prev_targets,
-                    hand_moving_average=HAND_MOVING_AVERAGE,
-                    arm_moving_average=ARM_MOVING_AVERAGE,
-                    hand_dof_speed_scale=HAND_DOF_SPEED_SCALE,
-                    dt=DT,
-                )
-                assert_equals(joint_pos_targets.shape, (1, self.num_actions))
+            if self.overwrite_targets_filepath is not None:
+                if self.current_step >= self.q_targets_from_file.shape[0]:
+                    self.current_step = self.q_targets_from_file.shape[0] - 1
+                    info("Reached end of targets, holding last target")
+                assert self.current_step < self.q_targets_from_file.shape[0], f"current_step: {self.current_step}, expected: < {self.q_targets_from_file.shape[0]}"
+                joint_pos_targets = self.q_targets_from_file[self.current_step].unsqueeze(0)
+                self.current_step += 1
 
-                # Clamp
-                joint_pos_targets = torch.clip(
-                    joint_pos_targets,
-                    min=torch.from_numpy(Q_LOWER_LIMITS_np).float().to(self.device)[None],
-                    max=torch.from_numpy(Q_UPPER_LIMITS_np).float().to(self.device)[None],
-                )
-
-                if HACK_USE_TARGETS_FROM_FILE:
-                    if self.current_step >= self.q_targets_from_file.shape[0]:
-                        self.current_step = self.q_targets_from_file.shape[0] - 1
-                        info("Reached end of targets, holding last target")
-                    assert self.current_step < self.q_targets_from_file.shape[0], f"current_step: {self.current_step}, expected: < {self.q_targets_from_file.shape[0]}"
-                    joint_pos_targets = self.q_targets_from_file[self.current_step].unsqueeze(0)
-                    self.current_step += 1
-
-                # Publish the targets
-                self.publish_targets(joint_pos_targets)
-                self.prev_targets = joint_pos_targets.clone()
+            # Publish the targets
+            self.publish_targets(joint_pos_targets)
+            self.prev_targets = joint_pos_targets.clone()
 
             # End of loop timekeeping
             end_loop_no_sleep_time = time.time()
@@ -505,7 +554,9 @@ class RLPolicyNode:
         else:
             info(f"Received signal {signum}, saving to file")
             datetime_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            output_path = Path("recorded_robot_inputs") / f"{datetime_str}.npz"
+            # filename = datetime_str
+            filename = f"{datetime_str}_{self.checkpoint_path.stem}_arm{self.arm_moving_average}"
+            output_path = Path("recorded_robot_inputs") / "isaac" /f"{filename}.npz"
             self.save_to_file(output_path)
             info(f"Saved to file: {output_path}")
 
@@ -576,7 +627,15 @@ class RLPolicyNode:
 
 if __name__ == "__main__":
     try:
-        rl_policy_node = RLPolicyNode()
+        rl_policy_node = RLPolicyNode(
+            config_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"),
+            # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/cleanInputs.pth"),
+            checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/noisyInputs.pth"),
+            hand_moving_average=0.1,
+            arm_moving_average=0.05,
+            overwrite_targets_filepath=None,
+            # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-11_14-35-06.npz"),
+        )
         rl_policy_node.run()
     except rospy.ROSInterruptException:
         pass
