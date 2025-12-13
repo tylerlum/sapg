@@ -194,11 +194,13 @@ if __name__ == "__main__":
             # goal_object_pose_file=Path("goal_pose_listener_ros_node_output/mallet/2025-11-17_15-40-29.json"),
             # goal_object_pose_file=Path("goal_pose_listener_ros_node_output/mallet/2025-11-17_15-44-33.json"),
             # goal_object_pose_file=Path("goal_pose_listener_ros_node_output/mallet/2025-11-17_15-59-04.json"),
-            goal_object_pose_file=Path("goal_pose_listener_ros_node_output/mallet/2025-11-17_16-17-57.json"),
-            object_scales=np.array([3.0, 0.25, 0.2]),
+            # goal_object_pose_file=Path("goal_pose_listener_ros_node_output/mallet/2025-11-17_16-17-57.json"),
+            # goal_object_pose_file=Path("goal_poses_around_z_axis.json"),
+            goal_object_pose_file=Path("goal_poses_around_y_axis.json"),
+            object_scales=np.array([5.0, 0.9375, 1.25]),
             # success_threshold=0.01,
             # success_threshold=0.02,
-            success_threshold=0.03,
+            success_threshold=0.02,
             # success_threshold=0.05,
         )
         node.run()
