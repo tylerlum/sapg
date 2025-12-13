@@ -562,8 +562,10 @@ class RLPolicyNode:
         else:
             info(f"Received signal {signum}, saving to file")
             datetime_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            # filename = datetime_str
+
             filename = f"{datetime_str}_{self.checkpoint_path.stem}_arm{self.arm_moving_average}"
+            if self.overwrite_targets_filepath is not None:
+                filename = f"{datetime_str}_replay_{self.overwrite_targets_filepath.stem}"
             output_path = Path("recorded_robot_inputs") / self.save_foldername /f"{filename}.npz"
             self.save_to_file(output_path)
             info(f"Saved to file: {output_path}")
@@ -637,13 +639,15 @@ if __name__ == "__main__":
     try:
         rl_policy_node = RLPolicyNode(
             config_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"),
-            # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/cleanInputs.pth"),
-            checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/noisyInputs.pth"),
+            checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/cleanInputs.pth"),
+            # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/noisyInputs.pth"),
             hand_moving_average=0.1,
-            arm_moving_average=0.05,
-            overwrite_targets_filepath=None,
-            save_foldername=None,
-            # overwrite_targets_filepath=Path("recorded_robot_inputs/isaac/2025-12-12_19-34-25_noisyInputs_arm0.05.npz"),
+            # arm_moving_average=0.05,
+            arm_moving_average=0.01,
+            # save_foldername=None,
+            save_foldername="mujoco_replay_in_mujoco",
+            # overwrite_targets_filepath=None,
+            overwrite_targets_filepath=Path("recorded_robot_inputs/mujoco/2025-12-12_19-45-23_noisyInputs_arm0.05.npz"),
         )
         rl_policy_node.run()
     except rospy.ROSInterruptException:
