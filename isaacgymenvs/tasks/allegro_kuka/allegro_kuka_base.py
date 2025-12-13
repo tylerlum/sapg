@@ -2285,6 +2285,7 @@ class AllegroKukaBase(VecTask):
             noise_coeff[7 : self.num_hand_arm_dofs] = self.reset_dof_pos_noise_fingers
 
             allegro_pos = self.hand_arm_default_dof_pos + noise_coeff * rand_delta
+            allegro_pos = tensor_clamp(allegro_pos, self.arm_hand_dof_lower_limits, self.arm_hand_dof_upper_limits)
 
             self.arm_hand_dof_pos[env_ids, :] = allegro_pos
             if self.VISUALIZE_PD_TARGET_AS_BLUE_ROBOT:
@@ -2300,6 +2301,7 @@ class AllegroKukaBase(VecTask):
             self.arm_hand_dof_pos[env_ids, :] = self.dof_resets[reset_buf_idxs[env_ids].cpu(), :, 0].to(self.device)
             self.arm_hand_dof_vel[env_ids, :] = self.dof_resets[reset_buf_idxs[env_ids].cpu(), :, 1].to(self.device)
             allegro_pos = self.arm_hand_dof_pos[env_ids, : self.num_hand_arm_dofs]
+            allegro_pos = tensor_clamp(allegro_pos, self.arm_hand_dof_lower_limits, self.arm_hand_dof_upper_limits)
 
             self.prev_targets[env_ids, : self.num_hand_arm_dofs] = allegro_pos
             self.cur_targets[env_ids, : self.num_hand_arm_dofs] = allegro_pos
@@ -2881,7 +2883,7 @@ class AllegroKukaBase(VecTask):
                     r=gymapi.Quat(*self.goal_rot[i]),
                 )
                 self._draw_transform(transform=object_transform, env_idx=i)
-                # self._draw_transform(transform=goal_transform, env_idx=i)
+                self._draw_transform(transform=goal_transform, env_idx=i)
 
     def _init_obs_action_queue(self):
         obs_queue_length = self.cfg["env"]["obsDelayMax"]
