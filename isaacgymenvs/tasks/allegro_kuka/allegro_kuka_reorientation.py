@@ -178,8 +178,7 @@ class AllegroKukaReorientation(AllegroKukaBase):
             for i in range(7):
                 self.goal_states[env_ids, i] = desired_goal_object_pose[i]
             self.root_state_tensor[self.goal_object_indices[env_ids], 0:7] = self.goal_states[env_ids, 0:7]
-
-        self.deferred_set_actor_root_state_tensor_indexed([self.goal_object_indices])
+            self.deferred_set_actor_root_state_tensor_indexed([self.goal_object_indices])
 
     def _extra_object_indices(self, env_ids: Tensor) -> List[Tensor]:
         return [self.goal_object_indices[env_ids]]
