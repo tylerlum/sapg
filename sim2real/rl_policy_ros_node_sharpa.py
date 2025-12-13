@@ -380,7 +380,15 @@ class RLPolicyNode:
         info("Warming up policy and publishing current targets")
         info("=" * 100)
         # THIS IS NOT THE REAL LOOP, DON'T CARE ABOUT THESE NUMBERs
+        num_steps = 0
+        NUM_WARMUP_STEPS = 100
         while not rospy.is_shutdown():
+            num_steps += 1
+            info(f"Warmup step {num_steps} of {NUM_WARMUP_STEPS}")
+            if num_steps > NUM_WARMUP_STEPS:
+                info(f"Reached {NUM_WARMUP_STEPS} steps, stopping warmup")
+                break
+
             # Create observation from the latest messages
             obs, q = self.create_observation()
             assert obs is not None and q is not None, f"obs: {obs}, q: {q}"
@@ -634,7 +642,7 @@ if __name__ == "__main__":
             hand_moving_average=0.1,
             arm_moving_average=0.05,
             overwrite_targets_filepath=None,
-            # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-11_14-35-06.npz"),
+            # overwrite_targets_filepath=Path("recorded_robot_inputs/isaac/2025-12-12_19-34-25_noisyInputs_arm0.05.npz"),
         )
         rl_policy_node.run()
     except rospy.ROSInterruptException:
