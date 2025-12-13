@@ -16,7 +16,7 @@ from sim2sim.mujoco_sim.mujoco_sim_sharpa import (
 
 # Goal object pose doesn't exist in the simulation
 # But we can just publish the goal object pose above the table
-PUBLISH_GOAL_OBJECT_POSE = True
+PUBLISH_GOAL_OBJECT_POSE = False
 
 T_W_R = np.eye(4)
 T_W_R[:3, 3] = np.array([0.0, 0.8, 0.0])
@@ -105,7 +105,7 @@ class MujocoEnvRosSharpa:
             table_pos_R = T_R_T[:3, 3]
             table_quat_xyzw_R = R.from_matrix(T_R_T[:3, :3]).as_quat()
 
-            goal_object_pos_R = table_pos_R + np.array([0.0, 0.0, 0.3])
+            goal_object_pos_R = table_pos_R + np.array([0.0, 0.0, 0.5])
             goal_object_quat_xyzw_R = table_quat_xyzw_R
 
             goal_object_pose_msg = Pose()
@@ -235,9 +235,11 @@ class MujocoEnvRosSharpa:
 
 def main():
     sim = MujocoSim(MujocoSimConfig(
+        # enable_viewer=True,
         enable_viewer=False,
-        sim_dt=1.0 / 600.0,
+        sim_dt=1.0 / 1000.0,
         object_name="cuboid_5_0.9375_1.25",
+        # object_name="blue_cuboid_real_iphone",
     ))
     mujoco_env_ros = MujocoEnvRosSharpa(sim, update_and_publish_dt=1.0 / 600)
     mujoco_env_ros.run()
