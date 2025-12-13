@@ -43,7 +43,7 @@
       <joint armature="0.00042" frictionloss="0.00378738"  damping="1.21E-06"/>
     </default>
     <default class="elastomer_geom">
-      <geom solref="0.06 0.9"/>
+      <!-- <geom solref="0.06 0.9"/> -->
     </default>
   </default>
   <worldbody>
