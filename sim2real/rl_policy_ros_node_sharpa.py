@@ -639,15 +639,23 @@ if __name__ == "__main__":
     try:
         rl_policy_node = RLPolicyNode(
             config_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"),
-            checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/cleanInputs.pth"),
-            # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/noisyInputs.pth"),
+            # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/cleanInputs.pth"),
+            checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/noisyInputs.pth"),
             hand_moving_average=0.1,
+            arm_moving_average=0.03,
             # arm_moving_average=0.05,
-            arm_moving_average=0.01,
+            # arm_moving_average=0.01,
             # save_foldername=None,
-            save_foldername="mujoco_replay_in_mujoco",
-            # overwrite_targets_filepath=None,
-            overwrite_targets_filepath=Path("recorded_robot_inputs/mujoco/2025-12-12_19-45-23_noisyInputs_arm0.05.npz"),
+            save_foldername="real_world_policy",
+            overwrite_targets_filepath=None,
+            # overwrite_targets_filepath=Path("recorded_robot_inputs/isaac/2025-12-12_19-40-52_noisyInputs_arm0.01.npz"),
+            # overwrite_targets_filepath=Path("recorded_robot_inputs/isaac/2025-12-12_19-40-13_noisyInputs_arm0.05.npz"),
+            # overwrite_targets_filepath=Path("recorded_robot_inputs/isaac/2025-12-12_19-43-50_cleanInputs_arm0.01.npz"),
+            # overwrite_targets_filepath=Path("recorded_robot_inputs/isaac/2025-12-12_19-41-34_cleanInputs_arm0.05.npz"),
+            # overwrite_targets_filepath=Path("recorded_robot_inputs/mujoco/2025-12-12_19-45-23_noisyInputs_arm0.05.npz"),
+            # overwrite_targets_filepath=Path("recorded_robot_inputs/mujoco/2025-12-12_19-46-05_noisyInputs_arm0.01.npz"),
+            # overwrite_targets_filepath=Path("recorded_robot_inputs/mujoco/2025-12-12_19-46-50_cleanInputs_arm0.05.npz"),
+            # overwrite_targets_filepath=Path("recorded_robot_inputs/mujoco/2025-12-12_19-47-35_cleanInputs_arm0.01.npz"),
         )
         rl_policy_node.run()
     except rospy.ROSInterruptException:
