@@ -16,12 +16,12 @@ from isaacgymenvs.utils.observation_action_utils_sharpa import (
 )
 from sim2sim.isaac_sim.isaac_env import create_env
 
-N_OBS = 133
+N_OBS = 140
 N_ACT = 29
 
 HAND_MOVING_AVERAGE = 0.1
 ARM_MOVING_AVERAGE = 0.1
-HAND_DOF_SPEED_SCALE = 5.0
+HAND_DOF_SPEED_SCALE = 2.5
 
 
 def warn(message: str):
@@ -39,41 +39,11 @@ class IsaacEnvNoRosJointPosTargets:
         control_dt: float,
         device: str,
         chain: pk.Chain,
-        palm_serial_chain: pk.SerialChain,
     ):
         self.env = env
         self.control_dt = control_dt
         self.device = device
         self.chain = chain
-        self.palm_serial_chain = palm_serial_chain
-
-    def step(self, action: torch.Tensor) -> Tuple[torch.Tensor, float, bool, dict]:
-        obs, reward, done, info = self.env.step(action)
-        q = self.env.arm_hand_dof_pos
-        qd = self.env.arm_hand_dof_vel
-        object_pose = self.env.object_pose
-        goal_object_pose = self.env.goal_pose
-        object_scales = self.env.object_scales
-
-        DEBUG = False
-        if DEBUG:
-            print(f"q = {q}")
-            print(f"qd = {qd}")
-            print(f"object_pose = {object_pose}")
-            print(f"goal_object_pose = {goal_object_pose}")
-            print(f"object_scales = {object_scales}")
-            breakpoint()
-
-        new_obs = compute_observation(
-            q=q,
-            qd=qd,
-            object_pose=object_pose,
-            goal_object_pose=goal_object_pose,
-            object_scales=object_scales,
-            chain=self.chain,
-            palm_serial_chain=self.palm_serial_chain,
-        )
-        return new_obs, reward, done, info
 
     def reset(self) -> torch.Tensor:
         obs, _, _, _ = self.env.step(torch.zeros((1, N_ACT), device=self.device))
@@ -109,14 +79,19 @@ class IsaacEnvNoRosJointPosTargets:
             print(f"object_scales = {object_scales}")
             breakpoint()
 
+        # # HACK: Overwrite
+        # goal_object_pose[:] = torch.tensor([0.,  0.,  0.88, 0.,  0.,  0.,  1.], device=self.device)[None]
+        # object_scales[:] = torch.tensor([5.0, 0.9375, 1.25], device=self.device)[None]
+
         new_obs = compute_observation(
             q=q,
             qd=qd,
+            prev_action_targets=self.env.prev_targets,
             object_pose=object_pose,
             goal_object_pose=goal_object_pose,
             object_scales=object_scales,
             chain=self.chain,
-            palm_serial_chain=self.palm_serial_chain,
+            obs_list=self.env.obs_list,
         )
 
         DEBUG = False
@@ -142,16 +117,13 @@ class IsaacEnvNoRosJointPosTargets:
 def main():
     CONTROL_DT = 1.0 / 60.0
     CONFIG_PATH = Path(
-        # "/home/tylerlum/github_repos/sapg/closed_loop_testing_sharpa/config.yaml"
-        "/home/tylerlum/github_repos/sapg/closed_loop_testing_sharpa_hammer_2/config.yaml"
+        "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"
     )
     assert Path(CONFIG_PATH).exists()
     CHECKPOINT_PATH = Path(
-        # Fast
-        # "/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-11-12_sharpa_hammer_2_coacd/00_CUBOID_obs-curriculum_thresh0-1_local_2025-11-14_00-04-24/runs/00_CUBOID_obs-curriculum_thresh0-1_local_2025-11-14_00-04-24/last/model.pth"
-        # Slow
-        # "/juno/u/kedia/sapg/train_dir/checkpoints/SLOW_CUBOID/model.pth"
-        "/juno/u/kedia/sapg/train_dir/checkpoints/dr_hammer_slow.pth"
+        # "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/newGains.pth"
+        # "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/noisyInput.pth"
+        "/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/cleanInputs.pth"
     )
     assert CHECKPOINT_PATH.exists()
 
@@ -161,6 +133,22 @@ def main():
         config_path=str(CONFIG_PATH),
         headless=False,
         device=DEVICE,
+        overrides={
+            "task.env.resetPositionNoiseX": 0.0,
+            "task.env.resetPositionNoiseY": 0.0,
+            "task.env.resetPositionNoiseZ": 0.0,
+            "task.env.resetRotationNoise": 0.0,
+            "task.env.resetDofPosRandomIntervalFingers": 0.0,
+            "task.env.resetDofPosRandomIntervalArm": 0.0,
+            "task.env.resetDofVelRandomInterval": 0.0,
+            "task.env.object_type": "blue_cuboid",
+            # "task.env.object_type": "blue_cuboid_fake_hammer",
+            # "task.env.forceNoReset": True,
+            "task.env.randomizeObjectRotation": False,
+            "task.env.objectStartPose": [0.,  0.,  0.58, 0.,  0.,  0.,  1.],  # x, y, z, qx, qy, qz, qw
+            "task.env.goalObjectPose": [0.,  0.,  0.88, 0.,  0.,  0.,  1.],  # x, y, z, qx, qy, qz, qw
+            "task.env.forceScale": 0.0,
+        },
     )
 
     # Set env state from checkpoint to match things like success_tolerance
@@ -176,8 +164,7 @@ def main():
         device=DEVICE,
     )
 
-    chain, palm_serial_chain = create_chain_and_serial_chain(
-        # device=DEVICE, robot_name="iiwa14_left_sharpa_between"
+    chain, _ = create_chain_and_serial_chain(
         device=DEVICE, robot_name="iiwa14_left_sharpa_adjusted_restricted"
     )
 
@@ -186,7 +173,6 @@ def main():
         control_dt=CONTROL_DT,
         device=DEVICE,
         chain=chain,
-        palm_serial_chain=palm_serial_chain,
     )
     observation = isaac_env_no_ros_joint_pos_targets.reset()
 
@@ -203,7 +189,7 @@ def main():
         if sleep_time > 0:
             time.sleep(sleep_time)
         else:
-            print(
+            warn(
                 f"Control loop too slow! Desired FPS: {1.0 / CONTROL_DT:.1f}, Actual FPS: {1.0 / (end_time - start_time):.1f}"
             )
 

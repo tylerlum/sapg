@@ -156,10 +156,56 @@ class MujocoSim:
             spec = mujoco.MjSpec.from_file(str(MERGED_XML_PATH))
             spec.option.timestep = self.config.sim_dt
 
+        # Improve physics
+        spec.option.enableflags |= mujoco.mjtEnableBit.mjENBL_MULTICCD
+        spec.option.cone = mujoco.mjtCone.mjCONE_ELLIPTIC
+        spec.option.iterations = 20
+        spec.option.ls_iterations = 50
+        spec.option.o_solref[:] = np.array([0.02, 1.0])
+        # spec.option.o_solimp[:] = np.array([
+        #     0.0,
+        #     0.95,
+        #     0.03,
+        #     0.5,
+        #     2,
+        # ])
+        spec.option.o_solimp[:] = np.array([
+            0.9,
+            0.95,
+            0.001,
+            0.5,
+            2,
+        ])
+        spec.option.integrator = mujoco.mjtIntegrator.mjINT_IMPLICITFAST
+
+        assert spec.option.o_solref[0] >= 2 * self.config.sim_dt, (
+            f"spec.option.o_solref[0]: {spec.option.o_solref[0]}, expected: >= {2 * self.config.sim_dt}"
+        )
+
         # Enable gravity compensation for robot bodies
         # https://mujoco.readthedocs.io/en/3.1.2/XMLreference.html#body-gravcomp
         for body in spec.bodies:
             body.gravcomp = 1.0
+
+        # Set frictions of the robot
+        SET_ROBOT_FRICTION = False
+        if SET_ROBOT_FRICTION:
+            geoms = [geom for geom in spec.geoms if len(geom.name) > 0]
+
+            # Get current friction values
+            PRINT_CURRENT_FRICTION = False
+            if PRINT_CURRENT_FRICTION:
+                geom_names = [geom.name for geom in geoms]
+                geom_frictions = [geom.friction for geom in geoms]
+                print(f"geom_names: {geom_names}")
+                print(f"geom_frictions: {geom_frictions}")
+
+                name_to_friction = {name: friction for name, friction in zip(geom_names, geom_frictions)}
+                for name, friction in name_to_friction.items():
+                    print(f"name: {name}, friction: {friction}")
+
+            for geom in geoms:
+                geom.friction = np.array([1.5, 0.005, 0.0001])
 
         # Move robot base to desired position
         robot_base_bodies = [body for body in spec.bodies if body.name == "base"]
@@ -188,7 +234,7 @@ class MujocoSim:
 
         # Object
         GREY_RGBA = np.array([0.5, 0.5, 0.5, 1.0])
-        OBJECT_POS_X, OBJECT_POS_Y, OBJECT_POS_Z = 0.0, 0.0, 0.38 + 0.3
+        OBJECT_POS_X, OBJECT_POS_Y, OBJECT_POS_Z = 0.0, 0.0, 0.38 + 0.2
         object_body = spec.worldbody.add_body()
         object_body.name = "object"
         object_body.pos = np.array([OBJECT_POS_X, OBJECT_POS_Y, OBJECT_POS_Z])
@@ -197,9 +243,16 @@ class MujocoSim:
         object_free_joint.name = "object_free_joint"
         object_free_joint.type = mujoco.mjtJoint.mjJNT_FREE
 
-        ADD_BOX_OBJECT = True
+        object_name = self.config.object_name
+        ADD_BOX_OBJECT = object_name.startswith("cuboid")
         if ADD_BOX_OBJECT:
-            BOX_LEN_X, BOX_LEN_Y, BOX_LEN_Z = 0.20, 0.05, 0.0375
+            # Example: cuboid_4_0.75_1
+            scales = object_name.split("_")[1:]
+            scales = np.array(scales, dtype=float)
+            assert scales.shape == (3,), f"scales.shape: {scales.shape}, expected: (3,)"
+            BASE_SIZE = 0.04
+            BOX_LEN_X, BOX_LEN_Y, BOX_LEN_Z = scales * BASE_SIZE
+            print(f"BOX_LEN_X: {BOX_LEN_X}, BOX_LEN_Y: {BOX_LEN_Y}, BOX_LEN_Z: {BOX_LEN_Z}")
 
             object_geom = object_body.add_geom()
             object_geom.name = "object_geom"
@@ -210,12 +263,12 @@ class MujocoSim:
             object_geom.size = np.array(
                 [BOX_LEN_X / 2, BOX_LEN_Y / 2, BOX_LEN_Z / 2]
             )  # Half extents
+            object_geom.density = 400.0
         else:
             # Use list of convex decomp meshes for object
             # Use run_coacd.py to generate convex decomp meshes
 
             from isaacgymenvs.utils.objects import NAME_TO_OBJECT
-            object_name = self.config.object_name
             mesh_paths = NAME_TO_OBJECT[object_name].coacd_filepaths
             assert mesh_paths is not None, f"mesh_paths is None for object_name: {object_name}"
             assert len(mesh_paths) > 0, f"len(mesh_paths) is 0 for object_name: {object_name}"
@@ -237,6 +290,13 @@ class MujocoSim:
                 object_geom.friction = self.config.friction_array.copy()
                 object_geom.type = mujoco.mjtGeom.mjGEOM_MESH
                 object_geom.meshname = mesh.name
+
+                # Improve contact
+                # object_geom.condim = 6
+
+        # Improve contact
+        for geom in spec.geoms:
+            geom.condim = 6
 
         DISABLE_ROBOT_SELF_COLLISION = False
         if DISABLE_ROBOT_SELF_COLLISION:
@@ -343,6 +403,10 @@ class MujocoSim:
     # Stepping simulation
     # ############################################################
     def sim_step(self):
+        DEBUG = False
+        if DEBUG:
+            self._print_debug_info()
+
         actuator_ids = [self.mj_model.actuator(name=name).id for name in ACTUATOR_NAMES]
         for i, actuator_id in enumerate(actuator_ids):
             self.mj_data.ctrl[actuator_id] = self.robot_joint_pos_targets[i]
@@ -356,6 +420,33 @@ class MujocoSim:
             return self.viewer.is_running()
         else:
             return True
+
+    def _print_debug_info(self) -> None:
+        # Examples of getting masses and inertias in mujoco
+        breakpoint()
+        body_names = [self.mj_model.body(i).name for i in range(self.mj_model.nbody) if len(self.mj_model.body(i).name) > 0]
+        body_ids = [self.mj_model.body(name=name).id for name in body_names]
+        masses = [self.mj_model.body_mass[body_id] for body_id in body_ids]
+        inertias = [self.mj_model.body_inertia[body_id] for body_id in body_ids]
+        print(f"body_names: {body_names}")
+        print(f"masses: {masses}")
+        print(f"inertias: {inertias}")
+        print(f"masses[-1]: {masses[-1]}")
+        print(f"inertias[-1]: {inertias[-1]}")
+        breakpoint()
+        geom_names = [self.mj_model.geom(i).name for i in range(self.mj_model.ngeom) if len(self.mj_model.geom(i).name) > 0]
+        print(f"geom_names: {geom_names}")
+        breakpoint()
+        print(dir(self.mj_model))
+        geom_ids = [self.mj_model.geom(name=name).id for name in geom_names]
+        densities = [self.mj_model.geom_density[geom_id] for geom_id in geom_ids]
+        masses = [self.mj_model.geom_mass[geom_id] for geom_id in geom_ids]
+        inertias = [self.mj_model.geom_inertia[geom_id] for geom_id in geom_ids]
+        print(f"geom_names: {geom_names}")
+        print(f"densities: {densities}")
+        print(f"masses: {masses}")
+        print(f"inertias: {inertias}")
+        breakpoint()
 
     def run(self):
         loop_no_sleep_dts, loop_dts = [], []

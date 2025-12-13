@@ -10,7 +10,7 @@ from termcolor import colored
 
 from sim2sim.isaac_sim.isaac_env import create_env
 
-N_OBS = 133
+N_OBS = 140
 N_ACT = 29
 
 
@@ -52,16 +52,11 @@ class IsaacEnvNoRos:
 def main():
     CONTROL_DT = 1.0 / 60.0  # Control loop frequency (policy loop rate)
     CONFIG_PATH = Path(
-        # "/home/tylerlum/github_repos/sapg/closed_loop_testing_sharpa/config.yaml"
-        "/home/tylerlum/github_repos/sapg/closed_loop_testing_sharpa_hammer_2/config.yaml"
+        "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"
     )
     assert Path(CONFIG_PATH).exists()
     CHECKPOINT_PATH = Path(
-        # Fast
-        # "/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-11-12_sharpa_hammer_2_coacd/00_CUBOID_obs-curriculum_thresh0-1_local_2025-11-14_00-04-24/runs/00_CUBOID_obs-curriculum_thresh0-1_local_2025-11-14_00-04-24/last/model.pth"
-        # Slow
-        # "/juno/u/kedia/sapg/train_dir/checkpoints/SLOW_CUBOID/model.pth"
-        "/juno/u/kedia/sapg/train_dir/checkpoints/dr_hammer_slow.pth"
+        "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/newGains.pth"
     )
     assert CHECKPOINT_PATH.exists()
 
@@ -71,6 +66,24 @@ def main():
         config_path=str(CONFIG_PATH),
         headless=False,
         device=DEVICE,
+        overrides={
+            "task.env.resetPositionNoiseX": 0.0,
+            "task.env.resetPositionNoiseY": 0.0,
+            "task.env.resetPositionNoiseZ": 0.0,
+            "task.env.resetRotationNoise": 0.0,
+            "task.env.resetDofPosRandomIntervalFingers": 0.0,
+            "task.env.resetDofPosRandomIntervalArm": 0.0,
+            "task.env.resetDofVelRandomInterval": 0.0,
+            # "task.env.object_type": "cuboid",
+            "task.env.object_type": "blue_cuboid",
+            # "task.env.object_type": "blue_cuboid_real_hammer",
+            # "task.env.object_type": "blue_cuboid_fake_hammer",
+            "task.env.forceNoReset": True,
+            "task.env.randomizeObjectRotation": False,
+            "task.env.objectStartPose": [0.,  0.,  0.58, 0.,  0.,  0.,  1.],  # x, y, z, qx, qy, qz, qw
+            "task.env.goalObjectPose": [0.,  0.,  0.88, 0.,  0.,  0.,  1.],  # x, y, z, qx, qy, qz, qw
+            "task.env.forceScale": 0.0,
+        },
     )
 
     # Set env state from checkpoint to match things like success_tolerance
@@ -100,7 +113,7 @@ def main():
         if sleep_time > 0:
             time.sleep(sleep_time)
         else:
-            print(
+            warn(
                 f"Control loop too slow! Desired FPS: {1.0 / CONTROL_DT:.1f}, Actual FPS: {1.0 / (end_time - start_time):.1f}"
             )
 

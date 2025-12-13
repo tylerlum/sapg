@@ -71,6 +71,11 @@ class Object:
         return mesh
 
 
+RESCALE_FACTOR = 1.25
+
+def rescale(scale: Tuple[float, float, float]) -> Tuple[float, float, float]:
+    return (scale[0] * RESCALE_FACTOR, scale[1] * RESCALE_FACTOR, scale[2] * RESCALE_FACTOR)
+
 NAME_TO_OBJECT = {
     "blue_cuboid": Object(
         filepath=(
@@ -81,7 +86,7 @@ NAME_TO_OBJECT = {
                 get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/blue_cuboid"
             ).glob("decomp_*.obj")
         ),
-        scale=(4.0, 0.75, 1.0),
+        scale=rescale((4.0, 0.75, 1.0)),
         need_vhacd=False,
     ),
     "blue_cuboid_real_iphone": Object(
@@ -91,7 +96,7 @@ NAME_TO_OBJECT = {
         coacd_filepaths=(
             [get_repo_root_dir() / "assets/urdf/tyler_objects/blue_cuboid_real_iphone/cuboid.obj"]
         ),
-        scale=(3.0, 1.4, 0.2),
+        scale=rescale((3.0, 1.4, 0.2)),
         need_vhacd=False,
     ),
     "blue_cuboid_fake_iphone": Object(
@@ -101,7 +106,7 @@ NAME_TO_OBJECT = {
         coacd_filepaths=(
             [get_repo_root_dir() / "assets/urdf/tyler_objects/blue_cuboid_fake_iphone/cuboid.obj"]
         ),
-        scale=(2.0, 1.25, 0.5),
+        scale=rescale((2.0, 1.25, 0.5)),
         need_vhacd=False,
     ),
     "blue_cuboid_real_hammer": Object(
@@ -111,7 +116,7 @@ NAME_TO_OBJECT = {
         coacd_filepaths=(
             [get_repo_root_dir() / "assets/urdf/tyler_objects/blue_cuboid_real_hammer/cuboid.obj"]
         ),
-        scale=(2.0, 0.55, 0.35),
+        scale=rescale((2.0, 0.55, 0.35)),
         need_vhacd=False,
     ),
     "blue_cuboid_fake_hammer": Object(
@@ -121,7 +126,7 @@ NAME_TO_OBJECT = {
         coacd_filepaths=(
             [get_repo_root_dir() / "assets/urdf/tyler_objects/blue_cuboid_fake_hammer/cuboid.obj"]
         ),
-        scale=(2.5, 0.75, 0.65),
+        scale=rescale((2.5, 0.75, 0.65)),
         need_vhacd=False,
     ),
     "blue_cuboid_real_screwdriver": Object(
@@ -131,7 +136,7 @@ NAME_TO_OBJECT = {
         coacd_filepaths=(
             [get_repo_root_dir() / "assets/urdf/tyler_objects/blue_cuboid_real_screwdriver/cuboid.obj"]
         ),
-        scale=(1.3, 0.7, 0.5),
+        scale=rescale((1.3, 0.7, 0.5)),
         need_vhacd=False,
     ),
     "blue_cuboid_thick": Object(
@@ -141,7 +146,7 @@ NAME_TO_OBJECT = {
         coacd_filepaths=(
             [get_repo_root_dir() / "assets/urdf/tyler_objects/blue_cuboid_thick/cuboid.obj"]
         ),
-        scale=(3.0, 2.0, 1.25),
+        scale=rescale((3.0, 2.0, 1.25)),
         need_vhacd=False,
     ),
     "scanned_hammer_1": Object(
@@ -153,7 +158,7 @@ NAME_TO_OBJECT = {
                 get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/hammer_1"
             ).glob("decomp_*.obj")
         ),
-        scale=(3.0, 0.5, 0.5),
+        scale=rescale((3.0, 0.5, 0.5)),
         need_vhacd=True,
     ),
     "scanned_hammer_2": Object(
@@ -165,7 +170,7 @@ NAME_TO_OBJECT = {
                 get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/hammer_2"
             ).glob("decomp_*.obj")
         ),
-        scale=(3.0, 0.25, 0.2),
+        scale=rescale((3.0, 0.25, 0.2)),
         need_vhacd=True,
     ),
     "scanned_hammer_2_coacd": Object(
@@ -177,7 +182,7 @@ NAME_TO_OBJECT = {
                 get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/hammer_2"
             ).glob("decomp_*.obj")
         ),
-        scale=(3.0, 0.25, 0.2),
+        scale=rescale((3.0, 0.25, 0.2)),
         need_vhacd=False,
     ),
     "scanned_hammer_2_coacd2": Object(
@@ -189,7 +194,7 @@ NAME_TO_OBJECT = {
                 get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/hammer_2_2pieces"
             ).glob("decomp_*.obj")
         ),
-        scale=(3.0, 0.25, 0.2),
+        scale=rescale((3.0, 0.25, 0.2)),
         need_vhacd=False,
     ),
     "YcbHammer": Object(
@@ -202,7 +207,7 @@ NAME_TO_OBJECT = {
                 / "assets/urdf/tyler_objects_convex_decomp/YcbHammer"
             ).glob("decomp_*.obj")
         ),
-        scale=(3.0, 0.5, 0.5),
+        scale=rescale((3.0, 0.5, 0.5)),
         need_vhacd=True,
     ),
     "cuboidal_hammer": Object(
@@ -211,7 +216,7 @@ NAME_TO_OBJECT = {
             / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_0-3_0-03_0-02_0-03_0-1_0-02_0-1_0-2.urdf"
         ),
         coacd_filepaths=None,  # Don't currently have COACD for object made of primitives
-        scale=(3.0, 0.5, 0.5),
+        scale=rescale((3.0, 0.5, 0.5)),
         need_vhacd=False,
     ),
     "cylindrical_hammer": Object(
@@ -220,7 +225,7 @@ NAME_TO_OBJECT = {
             / "assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0-3_0-015_0-015_0-1_0-1_0-2.urdf"
         ),
         coacd_filepaths=None,  # Don't currently have COACD for object made of primitives
-        scale=(3.0, 0.5, 0.5),
+        scale=rescale((3.0, 0.5, 0.5)),
         need_vhacd=False,
     ),
     "cuboidal_hammer_1-25x": Object(
@@ -229,7 +234,7 @@ NAME_TO_OBJECT = {
             / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_0-375_0-0375_0-025_0-0375_0-125_0-025_0-1_0-2.urdf"
         ),
         coacd_filepaths=None,  # Don't currently have COACD for object made of primitives
-        scale=(3.0, 0.5, 0.5),
+        scale=rescale((3.0, 0.5, 0.5)),
         need_vhacd=False,
     ),
     "cuboidal_hammer_1-5x": Object(
@@ -238,7 +243,7 @@ NAME_TO_OBJECT = {
             / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_0-44999999999999996_0-045_0-03_0-045_0-15000000000000002_0-03_0-1_0-2.urdf"
         ),
         coacd_filepaths=None,  # Don't currently have COACD for object made of primitives
-        scale=(3.0, 0.5, 0.5),
+        scale=rescale((3.0, 0.5, 0.5)),
         need_vhacd=False,
     ),
     "cuboidal_hammer_1-75x": Object(
@@ -247,7 +252,7 @@ NAME_TO_OBJECT = {
             / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_0-525_0-0525_0-035_0-0525_0-17500000000000002_0-035_0-1_0-2.urdf"
         ),
         coacd_filepaths=None,  # Don't currently have COACD for object made of primitives
-        scale=(3.0, 0.5, 0.5),
+        scale=rescale((3.0, 0.5, 0.5)),
         need_vhacd=False,
     ),
     "cuboidal_hammer_2x": Object(
@@ -256,7 +261,7 @@ NAME_TO_OBJECT = {
             / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_hammer_0-6_0-06_0-04_0-06_0-2_0-04_0-1_0-2.urdf"
         ),
         coacd_filepaths=None,  # Don't currently have COACD for object made of primitives
-        scale=(3.0, 0.5, 0.5),
+        scale=rescale((3.0, 0.5, 0.5)),
         need_vhacd=False,
     ),
     "cylindrical_hammer_1-25x": Object(
@@ -265,7 +270,7 @@ NAME_TO_OBJECT = {
             / "assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0-375_0-01875_0-01875_0-125_0-125_0-2.urdf"
         ),
         coacd_filepaths=None,  # Don't currently have COACD for object made of primitives
-        scale=(3.0, 0.5, 0.5),
+        scale=rescale((3.0, 0.5, 0.5)),
         need_vhacd=False,
     ),
     "cylindrical_hammer_1-5x": Object(
@@ -274,7 +279,7 @@ NAME_TO_OBJECT = {
             / "assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0-44999999999999996_0-0225_0-0225_0-15000000000000002_0-15000000000000002_0-2.urdf"
         ),
         coacd_filepaths=None,  # Don't currently have COACD for object made of primitives
-        scale=(3.0, 0.5, 0.5),
+        scale=rescale((3.0, 0.5, 0.5)),
         need_vhacd=False,
     ),
     "cylindrical_hammer_1-75x": Object(
@@ -283,7 +288,7 @@ NAME_TO_OBJECT = {
             / "assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0-525_0-02625_0-02625_0-17500000000000002_0-17500000000000002_0-2.urdf"
         ),
         coacd_filepaths=None,  # Don't currently have COACD for object made of primitives
-        scale=(3.0, 0.5, 0.5),
+        scale=rescale((3.0, 0.5, 0.5)),
         need_vhacd=False,
     ),
     "cylindrical_hammer_2x": Object(
@@ -292,7 +297,7 @@ NAME_TO_OBJECT = {
             / "assets/urdf/tyler_objects/cylindrical_hammer/cylindrical_hammer_0-6_0-03_0-03_0-2_0-2_0-2.urdf"
         ),
         coacd_filepaths=None,  # Don't currently have COACD for object made of primitives
-        scale=(3.0, 0.5, 0.5),
+        scale=rescale((3.0, 0.5, 0.5)),
         need_vhacd=False,
     ),
     "040_large_marker": Object(
@@ -306,7 +311,7 @@ NAME_TO_OBJECT = {
                 / "assets/urdf/tyler_objects_convex_decomp/040_large_marker"
             ).glob("decomp_*.obj")
         ),
-        scale=(3.0, 0.5, 0.5),
+        scale=rescale((3.0, 0.5, 0.5)),
         need_vhacd=True,
     ),
     "whiteboard_eraser": Object(
@@ -320,7 +325,7 @@ NAME_TO_OBJECT = {
                 / "assets/urdf/tyler_objects_convex_decomp/whiteboard_eraser"
             ).glob("decomp_*.obj")
         ),
-        scale=(3.0, 0.5, 0.5),
+        scale=rescale((3.0, 0.5, 0.5)),
         need_vhacd=True,
     ),
     "phone": Object(
@@ -330,7 +335,7 @@ NAME_TO_OBJECT = {
                 get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/phone"
             ).glob("decomp_*.obj")
         ),
-        scale=(3.0, 0.5, 0.5),
+        scale=rescale((3.0, 0.5, 0.5)),
         need_vhacd=True,
     ),
     "044_flat_screwdriver": Object(
@@ -344,7 +349,7 @@ NAME_TO_OBJECT = {
                 / "assets/urdf/tyler_objects_convex_decomp/044_flat_screwdriver"
             ).glob("decomp_*.obj")
         ),
-        scale=(3.0, 0.5, 0.5),
+        scale=rescale((3.0, 0.5, 0.5)),
         need_vhacd=True,
     ),
     "hairbrush": Object(
@@ -357,7 +362,7 @@ NAME_TO_OBJECT = {
                 / "assets/urdf/tyler_objects_convex_decomp/hairbrush"
             ).glob("decomp_*.obj")
         ),
-        scale=(3.0, 0.5, 0.5),
+        scale=rescale((3.0, 0.5, 0.5)),
         need_vhacd=True,
     ),
     "hairbrush_modified": Object(
@@ -370,7 +375,7 @@ NAME_TO_OBJECT = {
                 / "assets/urdf/tyler_objects_convex_decomp/hairbrush_modified"
             ).glob("decomp_*.obj")
         ),
-        scale=(3.0, 0.5, 0.5),
+        scale=rescale((3.0, 0.5, 0.5)),
         need_vhacd=True,
     ),
     "real_flat_screwdriver": Object(
@@ -384,7 +389,7 @@ NAME_TO_OBJECT = {
                 / "assets/urdf/tyler_objects_convex_decomp/real_flat_screwdriver"
             ).glob("decomp_*.obj")
         ),
-        scale=(3.0, 0.5, 0.5),
+        scale=rescale((3.0, 0.5, 0.5)),
         need_vhacd=True,
     ),
     "mallet": Object(
@@ -396,7 +401,7 @@ NAME_TO_OBJECT = {
                 get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/mallet"
             ).glob("decomp_*.obj")
         ),
-        scale=(3.0, 0.5, 0.5),
+        scale=rescale((3.0, 0.5, 0.5)),
         need_vhacd=True,
     ),
 }

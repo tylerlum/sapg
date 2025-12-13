@@ -1,7 +1,7 @@
 <mujoco model="iiwa14 scene">
   <compiler angle="radian" meshdir="assets/"/>
 
-  <option timestep="0.00166667" integrator="implicitfast"/>
+  <option timestep="0.001" integrator="implicitfast"/>
 
   <size nkey="1"/>
 
@@ -52,9 +52,7 @@
       <default class="palmDIP_joint">
         <joint armature="0.00042" damping="1.21e-06" frictionloss="0.00378738"/>
       </default>
-      <default class="palmelastomer_geom">
-        <geom solref="0.06 0.9"/>
-      </default>
+      <default class="palmelastomer_geom"/>
     </default>
   </default>
 

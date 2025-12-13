@@ -133,7 +133,7 @@ class AllegroKukaBase(VecTask):
         self.reset_position_noise_x = self.cfg["env"]["resetPositionNoiseX"]
         self.reset_position_noise_y = self.cfg["env"]["resetPositionNoiseY"]
         self.reset_position_noise_z = self.cfg["env"]["resetPositionNoiseZ"]
-        self.reset_rotation_noise = self.cfg["env"]["resetRotationNoise"]
+        self.randomize_object_rotation = self.cfg["env"]["randomizeObjectRotation"]
         self.reset_dof_pos_noise_fingers = self.cfg["env"]["resetDofPosRandomIntervalFingers"]
         self.reset_dof_pos_noise_arm = self.cfg["env"]["resetDofPosRandomIntervalArm"]
         self.reset_dof_vel_noise = self.cfg["env"]["resetDofVelRandomInterval"]
@@ -579,6 +579,18 @@ class AllegroKukaBase(VecTask):
 
         object_start_pose.p.y = allegro_pose.p.y + pose_dy
         object_start_pose.p.z = allegro_pose.p.z + pose_dz
+
+        # HACK: Overwrite
+        if self.cfg["env"]["objectStartPose"] is not None:
+            assert len(self.cfg["env"]["objectStartPose"]) == 7, f"objectStartPose must be a 7-element list, got {len(self.cfg['env']['objectStartPose'])}"
+            # Assumes [x, y, z, qx, qy, qz, qw]
+            object_start_pose.p.x = self.cfg["env"]["objectStartPose"][0]
+            object_start_pose.p.y = self.cfg["env"]["objectStartPose"][1]
+            object_start_pose.p.z = self.cfg["env"]["objectStartPose"][2]
+            object_start_pose.r.x = self.cfg["env"]["objectStartPose"][3]
+            object_start_pose.r.y = self.cfg["env"]["objectStartPose"][4]
+            object_start_pose.r.z = self.cfg["env"]["objectStartPose"][5]
+            object_start_pose.r.w = self.cfg["env"]["objectStartPose"][6]
 
         return object_start_pose
 
@@ -1296,17 +1308,11 @@ class AllegroKukaBase(VecTask):
         # Set mass and inertia of object
         MODIFY_OBJECT_MASS_AND_INERTIA = False
         if MODIFY_OBJECT_MASS_AND_INERTIA:
-            original_masses, original_inertias = [], []
-            for env, object in zip(self.envs, self.objects):
-                object_rb_props = self.gym.get_actor_rigid_body_properties(env, object)
-                assert len(object_rb_props) == 1, f"Expected 1 rigid body, got {len(object_rb_props)}"
-                object_rb_prop = object_rb_props[0]
-                original_mass = object_rb_prop.mass
-                original_inertia = (object_rb_prop.inertia.x.x, object_rb_prop.inertia.y.y, object_rb_prop.inertia.z.z)
-                original_masses.append(original_mass)
-                original_inertias.append(original_inertia)
+            # Get mass and inertia of object
+            original_masses, original_inertias = self._get_original_object_masses_and_inertias()
             print(f"Original masses: {original_masses[0]}")
             print(f"Original inertias: {original_inertias[0]}")
+
             self.set_object_masses_and_inertias(
                 envs=self.envs,
                 objects=self.objects,
@@ -1355,6 +1361,18 @@ class AllegroKukaBase(VecTask):
             tmp_assets_dir.cleanup()
         except Exception:
             pass
+
+    def _get_original_object_masses_and_inertias(self) -> Tuple[List[float], List[Tuple[float, float, float]]]:
+        original_masses, original_inertias = [], []
+        for env, object in zip(self.envs, self.objects):
+            object_rb_props = self.gym.get_actor_rigid_body_properties(env, object)
+            assert len(object_rb_props) == 1, f"Expected 1 rigid body, got {len(object_rb_props)}"
+            object_rb_prop = object_rb_props[0]
+            original_mass = object_rb_prop.mass
+            original_inertia = (object_rb_prop.inertia.x.x, object_rb_prop.inertia.y.y, object_rb_prop.inertia.z.z)
+            original_masses.append(original_mass)
+            original_inertias.append(original_inertia)
+        return original_masses, original_inertias
 
     def _set_actor_color(self, env, actor, color: Tuple[float, float, float]) -> None:
         for rigid_body_idx in range(self.gym.get_actor_rigid_body_count(env, actor)):
@@ -1633,6 +1651,10 @@ class AllegroKukaBase(VecTask):
 
         resets = self._compute_resets(is_success)
         self.reset_buf[:] = resets
+
+        # HACK: Force no reset for isaac_env_ros type testing
+        if self.cfg["env"]["forceNoReset"]:
+            self.reset_buf[:] = False
 
         self.extras["successes"] = self.prev_episode_successes
         self.extras["success_ratio"] = self.prev_episode_successes.mean().item() / self.max_consecutive_successes
@@ -1977,27 +1999,27 @@ class AllegroKukaBase(VecTask):
         CHECK_WITH_COMPUTED_OBS = False
         if CHECK_WITH_COMPUTED_OBS:
             import pytorch_kinematics as pk
-            # Create chain and palm_serial_chain from URDF
-            if not hasattr(self, "chain") or not hasattr(self, "palm_serial_chain"):
-                # self.chain, self.palm_serial_chain = create_chain_and_serial_chain(device=self.device, robot_name="iiwa14_left_sharpa_between")
-                self.chain, self.palm_serial_chain = create_chain_and_serial_chain(device=self.device, robot_name="iiwa14_left_sharpa_adjusted_restricted")
+            # Create chain from URDF
+            if not hasattr(self, "chain"):
+                self.chain, _ = create_chain_and_serial_chain(device=self.device, robot_name="iiwa14_left_sharpa_adjusted_restricted")
 
             computed_obs = compute_observation(
                 q=self.arm_hand_dof_pos,
                 qd=self.arm_hand_dof_vel,
+                prev_action_targets=self.prev_targets,
                 object_pose=self.object_pose,
                 goal_object_pose=self.goal_pose,
                 object_scales=self.object_scales,
                 chain=self.chain,
-                palm_serial_chain=self.palm_serial_chain,
+                obs_list=self.obs_list,
             )
 
             # Validate
             assert computed_obs.shape == (self.num_envs, len(OBS_NAMES)), f"computed_obs.shape: {computed_obs.shape}, expected: ({self.num_envs}, {len(OBS_NAMES)})"
-            assert buf.shape == computed_obs.shape, f"buf.shape: {buf.shape}, expected: {computed_obs.shape}"
+            assert self.obs_buf.shape == computed_obs.shape, f"self.obs_buf.shape: {self.obs_buf.shape}, expected: {computed_obs.shape}"
             num_errors = 0
             for i, name in enumerate(OBS_NAMES):
-                val_orig = buf[0, i].item()
+                val_orig = self.obs_buf[0, i].item()
                 val_computed = computed_obs[0, i].item()
                 print(f"{name}: original: {val_orig}, computed: {val_computed}, diff: {val_orig - val_computed}")
                 # Note that there are some reasonably large 2e-3 differences in the palm vel computation
@@ -2123,16 +2145,18 @@ class AllegroKukaBase(VecTask):
             self.root_state_tensor[obj_indices, 2:3] = (
                 self.object_init_state[env_ids, 2:3] + self.reset_position_noise_z * rand_pos_floats[:, 2:3]
             )
-            new_object_rot = self.get_random_quat(env_ids)
-            if USE_FIXED_INIT_OBJECT_POSE:
-                new_object_rot[:] = 0.0 #HACK
-                new_object_rot[:, -1] = 1.0 #HACK  xyzw
-                # HACK: Rotate the object by 180 degrees around the z-axis to go from right handed to left handed robot
-                from scipy.spatial.transform import Rotation as  R
-                new_object_rot[:] = torch.from_numpy(R.from_euler("z", 180, degrees=True).as_quat()).float().to(self.device)[None]
 
-            # indices 3,4,5,6 correspond to the rotation quaternion
-            self.root_state_tensor[obj_indices, 3:7] = new_object_rot
+            if self.randomize_object_rotation:
+                new_object_rot = self.get_random_quat(env_ids)
+                if USE_FIXED_INIT_OBJECT_POSE:
+                    new_object_rot[:] = 0.0 #HACK
+                    new_object_rot[:, -1] = 1.0 #HACK  xyzw
+                    # HACK: Rotate the object by 180 degrees around the z-axis to go from right handed to left handed robot
+                    from scipy.spatial.transform import Rotation as  R
+                    new_object_rot[:] = torch.from_numpy(R.from_euler("z", 180, degrees=True).as_quat()).float().to(self.device)[None]
+
+                # indices 3,4,5,6 correspond to the rotation quaternion
+                self.root_state_tensor[obj_indices, 3:7] = new_object_rot
 
             self.root_state_tensor[obj_indices, 7:13] = torch.zeros_like(self.root_state_tensor[obj_indices, 7:13])
         
@@ -2261,6 +2285,7 @@ class AllegroKukaBase(VecTask):
             noise_coeff[7 : self.num_hand_arm_dofs] = self.reset_dof_pos_noise_fingers
 
             allegro_pos = self.hand_arm_default_dof_pos + noise_coeff * rand_delta
+            allegro_pos = tensor_clamp(allegro_pos, self.arm_hand_dof_lower_limits, self.arm_hand_dof_upper_limits)
 
             self.arm_hand_dof_pos[env_ids, :] = allegro_pos
             if self.VISUALIZE_PD_TARGET_AS_BLUE_ROBOT:
@@ -2276,6 +2301,7 @@ class AllegroKukaBase(VecTask):
             self.arm_hand_dof_pos[env_ids, :] = self.dof_resets[reset_buf_idxs[env_ids].cpu(), :, 0].to(self.device)
             self.arm_hand_dof_vel[env_ids, :] = self.dof_resets[reset_buf_idxs[env_ids].cpu(), :, 1].to(self.device)
             allegro_pos = self.arm_hand_dof_pos[env_ids, : self.num_hand_arm_dofs]
+            allegro_pos = tensor_clamp(allegro_pos, self.arm_hand_dof_lower_limits, self.arm_hand_dof_upper_limits)
 
             self.prev_targets[env_ids, : self.num_hand_arm_dofs] = allegro_pos
             self.cur_targets[env_ids, : self.num_hand_arm_dofs] = allegro_pos
@@ -2857,7 +2883,7 @@ class AllegroKukaBase(VecTask):
                     r=gymapi.Quat(*self.goal_rot[i]),
                 )
                 self._draw_transform(transform=object_transform, env_idx=i)
-                # self._draw_transform(transform=goal_transform, env_idx=i)
+                self._draw_transform(transform=goal_transform, env_idx=i)
 
     def _init_obs_action_queue(self):
         obs_queue_length = self.cfg["env"]["obsDelayMax"]

@@ -16,109 +16,17 @@ from sensor_msgs.msg import JointState
 from termcolor import colored
 
 
-USE_BETWEEN = True
-if USE_BETWEEN:
-    from isaacgymenvs.utils.observation_action_utils_sharpa_between import (
-        compute_joint_pos_targets,
-        compute_observation,
-        create_chain_and_serial_chain,
-        Q_LOWER_LIMITS_restricted_np as Q_LOWER_LIMITS_np_between,
-        Q_UPPER_LIMITS_restricted_np as Q_UPPER_LIMITS_np_between,
-    )
-else:
-    from isaacgymenvs.utils.observation_action_utils_sharpa import (
+from isaacgymenvs.utils.observation_action_utils_sharpa import (
     compute_joint_pos_targets,
     compute_observation,
     create_chain_and_serial_chain,
-    Q_LOWER_LIMITS_restricted_np as Q_LOWER_LIMITS_np_between,
-    Q_UPPER_LIMITS_restricted_np as Q_UPPER_LIMITS_np_between,
+    Q_LOWER_LIMITS_restricted_np as Q_LOWER_LIMITS_np,
+    Q_UPPER_LIMITS_restricted_np as Q_UPPER_LIMITS_np,
 )
 
 
 T_W_R = np.eye(4)
 T_W_R[:3, 3] = np.array([0.0, 0.8, 0.0])
-
-BETWEEN_JOINT_ORDER = [
-    'iiwa14_joint_1', 'iiwa14_joint_2', 'iiwa14_joint_3', 'iiwa14_joint_4', 'iiwa14_joint_5', 'iiwa14_joint_6', 'iiwa14_joint_7',
-    'left_index_MCP_FE', 'left_index_MCP_AA', 'left_index_PIP', 'left_index_DIP',
-    'left_middle_MCP_FE', 'left_middle_MCP_AA', 'left_middle_PIP', 'left_middle_DIP',
-    'left_pinky_CMC', 'left_pinky_MCP_FE', 'left_pinky_MCP_AA', 'left_pinky_PIP', 'left_pinky_DIP',
-    'left_ring_MCP_FE', 'left_ring_MCP_AA', 'left_ring_PIP', 'left_ring_DIP',
-    'left_thumb_CMC_FE', 'left_thumb_CMC_AA', 'left_thumb_MCP_FE', 'left_thumb_MCP_AA', 'left_thumb_IP',
-]
-
-ADJUSTED_JOINT_ORDER = [
-    'iiwa14_joint_1', 'iiwa14_joint_2', 'iiwa14_joint_3', 'iiwa14_joint_4', 'iiwa14_joint_5', 'iiwa14_joint_6', 'iiwa14_joint_7',
-    'left_thumb_CMC_FE', 'left_thumb_CMC_AA', 'left_thumb_MCP_FE', 'left_thumb_MCP_AA', 'left_thumb_IP',
-    'left_index_MCP_FE', 'left_index_MCP_AA', 'left_index_PIP', 'left_index_DIP',
-    'left_middle_MCP_FE', 'left_middle_MCP_AA', 'left_middle_PIP', 'left_middle_DIP',
-    'left_ring_MCP_FE', 'left_ring_MCP_AA', 'left_ring_PIP', 'left_ring_DIP',
-    'left_pinky_CMC', 'left_pinky_MCP_FE', 'left_pinky_MCP_AA', 'left_pinky_PIP', 'left_pinky_DIP',
-]
-def change_joint_order(
-    q: np.ndarray,
-    from_order: list[str],
-    to_order: list[str],
-) -> np.ndarray:
-    J = len(from_order)
-    assert len(to_order) == J, (
-        f"Expected to_order to have the same length as from_order, got {len(to_order)} and {len(from_order)}"
-    )
-    assert q.shape == (J,), (
-        f"Expected q to have length {J}, got {q.shape}"
-    )
-
-    assert set(to_order) == set(from_order), (
-        f"Expected to_order to be the same as from_order, got to_order: {to_order} and from_order: {from_order}. Only in to_order: {set(to_order) - set(from_order)}"
-    )
-
-    # q is given in the from_order
-    joint_name_to_value = {from_order[i]: q[i] for i in range(J)}
-    new_q = np.array([joint_name_to_value[name] for name in to_order])
-
-    assert new_q.shape == (len(to_order),), (
-        f"Expected new_q to be {len(to_order)}, got {new_q.shape}"
-    )
-    return new_q
-
-
-def adjusted_to_between(q: np.ndarray) -> np.ndarray:
-    if USE_BETWEEN:
-        return change_joint_order(
-            q=q,
-            from_order=ADJUSTED_JOINT_ORDER,
-            to_order=BETWEEN_JOINT_ORDER,
-        )
-    else:
-        return q
-
-def between_to_adjusted(q: np.ndarray) -> np.ndarray:
-    if USE_BETWEEN:
-        return change_joint_order(
-            q=q,
-            from_order=BETWEEN_JOINT_ORDER,
-            to_order=ADJUSTED_JOINT_ORDER,
-        )
-    else:
-        return q
-
-
-# def adjusted_to_between(q: np.ndarray) -> np.ndarray:
-#     return change_joint_order(
-#         q=q,
-#         from_order=ADJUSTED_JOINT_ORDER,
-#         to_order=BETWEEN_JOINT_ORDER,
-#     )
-# 
-# 
-# def between_to_adjusted(q: np.ndarray) -> np.ndarray:
-#     return change_joint_order(
-#         q=q,
-#         from_order=BETWEEN_JOINT_ORDER,
-#         to_order=ADJUSTED_JOINT_ORDER,
-#     )
-
-
 
 def warn(message: str):
     print(colored(message, "yellow"))
@@ -185,9 +93,44 @@ def T_to_pos_quat_xyzw(T: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
 
 
 class RLPolicyNode:
-    def __init__(self):
+    def __init__(
+        self,
+        config_path: Path,
+        checkpoint_path: Path,
+        hand_moving_average: float,
+        arm_moving_average: float,
+        save_foldername: Optional[str] = None,
+        overwrite_targets_filepath: Optional[Path] = None,
+    ):
+        self.config_path = config_path
+        self.checkpoint_path = checkpoint_path
+        self.hand_moving_average = hand_moving_average
+        self.arm_moving_average = arm_moving_average
+        self.save_foldername = save_foldername
+        self.overwrite_targets_filepath = overwrite_targets_filepath
+
         # Initialize the ROS node
         rospy.init_node("rl_policy_node_sharpa")
+
+        if self.save_foldername is not None:
+            # ##############################################################################
+            # Signal handling to save on shutdown
+            # When in progress saving to file, stop updating latest joint states and commands
+            # ##############################################################################
+            import signal
+            # Signal handling to save on shutdown
+            # When in progress saving to file, stop updating latest joint states and commands
+            self._is_in_progress_saving_to_file = False
+            signal.signal(signal.SIGINT, self._signal_handler)
+            signal.signal(signal.SIGTERM, self._signal_handler)
+
+            # Store history of joint states and commands
+            self.time_history: list[float] = []
+            self.q_history: list[np.ndarray] = []
+            self.qd_history: list[np.ndarray] = []
+            self.q_target_history: list[np.ndarray] = []
+            self.object_pose_history: list[np.ndarray] = []
+            self.goal_object_pose_history: list[np.ndarray] = []
 
         # Publisher for iiwa and sharpa joint commands
         self.iiwa_joint_cmd_pub = rospy.Publisher(
@@ -223,60 +166,45 @@ class RLPolicyNode:
 
         # RL Player setup
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.num_observations = 133  # Update this number based on actual dimensions
+        self.num_observations = 140  # Update this number based on actual dimensions
         self.num_actions = 29
 
-        CONFIG_PATH = Path(
-            # "/home/tylerlum/github_repos/sapg/closed_loop_testing/config.yaml"
-            # "/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-11-05_hairbrush/00_smooth-arm-hand_speed-10_dropout-obs_2025-11-05_05-20-24/runs/00_smooth-arm-hand_speed-10_dropout-obs_2025-11-05_05-20-24/config.yaml"
-            # "/home/tylerlum/github_repos/sapg/closed_loop_testing_sharpa/config.yaml"
-            "/home/tylerlum/github_repos/sapg/closed_loop_testing_sharpa_hammer_2/config.yaml"
-        )
-        assert Path(CONFIG_PATH).exists()
-        CHECKPOINT_PATH = Path(
-            # Fast
-            # "/juno/u/tylerlum/github_repos/sapg/train_dir/allegro_kuka_reorientation/2025-11-12_sharpa_hammer_2_coacd/00_CUBOID_obs-curriculum_thresh0-1_local_2025-11-14_00-04-24/runs/00_CUBOID_obs-curriculum_thresh0-1_local_2025-11-14_00-04-24/last/model.pth"
-            # Slow
-            # "/juno/u/kedia/sapg/train_dir/checkpoints/SLOW_CUBOID/model.pth"
-            # "/juno/u/kedia/sapg/train_dir/checkpoints/dr_hammer_slow.pth"
-            # "/juno/u/kedia/sapg/train_dir/checkpoints/hammer_slowest.pth"
-
-            # DR 4.075 speed
-            # "/juno/u/kedia/sapg/train_dir/checkpoints/2025_11_17_checkpoints/hammer_dr_4.075/00_DR_REAL_FINETUNING_SLOW_2025-11-15_13-49-55.pth"
-
-            # NODR 2.5 speed
-            # "/juno/u/kedia/sapg/train_dir/checkpoints/2025_11_17_checkpoints/hammer_nodr_2.5/00_REAL_FINETUNING_SLOW_2025-11-15_13-51-31.pth"
-
-            # Cuboid
-            "/juno/u/kedia/sapg/train_dir/checkpoints/2025_11_17_checkpoints/cuboid_nodr_5/00_SLOW_CUBOID_2025-11-14_11-59-02.pth"
-        )
-        assert CHECKPOINT_PATH.exists()
+        assert self.config_path.exists(), f"config_path: {self.config_path} does not exist"
+        assert self.checkpoint_path.exists(), f"checkpoint_path: {self.checkpoint_path} does not exist"
 
         # Create the RL player
         self.player = RlPlayer(
             num_observations=self.num_observations,
             num_actions=self.num_actions,
-            config_path=CONFIG_PATH,
-            checkpoint_path=CHECKPOINT_PATH,
+            config_path=str(self.config_path),
+            checkpoint_path=str(self.checkpoint_path),
             device=self.device,
         )
+        self.obs_list = self.player.cfg["task"]["env"]["obsList"]
 
         # ROS rate
-        self.rate_hz = 60
-        self.dt = 1.0 / self.rate_hz
-        self.rate = rospy.Rate(self.rate_hz)
+        self.control_dt = 1.0 / 60
 
-        # Set up chain and palm_serial_chain
-        if USE_BETWEEN:
-            robot_name = "iiwa14_left_sharpa_between"
-        else:
-            robot_name = "iiwa14_left_sharpa_adjusted_restricted"
-        self.chain, self.palm_serial_chain = create_chain_and_serial_chain(
+        # Set up chain
+        robot_name = "iiwa14_left_sharpa_adjusted_restricted"
+        self.chain, _ = create_chain_and_serial_chain(
             device=self.device, robot_name=robot_name
         )
 
         # State: prev_targets
         self.prev_targets = None
+
+        if self.overwrite_targets_filepath is not None:
+            info(f"Overwriting targets from file: {self.overwrite_targets_filepath}")
+            from recorded_data_scripts.recorded_data_sharpa import RecordedData
+            data_path = self.overwrite_targets_filepath
+            assert data_path.exists(), f"File {data_path} does not exist"
+            data = RecordedData.from_file(data_path)
+            self.q_targets_from_file = torch.from_numpy(data.robot_joint_pos_targets_array).float().to(self.device)
+            T, D = self.q_targets_from_file.shape
+            print(f"T: {T}, D: {D}")
+            assert D == 29, f"D: {D}, expected: 29"
+            self.current_step = 0
 
     def object_pose_callback(self, msg: PoseStamped):
         self.object_pose_msg = msg.pose
@@ -333,17 +261,11 @@ class RLPolicyNode:
         q = np.concatenate([iiwa_position, sharpa_position])
         qd = np.concatenate([iiwa_velocity, sharpa_velocity])
 
-        # HACK: Rearrange joint order
-        q_between = adjusted_to_between(
-            q=q,
-        )
-        qd_between = adjusted_to_between(
-            q=qd,
-        )
-
+        prev_action_targets = self.prev_targets if self.prev_targets is not None else torch.from_numpy(q).float().to(self.device)[None]
         observation = compute_observation(
-            q=torch.from_numpy(q_between).float().to(self.device)[None],
-            qd=torch.from_numpy(qd_between).float().to(self.device)[None],
+            q=torch.from_numpy(q).float().to(self.device)[None],
+            qd=torch.from_numpy(qd).float().to(self.device)[None],
+            prev_action_targets=prev_action_targets,
             object_pose=torch.from_numpy(object_pose_W).float().to(self.device)[None],
             goal_object_pose=torch.from_numpy(goal_object_pose_W)
             .float()
@@ -352,7 +274,7 @@ class RLPolicyNode:
             .float()
             .to(self.device)[None],
             chain=self.chain,
-            palm_serial_chain=self.palm_serial_chain,
+            obs_list=self.obs_list,
         )
         assert_equals(
             observation.shape,
@@ -369,20 +291,30 @@ class RLPolicyNode:
             print(f"object_pose_W: {object_pose_W}")
             print(f"goal_object_pose_W: {goal_object_pose_W}")
             print(f"object_scales: {self.object_scales}")
-            print(f"q_between: {q_between}")
-            print(f"qd_between: {qd_between}")
             breakpoint()
 
-        return observation, q_between
+        # ##############################################################################
+        # Record time and joint states and commands and object pose and goal object pose
+        # ##############################################################################
+        if self.save_foldername is not None:
+            if not hasattr(self, "start_run_time"):
+                self.start_run_time = time.time()
+            current_time = time.time()
+            dt = current_time - self.start_run_time
+
+            self.time_history.append(dt)
+            self.q_history.append(q)
+            self.qd_history.append(qd)
+            self.q_target_history.append(prev_action_targets.cpu().numpy()[0])
+            self.object_pose_history.append(object_pose_W)
+            self.goal_object_pose_history.append(goal_object_pose_W)
+
+        return observation, q
 
     def publish_targets(self, joint_pos_targets: torch.Tensor):
         assert_equals(joint_pos_targets.shape, (1, self.num_actions))
         joint_pos_targets = joint_pos_targets.squeeze(dim=0)
         joint_pos_targets = joint_pos_targets.cpu().numpy()
-
-        q_adjusted = between_to_adjusted(
-            q=joint_pos_targets,
-        )
 
         iiwa_msg = JointState()
         iiwa_msg.header.stamp = rospy.Time.now()
@@ -396,7 +328,7 @@ class RLPolicyNode:
             "iiwa_joint_6",
             "iiwa_joint_7",
         ]
-        iiwa_msg.position = q_adjusted[:7].tolist()
+        iiwa_msg.position = joint_pos_targets[:7].tolist()
         self.iiwa_joint_cmd_pub.publish(iiwa_msg)
         sharpa_msg = JointState()
         sharpa_msg.header.stamp = rospy.Time.now()
@@ -425,95 +357,150 @@ class RLPolicyNode:
             "joint_20.0",
             "joint_21.0",
         ]
-        sharpa_msg.position = q_adjusted[7:].tolist()
+        sharpa_msg.position = joint_pos_targets[7:].tolist()
         self.sharpa_joint_cmd_pub.publish(sharpa_msg)
 
-    def run(self):
-        first_observations_received = False
-
-        loop_no_sleep_dts, loop_dts = [], []
-
-        # CURRENT_STEP = 0
+    def _wait_and_warmup(self):
+        # Wait
         while not rospy.is_shutdown():
-            # print(f"Current step: {CURRENT_STEP}")
-            # if CURRENT_STEP > 1500:
-            #     print("Exiting")
-            #     import sys
+            obs, q = self.create_observation()
+            if obs is not None and q is not None:
+                break
+            time.sleep(self.control_dt)
 
-            #     sys.exit(0)
-            # CURRENT_STEP += 1
+        # Done waiting
+        info("=" * 100)
+        info("First observations received, starting to publish sim state")
+        info("=" * 100)
 
-            start_time = rospy.Time.now()
+        self.prev_targets = torch.from_numpy(q).float().to(self.device)[None]
+
+        # Warm up the policy and publishing
+        info("=" * 100)
+        info("Warming up policy and publishing current targets")
+        info("=" * 100)
+        # THIS IS NOT THE REAL LOOP, DON'T CARE ABOUT THESE NUMBERs
+        num_steps = 0
+        NUM_WARMUP_STEPS = 100
+        while not rospy.is_shutdown():
+            num_steps += 1
+            info(f"Warmup step {num_steps} of {NUM_WARMUP_STEPS}")
+            if num_steps > NUM_WARMUP_STEPS:
+                info(f"Reached {NUM_WARMUP_STEPS} steps, stopping warmup")
+                break
 
             # Create observation from the latest messages
-            obs, q_between = self.create_observation()
+            obs, q = self.create_observation()
+            assert obs is not None and q is not None, f"obs: {obs}, q: {q}"
+            assert_equals(obs.shape, (1, self.num_observations))
 
-            if obs is not None and q_between is not None:
-                if not first_observations_received:
-                    info("=" * 100)
-                    info("First observations received, starting to publish sim state")
-                    info("=" * 100)
-                    first_observations_received = True
+            # Get the normalized action from the RL player
+            normalized_action = self.player.get_normalized_action(
+                obs=obs,
+                deterministic_actions=True,
+            )
+            # normalized_action = torch.zeros(1, self.num_actions, device=self.device)
+            assert_equals(normalized_action.shape, (1, self.num_actions))
 
-                if self.prev_targets is None:
-                    self.prev_targets = torch.from_numpy(q_between).float().to(self.device)[None]
+            _ = compute_joint_pos_targets(
+                actions=normalized_action,
+                prev_targets=self.prev_targets,
+                hand_moving_average=0.1,
+                arm_moving_average=0.1,
+                hand_dof_speed_scale=2.5,
+                dt=1/60,
+            )
 
-                assert_equals(obs.shape, (1, self.num_observations))
+            # We do not actually use the joint pos targets computed by the policy, we use the actual joint states so it doesn't move
+            joint_pos_targets = torch.clip(
+                torch.from_numpy(q).float().to(self.device)[None],
+                min=torch.from_numpy(Q_LOWER_LIMITS_np).float().to(self.device)[None],
+                max=torch.from_numpy(Q_UPPER_LIMITS_np).float().to(self.device)[None],
+            )
 
-                # Get the normalized action from the RL player
-                normalized_action = self.player.get_normalized_action(
-                    obs=obs,
-                    deterministic_actions=True,
-                    # obs=obs, deterministic_actions=True
-                )
-                # normalized_action = torch.zeros(1, self.num_actions, device=self.device)
-                assert_equals(normalized_action.shape, (1, self.num_actions))
+            # Publish the targets
+            self.publish_targets(joint_pos_targets)
+            self.prev_targets = joint_pos_targets.clone()
+            time.sleep(self.control_dt)
 
-                HAND_MOVING_AVERAGE = 0.05
-                # HAND_MOVING_AVERAGE = 0.1
-                ARM_MOVING_AVERAGE = 0.01
-                # HAND_DOF_SPEED_SCALE = 2.5
-                # HAND_DOF_SPEED_SCALE = 4.075
-                HAND_DOF_SPEED_SCALE = 5.0
-                DT = 1 / 60
-                joint_pos_targets = compute_joint_pos_targets(
-                    actions=normalized_action,
-                    prev_targets=self.prev_targets,
-                    hand_moving_average=HAND_MOVING_AVERAGE,
-                    arm_moving_average=ARM_MOVING_AVERAGE,
-                    hand_dof_speed_scale=HAND_DOF_SPEED_SCALE,
-                    dt=DT,
-                )
-                assert_equals(joint_pos_targets.shape, (1, self.num_actions))
+        # Reset rnn state
+        self.player.reset()
 
-                # Clamp
-                joint_pos_targets = torch.clip(
-                    joint_pos_targets,
-                    min=torch.from_numpy(Q_LOWER_LIMITS_np_between).float().to(self.device)[None],
-                    max=torch.from_numpy(Q_UPPER_LIMITS_np_between).float().to(self.device)[None],
-                )
+        # Done warming up
+        info("=" * 100)
+        info("Warmup complete")
+        info("=" * 100)
 
-                # Publish the targets
-                self.publish_targets(joint_pos_targets)
-                # print(f"CURRENT_STEP: {CURRENT_STEP}")
-                # print(f"joint_pos_targets: {joint_pos_targets}")
-                # print()
-                self.prev_targets = joint_pos_targets.clone()
+    def run(self):
+        self._wait_and_warmup()
 
-            # Sleep to maintain loop rate
-            before_sleep_time = rospy.Time.now()
-            self.rate.sleep()
-            after_sleep_time = rospy.Time.now()
+        loop_no_sleep_dts, loop_dts = [], []
+        while not rospy.is_shutdown():
+            start_loop_no_sleep_time = time.time()
 
-            loop_no_sleep_dt = (before_sleep_time - start_time).to_sec()
+            # Create observation from the latest messages
+            obs, q = self.create_observation()
+            assert obs is not None and q is not None, f"obs: {obs}, q: {q}"
+
+            assert_equals(obs.shape, (1, self.num_observations))
+
+            # Get the normalized action from the RL player
+            normalized_action = self.player.get_normalized_action(
+                obs=obs,
+                deterministic_actions=True,
+            )
+            assert_equals(normalized_action.shape, (1, self.num_actions))
+
+            HAND_DOF_SPEED_SCALE = 2.5
+            DT = 1 / 60
+            joint_pos_targets = compute_joint_pos_targets(
+                actions=normalized_action,
+                prev_targets=self.prev_targets,
+                hand_moving_average=self.hand_moving_average,
+                arm_moving_average=self.arm_moving_average,
+                hand_dof_speed_scale=HAND_DOF_SPEED_SCALE,
+                dt=DT,
+            )
+            assert_equals(joint_pos_targets.shape, (1, self.num_actions))
+
+            # Clamp
+            joint_pos_targets = torch.clip(
+                joint_pos_targets,
+                min=torch.from_numpy(Q_LOWER_LIMITS_np).float().to(self.device)[None],
+                max=torch.from_numpy(Q_UPPER_LIMITS_np).float().to(self.device)[None],
+            )
+
+            if self.overwrite_targets_filepath is not None:
+                if self.current_step >= self.q_targets_from_file.shape[0]:
+                    self.current_step = self.q_targets_from_file.shape[0] - 1
+                    info("Reached end of targets, holding last target")
+                assert self.current_step < self.q_targets_from_file.shape[0], f"current_step: {self.current_step}, expected: < {self.q_targets_from_file.shape[0]}"
+                joint_pos_targets = self.q_targets_from_file[self.current_step].unsqueeze(0)
+                self.current_step += 1
+
+            # Publish the targets
+            self.publish_targets(joint_pos_targets)
+            self.prev_targets = joint_pos_targets.clone()
+
+            # End of loop timekeeping
+            end_loop_no_sleep_time = time.time()
+            loop_no_sleep_dt = end_loop_no_sleep_time - start_loop_no_sleep_time
             loop_no_sleep_dts.append(loop_no_sleep_dt)
-            loop_dt = (after_sleep_time - start_time).to_sec()
+
+            sleep_dt = self.control_dt - loop_no_sleep_dt
+            if sleep_dt > 0:
+                time.sleep(sleep_dt)
+                loop_dt = loop_no_sleep_dt + sleep_dt
+            else:
+                loop_dt = loop_no_sleep_dt
+                warn(
+                    f"Simulation is running slower than real time, desired FPS = {1.0 / self.control_dt:.1f}, actual FPS = {1.0 / loop_dt:.1f}"
+                )
             loop_dts.append(loop_dt)
 
             PRINT_FPS_EVERY_N_SECONDS = 5.0
-            PRINT_FPS_EVERY_N_STEPS = int(PRINT_FPS_EVERY_N_SECONDS / self.dt)
+            PRINT_FPS_EVERY_N_STEPS = int(PRINT_FPS_EVERY_N_SECONDS / self.control_dt)
             if len(loop_dts) == PRINT_FPS_EVERY_N_STEPS:
-            # if True:
                 loop_dt_array = np.array(loop_dts)
                 loop_no_sleep_dt_array = np.array(loop_no_sleep_dts)
                 fps_array = 1.0 / loop_dt_array
@@ -535,16 +522,14 @@ class RLPolicyNode:
 
     @property
     def object_scales(self) -> np.ndarray:
-        # object_scales = np.array([0.1, 0.035, 0.025]) * 20
-        # object_scales = np.array([3.0, 0.5, 0.5])
-        # object_scales = np.array([4.0, 0.75, 1.0])
-        # object_scales = np.array([4.0, 0.75, 1.0]) * 1.25
-
         # Hammer 2
         # object_scales = np.array([3.0, 0.25, 0.2])
 
         # blue_cuboid (rearrange)
-        object_scales = np.array([4.0, 1.0, 0.75])
+        # object_scales = np.array([4.0, 1.0, 0.75])
+
+        # blue_cuboid (not rearrange) and different scale
+        object_scales = np.array([5.0, 0.9375, 1.25])
 
         # blue_cuboid_real_iphone
         # object_scales = np.array([3.0, 1.4, 0.2])
@@ -563,11 +548,117 @@ class RLPolicyNode:
 
         return object_scales
 
+    def _signal_handler(self, signum, frame):
+        assert self.save_foldername is not None, "save_foldername must be set to save to file"
+
+        import datetime
+        if self._is_in_progress_saving_to_file:
+            warn("Already in progress of saving to file, skipping")
+            return
+
+        self._is_in_progress_saving_to_file = True
+        if len(self.time_history) == 0:
+            warn("No data recorded, skipping")
+        else:
+            info(f"Received signal {signum}, saving to file")
+            datetime_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+            filename = f"{datetime_str}_{self.checkpoint_path.stem}_arm{self.arm_moving_average}"
+            if self.overwrite_targets_filepath is not None:
+                filename = f"{datetime_str}_replay_{self.overwrite_targets_filepath.stem}"
+            output_path = Path("recorded_robot_inputs") / self.save_foldername /f"{filename}.npz"
+            self.save_to_file(output_path)
+            info(f"Saved to file: {output_path}")
+
+        rospy.signal_shutdown("Shutting down")
+
+    def save_to_file(self, file_path: Path):
+        assert self.save_foldername is not None, "save_foldername must be set to save to file"
+
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        info(f"Saving to file: {file_path}")
+
+        T = len(self.time_history)
+        robot_root_states_array = np.zeros((T, 13))
+        robot_root_states_array[:, 1] = 0.8
+        robot_root_states_array[:, 6] = 1.0  # quaternion xyzw has w=1
+        object_root_states_array = np.zeros((T, 13))
+        object_root_states_array[:, :7] = np.array(self.object_pose_history)
+        table_root_states_array = np.zeros((T, 13))
+        table_root_states_array[:, :3] = np.array([0.0, 0.0, 0.38])[None]
+        goal_root_states_array = np.zeros((T, 13))
+        goal_root_states_array[:, :7] = np.array(self.goal_object_pose_history)
+
+        robot_joint_positions = np.array(self.q_history)
+        robot_joint_velocities = np.array(self.qd_history)
+
+        robot_joint_pos_targets = np.array(self.q_target_history)
+        time_array = np.array(self.time_history)
+
+        assert robot_joint_positions.shape == (T, 29), (
+            f"robot_joint_positions.shape: {robot_joint_positions.shape}, expected: (T, 29)"
+        )
+        assert robot_joint_velocities.shape == (T, 29), (
+            f"robot_joint_velocities.shape: {robot_joint_velocities.shape}, expected: (T, 29)"
+        )
+        assert robot_joint_pos_targets.shape == (T, 29), (
+            f"robot_joint_pos_targets.shape: {robot_joint_pos_targets.shape}, expected: (T, 29)"
+        )
+        assert object_root_states_array.shape == (T, 13), (
+            f"object_root_states_array.shape: {object_root_states_array.shape}, expected: (T, 13)"
+        )
+        assert time_array.shape == (T,), (
+            f"time_array.shape: {time_array.shape}, expected: (T,)"
+        )
+
+        JOINT_NAMES = [
+            'iiwa14_joint_1', 'iiwa14_joint_2', 'iiwa14_joint_3', 'iiwa14_joint_4', 'iiwa14_joint_5', 'iiwa14_joint_6', 'iiwa14_joint_7',
+            'left_1_thumb_CMC_FE', 'left_thumb_CMC_AA', 'left_thumb_MCP_FE', 'left_thumb_MCP_AA', 'left_thumb_IP',
+            'left_2_index_MCP_FE', 'left_index_MCP_AA', 'left_index_PIP', 'left_index_DIP',
+            'left_3_middle_MCP_FE', 'left_middle_MCP_AA', 'left_middle_PIP', 'left_middle_DIP',
+            'left_4_ring_MCP_FE', 'left_ring_MCP_AA', 'left_ring_PIP', 'left_ring_DIP',
+            'left_5_pinky_CMC', 'left_pinky_MCP_FE', 'left_pinky_MCP_AA', 'left_pinky_PIP', 'left_pinky_DIP',
+        ]
+
+        from recorded_data_scripts.recorded_data_sharpa import RecordedData
+
+        recorded_data = RecordedData(
+            robot_root_states_array=robot_root_states_array,
+            object_root_states_array=object_root_states_array,
+            robot_joint_positions_array=robot_joint_positions,
+            time_array=time_array,
+            robot_joint_names=JOINT_NAMES,
+            robot_joint_velocities_array=robot_joint_velocities,
+            robot_joint_pos_targets_array=robot_joint_pos_targets,
+            goal_root_states_array=goal_root_states_array,
+        )
+        recorded_data.to_file(file_path)
 
 
 if __name__ == "__main__":
     try:
-        rl_policy_node = RLPolicyNode()
+        rl_policy_node = RLPolicyNode(
+            config_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"),
+            # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/cleanInputs.pth"),
+            checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/noisyInputs.pth"),
+            hand_moving_average=0.1,
+            arm_moving_average=0.02,
+            # arm_moving_average=0.03,
+            # arm_moving_average=0.04,
+            # arm_moving_average=0.05,
+            # arm_moving_average=0.01,
+            # save_foldername=None,
+            save_foldername="real_world_policy",
+            overwrite_targets_filepath=None,
+            # overwrite_targets_filepath=Path("recorded_robot_inputs/isaac/2025-12-12_19-40-52_noisyInputs_arm0.01.npz"),
+            # overwrite_targets_filepath=Path("recorded_robot_inputs/isaac/2025-12-12_19-40-13_noisyInputs_arm0.05.npz"),
+            # overwrite_targets_filepath=Path("recorded_robot_inputs/isaac/2025-12-12_19-43-50_cleanInputs_arm0.01.npz"),
+            # overwrite_targets_filepath=Path("recorded_robot_inputs/isaac/2025-12-12_19-41-34_cleanInputs_arm0.05.npz"),
+            # overwrite_targets_filepath=Path("recorded_robot_inputs/mujoco/2025-12-12_19-45-23_noisyInputs_arm0.05.npz"),
+            # overwrite_targets_filepath=Path("recorded_robot_inputs/mujoco/2025-12-12_19-46-05_noisyInputs_arm0.01.npz"),
+            # overwrite_targets_filepath=Path("recorded_robot_inputs/mujoco/2025-12-12_19-46-50_cleanInputs_arm0.05.npz"),
+            # overwrite_targets_filepath=Path("recorded_robot_inputs/mujoco/2025-12-12_19-47-35_cleanInputs_arm0.01.npz"),
+        )
         rl_policy_node.run()
     except rospy.ROSInterruptException:
         pass

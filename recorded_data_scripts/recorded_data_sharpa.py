@@ -7,6 +7,7 @@ from typing import Optional
 
 import numpy as np
 from scipy.spatial.transform import Rotation as R
+from termcolor import colored
 
 OBSERVATIONS_DIM = 133
 ACTIONS_DIM = 29
@@ -29,38 +30,6 @@ ADJUSTED_JOINT_ORDER = [
 ]
 
 JOINT_NAMES_ISAACGYM = ADJUSTED_JOINT_ORDER
-
-# JOINT_NAMES_ISAACGYM = [
-#     "iiwa7_joint_1",
-#     "iiwa7_joint_2",
-#     "iiwa7_joint_3",
-#     "iiwa7_joint_4",
-#     "iiwa7_joint_5",
-#     "iiwa7_joint_6",
-#     "iiwa7_joint_7",
-#     "joint_0.0",
-#     "joint_1.0",
-#     "joint_2.0",
-#     "joint_3.0",
-#     "joint_4.0",
-#     "joint_5.0",
-#     "joint_6.0",
-#     "joint_7.0",
-#     "joint_8.0",
-#     "joint_9.0",
-#     "joint_10.0",
-#     "joint_11.0",
-#     "joint_12.0",
-#     "joint_13.0",
-#     "joint_14.0",
-#     "joint_15.0",
-#     "joint_16.0",
-#     "joint_17.0",
-#     "joint_18.0",
-#     "joint_19.0",
-#     "joint_20.0",
-#     "joint_21.0",
-# ]
 
 OBS_NAME_TO_NAMES = {
     "q": [f"{name}_q" for name in JOINT_NAMES_ISAACGYM],
@@ -96,6 +65,27 @@ OBS_NAME_TO_NAMES = {
 }
 OBS_NAMES = sum(OBS_NAME_TO_NAMES.values(), [])
 ACTION_NAMES = JOINT_NAMES_ISAACGYM
+
+def warn(message: str):
+    print(colored(message, "yellow"))
+
+
+def warn_every(message: str, n_seconds: float, key=None):
+    import time
+    """
+    Print a warning message at most once every n_seconds per unique key.
+    Stores state inside the function itself (no globals).
+    """
+    if not hasattr(warn_every, "_last_times"):
+        warn_every._last_times = {}  # create on first call
+
+    key = key or message
+    last_times = warn_every._last_times
+    last_time = last_times.get(key, 0)
+
+    if time.time() - last_time > n_seconds:
+        warn(message)
+        last_times[key] = time.time()
 
 
 @dataclass
@@ -337,9 +327,36 @@ class RecordedData:
     @cached_property
     def dt(self) -> float:
         dt = self.time_array[1] - self.time_array[0]
-        assert np.allclose(np.diff(self.time_array), dt), (
-            f"Expected time array to be evenly spaced, got {self.time_array}"
-        )
+
+        dt_array = np.diff(self.time_array)
+        all_close = np.allclose(dt_array, dt)
+        if not all_close:
+            fps_array = 1.0 / dt_array
+            WARN_EVERY_N_SECONDS = 100.0
+            warn_every("~" * 100, WARN_EVERY_N_SECONDS)
+            warn_every("Time array is not evenly spaced", WARN_EVERY_N_SECONDS)
+            warn_every(f"Differences: {dt_array}", WARN_EVERY_N_SECONDS)
+            warn_every(f"dt: {dt}", WARN_EVERY_N_SECONDS)
+            warn_every(f"Min difference: {np.min(dt_array)}", WARN_EVERY_N_SECONDS)
+            warn_every(f"Median difference: {np.median(dt_array)}", WARN_EVERY_N_SECONDS)
+            warn_every(f"Mean difference: {np.mean(dt_array)}", WARN_EVERY_N_SECONDS)
+            warn_every(f"Max difference: {np.max(dt_array)}", WARN_EVERY_N_SECONDS)
+            warn_every(f"fps array: {fps_array}", WARN_EVERY_N_SECONDS)
+            warn_every(f"fps: {1.0 / dt}", WARN_EVERY_N_SECONDS)
+            warn_every(f"fps mean: {np.mean(fps_array)}", WARN_EVERY_N_SECONDS)
+            warn_every(f"fps median: {np.median(fps_array)}", WARN_EVERY_N_SECONDS)
+            warn_every(f"fps max: {np.max(fps_array)}", WARN_EVERY_N_SECONDS)
+            warn_every(f"fps min: {np.min(fps_array)}", WARN_EVERY_N_SECONDS)
+            warn_every(f"fps std: {np.std(fps_array)}", WARN_EVERY_N_SECONDS)
+            ERROR = False
+            if ERROR:
+                raise ValueError("Time array is not evenly spaced")
+            USE_MEDIAN_DT = True
+            if USE_MEDIAN_DT:
+                warn_every(f"Using median dt: {np.median(dt_array)}", WARN_EVERY_N_SECONDS)
+                dt = np.median(dt_array)
+            warn_every("~" * 100, WARN_EVERY_N_SECONDS)
+
         return dt
 
     @cached_property

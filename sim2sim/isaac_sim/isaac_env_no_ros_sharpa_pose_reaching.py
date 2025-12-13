@@ -105,7 +105,7 @@ def main():
         if sleep_time > 0:
             time.sleep(sleep_time)
         else:
-            print(
+            warn(
                 f"Control loop too slow! Desired FPS: {1.0 / CONTROL_DT:.1f}, Actual FPS: {1.0 / (end_time - start_time):.1f}"
             )
 

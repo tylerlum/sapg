@@ -117,6 +117,9 @@ class RlPlayer:
         assert_equals(normalized_action.shape, (batch_size, self.num_actions))
         return normalized_action
 
+    def reset(self) -> None:
+        self.player.reset()
+
 
 def main() -> None:
     from pathlib import Path

@@ -38,7 +38,7 @@ env:
   resetPositionNoiseX: 0.1
   resetPositionNoiseY: 0.1
   resetPositionNoiseZ: 0.02
-  resetRotationNoise: 1.0
+  randomizeObjectRotation: True
   resetDofPosRandomIntervalFingers: 0.1
   resetDofPosRandomIntervalArm: 0.1
   resetDofVelRandomInterval: 0.5
@@ -177,6 +177,10 @@ env:
 
   # jointVelocityObsNoiseStd: 0.1
   jointVelocityObsNoiseStd: 0.0
+
+  forceNoReset: False  # If True, will not reset the environment, useful for sim2sim testing
+  objectStartPose: ${eval:"None"}  # If None, will use the default object start pose. Otherwise, a 7-element list of [x, y, z, qx, qy, qz, qw]
+  goalObjectPose: ${eval:"None"}  # If None, does nothing. Otherwise, forces the goal object pose to be this value. Must be a 7-element list of [x, y, z, qx, qy, qz, qw]
 
   asset:
     # Whis was the original kuka_allegro asset.
