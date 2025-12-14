@@ -4,6 +4,7 @@ import argparse
 import time
 from pathlib import Path
 
+from scipy.spatial.transform import Rotation as R
 import numpy as np
 import viser
 from viser.extras import ViserUrdf
@@ -40,6 +41,14 @@ def main():
     # ###########
     assert file_path.exists(), f"File {file_path} does not exist"
     recorded_data = RecordedData.from_file(file_path)
+
+    FILL_IN_EXPECTED_TABLE_ROOT_STATES_IF_MISSING = True
+    if FILL_IN_EXPECTED_TABLE_ROOT_STATES_IF_MISSING and recorded_data.table_root_states_array is None:
+        print(f"Filling in expected table root states because table root states array is missing for file: {file_path}")
+        expected_table_root_states = np.zeros((len(recorded_data), 13))
+        expected_table_root_states[:, :3] = np.array([0.0, 0.0, 0.38])[None]
+        expected_table_root_states[:, 3:7] = np.array([1.0, 0.0, 0.0, 0.0])[None]
+        recorded_data.table_root_states_array = expected_table_root_states
 
     # ###########
     # Create viser server and create viser objects
@@ -309,8 +318,9 @@ def main():
             # Keep floating sharpa hand in a fixed position
             sharpa_frame.position = recorded_data.robot_root_states_array[
                 0, :3
-            ] + np.array([0.5, -0.8, 0.7])
-            sharpa_frame.wxyz = np.array([1.0, 0.0, 0.0, 0.0])
+            ] + np.array([-0.5, -0.8, 0.7])
+            # sharpa_frame.wxyz = np.array([1.0, 0.0, 0.0, 0.0])
+            sharpa_frame.wxyz = xyzw_to_wxyz(R.from_euler("z", -np.pi / 2).as_quat())
 
         # Object relative to floating sharpa hand
         T_W_O = RecordedData.pose_to_T(object_root_state[:7])
