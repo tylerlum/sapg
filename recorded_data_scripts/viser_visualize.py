@@ -19,7 +19,7 @@ GREEN_RGBA = (0, 255, 0, 0.5)
 AXES_LENGTH = 0.2
 AXES_RADIUS = 0.01
 
-DISABLE_AXES = False
+DISABLE_AXES = True
 if DISABLE_AXES:
     AXES_LENGTH = 0.00001
     AXES_RADIUS = 0.00001
@@ -63,6 +63,21 @@ def main():
         client.camera.position = (0.0, -1.0, 1.03)
         # client.camera.wxyz = (0, 0, 0, 1)
         client.camera.look_at = (0, 0, 0.53)
+
+        USE_REAL_CAMERA_T_R_C = True
+        if USE_REAL_CAMERA_T_R_C:
+            T_W_R = np.eye(4)
+            T_W_R[:3, 3] = np.array([0.0, 0.8, 0.0])
+            T_R_C = np.array([
+                [0.95527630647288930, -0.17920451516639435, 0.23522950502752071, -0.50020504226664309],
+                [-0.28890230754832508, -0.39580744250644329, 0.87170632964878869, -1.43857156913606077],
+                [-0.06310812138518884, -0.90067874972183481, -0.42987806970668574, 1.02018932829980047],
+                [0.00000000000000000, 0.00000000000000000, 0.00000000000000000, 1.00000000000000000]
+            ])
+            T_W_C = T_W_R @ T_R_C
+            client.camera.position = T_W_C[:3, 3]
+            client.camera.wxyz = xyzw_to_wxyz(R.from_matrix(T_W_C[:3, :3]).as_quat())
+
 
     # Load assets into viser
     KUKA_SHARPA_URDF_PATH = get_repo_root_dir() / "assets/urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted_restricted.urdf"
