@@ -298,6 +298,27 @@ class RecordedData:
         qd[-1] = (q[-1] - q[-2]) / (t[-1] - t[-2])
         return qd
 
+    @cached_property
+    def robot_ee_pose_array(self) -> np.ndarray:
+        from isaacgymenvs.utils.observation_action_utils_sharpa import create_chain_and_serial_chain
+        chain, _ = create_chain_and_serial_chain(device="cpu", robot_name="iiwa14_left_sharpa_adjusted_restricted")
+        fk_dict = chain.forward_kinematics(
+            self.change_joint_order(
+                q=self.robot_joint_positions_array,
+                from_order=self.robot_joint_names,
+                to_order=chain.get_joint_parameter_names(),
+            )
+        )
+        ee_pose_matrix = fk_dict["iiwa14_link_7"].get_matrix()
+        assert ee_pose_matrix.shape == (self.T, 4, 4), (
+            f"Expected ee_pose_matrix to be (T, 4, 4), got {ee_pose_matrix.shape}"
+        )
+        ee_pose = self.T_to_pose(ee_pose_matrix)
+        assert ee_pose.shape == (self.T, 7), (
+            f"Expected ee_pose to be (T, 7), got {ee_pose.shape}"
+        )
+        return ee_pose
+
     # ###############
     # Hardcoded Properties
     # ###############
