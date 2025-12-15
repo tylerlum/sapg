@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CUSTOM_EXPERIMENT_NAME="2.5_Speed_controlFreqInv_4_successSteps_2_delta"
+CUSTOM_EXPERIMENT_NAME="NEW_TARGET_VOLUME"
 WANDB_GROUP="NEW_GAINS"
 
 WANDB_ENTITY="kk837"
@@ -46,10 +46,10 @@ task.env.objectBaseSize=0.04 \
 task.env.kukaActionsPenaltyScale=0.03 \
 task.env.allegroActionsPenaltyScale=0.003 \
 task.env.dofSpeedScale=2.5 \
-task.env.controlFrequencyInv=4 \
-task.env.armMovingAverage=0.3 \
-task.env.handMovingAverage=0.3 \
-task.env.episodeLength=200 \
+task.env.controlFrequencyInv=1 \
+task.env.armMovingAverage=0.1 \
+task.env.handMovingAverage=0.1 \
+task.env.episodeLength=600 \
 task.env.successSteps=10 \
 task.env.goalSamplingType=delta \
 task.env.useObsDelay=False \
@@ -61,5 +61,6 @@ task.env.objectStateDelayMax=10 \
 task.env.objectStateXyzNoiseStd=0.01 \
 task.env.objectStateRotationNoiseDegrees=5.0 \
 task.env.jointVelocityObsNoiseStd=0 \
+# checkpoint=/share/portal/kk837/sapg/train_dir/FINAL_ASYMMETRIC_RUNS/NEW_GAINS/2.5_Speed_controlFreqInv_1_successSteps_10_delta_2025-12-09_19-47-41/runs/00_2.5_Speed_controlFreqInv_1_successSteps_10_delta_2025-12-09_19-47-41/last/model.pth \
 # task.task.randomization_params.actor_params.object.scale.range=[0.999,1.001] \
 # task.task.randomization_params.actor_params.allegro.scale.range=[0.999,1.001] \

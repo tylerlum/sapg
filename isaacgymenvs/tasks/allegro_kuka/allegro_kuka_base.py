@@ -288,8 +288,8 @@ class AllegroKukaBase(VecTask):
         self._modify_render_settings_if_headless()
 
         # volume to sample target position from
-        target_volume_origin = np.array([0, 0.05, 0.8], dtype=np.float32)
-        target_volume_extent = np.array([[-0.4, 0.4], [-0.05, 0.3], [-0.12, 0.25]], dtype=np.float32)
+        target_volume_origin = np.array([0, 0.05, 0.86], dtype=np.float32)
+        target_volume_extent = np.array([[-0.4, 0.4], [-0.05, 0.3], [-0.12, 0.19]], dtype=np.float32)
 
         self.target_volume_origin = torch.from_numpy(target_volume_origin).to(self.device).float()
         self.target_volume_extent = torch.from_numpy(target_volume_extent).to(self.device).float()
