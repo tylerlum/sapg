@@ -193,6 +193,7 @@ class RLPolicyNode:
 
         # State: prev_targets
         self.prev_targets = None
+        self._warmup_completed = False
 
         if self.overwrite_targets_filepath is not None:
             info(f"Overwriting targets from file: {self.overwrite_targets_filepath}")
@@ -296,7 +297,7 @@ class RLPolicyNode:
         # ##############################################################################
         # Record time and joint states and commands and object pose and goal object pose
         # ##############################################################################
-        if self.save_foldername is not None:
+        if self.save_foldername is not None and self._warmup_completed:
             if not hasattr(self, "start_run_time"):
                 self.start_run_time = time.time()
             current_time = time.time()
@@ -361,6 +362,8 @@ class RLPolicyNode:
         self.sharpa_joint_cmd_pub.publish(sharpa_msg)
 
     def _wait_and_warmup(self):
+        assert not self._warmup_completed, "Warmup already completed"
+
         # Wait
         while not rospy.is_shutdown():
             obs, q = self.create_observation()
@@ -427,9 +430,11 @@ class RLPolicyNode:
         self.player.reset()
 
         # Done warming up
+        self._warmup_completed = True
         info("=" * 100)
         info("Warmup complete")
         info("=" * 100)
+        assert self._warmup_completed, "Warmup completed"
 
     def run(self):
         self._wait_and_warmup()
@@ -648,9 +653,9 @@ if __name__ == "__main__":
             # arm_moving_average=0.05,
             # arm_moving_average=0.01,
             # save_foldername=None,
-            save_foldername="real_world_policy",
-            overwrite_targets_filepath=None,
-            # overwrite_targets_filepath=Path("recorded_robot_inputs/isaac/2025-12-12_19-40-52_noisyInputs_arm0.01.npz"),
+            save_foldername="isaac_no-kuka-armature_replay_from_isaac",
+            # overwrite_targets_filepath=None,
+            overwrite_targets_filepath=Path("recorded_robot_inputs/isaac/2025-12-12_19-40-52_noisyInputs_arm0.01.npz"),
             # overwrite_targets_filepath=Path("recorded_robot_inputs/isaac/2025-12-12_19-40-13_noisyInputs_arm0.05.npz"),
             # overwrite_targets_filepath=Path("recorded_robot_inputs/isaac/2025-12-12_19-43-50_cleanInputs_arm0.01.npz"),
             # overwrite_targets_filepath=Path("recorded_robot_inputs/isaac/2025-12-12_19-41-34_cleanInputs_arm0.05.npz"),
