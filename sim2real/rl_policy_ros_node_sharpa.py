@@ -459,12 +459,8 @@ class RLPolicyNode:
             # t3 is the time that the robot receives the targets (not captured here)
 
             # Create observation from the latest messages
-            before_obs_time = time.time()
             t1 = rospy.Time.now()
             obs, q, t0 = self.create_observation()
-            after_obs_time = time.time()
-            obs_dt = after_obs_time - before_obs_time
-            print(f"obs_dt: {obs_dt * 1000:.1f} ms")
             assert obs is not None and q is not None, f"obs: {obs}, q: {q}"
 
             assert_equals(obs.shape, (1, self.num_observations))

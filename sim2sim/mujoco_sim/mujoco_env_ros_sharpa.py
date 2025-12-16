@@ -122,6 +122,7 @@ class MujocoEnvRosSharpa:
         joint_names = JOINT_NAMES
 
         iiwa_joint_msg = JointState(
+            header=object_pose_msg.header,
             name=joint_names[:N_IIWA_JOINTS],
             position=joint_positions[:N_IIWA_JOINTS],
             velocity=joint_velocities[:N_IIWA_JOINTS],
@@ -129,6 +130,7 @@ class MujocoEnvRosSharpa:
         self.iiwa_pub.publish(iiwa_joint_msg)
 
         sharpa_joint_msg = JointState(
+            header=object_pose_msg.header,
             name=joint_names[N_IIWA_JOINTS:],
             position=joint_positions[N_IIWA_JOINTS:],
             velocity=joint_velocities[N_IIWA_JOINTS:],
