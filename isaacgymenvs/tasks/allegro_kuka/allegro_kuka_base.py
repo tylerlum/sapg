@@ -2003,8 +2003,10 @@ class AllegroKukaBase(VecTask):
             delay_index = torch.randint(0, self.obs_queue.shape[1], (self.num_envs,), device=self.device)
             self.obs_buf[:] = self.obs_queue[torch.arange(self.num_envs), delay_index].clone()
 
-        # HACK:
-        # self.obs_buf[:] = self.obs_queue[:, -1].clone()
+        # HACK: For testing delay, force a fixed full delay
+        FORCE_FULL_DELAY = False
+        if FORCE_FULL_DELAY:
+            self.obs_buf[:] = self.obs_queue[:, -1].clone()
 
         # Default CHECK_WITH_COMPUTED_OBS = False
         # Set to True to check if the observations are computed correctly
