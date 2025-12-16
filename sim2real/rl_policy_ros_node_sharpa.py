@@ -451,6 +451,13 @@ class RLPolicyNode:
         while not rospy.is_shutdown():
             start_loop_no_sleep_time = time.time()
 
+            # Profiling:
+            # t0 is the time at which the earliest ROS message was received that was used to create the observation
+            # t1 is the time at which the policy loop started
+            # t1_5 is the time at which the targets were computed (computed obs, policy forward pass, compute targets)
+            # t2 is the time at which the targets were done being published
+            # t3 is the time that the robot receives the targets (not captured here)
+
             # Create observation from the latest messages
             before_obs_time = time.time()
             t1 = rospy.Time.now()
@@ -497,22 +504,25 @@ class RLPolicyNode:
                 self.current_step += 1
 
             # Publish the targets
-            t2 = rospy.Time.now()
+            t1_5 = rospy.Time.now()
             dt01_ms = (t1 - t0).to_sec() * 1000
-            dt12_ms = (t2 - t1).to_sec() * 1000
-            dt02_ms = (t2 - t0).to_sec() * 1000
+            dt11_5_ms = (t1_5 - t1).to_sec() * 1000
             self.publish_targets(joint_pos_targets)
             self.prev_targets = joint_pos_targets.squeeze(dim=0).cpu().numpy()
-            t3 = rospy.Time.now()
-            dt23_ms = (t3 - t2).to_sec() * 1000
+            t2 = rospy.Time.now()
+            dt1_5_2_ms = (t2 - t1_5).to_sec() * 1000
 
             # End of loop timekeeping
             end_loop_no_sleep_time = time.time()
             loop_no_sleep_dt = end_loop_no_sleep_time - start_loop_no_sleep_time
             loop_no_sleep_dts.append(loop_no_sleep_dt)
 
+            # Print timing information
+            PRINT_TIMING = False
+            if PRINT_TIMING:
+                print(f"dt01_ms: {dt01_ms:.1f}, dt11_5_ms: {dt11_5_ms:.1f}, dt1_5_2_ms: {dt1_5_2_ms:.1f} ms, loop_no_sleep_dt: {loop_no_sleep_dt * 1000:.1f} ms")
+
             sleep_dt = self.control_dt - loop_no_sleep_dt
-            print(f"dt01_ms: {dt01_ms:.1f}, dt12_ms: {dt12_ms:.1f}, dt02_ms: {dt02_ms:.1f} ms, loop_no_sleep_dt: {loop_no_sleep_dt * 1000:.1f} ms, dt23_ms: {dt23_ms:.1f} ms")
             if sleep_dt > 0:
                 time.sleep(sleep_dt)
                 loop_dt = loop_no_sleep_dt + sleep_dt
