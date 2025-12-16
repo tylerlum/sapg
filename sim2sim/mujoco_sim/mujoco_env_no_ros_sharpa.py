@@ -61,9 +61,6 @@ class MujocoEnvNoRosSharpa:
         object_quat_xyzw = object_quat_wxyz[[1, 2, 3, 0]]
         object_pose_W = np.concatenate([object_pos, object_quat_xyzw])
 
-        table_pos = sim_state["table_pos"]
-        table_quat_wxyz = sim_state["table_quat_wxyz"]
-
         goal_object_pos = sim_state["goal_object_pos"]
         goal_object_quat_wxyz = sim_state["goal_object_quat_wxyz"]
         goal_object_quat_xyzw = goal_object_quat_wxyz[[1, 2, 3, 0]]
@@ -92,16 +89,14 @@ class MujocoEnvNoRosSharpa:
 
     def step(self, action: torch.Tensor) -> None:
         joint_pos_targets = compute_joint_pos_targets(
-            actions=action,
-            prev_targets=torch.from_numpy(self.sim.robot_joint_pos_targets)
-            .float()
-            .to(self.device)[None],
+            actions=action.cpu().numpy(),
+            prev_targets=self.sim.robot_joint_pos_targets[None],
             hand_moving_average=self.hand_moving_average,
             arm_moving_average=self.arm_moving_average,
             hand_dof_speed_scale=self.hand_dof_speed_scale,
             dt=self.control_dt,
         )
-        self.sim.set_robot_joint_pos_targets(joint_pos_targets.squeeze(dim=0).cpu().numpy())
+        self.sim.set_robot_joint_pos_targets(joint_pos_targets[0])
 
         for _ in range(self.sim_steps_per_control_step):
             self.sim.sim_step()

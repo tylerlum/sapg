@@ -6,10 +6,6 @@ from collections import defaultdict
 import yourdfpy
 import numpy as np
 from pathlib import Path
-import torch
-from torch import Tensor
-
-from isaacgymenvs.utils.torch_jit_utils import tensor_clamp
 
 def unscale(x, lower, upper):
     return (2.0 * x - upper - lower) / (upper - lower)
@@ -27,6 +23,9 @@ def quat_rotate(q, v):
         (q_vec.reshape(shape[0], 1, 3) @ v.reshape(shape[0], 3, 1))[..., 0] * 2.0
     return a + b + c
 
+
+def tensor_clamp(t, min_t, max_t):
+    return np.maximum(np.minimum(t, max_t), min_t)
 
 # Constants
 # JOINT_NAMES_ISAACGYM = [
@@ -313,21 +312,21 @@ def compute_observation(
 
 
 def compute_joint_pos_targets(
-    actions: Tensor,
-    prev_targets: Tensor,
+    actions: np.ndarray,
+    prev_targets: np.ndarray,
     hand_moving_average: float,
     arm_moving_average: float,
     hand_dof_speed_scale: float,
     dt: float,
-) -> Tensor:
+) -> np.ndarray:
     N = actions.shape[0]
     J = 29
     assert actions.shape == (N, J), f"actions.shape: {actions.shape}, expected: (N, J)"
     assert prev_targets.shape == (N, J), (
         f"prev_targets.shape: {prev_targets.shape}, expected: (N, J)"
     )
-    q_lower_limits = torch.from_numpy(Q_LOWER_LIMITS_np).float().to(actions.device)
-    q_upper_limits = torch.from_numpy(Q_UPPER_LIMITS_np).float().to(actions.device)
+    q_lower_limits = Q_LOWER_LIMITS_np
+    q_upper_limits = Q_UPPER_LIMITS_np
     assert q_lower_limits.shape == (J,), (
         f"q_lower_limits.shape: {q_lower_limits.shape}, expected: (J,)"
     )
@@ -342,7 +341,7 @@ def compute_joint_pos_targets(
     )
 
     # hand
-    cur_targets = prev_targets.clone()
+    cur_targets = prev_targets.copy()
     cur_targets[:, 7:29] = scale(
         actions[:, 7:29],
         q_lower_limits[7:29],

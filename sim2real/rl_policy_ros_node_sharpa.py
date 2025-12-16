@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 
+import torch
 import copy
 import time
 from pathlib import Path
 from typing import Literal, Optional, Tuple
 
 import numpy as np
-import pytorch_kinematics as pk
 import rospy
-import torch
 from geometry_msgs.msg import Pose, PoseStamped
 from rl_player import RlPlayer
 from scipy.spatial.transform import Rotation as R
@@ -206,7 +205,7 @@ class RLPolicyNode:
             data_path = self.overwrite_targets_filepath
             assert data_path.exists(), f"File {data_path} does not exist"
             data = RecordedData.from_file(data_path)
-            self.q_targets_from_file = torch.from_numpy(data.robot_joint_pos_targets_array).float().to(self.device)
+            self.q_targets_from_file = data.robot_joint_pos_targets_array
             T, D = self.q_targets_from_file.shape
             print(f"T: {T}, D: {D}")
             assert D == 29, f"D: {D}, expected: 29"
@@ -320,10 +319,9 @@ class RLPolicyNode:
 
         return observation, q, min_timestamp
 
-    def publish_targets(self, joint_pos_targets: torch.Tensor):
+    def publish_targets(self, joint_pos_targets: np.ndarray):
         assert_equals(joint_pos_targets.shape, (1, self.num_actions))
-        joint_pos_targets = joint_pos_targets.squeeze(dim=0)
-        joint_pos_targets = joint_pos_targets.cpu().numpy()
+        joint_pos_targets = joint_pos_targets[0]
 
         iiwa_msg = JointState()
         iiwa_msg.header.stamp = rospy.Time.now()
@@ -414,8 +412,8 @@ class RLPolicyNode:
             assert_equals(normalized_action.shape, (1, self.num_actions))
 
             _ = compute_joint_pos_targets(
-                actions=normalized_action,
-                prev_targets=torch.from_numpy(self.prev_targets).float().to(self.device)[None],
+                actions=normalized_action.cpu().numpy(),
+                prev_targets=self.prev_targets[None],
                 hand_moving_average=0.1,
                 arm_moving_average=0.1,
                 hand_dof_speed_scale=2.5,
@@ -423,15 +421,15 @@ class RLPolicyNode:
             )
 
             # We do not actually use the joint pos targets computed by the policy, we use the actual joint states so it doesn't move
-            joint_pos_targets = torch.clip(
-                torch.from_numpy(q).float().to(self.device)[None],
-                min=torch.from_numpy(Q_LOWER_LIMITS_np).float().to(self.device)[None],
-                max=torch.from_numpy(Q_UPPER_LIMITS_np).float().to(self.device)[None],
+            joint_pos_targets = np.clip(
+                q[None],
+                min=Q_LOWER_LIMITS_np,
+                max=Q_UPPER_LIMITS_np,
             )
 
             # Publish the targets
             self.publish_targets(joint_pos_targets)
-            self.prev_targets = joint_pos_targets.squeeze(dim=0).cpu().numpy()
+            self.prev_targets = joint_pos_targets[0]
             time.sleep(self.control_dt)
 
         # Reset rnn state
@@ -460,7 +458,9 @@ class RLPolicyNode:
 
             # Create observation from the latest messages
             t1 = rospy.Time.now()
+            t00 = time.time()
             obs, q, t0 = self.create_observation()
+            t01 = time.time()
             assert obs is not None and q is not None, f"obs: {obs}, q: {q}"
 
             assert_equals(obs.shape, (1, self.num_observations))
@@ -470,43 +470,61 @@ class RLPolicyNode:
                 obs=obs,
                 deterministic_actions=True,
             )
+            t02 = time.time()
             assert_equals(normalized_action.shape, (1, self.num_actions))
 
             HAND_DOF_SPEED_SCALE = 2.5
             DT = 1 / 60
             joint_pos_targets = compute_joint_pos_targets(
-                actions=normalized_action,
-                prev_targets=torch.from_numpy(self.prev_targets).float().to(self.device)[None],
+                actions=normalized_action.cpu().numpy(),
+                prev_targets=self.prev_targets[None],
                 hand_moving_average=self.hand_moving_average,
                 arm_moving_average=self.arm_moving_average,
                 hand_dof_speed_scale=HAND_DOF_SPEED_SCALE,
                 dt=DT,
             )
+            t03 = time.time()
             assert_equals(joint_pos_targets.shape, (1, self.num_actions))
 
             # Clamp
-            joint_pos_targets = torch.clip(
+            joint_pos_targets = np.clip(
                 joint_pos_targets,
-                min=torch.from_numpy(Q_LOWER_LIMITS_np).float().to(self.device)[None],
-                max=torch.from_numpy(Q_UPPER_LIMITS_np).float().to(self.device)[None],
+                min=Q_LOWER_LIMITS_np,
+                max=Q_UPPER_LIMITS_np,
             )
+            t04 = time.time()
 
             if self.overwrite_targets_filepath is not None:
                 if self.current_step >= self.q_targets_from_file.shape[0]:
                     self.current_step = self.q_targets_from_file.shape[0] - 1
                     info("Reached end of targets, holding last target")
                 assert self.current_step < self.q_targets_from_file.shape[0], f"current_step: {self.current_step}, expected: < {self.q_targets_from_file.shape[0]}"
-                joint_pos_targets = self.q_targets_from_file[self.current_step].unsqueeze(0)
+                joint_pos_targets = self.q_targets_from_file[self.current_step][None]
                 self.current_step += 1
+            t05 = time.time()
 
             # Publish the targets
             t1_5 = rospy.Time.now()
             dt01_ms = (t1 - t0).to_sec() * 1000
             dt11_5_ms = (t1_5 - t1).to_sec() * 1000
+            t06 = time.time()
             self.publish_targets(joint_pos_targets)
-            self.prev_targets = joint_pos_targets.squeeze(dim=0).cpu().numpy()
+            t07 = time.time()
+            self.prev_targets = joint_pos_targets[0]
+            t08 = time.time()
             t2 = rospy.Time.now()
             dt1_5_2_ms = (t2 - t1_5).to_sec() * 1000
+            total_dt = t08 - t00
+            print(f"total_dt: {total_dt:.6f} s")
+            print(f"t01 - t00: {(t01 - t00) * 1000:.1f} ms, {((t01 - t00)) / total_dt * 100:.1f}%")
+            print(f"t02 - t01: {(t02 - t01) * 1000:.1f} ms, {((t02 - t01)) / total_dt * 100:.1f}%")
+            print(f"t03 - t02: {(t03 - t02) * 1000:.1f} ms, {((t03 - t02)) / total_dt * 100:.1f}%")
+            print(f"t04 - t03: {(t04 - t03) * 1000:.1f} ms, {((t04 - t03)) / total_dt * 100:.1f}%")
+            print(f"t05 - t04: {(t05 - t04) * 1000:.1f} ms, {((t05 - t04)) / total_dt * 100:.1f}%")
+            print(f"t06 - t05: {(t06 - t05) * 1000:.1f} ms, {((t06 - t05)) / total_dt * 100:.1f}%")
+            print(f"t07 - t06: {(t07 - t06) * 1000:.1f} ms, {((t07 - t06)) / total_dt * 100:.1f}%")
+            print(f"t08 - t07: {(t08 - t07) * 1000:.1f} ms, {((t08 - t07)) / total_dt * 100:.1f}%")
+            print("=" * 100)
 
             # End of loop timekeeping
             end_loop_no_sleep_time = time.time()

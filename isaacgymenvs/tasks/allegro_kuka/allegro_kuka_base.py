@@ -2470,13 +2470,14 @@ class AllegroKukaBase(VecTask):
         CHECK_WITH_COMPUTED_JOINT_POS_TARGETS = False
         if CHECK_WITH_COMPUTED_JOINT_POS_TARGETS:
             computed_joint_pos_targets = compute_joint_pos_targets(
-                actions=self.actions,
-                prev_targets=self.prev_targets,
+                actions=self.actions.cpu().numpy(),
+                prev_targets=self.prev_targets.cpu().numpy(),
                 hand_moving_average=self.hand_moving_average,
                 arm_moving_average=self.arm_moving_average,
                 hand_dof_speed_scale=self.hand_dof_speed_scale,
                 dt=self.dt,
             )
+            computed_joint_pos_targets = torch.from_numpy(computed_joint_pos_targets).float().to(self.device)
             assert computed_joint_pos_targets.shape == (self.num_envs, self.num_hand_arm_dofs), f"computed_joint_pos_targets.shape: {computed_joint_pos_targets.shape}, expected: ({self.num_envs}, {self.num_hand_arm_dofs})"
             assert self.cur_targets.shape == computed_joint_pos_targets.shape, f"self.cur_targets.shape: {self.cur_targets.shape}, expected: {computed_joint_pos_targets.shape}"
 

@@ -53,13 +53,14 @@ class IsaacEnvNoRosJointPosTargets:
         self, action: torch.Tensor
     ) -> Tuple[torch.Tensor, float, bool, dict]:
         joint_pos_targets = compute_joint_pos_targets(
-            actions=action,
-            prev_targets=self.env.prev_targets,
+            actions=action.cpu().numpy(),
+            prev_targets=self.env.prev_targets.cpu().numpy(),
             hand_moving_average=HAND_MOVING_AVERAGE,
             arm_moving_average=ARM_MOVING_AVERAGE,
             hand_dof_speed_scale=HAND_DOF_SPEED_SCALE,
             dt=self.control_dt,
         )
+        joint_pos_targets = torch.from_numpy(joint_pos_targets).float().to(self.device)
 
         obs, reward, done, info = self.env.step(
             action, joint_pos_targets=joint_pos_targets
