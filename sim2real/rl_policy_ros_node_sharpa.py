@@ -473,7 +473,7 @@ class RLPolicyNode:
             DT = 1 / 60
             joint_pos_targets = compute_joint_pos_targets(
                 actions=normalized_action,
-                prev_targets=self.prev_targets,
+                prev_targets=torch.from_numpy(self.prev_targets).float().to(self.device)[None],
                 hand_moving_average=self.hand_moving_average,
                 arm_moving_average=self.arm_moving_average,
                 hand_dof_speed_scale=HAND_DOF_SPEED_SCALE,
@@ -502,7 +502,7 @@ class RLPolicyNode:
             dt12_ms = (t2 - t1).to_sec() * 1000
             dt02_ms = (t2 - t0).to_sec() * 1000
             self.publish_targets(joint_pos_targets)
-            self.prev_targets = joint_pos_targets.clone()
+            self.prev_targets = joint_pos_targets.squeeze(dim=0).cpu().numpy()
             t3 = rospy.Time.now()
             dt23_ms = (t3 - t2).to_sec() * 1000
 
@@ -637,8 +637,8 @@ if __name__ == "__main__":
         rl_policy_node = RLPolicyNode(
             config_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"),
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/cleanInputs.pth"),
-            # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/noisyInputs.pth"),
-            checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/cleanInputsFinetuned.pth"),
+            checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/noisyInputs.pth"),
+            # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/cleanInputsFinetuned.pth"),
             hand_moving_average=0.1,
             # arm_moving_average=0.02,
             arm_moving_average=0.1,

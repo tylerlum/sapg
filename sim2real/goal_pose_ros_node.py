@@ -37,16 +37,11 @@ def warn_every(message: str, n_seconds: float, key=None):
 
 def keypoint_distance(pose1_xyzw: np.ndarray, pose2_xyzw: np.ndarray, object_scales: np.ndarray) -> float:
     """Compute the distance between two keypoints."""
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    object_pose1_xyzw = torch.from_numpy(pose1_xyzw).float().to(device)
-    object_pose2_xyzw = torch.from_numpy(pose2_xyzw).float().to(device)
-    object_scales = torch.from_numpy(object_scales).float().to(device)
-
     object_keypoint_positions = _compute_keypoint_positions(
-        pose=object_pose1_xyzw[None], scales=object_scales[None]
+        pose=pose1_xyzw[None], scales=object_scales[None]
     )
     goal_keypoint_positions = _compute_keypoint_positions(
-        pose=object_pose2_xyzw[None], scales=object_scales[None]
+        pose=pose2_xyzw[None], scales=object_scales[None]
     )
     keypoints_rel_goal = object_keypoint_positions - goal_keypoint_positions
     N_KEYPOINTS = 4
@@ -54,8 +49,8 @@ def keypoint_distance(pose1_xyzw: np.ndarray, pose2_xyzw: np.ndarray, object_sca
     assert keypoints_rel_goal.shape == (N, N_KEYPOINTS, 3), (
         f"keypoints_rel_goal.shape: {keypoints_rel_goal.shape}, expected: (N, N_KEYPOINTS, 3)"
     )
-    keypoint_distances_l2 = torch.norm(keypoints_rel_goal, dim=-1).max(dim=-1).values
-    return keypoint_distances_l2.item()
+    keypoint_distances_l2 = np.linalg.norm(keypoints_rel_goal, axis=-1).max(axis=-1)
+    return keypoint_distances_l2
 
 
 class GoalPoseNode:
@@ -200,8 +195,8 @@ if __name__ == "__main__":
             goal_object_pose_file=Path("hammer_trajectory.json"),
             # object_scales=np.array([5.0, 0.9375, 1.25]),
             object_scales=np.array([0.24, 0.03, 0.02]) * 25,
-            success_threshold=0.01,
-            # success_threshold=0.02,
+            # success_threshold=0.01,
+            success_threshold=0.02,
             # success_threshold=0.05,
         )
         node.run()
