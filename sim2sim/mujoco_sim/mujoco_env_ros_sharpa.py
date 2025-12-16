@@ -95,18 +95,15 @@ class MujocoEnvRosSharpa:
 
         if PUBLISH_GOAL_OBJECT_POSE:
             # Place goal object pose above the table
-            table_pos = sim_state["table_pos"]
-            table_quat_wxyz = sim_state["table_quat_wxyz"]
-            table_quat_xyzw = table_quat_wxyz[[1, 2, 3, 0]]
-            T_W_T = np.eye(4)
-            T_W_T[:3, 3] = table_pos
-            T_W_T[:3, :3] = R.from_quat(table_quat_xyzw).as_matrix()
-            T_R_T = T_R_W @ T_W_T
-            table_pos_R = T_R_T[:3, 3]
-            table_quat_xyzw_R = R.from_matrix(T_R_T[:3, :3]).as_quat()
-
-            goal_object_pos_R = table_pos_R + np.array([0.0, 0.0, 0.5])
-            goal_object_quat_xyzw_R = table_quat_xyzw_R
+            goal_object_pos = sim_state["goal_object_pos"]
+            goal_object_quat_wxyz = sim_state["goal_object_quat_wxyz"]
+            goal_object_quat_xyzw = goal_object_quat_wxyz[[1, 2, 3, 0]]
+            T_W_G = np.eye(4)
+            T_W_G[:3, 3] = goal_object_pos
+            T_W_G[:3, :3] = R.from_quat(goal_object_quat_xyzw).as_matrix()
+            T_R_G = T_R_W @ T_W_G
+            goal_object_pos_R = T_R_G[:3, 3]
+            goal_object_quat_xyzw_R = R.from_matrix(T_R_G[:3, :3]).as_quat()
 
             goal_object_pose_msg = Pose()
             goal_object_pose_msg.position.x = goal_object_pos_R[0]
