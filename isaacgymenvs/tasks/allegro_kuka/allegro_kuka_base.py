@@ -684,9 +684,25 @@ class AllegroKukaBase(VecTask):
             else:
                 raise ValueError(f"The following object_type does not have a fixed trajectory: {object_type}, cannot use USE_FIXED_SET_OF_GOAL_STATES with this object type")
 
+            SAVE_TO_JSON = False
+            if SAVE_TO_JSON:
+                import json
+                from pathlib import Path
+                output_filepath = Path(f"{object_type}_trajectory.json")
+                print(f"Saving trajectory to {output_filepath}")
+
+                trajectory_states_np = self.trajectory_states.cpu().numpy()
+                trajectory_states_np[:, 1] -= 0.8  # Account for initial offset of 0.8 in world frame
+                with open(output_filepath, "w") as f:
+                    json.dump(
+                        trajectory_states_np.tolist(),
+                        f,
+                        indent=4,
+                    )
+                print(f"Saved trajectory to {output_filepath}")
+
             # Set max consecutive successes to the length of the trajectory so we don't run out of goal states
             self.max_consecutive_successes = len(self.trajectory_states)
-
 
         return object_asset_files, object_asset_scales, need_vhacds
 

@@ -58,23 +58,6 @@ def get_hammer_trajectory(object_init_state, device="cuda"):
         trajectory_states.append(swing_up_state)
         trajectory_states.append(swing_down_state)
 
-    SAVE_TO_JSON = False
-    if SAVE_TO_JSON:
-        import json
-        from pathlib import Path
-        output_filepath = Path("hammer_trajectory.json")
-        print(f"Saving trajectory to {output_filepath}")
-
-        trajectory_states_np = np.array(trajectory_states)
-        trajectory_states_np[:, 1] -= 0.8  # Account for initial offset of 0.8 in world frame
-        with open(output_filepath, "w") as f:
-            json.dump(
-                trajectory_states_np.tolist(),
-                f,
-                indent=4,
-            )
-        print(f"Saved trajectory to {output_filepath}")
-
     # trajectory_states = [pick_up_state, rotate_90_state, swing_up_state,
     #         swing_down_state, swing_up_state, swing_down_state]
     return torch.tensor(trajectory_states, dtype=torch.float32, device=device)
@@ -113,23 +96,6 @@ def get_hammer_trajectory_2(object_init_state, device="cuda"):
     for _ in range(num_swings):
         trajectory_states.append(swing_backward_state)
         trajectory_states.append(swing_forward_state)
-
-    SAVE_TO_JSON = True
-    if SAVE_TO_JSON:
-        import json
-        from pathlib import Path
-        output_filepath = Path("hammer_trajectory_2.json")
-        print(f"Saving trajectory to {output_filepath}")
-
-        trajectory_states_np = np.array(trajectory_states)
-        trajectory_states_np[:, 1] -= 0.8  # Account for initial offset of 0.8 in world frame
-        with open(output_filepath, "w") as f:
-            json.dump(
-                trajectory_states_np.tolist(),
-                f,
-                indent=4,
-            )
-        print(f"Saved trajectory to {output_filepath}")
 
     # trajectory_states = [pick_up_state, rotate_90_state, swing_backward_state, swing_forward_state, swing_backward_state]
     return torch.tensor(trajectory_states, dtype=torch.float32, device=device)

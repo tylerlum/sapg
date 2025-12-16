@@ -176,7 +176,7 @@ class GoalPoseListenerNode:
             f"goal_pose_history.shape: {goal_pose_history.shape}, expected: (T, 7)"
         )
 
-        json.dump(goal_pose_history.tolist(), self.output_path.open("w"))
+        json.dump(goal_pose_history.tolist(), self.output_path.open("w"), indent=4)
 
 
 
