@@ -1136,6 +1136,7 @@ class AllegroKukaBase(VecTask):
         self.objects = []
 
         object_init_state = []
+        table_init_state = []
         
         self.rigid_body_name_to_idx = {}
 
@@ -1291,6 +1292,23 @@ class AllegroKukaBase(VecTask):
 
             # table object
             table_handle = self.gym.create_actor(env_ptr, table_asset, table_pose, "table_object", i, 0, 0)
+            table_init_state.append(
+                [
+                    table_pose.p.x,
+                    table_pose.p.y,
+                    table_pose.p.z,
+                    table_pose.r.x,
+                    table_pose.r.y,
+                    table_pose.r.z,
+                    table_pose.r.w,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                ]
+            )
             table_object_idx = self.gym.get_actor_index(env_ptr, table_handle, gymapi.DOMAIN_SIM)
             table_indices.append(table_object_idx)
             for name in self.gym.get_actor_rigid_body_names(env_ptr, table_handle):
@@ -1328,6 +1346,9 @@ class AllegroKukaBase(VecTask):
         self.object_rb_masses = [prop.mass for prop in object_rb_props]
 
         self.object_init_state = to_torch(object_init_state, device=self.device, dtype=torch.float).view(
+            self.num_envs, 13
+        )
+        self.table_init_state = to_torch(table_init_state, device=self.device, dtype=torch.float).view(
             self.num_envs, 13
         )
         self.goal_states = self.object_init_state.clone()
@@ -2126,6 +2147,18 @@ class AllegroKukaBase(VecTask):
     def reset_object_pose(self, env_ids: Tensor, reset_buf_idxs=None, tensor_reset=True):
         if len(env_ids) > 0 and reset_buf_idxs is None and tensor_reset:
             obj_indices = self.object_indices[env_ids]
+            table_indices = self.table_indices[env_ids]
+
+            table_pose_z = self.cfg["env"]["tablePoseZ"]
+            table_pose_z_noise = self.cfg["env"]["tablePoseZNoise"]
+            table_object_z_offset = self.cfg["env"]["tableObjectZOffset"]
+
+            table_pose_z = table_pose_z + torch_rand_float(-table_pose_z_noise, table_pose_z_noise, (len(env_ids),1), device=self.device)
+
+            object_pose_z = table_pose_z + table_object_z_offset
+
+            self.table_init_state[env_ids, 2:3] = table_pose_z
+            self.object_init_state[env_ids, 2:3] = object_pose_z
 
             USE_FIXED_INIT_OBJECT_POSE = self.cfg["env"]["use_fixed_init_object_pose"]
 
@@ -2133,6 +2166,7 @@ class AllegroKukaBase(VecTask):
             rand_pos_floats = torch_rand_float(-1.0, 1.0, (len(env_ids), 3), device=self.device)
             if USE_FIXED_INIT_OBJECT_POSE:
                 rand_pos_floats[:] = 0.0 #HACK
+            self.root_state_tensor[table_indices] = self.table_init_state[env_ids].clone()
             self.root_state_tensor[obj_indices] = self.object_init_state[env_ids].clone()
 
             # indices 0..2 correspond to the object position
@@ -2172,6 +2206,7 @@ class AllegroKukaBase(VecTask):
             self.furthest_hand_dist[env_ids] = -1
             self.lifted_object[env_ids] = False
         self.deferred_set_actor_root_state_tensor_indexed([self.object_indices[env_ids]])
+        self.deferred_set_actor_root_state_tensor_indexed([self.table_indices[env_ids]])
 
     def deferred_set_actor_root_state_tensor_indexed(self, obj_indices: List[Tensor]) -> None:
         self.set_actor_root_state_object_indices.extend(obj_indices)

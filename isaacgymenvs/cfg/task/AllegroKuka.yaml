@@ -43,6 +43,11 @@ env:
   resetDofPosRandomIntervalArm: 0.1
   resetDofVelRandomInterval: 0.5
 
+  # table and object reset settings
+  tablePoseZ: 0.38
+  tablePoseZNoise: 0.03
+  tableObjectZOffset: 0.25
+
   # Random forces applied to the object
   forceScale: 2.0
   forceProbRange: [0.001, 0.1]
