@@ -200,8 +200,8 @@ if __name__ == "__main__":
             goal_object_pose_file=Path("hammer_trajectory.json"),
             # object_scales=np.array([5.0, 0.9375, 1.25]),
             object_scales=np.array([0.24, 0.03, 0.02]) * 25,
-            success_threshold=0.01,
-            # success_threshold=0.02,
+            # success_threshold=0.01,
+            success_threshold=0.02,
             # success_threshold=0.05,
         )
         node.run()

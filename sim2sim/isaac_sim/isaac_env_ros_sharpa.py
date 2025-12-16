@@ -64,16 +64,16 @@ class IsaacEnvRos:
             "/sharpa/joint_cmd", JointState, self._sharpa_joint_cmd_callback
         )
 
-        self.iiwa_pub = rospy.Publisher("/iiwa/joint_states", JointState, queue_size=10)
+        self.iiwa_pub = rospy.Publisher("/iiwa/joint_states", JointState, queue_size=1)
         self.sharpa_pub = rospy.Publisher(
-            "/sharpa/joint_states", JointState, queue_size=10
+            "/sharpa/joint_states", JointState, queue_size=1
         )
         self.object_pose_pub = rospy.Publisher(
-            "/robot_frame/current_object_pose", PoseStamped, queue_size=10
+            "/robot_frame/current_object_pose", PoseStamped, queue_size=1
         )
         if PUBLISH_GOAL_OBJECT_POSE:
             self.goal_object_pose_pub = rospy.Publisher(
-                "/robot_frame/goal_object_pose", Pose, queue_size=10
+                "/robot_frame/goal_object_pose", Pose, queue_size=1
             )
 
     def _iiwa_joint_cmd_callback(self, msg: JointState):
