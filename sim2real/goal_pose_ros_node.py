@@ -80,8 +80,8 @@ class GoalPoseNode:
         self.latest_current_object_pose = None
 
         # Publisher and subscriber
-        self.goal_object_pose_pub = rospy.Publisher("/robot_frame/goal_object_pose", Pose, queue_size=10)
-        self.current_object_pose_sub = rospy.Subscriber("/robot_frame/current_object_pose", PoseStamped, self.current_object_pose_callback)
+        self.goal_object_pose_pub = rospy.Publisher("/robot_frame/goal_object_pose", Pose, queue_size=1)
+        self.current_object_pose_sub = rospy.Subscriber("/robot_frame/current_object_pose", PoseStamped, self.current_object_pose_callback, queue_size=1)
 
         # Set control rate to 60Hz
         self.rate_hz = 60

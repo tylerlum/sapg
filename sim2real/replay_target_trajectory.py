@@ -168,15 +168,16 @@ def main():
 
     # Create subscribers and publishers
     _sub_iiwa = rospy.Subscriber(
-        "/iiwa/joint_states", JointState, current_joint_pos_iiwa_callback
+        "/iiwa/joint_states", JointState, current_joint_pos_iiwa_callback, queue_size=1
     )
     _sub_allegro = rospy.Subscriber(
         "/allegroHand_0/joint_states",
         JointState,
         current_joint_pos_allegro_callback,
+        queue_size=1
     )
-    pub_iiwa = rospy.Publisher("/iiwa/joint_cmd", JointState, queue_size=10)
-    pub_allegro = rospy.Publisher("/allegroHand_0/joint_cmd", JointState, queue_size=10)
+    pub_iiwa = rospy.Publisher("/iiwa/joint_cmd", JointState, queue_size=1)
+    pub_allegro = rospy.Publisher("/allegroHand_0/joint_cmd", JointState, queue_size=1)
 
     # Wait for current joint positions to be available
     while not rospy.is_shutdown():

@@ -135,12 +135,13 @@ class SharpaRosNode:
 
         # Listen to joint cmd
         self.joint_cmd_sub = rospy.Subscriber(
-            "/sharpa/joint_cmd", JointState, self.joint_cmd_callback
+            "/sharpa/joint_cmd", JointState, self.joint_cmd_callback,
+            queue_size=1
         )
 
         # Publish joint states
         self.joint_states_pub = rospy.Publisher(
-            "/sharpa/joint_states", JointState, queue_size=10
+            "/sharpa/joint_states", JointState, queue_size=1
         )
 
         # Initialize SharpaWave

@@ -81,7 +81,7 @@ class GoalPoseListenerNode:
         self.latest_current_object_pose: Optional[Pose] = None
 
         # Subscribers
-        self.current_object_pose_sub = rospy.Subscriber("/robot_frame/current_object_pose", PoseStamped, self.current_object_pose_callback)
+        self.current_object_pose_sub = rospy.Subscriber("/robot_frame/current_object_pose", PoseStamped, self.current_object_pose_callback, queue_size=1)
 
         # Set control rate to 60Hz
         self.rate_hz = 60

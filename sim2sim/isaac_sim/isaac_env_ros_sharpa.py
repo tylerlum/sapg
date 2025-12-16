@@ -58,10 +58,12 @@ class IsaacEnvRos:
         self.latest_sharpa_joint_cmd = None
 
         self.iiwa_cmd_sub = rospy.Subscriber(
-            "/iiwa/joint_cmd", JointState, self._iiwa_joint_cmd_callback, queue_size=1
+            "/iiwa/joint_cmd", JointState, self._iiwa_joint_cmd_callback,
+            queue_size=1
         )
         self.sharpa_cmd_sub = rospy.Subscriber(
-            "/sharpa/joint_cmd", JointState, self._sharpa_joint_cmd_callback, queue_size=1
+            "/sharpa/joint_cmd", JointState, self._sharpa_joint_cmd_callback,
+            queue_size=1
         )
 
         self.iiwa_pub = rospy.Publisher("/iiwa/joint_states", JointState, queue_size=1)
@@ -273,7 +275,7 @@ def main():
     isaac_env_ros = IsaacEnvRos(
         env=env,
         control_dt=CONTROL_DT,
-        update_and_publish_dt=0,
+        update_and_publish_dt=0,  # Make this 0 to update and publish as fast as possible
         device=DEVICE,
     )
     isaac_env_ros.run()
