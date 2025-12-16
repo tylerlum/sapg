@@ -285,26 +285,28 @@ def compute_observation(
     )
     t14 = time.time()
 
-    print("IN COMPUTE OBS")
-    print("=" * 100)
-    total_dt = t14 - t0
-    # Compute each dt in ms and as a fraction of the total and print as a percentage and absolute value
-    print(f"total_dt: {total_dt:.6f} s")
-    print(f"t1 - t0: {(t1 - t0) * 1000:.1f} ms, {((t1 - t0)) / total_dt * 100:.1f}%")
-    print(f"t2 - t1: {(t2 - t1) * 1000:.1f} ms, {((t2 - t1)) / total_dt * 100:.1f}%")
-    print(f"t3 - t2: {(t3 - t2) * 1000:.1f} ms, {((t3 - t2)) / total_dt * 100:.1f}%")
-    print(f"t4 - t3: {(t4 - t3) * 1000:.1f} ms, {((t4 - t3)) / total_dt * 100:.1f}%")
-    print(f"t5 - t4: {(t5 - t4) * 1000:.1f} ms, {((t5 - t4)) / total_dt * 100:.1f}%")
-    print(f"t6 - t5: {(t6 - t5) * 1000:.1f} ms, {((t6 - t5)) / total_dt * 100:.1f}%")
-    print(f"t7 - t6: {(t7 - t6) * 1000:.1f} ms, {((t7 - t6)) / total_dt * 100:.1f}%")
-    print(f"t8 - t7: {(t8 - t7) * 1000:.1f} ms, {((t8 - t7)) / total_dt * 100:.1f}%")
-    print(f"t9 - t8: {(t9 - t8) * 1000:.1f} ms, {((t9 - t8)) / total_dt * 100:.1f}%")
-    print(f"t10 - t9: {(t10 - t9) * 1000:.1f} ms, {((t10 - t9)) / total_dt * 100:.1f}%")
-    print(f"t11 - t10: {(t11 - t10) * 1000:.1f} ms, {((t11 - t10)) / total_dt * 100:.1f}%")
-    print(f"t12 - t11: {(t12 - t11) * 1000:.1f} ms, {((t12 - t11)) / total_dt * 100:.1f}%")
-    print(f"t13 - t12: {(t13 - t12) * 1000:.1f} ms, {((t13 - t12)) / total_dt * 100:.1f}%")
-    print(f"t14 - t13: {(t14 - t13) * 1000:.1f} ms, {((t14 - t13)) / total_dt * 100:.1f}%")
-    print("=" * 100)
+    PRINT_TIMING = False
+    if PRINT_TIMING:
+        print("IN COMPUTE OBS")
+        print("=" * 100)
+        total_dt = t14 - t0
+        # Compute each dt in ms and as a fraction of the total and print as a percentage and absolute value
+        print(f"total_dt: {total_dt:.6f} s")
+        print(f"t1 - t0: {(t1 - t0) * 1000:.1f} ms, {((t1 - t0)) / total_dt * 100:.1f}%")
+        print(f"t2 - t1: {(t2 - t1) * 1000:.1f} ms, {((t2 - t1)) / total_dt * 100:.1f}%")
+        print(f"t3 - t2: {(t3 - t2) * 1000:.1f} ms, {((t3 - t2)) / total_dt * 100:.1f}%")
+        print(f"t4 - t3: {(t4 - t3) * 1000:.1f} ms, {((t4 - t3)) / total_dt * 100:.1f}%")
+        print(f"t5 - t4: {(t5 - t4) * 1000:.1f} ms, {((t5 - t4)) / total_dt * 100:.1f}%")
+        print(f"t6 - t5: {(t6 - t5) * 1000:.1f} ms, {((t6 - t5)) / total_dt * 100:.1f}%")
+        print(f"t7 - t6: {(t7 - t6) * 1000:.1f} ms, {((t7 - t6)) / total_dt * 100:.1f}%")
+        print(f"t8 - t7: {(t8 - t7) * 1000:.1f} ms, {((t8 - t7)) / total_dt * 100:.1f}%")
+        print(f"t9 - t8: {(t9 - t8) * 1000:.1f} ms, {((t9 - t8)) / total_dt * 100:.1f}%")
+        print(f"t10 - t9: {(t10 - t9) * 1000:.1f} ms, {((t10 - t9)) / total_dt * 100:.1f}%")
+        print(f"t11 - t10: {(t11 - t10) * 1000:.1f} ms, {((t11 - t10)) / total_dt * 100:.1f}%")
+        print(f"t12 - t11: {(t12 - t11) * 1000:.1f} ms, {((t12 - t11)) / total_dt * 100:.1f}%")
+        print(f"t13 - t12: {(t13 - t12) * 1000:.1f} ms, {((t13 - t12)) / total_dt * 100:.1f}%")
+        print(f"t14 - t13: {(t14 - t13) * 1000:.1f} ms, {((t14 - t13)) / total_dt * 100:.1f}%")
+        print("=" * 100)
 
     assert obs.shape == (N, N_OBS), f"obs.shape: {obs.shape}, expected: (N, {N_OBS})"
     return obs
@@ -414,22 +416,25 @@ def _compute_palm_center_pos_and_rot(
     )
     t11 = time.time()
     total_dt = t11 - t00
-    # print("IN _compute_palm_center_pos_and_rot")
-    # print("=" * 100)
-    # print(f"total_dt: {total_dt:.6f} s")
-    # print(f"t01 - t00: {(t01 - t00) * 1000:.1f} ms, {((t01 - t00)) / total_dt * 100:.1f}%")
-    # print(f"t02 - t01: {(t02 - t01) * 1000:.1f} ms, {((t02 - t01)) / total_dt * 100:.1f}%")
-    # print(f"t03 - t02: {(t03 - t02) * 1000:.1f} ms, {((t03 - t02)) / total_dt * 100:.1f}%")
-    # print(f"t04 - t03: {(t04 - t03) * 1000:.1f} ms, {((t04 - t03)) / total_dt * 100:.1f}%")
-    # print(f"t05 - t04: {(t05 - t04) * 1000:.1f} ms, {((t05 - t04)) / total_dt * 100:.1f}%")
-    # print(f"t06 - t05: {(t06 - t05) * 1000:.1f} ms, {((t06 - t05)) / total_dt * 100:.1f}%")
-    # print(f"t07 - t06: {(t07 - t06) * 1000:.1f} ms, {((t07 - t06)) / total_dt * 100:.1f}%")
-    # print(f"t07_5 - t07: {(t07_5 - t07) * 1000:.1f} ms, {((t07_5 - t07)) / total_dt * 100:.1f}%")
-    # print(f"t08 - t07_5: {(t08 - t07_5) * 1000:.1f} ms, {((t08 - t07_5)) / total_dt * 100:.1f}%")
-    # print(f"t09 - t08: {(t09 - t08) * 1000:.1f} ms, {((t09 - t08)) / total_dt * 100:.1f}%")
-    # print(f"t10 - t09: {(t10 - t09) * 1000:.1f} ms, {((t10 - t09)) / total_dt * 100:.1f}%")
-    # print(f"t11 - t10: {(t11 - t10) * 1000:.1f} ms, {((t11 - t10)) / total_dt * 100:.1f}%")
-    # print("=" * 100)
+
+    PRINT_TIMING = False
+    if PRINT_TIMING:
+        print("IN _compute_palm_center_pos_and_rot")
+        print("=" * 100)
+        print(f"total_dt: {total_dt:.6f} s")
+        print(f"t01 - t00: {(t01 - t00) * 1000:.1f} ms, {((t01 - t00)) / total_dt * 100:.1f}%")
+        print(f"t02 - t01: {(t02 - t01) * 1000:.1f} ms, {((t02 - t01)) / total_dt * 100:.1f}%")
+        print(f"t03 - t02: {(t03 - t02) * 1000:.1f} ms, {((t03 - t02)) / total_dt * 100:.1f}%")
+        print(f"t04 - t03: {(t04 - t03) * 1000:.1f} ms, {((t04 - t03)) / total_dt * 100:.1f}%")
+        print(f"t05 - t04: {(t05 - t04) * 1000:.1f} ms, {((t05 - t04)) / total_dt * 100:.1f}%")
+        print(f"t06 - t05: {(t06 - t05) * 1000:.1f} ms, {((t06 - t05)) / total_dt * 100:.1f}%")
+        print(f"t07 - t06: {(t07 - t06) * 1000:.1f} ms, {((t07 - t06)) / total_dt * 100:.1f}%")
+        print(f"t07_5 - t07: {(t07_5 - t07) * 1000:.1f} ms, {((t07_5 - t07)) / total_dt * 100:.1f}%")
+        print(f"t08 - t07_5: {(t08 - t07_5) * 1000:.1f} ms, {((t08 - t07_5)) / total_dt * 100:.1f}%")
+        print(f"t09 - t08: {(t09 - t08) * 1000:.1f} ms, {((t09 - t08)) / total_dt * 100:.1f}%")
+        print(f"t10 - t09: {(t10 - t09) * 1000:.1f} ms, {((t10 - t09)) / total_dt * 100:.1f}%")
+        print(f"t11 - t10: {(t11 - t10) * 1000:.1f} ms, {((t11 - t10)) / total_dt * 100:.1f}%")
+        print("=" * 100)
     return palm_center_pos, palm_quat_xyzw
 
 
