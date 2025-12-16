@@ -664,7 +664,9 @@ class AllegroKukaBase(VecTask):
             # Some objects don't have a fixed trajectory, so we raise an error
             HAMMER_TRAJECTORY_OBJECTS = set(
                 ["scanned_hammer_1", "scanned_hammer_2", "scanned_hammer_2_coacd", "scanned_hammer_2_coacd2", "YcbHammer", "cuboidal_hammer", "cylindrical_hammer", "cuboidal_hammer_2x", "cylindrical_hammer_2x",]
+                + ["all_hammers", "all_cuboidal_hammers", "all_cylindrical_hammers", "all_cuboidal_and_cylindrical_hammers", "mallet", "cuboidal_mallet"]
             )
+            CUBOID_OBJECTS = set(["cuboid", "blue_cuboid", "blue_cuboid_thick", "blue_cuboid_real_iphone", "blue_cuboid_fake_iphone", "blue_cuboid_real_hammer", "blue_cuboid_fake_hammer", "blue_cuboid_real_screwdriver"])
             if object_type in HAMMER_TRAJECTORY_OBJECTS:
                 self.trajectory_states = get_hammer_trajectory(init_state, device=self.device)
             elif object_type in set(["hairbrush", "hairbrush_modified"]):
@@ -677,9 +679,7 @@ class AllegroKukaBase(VecTask):
                 self.trajectory_states = get_eraser_trajectory(init_state, device=self.device)
             elif object_type == "phone":
                 self.trajectory_states = get_phone_trajectory(init_state, device=self.device)
-            elif object_type in ["all_hammers", "all_cuboidal_hammers", "all_cylindrical_hammers", "all_cuboidal_and_cylindrical_hammers", "mallet", "cuboidal_mallet"]:
-                self.trajectory_states = get_hammer_trajectory(init_state, device=self.device)
-            elif object_type in ["cuboid", "blue_cuboid", "blue_cuboid_thick", "blue_cuboid_real_iphone", "blue_cuboid_fake_iphone", "blue_cuboid_real_hammer", "blue_cuboid_fake_hammer", "blue_cuboid_real_screwdriver"]:
+            elif object_type in CUBOID_OBJECTS:
                 self.trajectory_states = get_cuboid_trajectory(init_state, device=self.device)
             else:
                 raise ValueError(f"The following object_type does not have a fixed trajectory: {object_type}, cannot use USE_FIXED_SET_OF_GOAL_STATES with this object type")
