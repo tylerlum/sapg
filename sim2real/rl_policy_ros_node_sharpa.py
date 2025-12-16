@@ -534,7 +534,7 @@ class RLPolicyNode:
         # object_scales = np.array([4.0, 1.0, 0.75])
 
         # blue_cuboid (not rearrange) and different scale
-        object_scales = np.array([5.0, 0.9375, 1.25])
+        # object_scales = np.array([5.0, 0.9375, 1.25])
 
         # blue_cuboid_real_iphone
         # object_scales = np.array([3.0, 1.4, 0.2])
@@ -550,6 +550,9 @@ class RLPolicyNode:
 
         # # blue_cuboid_real_screwdriver
         # object_scales = np.array([1.3, 0.7, 0.5])
+
+        # cuboidal_mallet
+        object_scales = np.array([0.24, 0.03, 0.02]) * 25
 
         return object_scales
 
@@ -647,15 +650,15 @@ if __name__ == "__main__":
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/cleanInputs.pth"),
             checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/noisyInputs.pth"),
             hand_moving_average=0.1,
-            arm_moving_average=0.02,
+            arm_moving_average=0.1,
             # arm_moving_average=0.03,
             # arm_moving_average=0.04,
             # arm_moving_average=0.05,
             # arm_moving_average=0.01,
             # save_foldername=None,
-            save_foldername="isaac_no-kuka-armature_replay_from_isaac",
+            save_foldername="isaac_testing",
             # overwrite_targets_filepath=None,
-            overwrite_targets_filepath=Path("recorded_robot_inputs/isaac/2025-12-12_19-40-52_noisyInputs_arm0.01.npz"),
+            # overwrite_targets_filepath=Path("recorded_robot_inputs/isaac/2025-12-12_19-40-52_noisyInputs_arm0.01.npz"),
             # overwrite_targets_filepath=Path("recorded_robot_inputs/isaac/2025-12-12_19-40-13_noisyInputs_arm0.05.npz"),
             # overwrite_targets_filepath=Path("recorded_robot_inputs/isaac/2025-12-12_19-43-50_cleanInputs_arm0.01.npz"),
             # overwrite_targets_filepath=Path("recorded_robot_inputs/isaac/2025-12-12_19-41-34_cleanInputs_arm0.05.npz"),

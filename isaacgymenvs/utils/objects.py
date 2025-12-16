@@ -73,8 +73,11 @@ class Object:
 
 RESCALE_FACTOR = 1.25
 
+def rescale_by_factor(scale: Tuple[float, float, float], factor: float) -> Tuple[float, float, float]:
+    return (scale[0] * factor, scale[1] * factor, scale[2] * factor)
+
 def rescale(scale: Tuple[float, float, float]) -> Tuple[float, float, float]:
-    return (scale[0] * RESCALE_FACTOR, scale[1] * RESCALE_FACTOR, scale[2] * RESCALE_FACTOR)
+    return rescale_by_factor(scale, RESCALE_FACTOR)
 
 NAME_TO_OBJECT = {
     "blue_cuboid": Object(
@@ -209,6 +212,15 @@ NAME_TO_OBJECT = {
         ),
         scale=rescale((3.0, 0.5, 0.5)),
         need_vhacd=True,
+    ),
+    "cuboidal_mallet": Object(
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/tyler_objects/cuboidal_hammer/cuboidal_mallet_0-24_0-03_0-02_0-05_0-08_0-045.urdf"
+        ),
+        coacd_filepaths=None,  # Don't currently have COACD for object made of primitives
+        scale=rescale_by_factor((0.24, 0.03, 0.02), factor=25),
+        need_vhacd=False,
     ),
     "cuboidal_hammer": Object(
         filepath=(
