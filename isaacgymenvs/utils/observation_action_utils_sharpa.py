@@ -193,7 +193,6 @@ def compute_observation(
     )
     t2 = time.time()
 
-    t2_5 = time.time()
     # FK to get link poses
     N_FINGERTIPS = 5
     assert JOINT_NAMES_ISAACGYM == urdf.actuated_joint_names, f"JOINT_NAMES_ISAACGYM: {JOINT_NAMES_ISAACGYM} != urdf.actuated_joint_names: {urdf.actuated_joint_names}"
@@ -201,9 +200,9 @@ def compute_observation(
     LINK_NAMES = ["iiwa14_link_7"] + ["left_index_DP", "left_middle_DP", "left_ring_DP", "left_thumb_DP", "left_pinky_DP"]
     for i in range(N):
         urdf.update_cfg(q[i])
-        from copy import deepcopy
         for link_name in LINK_NAMES:
-            fk_dict[link_name].append(deepcopy(urdf.get_transform(frame_to=link_name)))
+            fk_dict[link_name].append(urdf.get_transform(frame_to=link_name))
+    t2_5 = time.time()
     for link_name in LINK_NAMES:
         fk_dict[link_name] = np.stack(fk_dict[link_name], axis=0)
         assert fk_dict[link_name].shape == (N, 4, 4), f"fk_dict[link_name].shape: {fk_dict[link_name].shape}, expected: (N, 4, 4)"
@@ -305,9 +304,6 @@ def compute_observation(
     print("=" * 100)
 
     assert obs.shape == (N, N_OBS), f"obs.shape: {obs.shape}, expected: (N, {N_OBS})"
-    print(f"obs[0, :29] = {obs[0, :29]}")
-    print(f"q = {q[0, :29]}")
-    breakpoint()
     return obs
 
 

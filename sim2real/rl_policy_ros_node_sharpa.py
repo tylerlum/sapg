@@ -314,7 +314,7 @@ class RLPolicyNode:
             self.time_history.append(dt)
             self.q_history.append(q)
             self.qd_history.append(qd)
-            self.q_target_history.append(prev_action_targets.cpu().numpy()[0])
+            self.q_target_history.append(prev_action_targets)
             self.object_pose_history.append(object_pose_W)
             self.goal_object_pose_history.append(goal_object_pose_W)
 
