@@ -54,7 +54,7 @@ def keypoint_distance(pose1_xyzw: np.ndarray, pose2_xyzw: np.ndarray, object_sca
 
 
 class GoalPoseNode:
-    def __init__(self, goal_object_pose_file: Path, object_scales: np.ndarray, success_threshold: float):
+    def __init__(self, goal_object_pose_file: Path, object_scales: np.ndarray, success_threshold: float, success_steps: int):
         # ROS setup
         rospy.init_node("goal_pose_ros_node")
 
@@ -62,6 +62,8 @@ class GoalPoseNode:
         self.object_scales = object_scales
         self.success_threshold = success_threshold
         self.keypoint_success_threshold = success_threshold * KEYPOINT_SCALE
+        self.success_steps = success_steps
+        self.current_success_steps = 0
 
         # Goal object pose 
         # Assumes xyzw quat convention
@@ -106,10 +108,15 @@ class GoalPoseNode:
         print(f"Distance: {distance}")
 
         if distance < self.keypoint_success_threshold:
-            info(f"Success threshold reached, updating goal object pose index to {self.current_goal_object_pose_index + 1}")
-            self.current_goal_object_pose_index += 1
-            if self.current_goal_object_pose_index >= self.goal_object_poses.shape[0]:
-                self.current_goal_object_pose_index = self.goal_object_poses.shape[0] - 1
+            self.current_success_steps += 1
+            if self.current_success_steps >= self.success_steps:
+                info(f"Success threshold reached, updating goal object pose index to {self.current_goal_object_pose_index + 1}")
+                self.current_success_steps = 0
+                self.current_goal_object_pose_index += 1
+                if self.current_goal_object_pose_index >= self.goal_object_poses.shape[0]:
+                    self.current_goal_object_pose_index = self.goal_object_poses.shape[0] - 1
+            else:
+                info(f"Success threshold reached, at {self.current_success_steps} of {self.success_steps} steps")
 
     def publish_goal_object_pose(self):
         """Publish the goal object pose."""
@@ -198,6 +205,7 @@ if __name__ == "__main__":
             # success_threshold=0.01,
             success_threshold=0.02,
             # success_threshold=0.05,
+            success_steps=10,
         )
         node.run()
     except rospy.ROSInterruptException:
