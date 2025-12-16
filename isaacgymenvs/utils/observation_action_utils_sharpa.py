@@ -140,6 +140,20 @@ def create_urdf_object(robot_name: Literal["iiwa14", "iiwa7", "iiwa14_left_sharp
     return yourdfpy.URDF.load(urdf_path)
 
 
+def compute_fk_dict(urdf: yourdfpy.URDF, q: np.ndarray, link_names: list[str]) -> dict[str, np.ndarray]:
+    N = q.shape[0]
+    assert q.shape == (N, 29), f"q.shape: {q.shape}, expected: (N, 29)"
+    fk_dict = defaultdict(list)
+    for i in range(N):
+        urdf.update_cfg(q[i])
+        for link_name in link_names:
+            fk_dict[link_name].append(urdf.get_transform(frame_to=link_name))
+    for link_name in link_names:
+        fk_dict[link_name] = np.stack(fk_dict[link_name], axis=0)
+        assert fk_dict[link_name].shape == (N, 4, 4), f"fk_dict[link_name].shape: {fk_dict[link_name].shape}, expected: (N, 4, 4)"
+    return fk_dict
+
+
 def compute_observation(
     q: np.ndarray,
     qd: np.ndarray,
@@ -149,7 +163,7 @@ def compute_observation(
     object_scales: np.ndarray,
     urdf: yourdfpy.URDF,
     obs_list: list[str],
-) -> Tensor:
+) -> np.ndarray:
     # Assume q and qd are in the order of JOINT_NAMES_ISAACGYM
     # object_pose, goal_object_pose are the pose of the object and goal in world frame (xyz_xyzw)
     # object_scales is the scale of the object [x, y, z]
@@ -196,17 +210,8 @@ def compute_observation(
     # FK to get link poses
     N_FINGERTIPS = 5
     assert JOINT_NAMES_ISAACGYM == urdf.actuated_joint_names, f"JOINT_NAMES_ISAACGYM: {JOINT_NAMES_ISAACGYM} != urdf.actuated_joint_names: {urdf.actuated_joint_names}"
-    fk_dict = defaultdict(list)
     LINK_NAMES = ["iiwa14_link_7"] + ["left_index_DP", "left_middle_DP", "left_ring_DP", "left_thumb_DP", "left_pinky_DP"]
-    for i in range(N):
-        urdf.update_cfg(q[i])
-        for link_name in LINK_NAMES:
-            fk_dict[link_name].append(urdf.get_transform(frame_to=link_name))
-    t2_5 = time.time()
-    for link_name in LINK_NAMES:
-        fk_dict[link_name] = np.stack(fk_dict[link_name], axis=0)
-        assert fk_dict[link_name].shape == (N, 4, 4), f"fk_dict[link_name].shape: {fk_dict[link_name].shape}, expected: (N, 4, 4)"
-
+    fk_dict = compute_fk_dict(urdf=urdf, q=q, link_names=LINK_NAMES)
     t3 = time.time()
     palm_center_pos, palm_rot = _compute_palm_center_pos_and_rot(fk_dict=fk_dict)
     t4 = time.time()
@@ -287,9 +292,7 @@ def compute_observation(
     print(f"total_dt: {total_dt:.6f} s")
     print(f"t1 - t0: {(t1 - t0) * 1000:.1f} ms, {((t1 - t0)) / total_dt * 100:.1f}%")
     print(f"t2 - t1: {(t2 - t1) * 1000:.1f} ms, {((t2 - t1)) / total_dt * 100:.1f}%")
-    print(f"t2_5 - t2: {(t2_5 - t2) * 1000:.1f} ms, {((t2_5 - t2)) / total_dt * 100:.1f}%")
-    print(f"t3 - t2_5: {(t3 - t2_5) * 1000:.1f} ms, {((t3 - t2_5)) / total_dt * 100:.1f}%")
-    # print(f"t3 - t2: {(t3 - t2) * 1000:.1f} ms, {((t3 - t2)) / total_dt * 100:.1f}%")
+    print(f"t3 - t2: {(t3 - t2) * 1000:.1f} ms, {((t3 - t2)) / total_dt * 100:.1f}%")
     print(f"t4 - t3: {(t4 - t3) * 1000:.1f} ms, {((t4 - t3)) / total_dt * 100:.1f}%")
     print(f"t5 - t4: {(t5 - t4) * 1000:.1f} ms, {((t5 - t4)) / total_dt * 100:.1f}%")
     print(f"t6 - t5: {(t6 - t5) * 1000:.1f} ms, {((t6 - t5)) / total_dt * 100:.1f}%")

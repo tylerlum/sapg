@@ -3,16 +3,16 @@ import time
 from pathlib import Path
 from typing import Tuple
 
+import yourdfpy
 from sim2real.rl_player import RlPlayer
 
 import torch  # isort:skip
-import pytorch_kinematics as pk
 from termcolor import colored
 
 from isaacgymenvs.utils.observation_action_utils_sharpa import (
     compute_joint_pos_targets,
     compute_observation,
-    create_chain_and_serial_chain,
+    create_urdf_object,
 )
 from sim2sim.isaac_sim.isaac_env import create_env
 
@@ -38,12 +38,12 @@ class IsaacEnvNoRosJointPosTargets:
         env: AllegroKukaBase,
         control_dt: float,
         device: str,
-        chain: pk.Chain,
+        urdf: yourdfpy.URDF,
     ):
         self.env = env
         self.control_dt = control_dt
         self.device = device
-        self.chain = chain
+        self.urdf = urdf
 
     def reset(self) -> torch.Tensor:
         obs, _, _, _ = self.env.step(torch.zeros((1, N_ACT), device=self.device))
@@ -84,15 +84,16 @@ class IsaacEnvNoRosJointPosTargets:
         # object_scales[:] = torch.tensor([5.0, 0.9375, 1.25], device=self.device)[None]
 
         new_obs = compute_observation(
-            q=q,
-            qd=qd,
-            prev_action_targets=self.env.prev_targets,
-            object_pose=object_pose,
-            goal_object_pose=goal_object_pose,
-            object_scales=object_scales,
-            chain=self.chain,
+            q=q.cpu().numpy(),
+            qd=qd.cpu().numpy(),
+            prev_action_targets=self.env.prev_targets.cpu().numpy(),
+            object_pose=object_pose.cpu().numpy(),
+            goal_object_pose=goal_object_pose.cpu().numpy(),
+            object_scales=object_scales.cpu().numpy(),
+            urdf=self.urdf,
             obs_list=self.env.obs_list,
         )
+        new_obs = torch.from_numpy(new_obs).float().to(self.device)
 
         DEBUG = False
         if DEBUG:
@@ -164,15 +165,13 @@ def main():
         device=DEVICE,
     )
 
-    chain, _ = create_chain_and_serial_chain(
-        device=DEVICE, robot_name="iiwa14_left_sharpa_adjusted_restricted"
-    )
+    urdf = create_urdf_object(robot_name="iiwa14_left_sharpa_adjusted_restricted")
 
     isaac_env_no_ros_joint_pos_targets = IsaacEnvNoRosJointPosTargets(
         env=env,
         control_dt=CONTROL_DT,
         device=DEVICE,
-        chain=chain,
+        urdf=urdf,
     )
     observation = isaac_env_no_ros_joint_pos_targets.reset()
 

@@ -310,16 +310,11 @@ class RecordedData:
     # Implementation Details
     # ###############
     def _compute_ee_pose_array(self, q: np.ndarray, joint_names: list[str]) -> np.ndarray:
-        from isaacgymenvs.utils.observation_action_utils_sharpa import create_chain_and_serial_chain
-        chain, _ = create_chain_and_serial_chain(device="cpu", robot_name="iiwa14_left_sharpa_adjusted_restricted")
-        fk_dict = chain.forward_kinematics(
-            self.change_joint_order(
-                q=q,
-                from_order=joint_names,
-                to_order=chain.get_joint_parameter_names(),
-            )
-        )
-        ee_pose_matrix = fk_dict["iiwa14_link_7"].get_matrix()
+        from isaacgymenvs.utils.observation_action_utils_sharpa import create_urdf_object, compute_fk_dict
+        urdf = create_urdf_object(robot_name="iiwa14_left_sharpa_adjusted_restricted")
+        assert joint_names == urdf.actuated_joint_names, f"joint_names: {joint_names} != urdf.actuated_joint_names: {urdf.actuated_joint_names}"
+        fk_dict = compute_fk_dict(urdf=urdf, q=q, link_names=["iiwa14_link_7"])
+        ee_pose_matrix = fk_dict["iiwa14_link_7"]
         return self.T_to_pose(ee_pose_matrix)
 
     # ###############

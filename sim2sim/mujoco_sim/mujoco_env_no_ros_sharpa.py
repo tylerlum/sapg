@@ -5,11 +5,12 @@ import numpy as np
 import pytorch_kinematics as pk
 import torch
 from termcolor import colored
+import yourdfpy
 
 from isaacgymenvs.utils.observation_action_utils_sharpa import (
     compute_joint_pos_targets,
     compute_observation,
-    create_chain_and_serial_chain,
+    create_urdf_object,
 )
 from sim2real.rl_player import RlPlayer
 from sim2sim.mujoco_sim.mujoco_sim_sharpa import (
@@ -34,7 +35,7 @@ class MujocoEnvNoRosSharpa:
         self,
         sim: MujocoSim,
         object_scales: np.ndarray,
-        chain: pk.Chain,
+        urdf: yourdfpy.URDF,
         hand_moving_average: float,
         arm_moving_average: float,
         hand_dof_speed_scale: float,
@@ -44,7 +45,7 @@ class MujocoEnvNoRosSharpa:
     ):
         self.sim = sim
         self.object_scales = object_scales
-        self.chain = chain
+        self.urdf = urdf
         self.hand_moving_average = hand_moving_average
         self.arm_moving_average = arm_moving_average
         self.hand_dof_speed_scale = hand_dof_speed_scale
@@ -71,21 +72,16 @@ class MujocoEnvNoRosSharpa:
         qd = sim_state["joint_velocities"]
 
         observation = compute_observation(
-            q=torch.from_numpy(q).float().to(self.device)[None],
-            qd=torch.from_numpy(qd).float().to(self.device)[None],
-            prev_action_targets=torch.from_numpy(self.sim.robot_joint_pos_targets)
-            .float()
-            .to(self.device)[None],
-            object_pose=torch.from_numpy(object_pose_W).float().to(self.device)[None],
-            goal_object_pose=(
-                torch.from_numpy(goal_object_pose_W).float().to(self.device)[None]
-            ),
-            object_scales=(
-                torch.from_numpy(self.object_scales).float().to(self.device)[None]
-            ),
-            chain=self.chain,
+            q=q[None],
+            qd=qd[None],
+            prev_action_targets=self.sim.robot_joint_pos_targets[None],
+            object_pose=object_pose_W[None],
+            goal_object_pose=goal_object_pose_W[None],
+            object_scales=self.object_scales[None],
+            urdf=self.urdf,
             obs_list=self.obs_list,
         )
+        observation = torch.from_numpy(observation).float().to(self.device)
 
         assert observation.shape == (
             1,
@@ -154,9 +150,7 @@ def main():
         device=device,
     )
 
-    chain, _ = create_chain_and_serial_chain(
-        device=device, robot_name="iiwa14_left_sharpa_adjusted_restricted"
-    )
+    urdf = create_urdf_object(robot_name="iiwa14_left_sharpa_adjusted_restricted")
 
     obs_list = policy.cfg["task"]["env"]["obsList"]
     print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
@@ -166,7 +160,7 @@ def main():
     mujoco_env_no_ros = MujocoEnvNoRosSharpa(
         sim=sim,
         object_scales=OBJECT_SCALES,
-        chain=chain,
+        urdf=urdf,
         hand_moving_average=HAND_MOVING_AVERAGE,
         arm_moving_average=ARM_MOVING_AVERAGE,
         hand_dof_speed_scale=HAND_DOF_SPEED_SCALE,
