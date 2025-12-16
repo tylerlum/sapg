@@ -514,17 +514,6 @@ class RLPolicyNode:
             t08 = time.time()
             t2 = rospy.Time.now()
             dt1_5_2_ms = (t2 - t1_5).to_sec() * 1000
-            total_dt = t08 - t00
-            print(f"total_dt: {total_dt:.6f} s")
-            print(f"t01 - t00: {(t01 - t00) * 1000:.1f} ms, {((t01 - t00)) / total_dt * 100:.1f}%")
-            print(f"t02 - t01: {(t02 - t01) * 1000:.1f} ms, {((t02 - t01)) / total_dt * 100:.1f}%")
-            print(f"t03 - t02: {(t03 - t02) * 1000:.1f} ms, {((t03 - t02)) / total_dt * 100:.1f}%")
-            print(f"t04 - t03: {(t04 - t03) * 1000:.1f} ms, {((t04 - t03)) / total_dt * 100:.1f}%")
-            print(f"t05 - t04: {(t05 - t04) * 1000:.1f} ms, {((t05 - t04)) / total_dt * 100:.1f}%")
-            print(f"t06 - t05: {(t06 - t05) * 1000:.1f} ms, {((t06 - t05)) / total_dt * 100:.1f}%")
-            print(f"t07 - t06: {(t07 - t06) * 1000:.1f} ms, {((t07 - t06)) / total_dt * 100:.1f}%")
-            print(f"t08 - t07: {(t08 - t07) * 1000:.1f} ms, {((t08 - t07)) / total_dt * 100:.1f}%")
-            print("=" * 100)
 
             # End of loop timekeeping
             end_loop_no_sleep_time = time.time()
@@ -535,6 +524,18 @@ class RLPolicyNode:
             PRINT_TIMING = False
             if PRINT_TIMING:
                 print(f"dt01_ms: {dt01_ms:.1f}, dt11_5_ms: {dt11_5_ms:.1f}, dt1_5_2_ms: {dt1_5_2_ms:.1f} ms, loop_no_sleep_dt: {loop_no_sleep_dt * 1000:.1f} ms")
+
+                total_dt = t08 - t00
+                print(f"total_dt: {total_dt:.6f} s")
+                print(f"t01 - t00: {(t01 - t00) * 1000:.1f} ms, {((t01 - t00)) / total_dt * 100:.1f}%")
+                print(f"t02 - t01: {(t02 - t01) * 1000:.1f} ms, {((t02 - t01)) / total_dt * 100:.1f}%")
+                print(f"t03 - t02: {(t03 - t02) * 1000:.1f} ms, {((t03 - t02)) / total_dt * 100:.1f}%")
+                print(f"t04 - t03: {(t04 - t03) * 1000:.1f} ms, {((t04 - t03)) / total_dt * 100:.1f}%")
+                print(f"t05 - t04: {(t05 - t04) * 1000:.1f} ms, {((t05 - t04)) / total_dt * 100:.1f}%")
+                print(f"t06 - t05: {(t06 - t05) * 1000:.1f} ms, {((t06 - t05)) / total_dt * 100:.1f}%")
+                print(f"t07 - t06: {(t07 - t06) * 1000:.1f} ms, {((t07 - t06)) / total_dt * 100:.1f}%")
+                print(f"t08 - t07: {(t08 - t07) * 1000:.1f} ms, {((t08 - t07)) / total_dt * 100:.1f}%")
+                print("=" * 100)
 
             sleep_dt = self.control_dt - loop_no_sleep_dt
             if sleep_dt > 0:
