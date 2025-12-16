@@ -241,7 +241,7 @@ class IsaacEnvRos:
 
 def main():
     CONTROL_DT = 1.0 / 60.0
-    UPDATE_AND_PUBLISH_DT = 1.0 / 60.0
+    SUBSTEPS = 2
     CONFIG_PATH = Path(
         "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"
     )
@@ -269,6 +269,8 @@ def main():
             "task.env.objectStartPose": [0.,  0.,  0.58, 0.,  0.,  1.,  0.],  # x, y, z, qx, qy, qz, qw
             "task.env.goalObjectPose": [0.,  0.,  0.88, 0.,  0.,  0.,  1.],  # x, y, z, qx, qy, qz, qw
             "task.env.forceScale": 0.0,
+            "task.sim.dt": CONTROL_DT,
+            "task.sim.substeps": SUBSTEPS,
         },
     )
 
