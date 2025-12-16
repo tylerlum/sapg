@@ -238,8 +238,12 @@ def main():
         # enable_viewer=True,
         enable_viewer=False,
         sim_dt=1.0 / 1000.0,
-        object_name="cuboid_5_0.9375_1.25",
+        # object_name="cuboid_5_0.9375_1.25",
+        object_name="cuboidal_mallet",
         # object_name="blue_cuboid_real_iphone",
+        object_start_pos=np.array([0.0, 0.0, 0.58]),
+        # object_start_quat_wxyz=np.array([1.0, 0.0, 0.0, 0.0]),
+        object_start_quat_wxyz=np.array([0.0, 0.0, 0.0, 1.0]),
     ))
     mujoco_env_ros = MujocoEnvRosSharpa(sim, update_and_publish_dt=1.0 / 600)
     mujoco_env_ros.run()

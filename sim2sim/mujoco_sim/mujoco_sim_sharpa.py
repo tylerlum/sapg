@@ -97,6 +97,8 @@ class MujocoSimConfig:
     sim_dt: float = 1.0 / 1000  # Need a high enough frequency to get stable physics
     friction: FrictionConfig = field(default_factory=FrictionConfig)
     object_name: str = "044_flat_screwdriver"
+    object_start_pos: np.ndarray = field(default_factory=lambda: np.array([0.0, 0.0, 0.58]))
+    object_start_quat_wxyz: np.ndarray = field(default_factory=lambda: np.array([1.0, 0.0, 0.0, 0.0]))
 
     @property
     def sim_hz(self) -> float:
@@ -234,10 +236,10 @@ class MujocoSim:
 
         # Object
         GREY_RGBA = np.array([0.5, 0.5, 0.5, 1.0])
-        OBJECT_POS_X, OBJECT_POS_Y, OBJECT_POS_Z = 0.0, 0.0, 0.38 + 0.2
         object_body = spec.worldbody.add_body()
         object_body.name = "object"
-        object_body.pos = np.array([OBJECT_POS_X, OBJECT_POS_Y, OBJECT_POS_Z])
+        object_body.pos = self.config.object_start_pos
+        object_body.quat = self.config.object_start_quat_wxyz
 
         object_free_joint = object_body.add_joint()
         object_free_joint.name = "object_free_joint"
