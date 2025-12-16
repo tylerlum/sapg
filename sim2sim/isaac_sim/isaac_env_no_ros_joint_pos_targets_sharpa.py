@@ -133,6 +133,7 @@ def main():
     )
     assert CHECKPOINT_PATH.exists()
 
+    # NOTE: cpu has different physics than training
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
     # DEVICE = "cpu"  # "cpu" faster for single env, but some bugs with cpu like force sensors not working
     env = create_env(

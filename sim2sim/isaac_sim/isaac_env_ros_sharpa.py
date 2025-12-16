@@ -247,8 +247,9 @@ def main():
     )
     assert Path(CONFIG_PATH).exists()
 
-    # DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-    DEVICE = "cpu"  # "cpu" faster for single env, but some bugs with cpu like force sensors not working
+    # NOTE: cpu has different physics than training
+    DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+    # DEVICE = "cpu"  # "cpu" faster for single env, but some bugs with cpu like force sensors not working
     env = create_env(
         config_path=str(CONFIG_PATH),
         headless=True,
