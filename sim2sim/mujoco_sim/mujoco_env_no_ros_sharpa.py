@@ -63,8 +63,9 @@ class MujocoEnvNoRosSharpa:
 
         table_pos = sim_state["table_pos"]
         table_quat_wxyz = sim_state["table_quat_wxyz"]
-        goal_object_pos = table_pos + np.array([0.0, 0.0, 0.5])
-        goal_object_quat_wxyz = table_quat_wxyz
+
+        goal_object_pos = sim_state["goal_object_pos"]
+        goal_object_quat_wxyz = sim_state["goal_object_quat_wxyz"]
         goal_object_quat_xyzw = goal_object_quat_wxyz[[1, 2, 3, 0]]
         goal_object_pose_W = np.concatenate([goal_object_pos, goal_object_quat_xyzw])
 
@@ -125,7 +126,8 @@ def main():
 
     # Cuboid
     # OBJECT_SCALES = np.array([4.0000, 0.7500, 1.0000])
-    OBJECT_SCALES = np.array([4.0000, 0.7500, 1.0000]) * 1.25
+    # OBJECT_SCALES = np.array([4.0000, 0.7500, 1.0000]) * 1.25
+    OBJECT_SCALES = np.array([0.24, 0.03, 0.02]) * 25
 
     CONFIG_PATH = Path(
         "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"
@@ -134,14 +136,15 @@ def main():
     CHECKPOINT_PATH = Path(
         # "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/newGains.pth"
         # "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/noisyInput.pth"
-        "/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/cleanInputs.pth"
-        # "/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/noisyInputs.pth"
+        # "/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/cleanInputs.pth"
+        "/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/noisyInputs.pth"
     )
     assert CHECKPOINT_PATH.exists()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     # sim = MujocoSim(MujocoSimConfig(enable_viewer=True, sim_dt=SIM_DT, object_name="cuboid_4_0.75_1"))
-    sim = MujocoSim(MujocoSimConfig(enable_viewer=True, sim_dt=SIM_DT, object_name="cuboid_5_0.9375_1.25"))
+    # sim = MujocoSim(MujocoSimConfig(enable_viewer=True, sim_dt=SIM_DT, object_name="cuboid_5_0.9375_1.25"))
+    sim = MujocoSim(MujocoSimConfig(enable_viewer=True, sim_dt=SIM_DT, object_name="cuboidal_mallet", object_start_pos=np.array([0.0, 0.0, 0.58]), object_start_quat_wxyz=np.array([0.0, 0.0, 0.0, 1.0]), goal_object_start_pos=np.array([0.0, 0.0, 0.78]), goal_object_start_quat_wxyz=np.array([0.0, 0.0, 0.0, 1.0])))
     policy = RlPlayer(
         num_observations=N_OBS,
         num_actions=N_ACT,
