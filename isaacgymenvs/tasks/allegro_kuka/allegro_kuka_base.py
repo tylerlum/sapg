@@ -1536,7 +1536,8 @@ class AllegroKukaBase(VecTask):
         resets = self._extra_reset_rules(resets)
 
         # Print resets when there is only one environment
-        if self.num_envs == 1 and resets.item():
+        PRINT_RESET_REASONS = False
+        if self.num_envs == 1 and resets.item() and PRINT_RESET_REASONS:
             print("=" * 100)
             print("REASON FOR RESET:")
             print(f"object_z_low: {object_z_low.item()}")
