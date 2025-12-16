@@ -4,7 +4,19 @@ from scipy.spatial.transform import Rotation as R
 
 
 def get_cuboid_trajectory(object_init_state, device="cuda"):
-    return get_hammer_trajectory(object_init_state, device)
+    from pathlib import Path
+    import json
+    # goal_object_pose_file = Path("goal_poses_around_z_axis.json")
+    goal_object_pose_file = Path("goal_poses_around_y_axis.json")
+    assert goal_object_pose_file.exists(), f"File does not exist: {goal_object_pose_file}"
+    assert goal_object_pose_file.suffix == ".json", f"Expected JSON file, got {goal_object_pose_file}"
+    with open(goal_object_pose_file, "r") as f:
+        goal_object_poses = np.array(json.load(f))
+    goal_object_poses[:, 1] += 0.8  # Move from robot frame to world frame
+
+    return torch.from_numpy(goal_object_poses).float().to(device)[::10]
+
+    # return get_hammer_trajectory(object_init_state, device)
     # trajectory_states = []
     # # first state is pick up state
     # pick_up_state = object_init_state.copy()
@@ -48,6 +60,44 @@ def get_hammer_trajectory(object_init_state, device="cuda"):
 
     # trajectory_states = [pick_up_state, rotate_90_state, swing_up_state,
     #         swing_down_state, swing_up_state, swing_down_state]
+    return torch.tensor(trajectory_states, dtype=torch.float32, device=device)
+
+
+def get_hammer_trajectory_2(object_init_state, device="cuda"):
+    trajectory_states = []
+
+    # first state is pick up state
+    pick_up_state = object_init_state.copy()
+    pick_up_state[3:7] = R.from_euler("z", 180, degrees=True).as_quat()
+    pick_up_state[2] += 0.2
+
+    # next state rotates -90 degrees around y axis wrt last state
+    rotate_90_state = pick_up_state.copy()
+    rotate_90_state[3:7] = (
+        R.from_quat(pick_up_state[3:7]) * R.from_euler("y", -90, degrees=True)
+    ).as_quat()
+
+    trajectory_states = [pick_up_state, rotate_90_state]
+    # next state rotates 20 degrees around z axis wrt last state
+    swing_backward_state = rotate_90_state.copy()
+    swing_backward_state[3:7] = (
+        R.from_quat(rotate_90_state[3:7]) * R.from_euler("z", -10, degrees=True)
+    ).as_quat()
+    swing_backward_state[1] += 0.05
+
+    # next state rotates -40 degrees around x axis and swings hammer forward wrt last state
+    swing_forward_state = swing_backward_state.copy()
+    swing_forward_state[3:7] = (
+        R.from_quat(swing_backward_state[3:7]) * R.from_euler("z", 30, degrees=True)
+    ).as_quat()
+    swing_forward_state[1] -= 0.1
+
+    num_swings = 4
+    for _ in range(num_swings):
+        trajectory_states.append(swing_backward_state)
+        trajectory_states.append(swing_forward_state)
+
+    # trajectory_states = [pick_up_state, rotate_90_state, swing_backward_state, swing_forward_state, swing_backward_state]
     return torch.tensor(trajectory_states, dtype=torch.float32, device=device)
 
 

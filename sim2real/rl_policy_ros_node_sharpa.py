@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 
+import torch
 import copy
 import time
 from pathlib import Path
 from typing import Literal, Optional, Tuple
 
 import numpy as np
-import pytorch_kinematics as pk
 import rospy
-import torch
 from geometry_msgs.msg import Pose, PoseStamped
 from rl_player import RlPlayer
 from scipy.spatial.transform import Rotation as R
@@ -19,7 +18,7 @@ from termcolor import colored
 from isaacgymenvs.utils.observation_action_utils_sharpa import (
     compute_joint_pos_targets,
     compute_observation,
-    create_chain_and_serial_chain,
+    create_urdf_object,
     Q_LOWER_LIMITS_restricted_np as Q_LOWER_LIMITS_np,
     Q_UPPER_LIMITS_restricted_np as Q_UPPER_LIMITS_np,
 )
@@ -99,6 +98,7 @@ class RLPolicyNode:
         checkpoint_path: Path,
         hand_moving_average: float,
         arm_moving_average: float,
+        object_scales: np.ndarray,
         save_foldername: Optional[str] = None,
         overwrite_targets_filepath: Optional[Path] = None,
     ):
@@ -106,8 +106,11 @@ class RLPolicyNode:
         self.checkpoint_path = checkpoint_path
         self.hand_moving_average = hand_moving_average
         self.arm_moving_average = arm_moving_average
+        self.object_scales = object_scales
         self.save_foldername = save_foldername
         self.overwrite_targets_filepath = overwrite_targets_filepath
+
+        assert_equals(object_scales.shape, (3,))
 
         # Initialize the ROS node
         rospy.init_node("rl_policy_node_sharpa")
@@ -165,7 +168,8 @@ class RLPolicyNode:
         )
 
         # RL Player setup
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        # self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.device = "cpu"
         self.num_observations = 140  # Update this number based on actual dimensions
         self.num_actions = 29
 
@@ -187,12 +191,13 @@ class RLPolicyNode:
 
         # Set up chain
         robot_name = "iiwa14_left_sharpa_adjusted_restricted"
-        self.chain, _ = create_chain_and_serial_chain(
-            device=self.device, robot_name=robot_name
+        self.urdf_object = create_urdf_object(
+            robot_name=robot_name
         )
 
         # State: prev_targets
         self.prev_targets = None
+        self._warmup_completed = False
 
         if self.overwrite_targets_filepath is not None:
             info(f"Overwriting targets from file: {self.overwrite_targets_filepath}")
@@ -200,14 +205,14 @@ class RLPolicyNode:
             data_path = self.overwrite_targets_filepath
             assert data_path.exists(), f"File {data_path} does not exist"
             data = RecordedData.from_file(data_path)
-            self.q_targets_from_file = torch.from_numpy(data.robot_joint_pos_targets_array).float().to(self.device)
+            self.q_targets_from_file = data.robot_joint_pos_targets_array
             T, D = self.q_targets_from_file.shape
             print(f"T: {T}, D: {D}")
             assert D == 29, f"D: {D}, expected: 29"
             self.current_step = 0
 
     def object_pose_callback(self, msg: PoseStamped):
-        self.object_pose_msg = msg.pose
+        self.object_pose_msg = msg
 
     def goal_object_pose_callback(self, msg: Pose):
         self.goal_object_pose_msg = msg
@@ -218,7 +223,7 @@ class RLPolicyNode:
     def sharpa_joint_state_callback(self, msg: JointState):
         self.sharpa_joint_state_msg = msg
 
-    def create_observation(self) -> Tuple[Optional[torch.Tensor], Optional[np.ndarray]]:
+    def create_observation(self) -> Tuple[Optional[torch.Tensor], Optional[np.ndarray], Optional[rospy.Time]]:
         # Ensure all messages are received before processing
         if (
             self.iiwa_joint_state_msg is None
@@ -230,12 +235,17 @@ class RLPolicyNode:
                 f"Waiting for all messages to be received... iiwa_joint_state_msg: {var_to_is_none_str(self.iiwa_joint_state_msg)}, sharpa_joint_state_msg: {var_to_is_none_str(self.sharpa_joint_state_msg)}, object_pose_msg: {var_to_is_none_str(self.object_pose_msg)}, goal_object_pose_msg: {var_to_is_none_str(self.goal_object_pose_msg)}",
                 n_seconds=1.0,
             )
-            return None, None
+            return None, None, None
 
         iiwa_joint_state_msg = copy.copy(self.iiwa_joint_state_msg)
         sharpa_joint_state_msg = copy.copy(self.sharpa_joint_state_msg)
         object_pose_msg = copy.copy(self.object_pose_msg)
         goal_object_pose_msg = copy.copy(self.goal_object_pose_msg)
+
+        timestamp_object_pose = object_pose_msg.header.stamp
+        timestamp_iiwa_joint_state = iiwa_joint_state_msg.header.stamp
+        timestamp_sharpa_joint_state = sharpa_joint_state_msg.header.stamp
+        min_timestamp = min(timestamp_object_pose, timestamp_iiwa_joint_state, timestamp_sharpa_joint_state)
 
         # Concatenate the data from joint states and object pose
         iiwa_position = np.array(iiwa_joint_state_msg.position)
@@ -244,7 +254,7 @@ class RLPolicyNode:
         sharpa_position = np.array(sharpa_joint_state_msg.position)
         sharpa_velocity = np.array(sharpa_joint_state_msg.velocity)
 
-        T_R_O = pose_msg_to_T(object_pose_msg)
+        T_R_O = pose_msg_to_T(object_pose_msg.pose)
         T_R_G = pose_msg_to_T(goal_object_pose_msg)
 
         T_W_O = T_W_R @ T_R_O
@@ -261,21 +271,19 @@ class RLPolicyNode:
         q = np.concatenate([iiwa_position, sharpa_position])
         qd = np.concatenate([iiwa_velocity, sharpa_velocity])
 
-        prev_action_targets = self.prev_targets if self.prev_targets is not None else torch.from_numpy(q).float().to(self.device)[None]
-        observation = compute_observation(
-            q=torch.from_numpy(q).float().to(self.device)[None],
-            qd=torch.from_numpy(qd).float().to(self.device)[None],
-            prev_action_targets=prev_action_targets,
-            object_pose=torch.from_numpy(object_pose_W).float().to(self.device)[None],
-            goal_object_pose=torch.from_numpy(goal_object_pose_W)
-            .float()
-            .to(self.device)[None],
-            object_scales=torch.from_numpy(self.object_scales)
-            .float()
-            .to(self.device)[None],
-            chain=self.chain,
-            obs_list=self.obs_list,
-        )
+        prev_action_targets = self.prev_targets if self.prev_targets is not None else q
+        with torch.no_grad():
+            observation = compute_observation(
+                q=q[None],
+                qd=qd[None],
+                prev_action_targets=prev_action_targets[None],
+                object_pose=object_pose_W[None],
+                goal_object_pose=goal_object_pose_W[None],
+                object_scales=self.object_scales[None],
+                urdf=self.urdf_object,
+                obs_list=self.obs_list,
+            )
+            observation = torch.from_numpy(observation).float().to(self.device)
         assert_equals(
             observation.shape,
             (
@@ -296,7 +304,7 @@ class RLPolicyNode:
         # ##############################################################################
         # Record time and joint states and commands and object pose and goal object pose
         # ##############################################################################
-        if self.save_foldername is not None:
+        if self.save_foldername is not None and self._warmup_completed:
             if not hasattr(self, "start_run_time"):
                 self.start_run_time = time.time()
             current_time = time.time()
@@ -305,16 +313,15 @@ class RLPolicyNode:
             self.time_history.append(dt)
             self.q_history.append(q)
             self.qd_history.append(qd)
-            self.q_target_history.append(prev_action_targets.cpu().numpy()[0])
+            self.q_target_history.append(prev_action_targets)
             self.object_pose_history.append(object_pose_W)
             self.goal_object_pose_history.append(goal_object_pose_W)
 
-        return observation, q
+        return observation, q, min_timestamp
 
-    def publish_targets(self, joint_pos_targets: torch.Tensor):
+    def publish_targets(self, joint_pos_targets: np.ndarray):
         assert_equals(joint_pos_targets.shape, (1, self.num_actions))
-        joint_pos_targets = joint_pos_targets.squeeze(dim=0)
-        joint_pos_targets = joint_pos_targets.cpu().numpy()
+        joint_pos_targets = joint_pos_targets[0]
 
         iiwa_msg = JointState()
         iiwa_msg.header.stamp = rospy.Time.now()
@@ -361,9 +368,11 @@ class RLPolicyNode:
         self.sharpa_joint_cmd_pub.publish(sharpa_msg)
 
     def _wait_and_warmup(self):
+        assert not self._warmup_completed, "Warmup already completed"
+
         # Wait
         while not rospy.is_shutdown():
-            obs, q = self.create_observation()
+            obs, q, _ = self.create_observation()
             if obs is not None and q is not None:
                 break
             time.sleep(self.control_dt)
@@ -373,7 +382,7 @@ class RLPolicyNode:
         info("First observations received, starting to publish sim state")
         info("=" * 100)
 
-        self.prev_targets = torch.from_numpy(q).float().to(self.device)[None]
+        self.prev_targets = q
 
         # Warm up the policy and publishing
         info("=" * 100)
@@ -390,7 +399,7 @@ class RLPolicyNode:
                 break
 
             # Create observation from the latest messages
-            obs, q = self.create_observation()
+            obs, q, _ = self.create_observation()
             assert obs is not None and q is not None, f"obs: {obs}, q: {q}"
             assert_equals(obs.shape, (1, self.num_observations))
 
@@ -403,8 +412,8 @@ class RLPolicyNode:
             assert_equals(normalized_action.shape, (1, self.num_actions))
 
             _ = compute_joint_pos_targets(
-                actions=normalized_action,
-                prev_targets=self.prev_targets,
+                actions=normalized_action.cpu().numpy(),
+                prev_targets=self.prev_targets[None],
                 hand_moving_average=0.1,
                 arm_moving_average=0.1,
                 hand_dof_speed_scale=2.5,
@@ -412,24 +421,26 @@ class RLPolicyNode:
             )
 
             # We do not actually use the joint pos targets computed by the policy, we use the actual joint states so it doesn't move
-            joint_pos_targets = torch.clip(
-                torch.from_numpy(q).float().to(self.device)[None],
-                min=torch.from_numpy(Q_LOWER_LIMITS_np).float().to(self.device)[None],
-                max=torch.from_numpy(Q_UPPER_LIMITS_np).float().to(self.device)[None],
+            joint_pos_targets = np.clip(
+                q[None],
+                min=Q_LOWER_LIMITS_np,
+                max=Q_UPPER_LIMITS_np,
             )
 
             # Publish the targets
             self.publish_targets(joint_pos_targets)
-            self.prev_targets = joint_pos_targets.clone()
+            self.prev_targets = joint_pos_targets[0]
             time.sleep(self.control_dt)
 
         # Reset rnn state
         self.player.reset()
 
         # Done warming up
+        self._warmup_completed = True
         info("=" * 100)
         info("Warmup complete")
         info("=" * 100)
+        assert self._warmup_completed, "Warmup completed"
 
     def run(self):
         self._wait_and_warmup()
@@ -438,8 +449,18 @@ class RLPolicyNode:
         while not rospy.is_shutdown():
             start_loop_no_sleep_time = time.time()
 
+            # Profiling:
+            # t0 is the time at which the earliest ROS message was received that was used to create the observation
+            # t1 is the time at which the policy loop started
+            # t1_5 is the time at which the targets were computed (computed obs, policy forward pass, compute targets)
+            # t2 is the time at which the targets were done being published
+            # t3 is the time that the robot receives the targets (not captured here)
+
             # Create observation from the latest messages
-            obs, q = self.create_observation()
+            t1 = rospy.Time.now()
+            t00 = time.time()
+            obs, q, t0 = self.create_observation()
+            t01 = time.time()
             assert obs is not None and q is not None, f"obs: {obs}, q: {q}"
 
             assert_equals(obs.shape, (1, self.num_observations))
@@ -449,43 +470,72 @@ class RLPolicyNode:
                 obs=obs,
                 deterministic_actions=True,
             )
+            t02 = time.time()
             assert_equals(normalized_action.shape, (1, self.num_actions))
 
             HAND_DOF_SPEED_SCALE = 2.5
             DT = 1 / 60
             joint_pos_targets = compute_joint_pos_targets(
-                actions=normalized_action,
-                prev_targets=self.prev_targets,
+                actions=normalized_action.cpu().numpy(),
+                prev_targets=self.prev_targets[None],
                 hand_moving_average=self.hand_moving_average,
                 arm_moving_average=self.arm_moving_average,
                 hand_dof_speed_scale=HAND_DOF_SPEED_SCALE,
                 dt=DT,
             )
+            t03 = time.time()
             assert_equals(joint_pos_targets.shape, (1, self.num_actions))
 
             # Clamp
-            joint_pos_targets = torch.clip(
+            joint_pos_targets = np.clip(
                 joint_pos_targets,
-                min=torch.from_numpy(Q_LOWER_LIMITS_np).float().to(self.device)[None],
-                max=torch.from_numpy(Q_UPPER_LIMITS_np).float().to(self.device)[None],
+                min=Q_LOWER_LIMITS_np,
+                max=Q_UPPER_LIMITS_np,
             )
+            t04 = time.time()
 
             if self.overwrite_targets_filepath is not None:
                 if self.current_step >= self.q_targets_from_file.shape[0]:
                     self.current_step = self.q_targets_from_file.shape[0] - 1
                     info("Reached end of targets, holding last target")
                 assert self.current_step < self.q_targets_from_file.shape[0], f"current_step: {self.current_step}, expected: < {self.q_targets_from_file.shape[0]}"
-                joint_pos_targets = self.q_targets_from_file[self.current_step].unsqueeze(0)
+                joint_pos_targets = self.q_targets_from_file[self.current_step][None]
                 self.current_step += 1
+            t05 = time.time()
 
             # Publish the targets
+            t1_5 = rospy.Time.now()
+            dt01_ms = (t1 - t0).to_sec() * 1000
+            dt11_5_ms = (t1_5 - t1).to_sec() * 1000
+            t06 = time.time()
             self.publish_targets(joint_pos_targets)
-            self.prev_targets = joint_pos_targets.clone()
+            t07 = time.time()
+            self.prev_targets = joint_pos_targets[0]
+            t08 = time.time()
+            t2 = rospy.Time.now()
+            dt1_5_2_ms = (t2 - t1_5).to_sec() * 1000
 
             # End of loop timekeeping
             end_loop_no_sleep_time = time.time()
             loop_no_sleep_dt = end_loop_no_sleep_time - start_loop_no_sleep_time
             loop_no_sleep_dts.append(loop_no_sleep_dt)
+
+            # Print timing information
+            PRINT_TIMING = False
+            if PRINT_TIMING:
+                print(f"dt01_ms: {dt01_ms:.1f}, dt11_5_ms: {dt11_5_ms:.1f}, dt1_5_2_ms: {dt1_5_2_ms:.1f} ms, loop_no_sleep_dt: {loop_no_sleep_dt * 1000:.1f} ms")
+
+                total_dt = t08 - t00
+                print(f"total_dt: {total_dt:.6f} s")
+                print(f"t01 - t00: {(t01 - t00) * 1000:.1f} ms, {((t01 - t00)) / total_dt * 100:.1f}%")
+                print(f"t02 - t01: {(t02 - t01) * 1000:.1f} ms, {((t02 - t01)) / total_dt * 100:.1f}%")
+                print(f"t03 - t02: {(t03 - t02) * 1000:.1f} ms, {((t03 - t02)) / total_dt * 100:.1f}%")
+                print(f"t04 - t03: {(t04 - t03) * 1000:.1f} ms, {((t04 - t03)) / total_dt * 100:.1f}%")
+                print(f"t05 - t04: {(t05 - t04) * 1000:.1f} ms, {((t05 - t04)) / total_dt * 100:.1f}%")
+                print(f"t06 - t05: {(t06 - t05) * 1000:.1f} ms, {((t06 - t05)) / total_dt * 100:.1f}%")
+                print(f"t07 - t06: {(t07 - t06) * 1000:.1f} ms, {((t07 - t06)) / total_dt * 100:.1f}%")
+                print(f"t08 - t07: {(t08 - t07) * 1000:.1f} ms, {((t08 - t07)) / total_dt * 100:.1f}%")
+                print("=" * 100)
 
             sleep_dt = self.control_dt - loop_no_sleep_dt
             if sleep_dt > 0:
@@ -519,34 +569,6 @@ class RLPolicyNode:
                 print(f"  Std: {np.std(fps_no_sleep_array):.1f}")
                 print()
                 loop_no_sleep_dts, loop_dts = [], []
-
-    @property
-    def object_scales(self) -> np.ndarray:
-        # Hammer 2
-        # object_scales = np.array([3.0, 0.25, 0.2])
-
-        # blue_cuboid (rearrange)
-        # object_scales = np.array([4.0, 1.0, 0.75])
-
-        # blue_cuboid (not rearrange) and different scale
-        object_scales = np.array([5.0, 0.9375, 1.25])
-
-        # blue_cuboid_real_iphone
-        # object_scales = np.array([3.0, 1.4, 0.2])
-
-        # # blue_cuboid_fake_iphone
-        # object_scales = np.array([2.0, 1.25, 0.5])
-
-        # # blue_cuboid_real_hammer
-        # object_scales = np.array([2.0, 0.55, 0.35])
-
-        # # blue_cuboid_fake_hammer
-        # object_scales = np.array([2.5, 0.75, 0.65])
-
-        # # blue_cuboid_real_screwdriver
-        # object_scales = np.array([1.3, 0.7, 0.5])
-
-        return object_scales
 
     def _signal_handler(self, signum, frame):
         assert self.save_foldername is not None, "save_foldername must be set to save to file"
@@ -641,14 +663,16 @@ if __name__ == "__main__":
             config_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"),
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/cleanInputs.pth"),
             checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/noisyInputs.pth"),
+            # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/cleanInputsFinetuned.pth"),
             hand_moving_average=0.1,
-            arm_moving_average=0.02,
-            # arm_moving_average=0.03,
+            # arm_moving_average=0.02,
+            arm_moving_average=0.1,
+            object_scales=np.array([0.24, 0.03, 0.02]) * 25,
             # arm_moving_average=0.04,
             # arm_moving_average=0.05,
             # arm_moving_average=0.01,
             # save_foldername=None,
-            save_foldername="real_world_policy",
+            save_foldername="isaac_testing",
             overwrite_targets_filepath=None,
             # overwrite_targets_filepath=Path("recorded_robot_inputs/isaac/2025-12-12_19-40-52_noisyInputs_arm0.01.npz"),
             # overwrite_targets_filepath=Path("recorded_robot_inputs/isaac/2025-12-12_19-40-13_noisyInputs_arm0.05.npz"),

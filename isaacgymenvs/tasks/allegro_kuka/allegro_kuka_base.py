@@ -42,7 +42,7 @@ from isaacgym import gymapi, gymtorch, gymutil
 from torch import Tensor
 
 from isaacgymenvs.tasks.allegro_kuka.allegro_kuka_utils import DofParameters, populate_dof_properties
-from isaacgymenvs.utils.observation_action_utils_sharpa import compute_observation, OBS_NAMES, compute_joint_pos_targets, create_chain_and_serial_chain
+from isaacgymenvs.utils.observation_action_utils_sharpa import compute_observation, OBS_NAMES, compute_joint_pos_targets, create_urdf_object
 
 from isaacgymenvs.tasks.base.vec_task import VecTask
 from isaacgymenvs.tasks.allegro_kuka.generate_cuboids import (
@@ -664,7 +664,9 @@ class AllegroKukaBase(VecTask):
             # Some objects don't have a fixed trajectory, so we raise an error
             HAMMER_TRAJECTORY_OBJECTS = set(
                 ["scanned_hammer_1", "scanned_hammer_2", "scanned_hammer_2_coacd", "scanned_hammer_2_coacd2", "YcbHammer", "cuboidal_hammer", "cylindrical_hammer", "cuboidal_hammer_2x", "cylindrical_hammer_2x",]
+                + ["all_hammers", "all_cuboidal_hammers", "all_cylindrical_hammers", "all_cuboidal_and_cylindrical_hammers", "mallet", "cuboidal_mallet"]
             )
+            CUBOID_OBJECTS = set(["cuboid", "blue_cuboid", "blue_cuboid_thick", "blue_cuboid_real_iphone", "blue_cuboid_fake_iphone", "blue_cuboid_real_hammer", "blue_cuboid_fake_hammer", "blue_cuboid_real_screwdriver"])
             if object_type in HAMMER_TRAJECTORY_OBJECTS:
                 self.trajectory_states = get_hammer_trajectory(init_state, device=self.device)
             elif object_type in set(["hairbrush", "hairbrush_modified"]):
@@ -677,16 +679,30 @@ class AllegroKukaBase(VecTask):
                 self.trajectory_states = get_eraser_trajectory(init_state, device=self.device)
             elif object_type == "phone":
                 self.trajectory_states = get_phone_trajectory(init_state, device=self.device)
-            elif object_type in ["all_hammers", "all_cuboidal_hammers", "all_cylindrical_hammers", "all_cuboidal_and_cylindrical_hammers"]:
-                self.trajectory_states = get_hammer_trajectory(init_state, device=self.device)
-            elif object_type in ["cuboid", "blue_cuboid", "blue_cuboid_thick", "blue_cuboid_real_iphone", "blue_cuboid_fake_iphone", "blue_cuboid_real_hammer", "blue_cuboid_fake_hammer", "blue_cuboid_real_screwdriver"]:
+            elif object_type in CUBOID_OBJECTS:
                 self.trajectory_states = get_cuboid_trajectory(init_state, device=self.device)
             else:
                 raise ValueError(f"The following object_type does not have a fixed trajectory: {object_type}, cannot use USE_FIXED_SET_OF_GOAL_STATES with this object type")
 
+            SAVE_TO_JSON = False
+            if SAVE_TO_JSON:
+                import json
+                from pathlib import Path
+                output_filepath = Path(f"{object_type}_trajectory.json")
+                print(f"Saving trajectory to {output_filepath}")
+
+                trajectory_states_np = self.trajectory_states.cpu().numpy()
+                trajectory_states_np[:, 1] -= 0.8  # Account for initial offset of 0.8 in world frame
+                with open(output_filepath, "w") as f:
+                    json.dump(
+                        trajectory_states_np.tolist(),
+                        f,
+                        indent=4,
+                    )
+                print(f"Saved trajectory to {output_filepath}")
+
             # Set max consecutive successes to the length of the trajectory so we don't run out of goal states
             self.max_consecutive_successes = len(self.trajectory_states)
-
 
         return object_asset_files, object_asset_scales, need_vhacds
 
@@ -1304,6 +1320,15 @@ class AllegroKukaBase(VecTask):
             self.envs.append(env_ptr)
             self.allegro_hands.append(allegro_actor)
             self.objects.append(object_handle)
+
+        # Default false because this is slow
+        DEBUG_PRINT_OBJECT_MASS_AND_INERTIA = False
+        # Get mass and inertia of object
+        if DEBUG_PRINT_OBJECT_MASS_AND_INERTIA:
+            original_masses, original_inertias = self._get_original_object_masses_and_inertias()
+            print(f"Original masses: {original_masses[0]}")
+            print(f"Original inertias: {original_inertias[0]}")
+            breakpoint()
 
         # Set mass and inertia of object
         MODIFY_OBJECT_MASS_AND_INERTIA = False
@@ -1994,25 +2019,30 @@ class AllegroKukaBase(VecTask):
             delay_index = torch.randint(0, self.obs_queue.shape[1], (self.num_envs,), device=self.device)
             self.obs_buf[:] = self.obs_queue[torch.arange(self.num_envs), delay_index].clone()
 
+        # HACK: For testing delay, force a fixed full delay
+        FORCE_FULL_DELAY = False
+        if FORCE_FULL_DELAY:
+            self.obs_buf[:] = self.obs_queue[:, -1].clone()
+
         # Default CHECK_WITH_COMPUTED_OBS = False
         # Set to True to check if the observations are computed correctly
         CHECK_WITH_COMPUTED_OBS = False
         if CHECK_WITH_COMPUTED_OBS:
-            import pytorch_kinematics as pk
-            # Create chain from URDF
-            if not hasattr(self, "chain"):
-                self.chain, _ = create_chain_and_serial_chain(device=self.device, robot_name="iiwa14_left_sharpa_adjusted_restricted")
+            # Create urdf object
+            if not hasattr(self, "urdf_object"):
+                self.urdf_object = create_urdf_object(robot_name="iiwa14_left_sharpa_adjusted_restricted")
 
             computed_obs = compute_observation(
-                q=self.arm_hand_dof_pos,
-                qd=self.arm_hand_dof_vel,
-                prev_action_targets=self.prev_targets,
-                object_pose=self.object_pose,
-                goal_object_pose=self.goal_pose,
-                object_scales=self.object_scales,
-                chain=self.chain,
+                q=self.arm_hand_dof_pos.cpu().numpy(),
+                qd=self.arm_hand_dof_vel.cpu().numpy(),
+                prev_action_targets=self.prev_targets.cpu().numpy(),
+                object_pose=self.object_pose.cpu().numpy(),
+                goal_object_pose=self.goal_pose.cpu().numpy(),
+                object_scales=self.object_scales.cpu().numpy(),
+                urdf=self.urdf_object,
                 obs_list=self.obs_list,
             )
+            computed_obs = torch.from_numpy(computed_obs).float().to(self.device)
 
             # Validate
             assert computed_obs.shape == (self.num_envs, len(OBS_NAMES)), f"computed_obs.shape: {computed_obs.shape}, expected: ({self.num_envs}, {len(OBS_NAMES)})"
@@ -2440,13 +2470,14 @@ class AllegroKukaBase(VecTask):
         CHECK_WITH_COMPUTED_JOINT_POS_TARGETS = False
         if CHECK_WITH_COMPUTED_JOINT_POS_TARGETS:
             computed_joint_pos_targets = compute_joint_pos_targets(
-                actions=self.actions,
-                prev_targets=self.prev_targets,
+                actions=self.actions.cpu().numpy(),
+                prev_targets=self.prev_targets.cpu().numpy(),
                 hand_moving_average=self.hand_moving_average,
                 arm_moving_average=self.arm_moving_average,
                 hand_dof_speed_scale=self.hand_dof_speed_scale,
                 dt=self.dt,
             )
+            computed_joint_pos_targets = torch.from_numpy(computed_joint_pos_targets).float().to(self.device)
             assert computed_joint_pos_targets.shape == (self.num_envs, self.num_hand_arm_dofs), f"computed_joint_pos_targets.shape: {computed_joint_pos_targets.shape}, expected: ({self.num_envs}, {self.num_hand_arm_dofs})"
             assert self.cur_targets.shape == computed_joint_pos_targets.shape, f"self.cur_targets.shape: {self.cur_targets.shape}, expected: {computed_joint_pos_targets.shape}"
 

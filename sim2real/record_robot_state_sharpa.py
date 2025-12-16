@@ -98,18 +98,22 @@ class RecordRobotState:
 
         # Subscribers
         self.iiwa_joint_state_sub = rospy.Subscriber(
-            "/iiwa/joint_states", JointState, self._iiwa_joint_state_callback
+            "/iiwa/joint_states", JointState, self._iiwa_joint_state_callback,
+            queue_size=1
         )
         self.sharpa_joint_state_sub = rospy.Subscriber(
             "/sharpa/joint_states",
             JointState,
             self._sharpa_joint_state_callback,
+            queue_size=1
         )
         self.iiwa_joint_cmd_sub = rospy.Subscriber(
-            "/iiwa/joint_cmd", JointState, self._iiwa_joint_cmd_callback
+            "/iiwa/joint_cmd", JointState, self._iiwa_joint_cmd_callback,
+            queue_size=1
         )
         self.sharpa_joint_cmd_sub = rospy.Subscriber(
-            "/sharpa/joint_cmd", JointState, self._sharpa_joint_cmd_callback
+            "/sharpa/joint_cmd", JointState, self._sharpa_joint_cmd_callback,
+            queue_size=1
         )
 
         # ROS rate

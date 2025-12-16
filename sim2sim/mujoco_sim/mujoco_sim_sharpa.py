@@ -71,10 +71,8 @@ assert len(INIT_JOINT_POS) == len(JOINT_NAMES) == len(ACTUATOR_NAMES) == N_JOINT
     f"len(INIT_JOINT_POS): {len(INIT_JOINT_POS)}, len(JOINT_NAMES): {len(JOINT_NAMES)}, len(ACTUATOR_NAMES): {len(ACTUATOR_NAMES)}, expected: {N_JOINTS}"
 )
 
-N_BODY_NAMES = 35
-BODY_NAMES = [
-    'world', 'base', 'link1', 'link2', 'link3', 'link4', 'link5', 'link6', 'link7', 'palmworld', 'palmleft_hand_C_MC', 'palmleft_thumb_CMC_VL', 'palmleft_thumb_MC', 'palmleft_thumb_MCP_VL', 'palmleft_thumb_PP', 'palmleft_thumb_DP', 'palmleft_index_MCP_VL', 'palmleft_index_PP', 'palmleft_index_MP', 'palmleft_index_DP', 'palmleft_middle_MCP_VL', 'palmleft_middle_PP', 'palmleft_middle_MP', 'palmleft_middle_DP', 'palmleft_ring_MCP_VL', 'palmleft_ring_PP', 'palmleft_ring_MP', 'palmleft_ring_DP', 'palmleft_pinky_MC', 'palmleft_pinky_MCP_VL', 'palmleft_pinky_PP', 'palmleft_pinky_MP', 'palmleft_pinky_DP', 'table', 'object'
-]
+N_BODY_NAMES = 36
+BODY_NAMES = ['world', 'base', 'link1', 'link2', 'link3', 'link4', 'link5', 'link6', 'link7', 'palmworld', 'palmleft_hand_C_MC', 'palmleft_thumb_CMC_VL', 'palmleft_thumb_MC', 'palmleft_thumb_MCP_VL', 'palmleft_thumb_PP', 'palmleft_thumb_DP', 'palmleft_index_MCP_VL', 'palmleft_index_PP', 'palmleft_index_MP', 'palmleft_index_DP', 'palmleft_middle_MCP_VL', 'palmleft_middle_PP', 'palmleft_middle_MP', 'palmleft_middle_DP', 'palmleft_ring_MCP_VL', 'palmleft_ring_PP', 'palmleft_ring_MP', 'palmleft_ring_DP', 'palmleft_pinky_MC', 'palmleft_pinky_MCP_VL', 'palmleft_pinky_PP', 'palmleft_pinky_MP', 'palmleft_pinky_DP', 'table', 'object', 'goal_object']
 assert len(BODY_NAMES) == N_BODY_NAMES, (
     f"len(BODY_NAMES): {len(BODY_NAMES)}, expected: {N_BODY_NAMES}"
 )
@@ -97,6 +95,10 @@ class MujocoSimConfig:
     sim_dt: float = 1.0 / 1000  # Need a high enough frequency to get stable physics
     friction: FrictionConfig = field(default_factory=FrictionConfig)
     object_name: str = "044_flat_screwdriver"
+    object_start_pos: np.ndarray = field(default_factory=lambda: np.array([0.0, 0.0, 0.58]))
+    object_start_quat_wxyz: np.ndarray = field(default_factory=lambda: np.array([1.0, 0.0, 0.0, 0.0]))
+    goal_object_start_pos: np.ndarray = field(default_factory=lambda: np.array([0.0, 0.0, 0.78]))
+    goal_object_start_quat_wxyz: np.ndarray = field(default_factory=lambda: np.array([1.0, 0.0, 0.0, 0.0]))
 
     @property
     def sim_hz(self) -> float:
@@ -162,20 +164,20 @@ class MujocoSim:
         spec.option.iterations = 20
         spec.option.ls_iterations = 50
         spec.option.o_solref[:] = np.array([0.02, 1.0])
-        # spec.option.o_solimp[:] = np.array([
-        #     0.0,
-        #     0.95,
-        #     0.03,
-        #     0.5,
-        #     2,
-        # ])
         spec.option.o_solimp[:] = np.array([
-            0.9,
+            0.0,
             0.95,
-            0.001,
+            0.03,
             0.5,
             2,
         ])
+        # spec.option.o_solimp[:] = np.array([
+        #     0.9,
+        #     0.95,
+        #     0.001,
+        #     0.5,
+        #     2,
+        # ])
         spec.option.integrator = mujoco.mjtIntegrator.mjINT_IMPLICITFAST
 
         assert spec.option.o_solref[0] >= 2 * self.config.sim_dt, (
@@ -232,67 +234,10 @@ class MujocoSim:
         table_geom.rgba = WHITE_RGBA
         table_geom.friction = self.config.friction_array.copy()
 
-        # Object
         GREY_RGBA = np.array([0.5, 0.5, 0.5, 1.0])
-        OBJECT_POS_X, OBJECT_POS_Y, OBJECT_POS_Z = 0.0, 0.0, 0.38 + 0.2
-        object_body = spec.worldbody.add_body()
-        object_body.name = "object"
-        object_body.pos = np.array([OBJECT_POS_X, OBJECT_POS_Y, OBJECT_POS_Z])
-
-        object_free_joint = object_body.add_joint()
-        object_free_joint.name = "object_free_joint"
-        object_free_joint.type = mujoco.mjtJoint.mjJNT_FREE
-
-        object_name = self.config.object_name
-        ADD_BOX_OBJECT = object_name.startswith("cuboid")
-        if ADD_BOX_OBJECT:
-            # Example: cuboid_4_0.75_1
-            scales = object_name.split("_")[1:]
-            scales = np.array(scales, dtype=float)
-            assert scales.shape == (3,), f"scales.shape: {scales.shape}, expected: (3,)"
-            BASE_SIZE = 0.04
-            BOX_LEN_X, BOX_LEN_Y, BOX_LEN_Z = scales * BASE_SIZE
-            print(f"BOX_LEN_X: {BOX_LEN_X}, BOX_LEN_Y: {BOX_LEN_Y}, BOX_LEN_Z: {BOX_LEN_Z}")
-
-            object_geom = object_body.add_geom()
-            object_geom.name = "object_geom"
-            object_geom.rgba = GREY_RGBA
-            object_geom.friction = self.config.friction_array.copy()
-
-            object_geom.type = mujoco.mjtGeom.mjGEOM_BOX
-            object_geom.size = np.array(
-                [BOX_LEN_X / 2, BOX_LEN_Y / 2, BOX_LEN_Z / 2]
-            )  # Half extents
-            object_geom.density = 400.0
-        else:
-            # Use list of convex decomp meshes for object
-            # Use run_coacd.py to generate convex decomp meshes
-
-            from isaacgymenvs.utils.objects import NAME_TO_OBJECT
-            mesh_paths = NAME_TO_OBJECT[object_name].coacd_filepaths
-            assert mesh_paths is not None, f"mesh_paths is None for object_name: {object_name}"
-            assert len(mesh_paths) > 0, f"len(mesh_paths) is 0 for object_name: {object_name}"
-            # mesh_paths = list((get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/044_flat_screwdriver").glob("decomp_*.obj"))
-
-            for mesh_path in mesh_paths:
-                assert mesh_path.exists(), f"Mesh file does not exist: {mesh_path}"
-                mesh = spec.add_mesh()
-                mesh.name = mesh_path.stem
-                mesh.file = str(mesh_path)
-                assert Path(mesh.file).exists(), (
-                    f"Mesh file does not exist: {mesh.file}"
-                )
-                mesh.scale = np.array([1.0, 1.0, 1.0])
-
-                object_geom = object_body.add_geom()
-                object_geom.name = f"object_geom_{mesh_path.stem}"
-                object_geom.rgba = GREY_RGBA
-                object_geom.friction = self.config.friction_array.copy()
-                object_geom.type = mujoco.mjtGeom.mjGEOM_MESH
-                object_geom.meshname = mesh.name
-
-                # Improve contact
-                # object_geom.condim = 6
+        self._add_object(spec=spec, object_name=self.config.object_name, color=GREY_RGBA, start_pos=self.config.object_start_pos, start_quat_wxyz=self.config.object_start_quat_wxyz, name="object", disable_contacts=False, movable=True)
+        GREEN_RGBA = np.array([0.0, 1.0, 0.0, 1.0])
+        self._add_object(spec=spec, object_name=self.config.object_name, color=GREEN_RGBA, start_pos=self.config.goal_object_start_pos, start_quat_wxyz=self.config.goal_object_start_quat_wxyz, name="goal_object", disable_contacts=True, movable=False)
 
         # Improve contact
         for geom in spec.geoms:
@@ -313,6 +258,118 @@ class MujocoSim:
 
         self._print_model_info()
         self._validate()
+
+    def _add_object(self, spec: mujoco.MjSpec, object_name: str, color: np.ndarray, start_pos: np.ndarray, start_quat_wxyz: np.ndarray, name: str, disable_contacts: bool, movable: bool) -> None:
+        # Object
+        object_body = spec.worldbody.add_body()
+        object_body.name = name
+        object_body.pos = start_pos
+        object_body.quat = start_quat_wxyz
+
+        if movable:
+            object_free_joint = object_body.add_joint()
+            object_free_joint.name = f"{name}_free_joint"
+            object_free_joint.type = mujoco.mjtJoint.mjJNT_FREE
+
+        object_name = self.config.object_name
+        ADD_BOX_OBJECT = object_name.startswith("cuboid")
+        if ADD_BOX_OBJECT:
+            if object_name == "cuboidal_mallet" or object_name == "cuboidal_hammer":
+                if object_name == "cuboidal_mallet":
+                    HANDLE_LENGTH = 0.24
+                    HANDLE_WIDTH = 0.03
+                    HANDLE_THICKNESS = 0.02
+                    HEAD_THICKNESS = 0.045
+                    HEAD_WIDTH = 0.05
+                    HEAD_LENGTH = 0.08
+                elif object_name == "cuboidal_hammer":
+                    HANDLE_LENGTH = 0.25
+                    HANDLE_WIDTH = 0.03
+                    HANDLE_THICKNESS = 0.02
+                    HEAD_THICKNESS = 0.02
+                    HEAD_WIDTH = 0.02
+                    HEAD_LENGTH = 0.11
+                else:
+                    raise ValueError(f"Invalid object name: {object_name}")
+                x_offset = HANDLE_LENGTH / 2 + HEAD_WIDTH / 2
+
+                handle_geom = object_body.add_geom()
+                handle_geom.name = f"{name}_handle_geom"
+                handle_geom.rgba = color
+                handle_geom.friction = self.config.friction_array.copy()
+                handle_geom.type = mujoco.mjtGeom.mjGEOM_BOX
+                handle_geom.size = np.array(
+                    [HANDLE_LENGTH / 2, HANDLE_WIDTH / 2, HANDLE_THICKNESS / 2]
+                )  # Half extents
+                handle_geom.density = 400.0
+
+                head_geom = object_body.add_geom()
+                head_geom.name = f"{name}_head_geom"
+                head_geom.rgba = color
+                head_geom.friction = self.config.friction_array.copy()
+                head_geom.type = mujoco.mjtGeom.mjGEOM_BOX
+                head_geom.size = np.array(
+                    [HEAD_WIDTH / 2, HEAD_LENGTH / 2, HEAD_THICKNESS / 2]
+                )  # Half extents
+                head_geom.density = 400.0
+                head_geom.pos = np.array([x_offset, 0.0, 0.0])
+                object_geoms = [handle_geom, head_geom]
+            else:
+                # Example: cuboid_4_0.75_1
+                scales = object_name.split("_")[1:]
+                scales = np.array(scales, dtype=float)
+                assert scales.shape == (3,), f"scales.shape: {scales.shape}, expected: (3,)"
+                BASE_SIZE = 0.04
+                BOX_LEN_X, BOX_LEN_Y, BOX_LEN_Z = scales * BASE_SIZE
+                print(f"BOX_LEN_X: {BOX_LEN_X}, BOX_LEN_Y: {BOX_LEN_Y}, BOX_LEN_Z: {BOX_LEN_Z}")
+
+                object_geom = object_body.add_geom()
+                object_geom.name = f"{name}_object_geom"
+                object_geom.rgba = color
+                object_geom.friction = self.config.friction_array.copy()
+
+                object_geom.type = mujoco.mjtGeom.mjGEOM_BOX
+                object_geom.size = np.array(
+                    [BOX_LEN_X / 2, BOX_LEN_Y / 2, BOX_LEN_Z / 2]
+                )  # Half extents
+                object_geom.density = 400.0
+                object_geoms = [object_geom]
+        else:
+            # Use list of convex decomp meshes for object
+            # Use run_coacd.py to generate convex decomp meshes
+
+            from isaacgymenvs.utils.objects import NAME_TO_OBJECT
+            mesh_paths = NAME_TO_OBJECT[object_name].coacd_filepaths
+            assert mesh_paths is not None, f"mesh_paths is None for object_name: {object_name}"
+            assert len(mesh_paths) > 0, f"len(mesh_paths) is 0 for object_name: {object_name}"
+            # mesh_paths = list((get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/044_flat_screwdriver").glob("decomp_*.obj"))
+            object_geoms = []
+            for mesh_path in mesh_paths:
+                assert mesh_path.exists(), f"Mesh file does not exist: {mesh_path}"
+                mesh = spec.add_mesh()
+                mesh.name = f"{name}_mesh_{mesh_path.stem}"
+                mesh.file = str(mesh_path)
+                assert Path(mesh.file).exists(), (
+                    f"Mesh file does not exist: {mesh.file}"
+                )
+                mesh.scale = np.array([1.0, 1.0, 1.0])
+
+                object_geom = object_body.add_geom()
+                object_geom.name = f"{name}_object_geom_{mesh_path.stem}"
+                object_geom.rgba = color
+                object_geom.friction = self.config.friction_array.copy()
+                object_geom.type = mujoco.mjtGeom.mjGEOM_MESH
+                object_geom.meshname = mesh.name
+                object_geoms.append(object_geom)
+
+                # Improve contact
+                # object_geom.condim = 6
+
+        if disable_contacts:
+            for geom in object_geoms:
+                geom.contype = 0
+                geom.conaffinity = 0
+
 
     def _print_model_info(self) -> None:
         print()
@@ -382,6 +439,7 @@ class MujocoSim:
         # Usage:
         table_pos, table_quat_wxyz = self.get_body_pose("table")
         object_pos, object_quat_wxyz = self.get_body_pose("object")
+        goal_object_pos, goal_object_quat_wxyz = self.get_body_pose("goal_object")
         robot_base_pos, robot_base_quat_wxyz = self.get_body_pose(
             "base"
         )  # replace with actual base body name
@@ -393,6 +451,8 @@ class MujocoSim:
             "table_quat_wxyz": table_quat_wxyz,
             "object_pos": object_pos,
             "object_quat_wxyz": object_quat_wxyz,
+            "goal_object_pos": goal_object_pos,
+            "goal_object_quat_wxyz": goal_object_quat_wxyz,
             "robot_base_pos": robot_base_pos,
             "robot_base_quat_wxyz": robot_base_quat_wxyz,
             "joint_positions": joint_positions,

@@ -5,11 +5,12 @@ import numpy as np
 import pytorch_kinematics as pk
 import torch
 from termcolor import colored
+import yourdfpy
 
 from isaacgymenvs.utils.observation_action_utils_sharpa import (
     compute_joint_pos_targets,
     compute_observation,
-    create_chain_and_serial_chain,
+    create_urdf_object,
 )
 from sim2real.rl_player import RlPlayer
 from sim2sim.mujoco_sim.mujoco_sim_sharpa import (
@@ -34,7 +35,7 @@ class MujocoEnvNoRosSharpa:
         self,
         sim: MujocoSim,
         object_scales: np.ndarray,
-        chain: pk.Chain,
+        urdf: yourdfpy.URDF,
         hand_moving_average: float,
         arm_moving_average: float,
         hand_dof_speed_scale: float,
@@ -44,7 +45,7 @@ class MujocoEnvNoRosSharpa:
     ):
         self.sim = sim
         self.object_scales = object_scales
-        self.chain = chain
+        self.urdf = urdf
         self.hand_moving_average = hand_moving_average
         self.arm_moving_average = arm_moving_average
         self.hand_dof_speed_scale = hand_dof_speed_scale
@@ -60,10 +61,8 @@ class MujocoEnvNoRosSharpa:
         object_quat_xyzw = object_quat_wxyz[[1, 2, 3, 0]]
         object_pose_W = np.concatenate([object_pos, object_quat_xyzw])
 
-        table_pos = sim_state["table_pos"]
-        table_quat_wxyz = sim_state["table_quat_wxyz"]
-        goal_object_pos = table_pos + np.array([0.0, 0.0, 0.5])
-        goal_object_quat_wxyz = table_quat_wxyz
+        goal_object_pos = sim_state["goal_object_pos"]
+        goal_object_quat_wxyz = sim_state["goal_object_quat_wxyz"]
         goal_object_quat_xyzw = goal_object_quat_wxyz[[1, 2, 3, 0]]
         goal_object_pose_W = np.concatenate([goal_object_pos, goal_object_quat_xyzw])
 
@@ -71,21 +70,16 @@ class MujocoEnvNoRosSharpa:
         qd = sim_state["joint_velocities"]
 
         observation = compute_observation(
-            q=torch.from_numpy(q).float().to(self.device)[None],
-            qd=torch.from_numpy(qd).float().to(self.device)[None],
-            prev_action_targets=torch.from_numpy(self.sim.robot_joint_pos_targets)
-            .float()
-            .to(self.device)[None],
-            object_pose=torch.from_numpy(object_pose_W).float().to(self.device)[None],
-            goal_object_pose=(
-                torch.from_numpy(goal_object_pose_W).float().to(self.device)[None]
-            ),
-            object_scales=(
-                torch.from_numpy(self.object_scales).float().to(self.device)[None]
-            ),
-            chain=self.chain,
+            q=q[None],
+            qd=qd[None],
+            prev_action_targets=self.sim.robot_joint_pos_targets[None],
+            object_pose=object_pose_W[None],
+            goal_object_pose=goal_object_pose_W[None],
+            object_scales=self.object_scales[None],
+            urdf=self.urdf,
             obs_list=self.obs_list,
         )
+        observation = torch.from_numpy(observation).float().to(self.device)
 
         assert observation.shape == (
             1,
@@ -95,16 +89,14 @@ class MujocoEnvNoRosSharpa:
 
     def step(self, action: torch.Tensor) -> None:
         joint_pos_targets = compute_joint_pos_targets(
-            actions=action,
-            prev_targets=torch.from_numpy(self.sim.robot_joint_pos_targets)
-            .float()
-            .to(self.device)[None],
+            actions=action.cpu().numpy(),
+            prev_targets=self.sim.robot_joint_pos_targets[None],
             hand_moving_average=self.hand_moving_average,
             arm_moving_average=self.arm_moving_average,
             hand_dof_speed_scale=self.hand_dof_speed_scale,
             dt=self.control_dt,
         )
-        self.sim.set_robot_joint_pos_targets(joint_pos_targets.squeeze(dim=0).cpu().numpy())
+        self.sim.set_robot_joint_pos_targets(joint_pos_targets[0])
 
         for _ in range(self.sim_steps_per_control_step):
             self.sim.sim_step()
@@ -129,7 +121,8 @@ def main():
 
     # Cuboid
     # OBJECT_SCALES = np.array([4.0000, 0.7500, 1.0000])
-    OBJECT_SCALES = np.array([4.0000, 0.7500, 1.0000]) * 1.25
+    # OBJECT_SCALES = np.array([4.0000, 0.7500, 1.0000]) * 1.25
+    OBJECT_SCALES = np.array([0.24, 0.03, 0.02]) * 25
 
     CONFIG_PATH = Path(
         "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"
@@ -138,14 +131,15 @@ def main():
     CHECKPOINT_PATH = Path(
         # "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/newGains.pth"
         # "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/noisyInput.pth"
-        "/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/cleanInputs.pth"
-        # "/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/noisyInputs.pth"
+        # "/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/cleanInputs.pth"
+        "/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/noisyInputs.pth"
     )
     assert CHECKPOINT_PATH.exists()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     # sim = MujocoSim(MujocoSimConfig(enable_viewer=True, sim_dt=SIM_DT, object_name="cuboid_4_0.75_1"))
-    sim = MujocoSim(MujocoSimConfig(enable_viewer=True, sim_dt=SIM_DT, object_name="cuboid_5_0.9375_1.25"))
+    # sim = MujocoSim(MujocoSimConfig(enable_viewer=True, sim_dt=SIM_DT, object_name="cuboid_5_0.9375_1.25"))
+    sim = MujocoSim(MujocoSimConfig(enable_viewer=True, sim_dt=SIM_DT, object_name="cuboidal_mallet", object_start_pos=np.array([0.0, 0.0, 0.58]), object_start_quat_wxyz=np.array([0.0, 0.0, 0.0, 1.0]), goal_object_start_pos=np.array([0.0, 0.0, 0.78]), goal_object_start_quat_wxyz=np.array([0.0, 0.0, 0.0, 1.0])))
     policy = RlPlayer(
         num_observations=N_OBS,
         num_actions=N_ACT,
@@ -154,9 +148,7 @@ def main():
         device=device,
     )
 
-    chain, _ = create_chain_and_serial_chain(
-        device=device, robot_name="iiwa14_left_sharpa_adjusted_restricted"
-    )
+    urdf = create_urdf_object(robot_name="iiwa14_left_sharpa_adjusted_restricted")
 
     obs_list = policy.cfg["task"]["env"]["obsList"]
     print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
@@ -166,7 +158,7 @@ def main():
     mujoco_env_no_ros = MujocoEnvNoRosSharpa(
         sim=sim,
         object_scales=OBJECT_SCALES,
-        chain=chain,
+        urdf=urdf,
         hand_moving_average=HAND_MOVING_AVERAGE,
         arm_moving_average=ARM_MOVING_AVERAGE,
         hand_dof_speed_scale=HAND_DOF_SPEED_SCALE,

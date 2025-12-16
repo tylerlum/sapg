@@ -46,22 +46,24 @@ class MujocoEnvRosSharpa:
         self.latest_sharpa_joint_cmd = None
 
         self.iiwa_cmd_sub = rospy.Subscriber(
-            "/iiwa/joint_cmd", JointState, self._iiwa_joint_cmd_callback
+            "/iiwa/joint_cmd", JointState, self._iiwa_joint_cmd_callback,
+            queue_size=1
         )
         self.sharpa_cmd_sub = rospy.Subscriber(
-            "/sharpa/joint_cmd", JointState, self._sharpa_joint_cmd_callback
+            "/sharpa/joint_cmd", JointState, self._sharpa_joint_cmd_callback,
+            queue_size=1
         )
 
-        self.iiwa_pub = rospy.Publisher("/iiwa/joint_states", JointState, queue_size=10)
+        self.iiwa_pub = rospy.Publisher("/iiwa/joint_states", JointState, queue_size=1)
         self.sharpa_pub = rospy.Publisher(
-            "/sharpa/joint_states", JointState, queue_size=10
+            "/sharpa/joint_states", JointState, queue_size=1
         )
         self.object_pose_pub = rospy.Publisher(
-            "/robot_frame/current_object_pose", PoseStamped, queue_size=10
+            "/robot_frame/current_object_pose", PoseStamped, queue_size=1
         )
         if PUBLISH_GOAL_OBJECT_POSE:
             self.goal_object_pose_pub = rospy.Publisher(
-                "/robot_frame/goal_object_pose", Pose, queue_size=10
+                "/robot_frame/goal_object_pose", Pose, queue_size=1
             )
 
     def _iiwa_joint_cmd_callback(self, msg: JointState):
@@ -95,18 +97,15 @@ class MujocoEnvRosSharpa:
 
         if PUBLISH_GOAL_OBJECT_POSE:
             # Place goal object pose above the table
-            table_pos = sim_state["table_pos"]
-            table_quat_wxyz = sim_state["table_quat_wxyz"]
-            table_quat_xyzw = table_quat_wxyz[[1, 2, 3, 0]]
-            T_W_T = np.eye(4)
-            T_W_T[:3, 3] = table_pos
-            T_W_T[:3, :3] = R.from_quat(table_quat_xyzw).as_matrix()
-            T_R_T = T_R_W @ T_W_T
-            table_pos_R = T_R_T[:3, 3]
-            table_quat_xyzw_R = R.from_matrix(T_R_T[:3, :3]).as_quat()
-
-            goal_object_pos_R = table_pos_R + np.array([0.0, 0.0, 0.5])
-            goal_object_quat_xyzw_R = table_quat_xyzw_R
+            goal_object_pos = sim_state["goal_object_pos"]
+            goal_object_quat_wxyz = sim_state["goal_object_quat_wxyz"]
+            goal_object_quat_xyzw = goal_object_quat_wxyz[[1, 2, 3, 0]]
+            T_W_G = np.eye(4)
+            T_W_G[:3, 3] = goal_object_pos
+            T_W_G[:3, :3] = R.from_quat(goal_object_quat_xyzw).as_matrix()
+            T_R_G = T_R_W @ T_W_G
+            goal_object_pos_R = T_R_G[:3, 3]
+            goal_object_quat_xyzw_R = R.from_matrix(T_R_G[:3, :3]).as_quat()
 
             goal_object_pose_msg = Pose()
             goal_object_pose_msg.position.x = goal_object_pos_R[0]
@@ -123,6 +122,7 @@ class MujocoEnvRosSharpa:
         joint_names = JOINT_NAMES
 
         iiwa_joint_msg = JointState(
+            header=object_pose_msg.header,
             name=joint_names[:N_IIWA_JOINTS],
             position=joint_positions[:N_IIWA_JOINTS],
             velocity=joint_velocities[:N_IIWA_JOINTS],
@@ -130,6 +130,7 @@ class MujocoEnvRosSharpa:
         self.iiwa_pub.publish(iiwa_joint_msg)
 
         sharpa_joint_msg = JointState(
+            header=object_pose_msg.header,
             name=joint_names[N_IIWA_JOINTS:],
             position=joint_positions[N_IIWA_JOINTS:],
             velocity=joint_velocities[N_IIWA_JOINTS:],
@@ -237,9 +238,13 @@ def main():
     sim = MujocoSim(MujocoSimConfig(
         # enable_viewer=True,
         enable_viewer=False,
-        sim_dt=1.0 / 1000.0,
-        object_name="cuboid_5_0.9375_1.25",
+        sim_dt=1.0 / 600.0,
+        # object_name="cuboid_5_0.9375_1.25",
+        object_name="cuboidal_mallet",
         # object_name="blue_cuboid_real_iphone",
+        object_start_pos=np.array([0.0, 0.0, 0.58]),
+        # object_start_quat_wxyz=np.array([1.0, 0.0, 0.0, 0.0]),
+        object_start_quat_wxyz=np.array([0.0, 0.0, 0.0, 1.0]),
     ))
     mujoco_env_ros = MujocoEnvRosSharpa(sim, update_and_publish_dt=1.0 / 600)
     mujoco_env_ros.run()
