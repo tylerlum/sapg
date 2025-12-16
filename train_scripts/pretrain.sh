@@ -1,10 +1,10 @@
 #!/bin/bash
 
-CUSTOM_EXPERIMENT_NAME="MLP_ASYMMETRIC_prevActions_4cmBaseSize_10xPenalty"
-WANDB_GROUP="PRETRAIN"
+CUSTOM_EXPERIMENT_NAME="debug"
+WANDB_GROUP="debug"
 
-WANDB_ENTITY="kk837"
-WANDB_PROJECT="FINAL_ASYMMETRIC_RUNS"
+WANDB_ENTITY="tylerlum"
+WANDB_PROJECT="dexterous_reorientation"
 OBJECT_TYPE="cuboid"
 
 DATETIME=$(date +"%Y-%m-%d_%H-%M-%S")

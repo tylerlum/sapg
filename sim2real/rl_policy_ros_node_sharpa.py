@@ -19,7 +19,7 @@ from termcolor import colored
 from isaacgymenvs.utils.observation_action_utils_sharpa import (
     compute_joint_pos_targets,
     compute_observation,
-    create_chain_and_serial_chain,
+    create_urdf_object,
     Q_LOWER_LIMITS_restricted_np as Q_LOWER_LIMITS_np,
     Q_UPPER_LIMITS_restricted_np as Q_UPPER_LIMITS_np,
 )
@@ -99,6 +99,7 @@ class RLPolicyNode:
         checkpoint_path: Path,
         hand_moving_average: float,
         arm_moving_average: float,
+        object_scales: np.ndarray,
         save_foldername: Optional[str] = None,
         overwrite_targets_filepath: Optional[Path] = None,
     ):
@@ -106,8 +107,11 @@ class RLPolicyNode:
         self.checkpoint_path = checkpoint_path
         self.hand_moving_average = hand_moving_average
         self.arm_moving_average = arm_moving_average
+        self.object_scales = object_scales
         self.save_foldername = save_foldername
         self.overwrite_targets_filepath = overwrite_targets_filepath
+
+        assert_equals(object_scales.shape, (3,))
 
         # Initialize the ROS node
         rospy.init_node("rl_policy_node_sharpa")
@@ -187,8 +191,8 @@ class RLPolicyNode:
 
         # Set up chain
         robot_name = "iiwa14_left_sharpa_adjusted_restricted"
-        self.chain, _ = create_chain_and_serial_chain(
-            device=self.device, robot_name=robot_name
+        self.urdf_object = create_urdf_object(
+            robot_name=robot_name
         )
 
         # State: prev_targets
@@ -208,7 +212,7 @@ class RLPolicyNode:
             self.current_step = 0
 
     def object_pose_callback(self, msg: PoseStamped):
-        self.object_pose_msg = msg.pose
+        self.object_pose_msg = msg
 
     def goal_object_pose_callback(self, msg: Pose):
         self.goal_object_pose_msg = msg
@@ -219,7 +223,7 @@ class RLPolicyNode:
     def sharpa_joint_state_callback(self, msg: JointState):
         self.sharpa_joint_state_msg = msg
 
-    def create_observation(self) -> Tuple[Optional[torch.Tensor], Optional[np.ndarray]]:
+    def create_observation(self) -> Tuple[Optional[torch.Tensor], Optional[np.ndarray], Optional[rospy.Time]]:
         # Ensure all messages are received before processing
         if (
             self.iiwa_joint_state_msg is None
@@ -231,12 +235,17 @@ class RLPolicyNode:
                 f"Waiting for all messages to be received... iiwa_joint_state_msg: {var_to_is_none_str(self.iiwa_joint_state_msg)}, sharpa_joint_state_msg: {var_to_is_none_str(self.sharpa_joint_state_msg)}, object_pose_msg: {var_to_is_none_str(self.object_pose_msg)}, goal_object_pose_msg: {var_to_is_none_str(self.goal_object_pose_msg)}",
                 n_seconds=1.0,
             )
-            return None, None
+            return None, None, None
 
         iiwa_joint_state_msg = copy.copy(self.iiwa_joint_state_msg)
         sharpa_joint_state_msg = copy.copy(self.sharpa_joint_state_msg)
         object_pose_msg = copy.copy(self.object_pose_msg)
         goal_object_pose_msg = copy.copy(self.goal_object_pose_msg)
+
+        timestamp_object_pose = object_pose_msg.header.stamp
+        timestamp_iiwa_joint_state = iiwa_joint_state_msg.header.stamp
+        timestamp_sharpa_joint_state = sharpa_joint_state_msg.header.stamp
+        min_timestamp = min(timestamp_object_pose, timestamp_iiwa_joint_state, timestamp_sharpa_joint_state)
 
         # Concatenate the data from joint states and object pose
         iiwa_position = np.array(iiwa_joint_state_msg.position)
@@ -245,7 +254,7 @@ class RLPolicyNode:
         sharpa_position = np.array(sharpa_joint_state_msg.position)
         sharpa_velocity = np.array(sharpa_joint_state_msg.velocity)
 
-        T_R_O = pose_msg_to_T(object_pose_msg)
+        T_R_O = pose_msg_to_T(object_pose_msg.pose)
         T_R_G = pose_msg_to_T(goal_object_pose_msg)
 
         T_W_O = T_W_R @ T_R_O
@@ -274,7 +283,7 @@ class RLPolicyNode:
             object_scales=torch.from_numpy(self.object_scales)
             .float()
             .to(self.device)[None],
-            chain=self.chain,
+            urdf=self.urdf_object,
             obs_list=self.obs_list,
         )
         assert_equals(
@@ -310,7 +319,7 @@ class RLPolicyNode:
             self.object_pose_history.append(object_pose_W)
             self.goal_object_pose_history.append(goal_object_pose_W)
 
-        return observation, q
+        return observation, q, min_timestamp
 
     def publish_targets(self, joint_pos_targets: torch.Tensor):
         assert_equals(joint_pos_targets.shape, (1, self.num_actions))
@@ -366,7 +375,7 @@ class RLPolicyNode:
 
         # Wait
         while not rospy.is_shutdown():
-            obs, q = self.create_observation()
+            obs, q, _ = self.create_observation()
             if obs is not None and q is not None:
                 break
             time.sleep(self.control_dt)
@@ -393,7 +402,7 @@ class RLPolicyNode:
                 break
 
             # Create observation from the latest messages
-            obs, q = self.create_observation()
+            obs, q, _ = self.create_observation()
             assert obs is not None and q is not None, f"obs: {obs}, q: {q}"
             assert_equals(obs.shape, (1, self.num_observations))
 
@@ -444,7 +453,12 @@ class RLPolicyNode:
             start_loop_no_sleep_time = time.time()
 
             # Create observation from the latest messages
-            obs, q = self.create_observation()
+            before_obs_time = time.time()
+            t1 = rospy.Time.now()
+            obs, q, t0 = self.create_observation()
+            after_obs_time = time.time()
+            obs_dt = after_obs_time - before_obs_time
+            print(f"obs_dt: {obs_dt * 1000:.1f} ms")
             assert obs is not None and q is not None, f"obs: {obs}, q: {q}"
 
             assert_equals(obs.shape, (1, self.num_observations))
@@ -484,8 +498,14 @@ class RLPolicyNode:
                 self.current_step += 1
 
             # Publish the targets
+            t2 = rospy.Time.now()
+            dt01_ms = (t1 - t0).to_sec() * 1000
+            dt12_ms = (t2 - t1).to_sec() * 1000
+            dt02_ms = (t2 - t0).to_sec() * 1000
             self.publish_targets(joint_pos_targets)
             self.prev_targets = joint_pos_targets.clone()
+            t3 = rospy.Time.now()
+            dt23_ms = (t3 - t2).to_sec() * 1000
 
             # End of loop timekeeping
             end_loop_no_sleep_time = time.time()
@@ -493,6 +513,7 @@ class RLPolicyNode:
             loop_no_sleep_dts.append(loop_no_sleep_dt)
 
             sleep_dt = self.control_dt - loop_no_sleep_dt
+            print(f"dt01_ms: {dt01_ms:.1f}, dt12_ms: {dt12_ms:.1f}, dt02_ms: {dt02_ms:.1f} ms, loop_no_sleep_dt: {loop_no_sleep_dt * 1000:.1f} ms, dt23_ms: {dt23_ms:.1f} ms")
             if sleep_dt > 0:
                 time.sleep(sleep_dt)
                 loop_dt = loop_no_sleep_dt + sleep_dt
@@ -524,34 +545,6 @@ class RLPolicyNode:
                 print(f"  Std: {np.std(fps_no_sleep_array):.1f}")
                 print()
                 loop_no_sleep_dts, loop_dts = [], []
-
-    @property
-    def object_scales(self) -> np.ndarray:
-        # Hammer 2
-        # object_scales = np.array([3.0, 0.25, 0.2])
-
-        # blue_cuboid (rearrange)
-        # object_scales = np.array([4.0, 1.0, 0.75])
-
-        # blue_cuboid (not rearrange) and different scale
-        object_scales = np.array([5.0, 0.9375, 1.25])
-
-        # blue_cuboid_real_iphone
-        # object_scales = np.array([3.0, 1.4, 0.2])
-
-        # # blue_cuboid_fake_iphone
-        # object_scales = np.array([2.0, 1.25, 0.5])
-
-        # # blue_cuboid_real_hammer
-        # object_scales = np.array([2.0, 0.55, 0.35])
-
-        # # blue_cuboid_fake_hammer
-        # object_scales = np.array([2.5, 0.75, 0.65])
-
-        # # blue_cuboid_real_screwdriver
-        # object_scales = np.array([1.3, 0.7, 0.5])
-
-        return object_scales
 
     def _signal_handler(self, signum, frame):
         assert self.save_foldername is not None, "save_foldername must be set to save to file"
@@ -646,16 +639,18 @@ if __name__ == "__main__":
             config_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"),
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/cleanInputs.pth"),
             checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/noisyInputs.pth"),
+            # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/cleanInputsFinetuned.pth"),
             hand_moving_average=0.1,
-            arm_moving_average=0.02,
-            # arm_moving_average=0.03,
+            # arm_moving_average=0.02,
+            arm_moving_average=0.1,
+            object_scales=np.array([0.24, 0.03, 0.02]) * 25,
             # arm_moving_average=0.04,
             # arm_moving_average=0.05,
             # arm_moving_average=0.01,
             # save_foldername=None,
-            save_foldername="isaac_no-kuka-armature_replay_from_isaac",
-            # overwrite_targets_filepath=None,
-            overwrite_targets_filepath=Path("recorded_robot_inputs/isaac/2025-12-12_19-40-52_noisyInputs_arm0.01.npz"),
+            save_foldername="isaac_testing",
+            overwrite_targets_filepath=None,
+            # overwrite_targets_filepath=Path("recorded_robot_inputs/isaac/2025-12-12_19-40-52_noisyInputs_arm0.01.npz"),
             # overwrite_targets_filepath=Path("recorded_robot_inputs/isaac/2025-12-12_19-40-13_noisyInputs_arm0.05.npz"),
             # overwrite_targets_filepath=Path("recorded_robot_inputs/isaac/2025-12-12_19-43-50_cleanInputs_arm0.01.npz"),
             # overwrite_targets_filepath=Path("recorded_robot_inputs/isaac/2025-12-12_19-41-34_cleanInputs_arm0.05.npz"),

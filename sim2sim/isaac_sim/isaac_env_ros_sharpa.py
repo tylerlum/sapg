@@ -112,6 +112,7 @@ class IsaacEnvRos:
         joint_velocities = sim_state["joint_velocities"]
         joint_names = self.env.joint_names
         iiwa_joint_msg = JointState(
+            header=object_pose_msg.header,
             name=joint_names[:N_IIWA_JOINTS],
             position=joint_positions[:N_IIWA_JOINTS],
             velocity=joint_velocities[:N_IIWA_JOINTS],
@@ -119,6 +120,7 @@ class IsaacEnvRos:
         self.iiwa_pub.publish(iiwa_joint_msg)
 
         sharpa_joint_msg = JointState(
+            header=object_pose_msg.header,
             name=joint_names[N_IIWA_JOINTS:],
             position=joint_positions[N_IIWA_JOINTS:],
             velocity=joint_velocities[N_IIWA_JOINTS:],
@@ -257,10 +259,12 @@ def main():
             "task.env.resetDofPosRandomIntervalFingers": 0.0,
             "task.env.resetDofPosRandomIntervalArm": 0.0,
             "task.env.resetDofVelRandomInterval": 0.0,
-            "task.env.object_type": "blue_cuboid",
+            # "task.env.object_type": "blue_cuboid",
+            "task.env.object_type": "cuboidal_mallet",
             "task.env.forceNoReset": True,
             "task.env.randomizeObjectRotation": False,
-            "task.env.objectStartPose": [0.,  0.,  0.58, 0.,  0.,  0.,  1.],  # x, y, z, qx, qy, qz, qw
+            # "task.env.objectStartPose": [0.,  0.,  0.58, 0.,  0.,  0.,  1.],  # x, y, z, qx, qy, qz, qw
+            "task.env.objectStartPose": [0.,  0.,  0.58, 0.,  0.,  1.,  0.],  # x, y, z, qx, qy, qz, qw
             "task.env.goalObjectPose": [0.,  0.,  0.88, 0.,  0.,  0.,  1.],  # x, y, z, qx, qy, qz, qw
             "task.env.forceScale": 0.0,
         },
@@ -269,7 +273,7 @@ def main():
     isaac_env_ros = IsaacEnvRos(
         env=env,
         control_dt=CONTROL_DT,
-        update_and_publish_dt=UPDATE_AND_PUBLISH_DT,
+        update_and_publish_dt=0,
         device=DEVICE,
     )
     isaac_env_ros.run()

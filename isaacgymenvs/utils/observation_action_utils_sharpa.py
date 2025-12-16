@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from typing import Literal, Tuple
+from collections import defaultdict
+import yourdfpy
 import numpy as np
 import pytorch_kinematics as pk
 import torch
@@ -97,51 +99,37 @@ assert len(OBS_NAMES) == N_OBS, f"len(OBS_NAMES): {len(OBS_NAMES)}, expected: {N
 
 T_W_R_np = np.eye(4)
 T_W_R_np[:3, 3] = np.array([0.0, 0.8, 0.0])
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+T_W_R = torch.from_numpy(T_W_R_np).float().to(DEVICE)
 
 PALM_OFFSET_np = np.array([-0.00, -0.02, 0.16])
+PALM_OFFSET = torch.from_numpy(PALM_OFFSET_np).float().to(DEVICE)
+
 FINGERTIP_OFFSETS_np = np.array(
     [[0.02, 0.002, 0], [0.02, 0.002, 0], [0.02, 0.002, 0], [0.02, 0.002, 0], [0.02, 0.002, 0]]
 )
+FINGERTIP_OFFSETS = torch.from_numpy(FINGERTIP_OFFSETS_np).float().to(DEVICE)
 OBJECT_KEYPOINT_OFFSETS_np = np.array(
     [[1, 1, 1], [1, 1, -1], [-1, -1, 1], [-1, -1, -1]]
 )
+OBJECT_KEYPOINT_OFFSETS = torch.from_numpy(OBJECT_KEYPOINT_OFFSETS_np).float().to(DEVICE)
 
 
-def create_chain_and_serial_chain(device: str, robot_name: Literal["iiwa14", "iiwa7", "iiwa14_left_sharpa_between", "iiwa14_left_sharpa_adjusted_restricted"]) -> Tuple[pk.Chain, pk.SerialChain]:
+def create_urdf_object(robot_name: Literal["iiwa14", "iiwa7", "iiwa14_left_sharpa_between", "iiwa14_left_sharpa_adjusted_restricted"]) -> yourdfpy.URDF:
     asset_root = Path(__file__).parent / "../../assets"
     assert asset_root.exists(), f"Asset root {asset_root} does not exist"
-
     if robot_name == "iiwa14":
-        urdf_path = (
-            asset_root / "urdf/kuka_allegro_description/iiwa14_real.urdf"
-        )
-        palm_link_name = "iiwa14_link_7"
+        urdf_path = asset_root / "urdf/kuka_allegro_description/iiwa14_real.urdf"
     elif robot_name == "iiwa7":
-        urdf_path = (
-            asset_root / "urdf/kuka_allegro_description/iiwa7_real.urdf"
-        )
-        palm_link_name = "iiwa7_link_7"
+        urdf_path = asset_root / "urdf/kuka_allegro_description/iiwa7_real.urdf"
     elif robot_name == "iiwa14_left_sharpa_between":
-        urdf_path = (
-            asset_root / "urdf/kuka_allegro_description/iiwa14_left_sharpa_between.urdf"
-        )
-        palm_link_name = "iiwa14_link_7"
+        urdf_path = asset_root / "urdf/kuka_allegro_description/iiwa14_left_sharpa_between.urdf"
     elif robot_name == "iiwa14_left_sharpa_adjusted_restricted":
-        urdf_path = (
-            asset_root / "urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted_restricted.urdf"
-        )
-        palm_link_name = "iiwa14_link_7"
+        urdf_path = asset_root / "urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted_restricted.urdf"
     else:
         raise ValueError(f"Invalid robot name: {robot_name}")
     assert urdf_path.exists(), f"URDF file {urdf_path} does not exist"
-
-    chain = pk.build_chain_from_urdf(
-        open(urdf_path).read(),
-    ).to(device=device)
-    palm_serial_chain = pk.SerialChain(chain, palm_link_name).to(
-        device=device
-    )
-    return chain, palm_serial_chain
+    return yourdfpy.URDF.load(urdf_path)
 
 
 def compute_observation(
@@ -151,7 +139,7 @@ def compute_observation(
     object_pose: Tensor,
     goal_object_pose: Tensor,
     object_scales: Tensor,
-    chain: pk.Chain,
+    urdf: yourdfpy.URDF,
     obs_list: list[str],
 ) -> Tensor:
     # Assume q and qd are in the order of JOINT_NAMES_ISAACGYM
@@ -159,6 +147,8 @@ def compute_observation(
     # object_scales is the scale of the object [x, y, z]
     # chain is to compute fk of robot across all links
     # palm_serial_chain is to compute the jacobian of the palm link
+    import time
+    t0 = time.time()
 
     N = q.shape[0]
     J = 29
@@ -184,8 +174,8 @@ def compute_observation(
     assert object_scales.shape == (N, 3), (
         f"object_scales.shape: {object_scales.shape}, expected: (N, 3)"
     )
-
     assert set(obs_list).issubset(set(OBS_NAME_TO_NAMES.keys())), f"obs_list: {obs_list} is not a subset of OBS_NAME_TO_NAMES.keys(): {OBS_NAME_TO_NAMES.keys()}"
+    t1 = time.time()
 
     # q unscaled
     q_unscaled = unscale(
@@ -193,23 +183,38 @@ def compute_observation(
         lower=q_lower_limits,
         upper=q_upper_limits,
     )
+    t2 = time.time()
 
+    t2_5 = time.time()
     # FK to get link poses
     N_FINGERTIPS = 5
-    fk_dict = chain.forward_kinematics(
-        _change_joint_order(
-            q=q,
-            from_order=JOINT_NAMES_ISAACGYM,
-            to_order=chain.get_joint_parameter_names(),
-        )
+    q_reordered = _change_joint_order(
+        q=q,
+        from_order=JOINT_NAMES_ISAACGYM,
+        to_order=urdf.actuated_joint_names,
     )
+    q_reordered_np = q_reordered.cpu().numpy()
+    fk_dict = defaultdict(list)
+    LINK_NAMES = ["iiwa14_link_7"] + ["left_index_DP", "left_middle_DP", "left_ring_DP", "left_thumb_DP", "left_pinky_DP"]
+    for i in range(N):
+        urdf.update_cfg(q_reordered_np[i])
+        for link_name in LINK_NAMES:
+            fk_dict[link_name].append(urdf.get_transform(frame_to=link_name))
+    for link_name in LINK_NAMES:
+        fk_dict[link_name] = torch.from_numpy(np.stack(fk_dict[link_name], axis=0)).float().to(q.device)
+        assert fk_dict[link_name].shape == (N, 4, 4), f"fk_dict[link_name].shape: {fk_dict[link_name].shape}, expected: (N, 4, 4)"
+
+    t3 = time.time()
     palm_center_pos, palm_rot = _compute_palm_center_pos_and_rot(fk_dict=fk_dict)
+    t4 = time.time()
     fingertip_positions_with_offsets = _compute_fingertip_positions_with_offsets(
         fk_dict=fk_dict
     )
+    t5 = time.time()
     fingertip_rel_pos = fingertip_positions_with_offsets - palm_center_pos.unsqueeze(
         dim=1
     )
+    t6 = time.time()
     assert palm_center_pos.shape == (N, 3), (
         f"palm_center_pos.shape: {palm_center_pos.shape}, expected: (N, 3)"
     )
@@ -222,11 +227,15 @@ def compute_observation(
     object_keypoint_positions = _compute_keypoint_positions(
         pose=object_pose, scales=object_scales
     )
+    t7 = time.time()
     goal_keypoint_positions = _compute_keypoint_positions(
         pose=goal_object_pose, scales=object_scales
     )
+    t8 = time.time()
     keypoints_rel_palm = object_keypoint_positions - palm_center_pos.unsqueeze(dim=1)
+    t9 = time.time()
     keypoints_rel_goal = object_keypoint_positions - goal_keypoint_positions
+    t10 = time.time()
     assert keypoints_rel_palm.shape == (N, N_KEYPOINTS, 3), (
         f"keypoints_rel_palm.shape: {keypoints_rel_palm.shape}, expected: (N, N_KEYPOINTS, 3)"
     )
@@ -236,6 +245,7 @@ def compute_observation(
 
     # Object rot
     object_rot = object_pose[:, 3:7]
+    t11 = time.time()
     assert object_rot.shape == (N, 4), (
         f"object_rot.shape: {object_rot.shape}, expected: (N, 4)"
     )
@@ -252,6 +262,7 @@ def compute_observation(
         "fingertip_pos_rel_palm": fingertip_rel_pos.reshape(N, -1),
         "object_scales": object_scales,
     }
+    t12 = time.time()
     for k, v in obs_dict.items():
         assert v.ndim == 2, f"v.ndim: {v.ndim}, expected: 2 for key: {k}: {v.shape}"
         assert v.shape[0] == N, f"v.shape[0]: {v.shape[0]}, expected: {N} for key: {k}"
@@ -260,11 +271,37 @@ def compute_observation(
         assert obs_dict[name].shape[1] == len(names), (
             f"obs_dict[name].shape[1]: {obs_dict[name].shape[1]}, expected: {len(names)} for name: {name}"
         )
+    t13 = time.time()
 
     obs = torch.cat(
         [obs_dict[key] for key in obs_list],
         dim=-1,
     )
+    t14 = time.time()
+
+#     print("IN COMPUTE OBS")
+#     print("=" * 100)
+#     total_dt = t14 - t0
+#     # Compute each dt in ms and as a fraction of the total and print as a percentage and absolute value
+#     print(f"total_dt: {total_dt:.6f} s")
+#     print(f"t1 - t0: {(t1 - t0) * 1000:.1f} ms, {((t1 - t0)) / total_dt * 100:.1f}%")
+#     print(f"t2 - t1: {(t2 - t1) * 1000:.1f} ms, {((t2 - t1)) / total_dt * 100:.1f}%")
+#     print(f"t2_5 - t2: {(t2_5 - t2) * 1000:.1f} ms, {((t2_5 - t2)) / total_dt * 100:.1f}%")
+#     print(f"t3 - t2_5: {(t3 - t2_5) * 1000:.1f} ms, {((t3 - t2_5)) / total_dt * 100:.1f}%")
+#     # print(f"t3 - t2: {(t3 - t2) * 1000:.1f} ms, {((t3 - t2)) / total_dt * 100:.1f}%")
+#     print(f"t4 - t3: {(t4 - t3) * 1000:.1f} ms, {((t4 - t3)) / total_dt * 100:.1f}%")
+#     print(f"t5 - t4: {(t5 - t4) * 1000:.1f} ms, {((t5 - t4)) / total_dt * 100:.1f}%")
+#     print(f"t6 - t5: {(t6 - t5) * 1000:.1f} ms, {((t6 - t5)) / total_dt * 100:.1f}%")
+#     print(f"t7 - t6: {(t7 - t6) * 1000:.1f} ms, {((t7 - t6)) / total_dt * 100:.1f}%")
+#     print(f"t8 - t7: {(t8 - t7) * 1000:.1f} ms, {((t8 - t7)) / total_dt * 100:.1f}%")
+#     print(f"t9 - t8: {(t9 - t8) * 1000:.1f} ms, {((t9 - t8)) / total_dt * 100:.1f}%")
+#     print(f"t10 - t9: {(t10 - t9) * 1000:.1f} ms, {((t10 - t9)) / total_dt * 100:.1f}%")
+#     print(f"t11 - t10: {(t11 - t10) * 1000:.1f} ms, {((t11 - t10)) / total_dt * 100:.1f}%")
+#     print(f"t12 - t11: {(t12 - t11) * 1000:.1f} ms, {((t12 - t11)) / total_dt * 100:.1f}%")
+#     print(f"t13 - t12: {(t13 - t12) * 1000:.1f} ms, {((t13 - t12)) / total_dt * 100:.1f}%")
+#     print(f"t14 - t13: {(t14 - t13) * 1000:.1f} ms, {((t14 - t13)) / total_dt * 100:.1f}%")
+#     print("=" * 100)
+# 
 
     assert obs.shape == (N, N_OBS), f"obs.shape: {obs.shape}, expected: (N, {N_OBS})"
     return obs
@@ -364,30 +401,19 @@ def _change_joint_order(
 
 
 def _compute_palm_center_pos_and_rot(
-    fk_dict: dict[str, pk.Transform3d],
+    fk_dict: dict[str, torch.Tensor],
 ) -> tuple[Tensor, Tensor]:
-    # T_R_Ps = fk_dict["iiwa7_link_7"].get_matrix()
-    T_R_Ps = fk_dict["iiwa14_link_7"].get_matrix()
+    T_R_Ps = fk_dict["iiwa14_link_7"]
     N = T_R_Ps.shape[0]
 
-    T_W_Rs = (
-        torch.from_numpy(T_W_R_np)
-        .float()
-        .to(T_R_Ps.device)[None]
-        .repeat_interleave(N, dim=0)
-    )
-    assert T_W_Rs.shape == (N, 4, 4), (
-        f"T_W_Rs.shape: {T_W_Rs.shape}, expected: (N, 4, 4)"
+    T_W_Rs = T_W_R[None]
+    assert T_W_Rs.shape == (1, 4, 4), (
+        f"T_W_Rs.shape: {T_W_Rs.shape}, expected: (1, 4, 4)"
     )
 
     T_W_Ps = T_W_Rs @ T_R_Ps
 
-    palm_offset = (
-        torch.from_numpy(PALM_OFFSET_np)
-        .float()
-        .to(T_W_Ps.device)[None]
-        .repeat_interleave(N, dim=0)
-    )
+    palm_offset = PALM_OFFSET[None].repeat_interleave(N, dim=0)
     assert palm_offset.shape == (N, 3), (
         f"palm_offset.shape: {palm_offset.shape}, expected: (N, 3)"
     )
@@ -430,11 +456,11 @@ def _compute_palm_linvel_and_angvel(
 
 
 def _compute_fingertip_positions_with_offsets(
-    fk_dict: dict[str, pk.Transform3d],
+    fk_dict: dict[str, torch.Tensor],
 ) -> Tensor:
     N_FINGERTIPS = 5
     T_R_F_list = [
-        fk_dict[name].get_matrix()
+        fk_dict[name]
         for name in ["left_index_DP", "left_middle_DP", "left_ring_DP", "left_thumb_DP", "left_pinky_DP"]
     ]
     T_R_Fs = torch.stack(T_R_F_list, dim=1)
@@ -443,15 +469,9 @@ def _compute_fingertip_positions_with_offsets(
         f"T_R_Fs.shape: {T_R_Fs.shape}, expected: (N, N_FINGERTIPS, 4, 4)"
     )
 
-    T_W_Rs = (
-        torch.from_numpy(T_W_R_np)
-        .float()
-        .to(T_R_Fs.device)[None]
-        .repeat_interleave(N, dim=0)[:, None]
-        .repeat_interleave(N_FINGERTIPS, dim=1)
-    )
-    assert T_W_Rs.shape == (N, N_FINGERTIPS, 4, 4), (
-        f"T_W_Rs.shape: {T_W_Rs.shape}, expected: (N, N_FINGERTIPS, 4, 4)"
+    T_W_Rs = T_W_R[None, None]
+    assert T_W_Rs.shape == (1, 1, 4, 4), (
+        f"T_W_Rs.shape: {T_W_Rs.shape}, expected: (1, 1, 4, 4)"
     )
 
     T_W_Fs = T_W_Rs @ T_R_Fs
@@ -459,12 +479,7 @@ def _compute_fingertip_positions_with_offsets(
     fingertip_rots = T_W_Fs[:, :, :3, :3]
     fingertip_quat_wxyz = matrix_to_quaternion(fingertip_rots)
     fingertip_quat_xyzw = fingertip_quat_wxyz[..., [1, 2, 3, 0]]
-    fingertip_offsets = (
-        torch.from_numpy(FINGERTIP_OFFSETS_np)
-        .float()
-        .to(fingertip_positions.device)[None]
-        .repeat_interleave(N, dim=0)
-    )
+    fingertip_offsets = FINGERTIP_OFFSETS[None].repeat_interleave(N, dim=0)
     assert fingertip_offsets.shape == (N, N_FINGERTIPS, 3), (
         f"fingertip_offsets.shape: {fingertip_offsets.shape}, expected: (N, N_FINGERTIPS, 3)"
     )
@@ -488,16 +503,7 @@ def _compute_keypoint_positions(
 
     OBJECT_BASE_SIZE = 0.04
     KEYPOINT_SCALE = 1.5
-    object_keypoint_offsets = (
-        torch.from_numpy(OBJECT_KEYPOINT_OFFSETS_np)
-        .float()
-        .to(pose.device)[None]
-        .repeat_interleave(N, dim=0)
-        * OBJECT_BASE_SIZE
-        * KEYPOINT_SCALE
-        / 2
-        * scales.unsqueeze(dim=1)
-    )
+    object_keypoint_offsets = OBJECT_KEYPOINT_OFFSETS[None] * OBJECT_BASE_SIZE * KEYPOINT_SCALE / 2 * scales.unsqueeze(dim=1)
     N_KEYPOINTS = 4
     assert object_keypoint_offsets.shape == (N, N_KEYPOINTS, 3), (
         f"object_keypoint_offsets.shape: {object_keypoint_offsets.shape}, expected: (N, N_KEYPOINTS, 3)"

@@ -42,7 +42,7 @@ from isaacgym import gymapi, gymtorch, gymutil
 from torch import Tensor
 
 from isaacgymenvs.tasks.allegro_kuka.allegro_kuka_utils import DofParameters, populate_dof_properties
-from isaacgymenvs.utils.observation_action_utils_sharpa import compute_observation, OBS_NAMES, compute_joint_pos_targets, create_chain_and_serial_chain
+from isaacgymenvs.utils.observation_action_utils_sharpa import compute_observation, OBS_NAMES, compute_joint_pos_targets, create_urdf_object
 
 from isaacgymenvs.tasks.base.vec_task import VecTask
 from isaacgymenvs.tasks.allegro_kuka.generate_cuboids import (
@@ -677,7 +677,7 @@ class AllegroKukaBase(VecTask):
                 self.trajectory_states = get_eraser_trajectory(init_state, device=self.device)
             elif object_type == "phone":
                 self.trajectory_states = get_phone_trajectory(init_state, device=self.device)
-            elif object_type in ["all_hammers", "all_cuboidal_hammers", "all_cylindrical_hammers", "all_cuboidal_and_cylindrical_hammers"]:
+            elif object_type in ["all_hammers", "all_cuboidal_hammers", "all_cylindrical_hammers", "all_cuboidal_and_cylindrical_hammers", "mallet", "cuboidal_mallet"]:
                 self.trajectory_states = get_hammer_trajectory(init_state, device=self.device)
             elif object_type in ["cuboid", "blue_cuboid", "blue_cuboid_thick", "blue_cuboid_real_iphone", "blue_cuboid_fake_iphone", "blue_cuboid_real_hammer", "blue_cuboid_fake_hammer", "blue_cuboid_real_screwdriver"]:
                 self.trajectory_states = get_cuboid_trajectory(init_state, device=self.device)
@@ -1304,6 +1304,15 @@ class AllegroKukaBase(VecTask):
             self.envs.append(env_ptr)
             self.allegro_hands.append(allegro_actor)
             self.objects.append(object_handle)
+
+        # Default false because this is slow
+        DEBUG_PRINT_OBJECT_MASS_AND_INERTIA = False
+        # Get mass and inertia of object
+        if DEBUG_PRINT_OBJECT_MASS_AND_INERTIA:
+            original_masses, original_inertias = self._get_original_object_masses_and_inertias()
+            print(f"Original masses: {original_masses[0]}")
+            print(f"Original inertias: {original_inertias[0]}")
+            breakpoint()
 
         # Set mass and inertia of object
         MODIFY_OBJECT_MASS_AND_INERTIA = False
@@ -1998,10 +2007,9 @@ class AllegroKukaBase(VecTask):
         # Set to True to check if the observations are computed correctly
         CHECK_WITH_COMPUTED_OBS = False
         if CHECK_WITH_COMPUTED_OBS:
-            import pytorch_kinematics as pk
-            # Create chain from URDF
-            if not hasattr(self, "chain"):
-                self.chain, _ = create_chain_and_serial_chain(device=self.device, robot_name="iiwa14_left_sharpa_adjusted_restricted")
+            # Create urdf object
+            if not hasattr(self, "urdf_object"):
+                self.urdf_object = create_urdf_object(robot_name="iiwa14_left_sharpa_adjusted_restricted")
 
             computed_obs = compute_observation(
                 q=self.arm_hand_dof_pos,
@@ -2010,7 +2018,7 @@ class AllegroKukaBase(VecTask):
                 object_pose=self.object_pose,
                 goal_object_pose=self.goal_pose,
                 object_scales=self.object_scales,
-                chain=self.chain,
+                urdf=self.urdf_object,
                 obs_list=self.obs_list,
             )
 

@@ -23,6 +23,7 @@ class RlPlayer:
         config_path: str,
         checkpoint_path: Optional[str],
         device: str,
+        num_envs: int = 1,
     ) -> None:
         self.num_observations = num_observations
         self.num_actions = num_actions
@@ -35,7 +36,7 @@ class RlPlayer:
         self.action_space = spaces.Box(
             low=-1, high=1, shape=(num_actions,), dtype=np.float32
         )
-        self.num_envs = 1
+        self.num_envs = num_envs
         self.set_env_state = lambda *args, **kwargs: None
 
         self.cfg = read_cfg(config_path=config_path, device=self.device)

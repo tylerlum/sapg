@@ -45,18 +45,22 @@ class IsaacEnvNoRos:
         return obs["obs"], reward, done, info
 
     def reset(self) -> torch.Tensor:
-        obs, _, _, _ = self.env.step(torch.zeros((1, N_ACT), device=self.device))
+        obs, _, _, _ = self.env.step(torch.zeros((self.env.num_envs, N_ACT), device=self.device))
         return obs["obs"]
 
 
 def main():
     CONTROL_DT = 1.0 / 60.0  # Control loop frequency (policy loop rate)
     CONFIG_PATH = Path(
+        # "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"
         "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"
     )
     assert Path(CONFIG_PATH).exists()
     CHECKPOINT_PATH = Path(
-        "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/newGains.pth"
+        # "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/newGains.pth"
+        # "/juno/u/kedia/sapg/train_dir/checkpoints/cleanInputsFinetuned.pth"
+        # "/juno/u/kedia/sapg/train_dir/checkpoints/fastCheckpoint.pth"
+        "/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/noisyInputs.pth"
     )
     assert CHECKPOINT_PATH.exists()
 
@@ -75,14 +79,22 @@ def main():
             "task.env.resetDofPosRandomIntervalArm": 0.0,
             "task.env.resetDofVelRandomInterval": 0.0,
             # "task.env.object_type": "cuboid",
-            "task.env.object_type": "blue_cuboid",
+            # "task.env.object_type": "blue_cuboid",
             # "task.env.object_type": "blue_cuboid_real_hammer",
             # "task.env.object_type": "blue_cuboid_fake_hammer",
-            "task.env.forceNoReset": True,
+            # "task.env.object_type": "cuboidal_hammer",
+            # "task.env.object_type": "mallet",
+            "task.env.object_type": "cuboidal_mallet",
+            # "task.env.forceNoReset": True,
             "task.env.randomizeObjectRotation": False,
-            "task.env.objectStartPose": [0.,  0.,  0.58, 0.,  0.,  0.,  1.],  # x, y, z, qx, qy, qz, qw
-            "task.env.goalObjectPose": [0.,  0.,  0.88, 0.,  0.,  0.,  1.],  # x, y, z, qx, qy, qz, qw
+            # "task.env.objectStartPose": [0.,  0.,  0.58, 0.,  0.,  0.,  1.],  # x, y, z, qx, qy, qz, qw
+            "task.env.objectStartPose": [0.,  0.,  0.58, 0.,  0.,  1.,  0.],  # x, y, z, qx, qy, qz, qw
+            # "task.env.goalObjectPose": [0.,  0.,  0.88, 0.,  0.,  0.,  1.],  # x, y, z, qx, qy, qz, qw
+            "task.env.use_fixed_set_of_goal_states": True,
             "task.env.forceScale": 0.0,
+            # "task.env.dofSpeedScale": 10.0,
+            "task.env.numEnvs": 10,
+            "task.env.envSpacing": 0.75,
         },
     )
 
@@ -97,6 +109,7 @@ def main():
         config_path=CONFIG_PATH,
         checkpoint_path=CHECKPOINT_PATH,
         device=DEVICE,
+        num_envs=env.num_envs,
     )
 
     isaac_env_no_ros = IsaacEnvNoRos(env=env, device=DEVICE)

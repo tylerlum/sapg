@@ -61,6 +61,7 @@ MAGENTA_RGB = (255, 0, 255)
 WHITE_RGB = (255, 255, 255)
 BLACK_RGB = (0, 0, 0)
 BLACK_RGBA_TRANSLUCENT = (0, 0, 0, 0.5)
+GREEN_RGBA = (0, 255, 0, 0.5)
 
 AXES_LENGTH = 0.1
 AXES_RADIUS = 0.001
@@ -276,7 +277,8 @@ class ViserVisualizationNode:
         from isaacgymenvs.utils.objects import NAME_TO_OBJECT
         object_name = rospy.get_param("/object_name", None)
         if object_name is None:
-            DEFAULT_OBJECT_NAME = "blue_cuboid"
+            # DEFAULT_OBJECT_NAME = "blue_cuboid"
+            DEFAULT_OBJECT_NAME = "cuboidal_mallet"
             # DEFAULT_OBJECT_NAME = "blue_cuboid_fake_hammer"
             # DEFAULT_OBJECT_NAME = "blue_cuboid_real_hammer"
             # DEFAULT_OBJECT_NAME = "blue_cuboid_real_iphone"
@@ -286,8 +288,11 @@ class ViserVisualizationNode:
             warn(f"Using default object name: {DEFAULT_OBJECT_NAME}")
             object_name = DEFAULT_OBJECT_NAME
 
-        object_mesh = NAME_TO_OBJECT[object_name].get_object_mesh()
-        goal_object_mesh = object_mesh
+        object_urdf = NAME_TO_OBJECT[object_name].filepath
+        goal_object_urdf = object_urdf
+        assert object_urdf.exists(), f"object_urdf does not exist: {object_urdf}"
+        # object_mesh = NAME_TO_OBJECT[object_name].get_object_mesh()
+        # goal_object_mesh = object_mesh
         # object_mesh_path = str(get_repo_root_dir() / "assets/urdf/tyler_objects/040_large_marker/040_large_marker/google_16k/textured_vhacd.obj")
         # assert isinstance(object_mesh_path, str), (
         #     f"object_mesh_path: {object_mesh_path}"
@@ -309,7 +314,10 @@ class ViserVisualizationNode:
             axes_length=AXES_LENGTH,
             axes_radius=AXES_RADIUS,
         )
-        SERVER.scene.add_mesh_trimesh(name="/object/mesh", mesh=object_mesh)
+        # SERVER.scene.add_mesh_trimesh(name="/object/mesh", mesh=object_mesh)
+        self.object_urdf_viser = ViserUrdf(
+            SERVER, object_urdf, root_node_name="/object"
+        )
         self.goal_object_viser = SERVER.scene.add_frame(
             "/goal_object",
             position=FAR_AWAY_OBJECT_POSITION + np.array([0.2, 0.2, 0.2]),
@@ -318,12 +326,15 @@ class ViserVisualizationNode:
             axes_length=AXES_LENGTH,
             axes_radius=AXES_RADIUS,
         )
-        SERVER.scene.add_mesh_simple(
-            name="/goal_object/mesh",
-            vertices=goal_object_mesh.vertices,
-            faces=goal_object_mesh.faces,
-            color=GREEN_RGB,
-            opacity=0.5,
+        # SERVER.scene.add_mesh_simple(
+        #     name="/goal_object/mesh",
+        #     vertices=goal_object_mesh.vertices,
+        #     faces=goal_object_mesh.faces,
+        #     color=GREEN_RGB,
+        #     opacity=0.5,
+        # )
+        self.goal_object_urdf_viser = ViserUrdf(
+            SERVER, goal_object_urdf, root_node_name="/goal_object", mesh_color_override=GREEN_RGBA
         )
 
         # Set the robot to a default pose
