@@ -58,9 +58,9 @@ def main():
     assert Path(CONFIG_PATH).exists()
     CHECKPOINT_PATH = Path(
         # "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/newGains.pth"
-        # "/juno/u/kedia/sapg/train_dir/checkpoints/cleanInputsFinetuned.pth"
+        "/juno/u/kedia/sapg/train_dir/checkpoints/cleanInputsFinetuned.pth"
         # "/juno/u/kedia/sapg/train_dir/checkpoints/fastCheckpoint.pth"
-        "/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/noisyInputs.pth"
+        # "/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/noisyInputs.pth"
     )
     assert CHECKPOINT_PATH.exists()
 
@@ -95,6 +95,8 @@ def main():
             # "task.env.dofSpeedScale": 10.0,
             "task.env.numEnvs": 10,
             "task.env.envSpacing": 0.75,
+            # "task.env.useObsDelay": True,
+            # "task.env.obsDelayMax": 3,
         },
     )
 

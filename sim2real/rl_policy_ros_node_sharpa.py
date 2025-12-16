@@ -169,7 +169,8 @@ class RLPolicyNode:
         )
 
         # RL Player setup
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        # self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.device = "cpu"
         self.num_observations = 140  # Update this number based on actual dimensions
         self.num_actions = 29
 
@@ -271,21 +272,19 @@ class RLPolicyNode:
         q = np.concatenate([iiwa_position, sharpa_position])
         qd = np.concatenate([iiwa_velocity, sharpa_velocity])
 
-        prev_action_targets = self.prev_targets if self.prev_targets is not None else torch.from_numpy(q).float().to(self.device)[None]
-        observation = compute_observation(
-            q=torch.from_numpy(q).float().to(self.device)[None],
-            qd=torch.from_numpy(qd).float().to(self.device)[None],
-            prev_action_targets=prev_action_targets,
-            object_pose=torch.from_numpy(object_pose_W).float().to(self.device)[None],
-            goal_object_pose=torch.from_numpy(goal_object_pose_W)
-            .float()
-            .to(self.device)[None],
-            object_scales=torch.from_numpy(self.object_scales)
-            .float()
-            .to(self.device)[None],
-            urdf=self.urdf_object,
-            obs_list=self.obs_list,
-        )
+        prev_action_targets = self.prev_targets if self.prev_targets is not None else q
+        with torch.no_grad():
+            observation = compute_observation(
+                q=q[None],
+                qd=qd[None],
+                prev_action_targets=prev_action_targets[None],
+                object_pose=object_pose_W[None],
+                goal_object_pose=goal_object_pose_W[None],
+                object_scales=self.object_scales[None],
+                urdf=self.urdf_object,
+                obs_list=self.obs_list,
+            )
+            observation = torch.from_numpy(observation).float().to(self.device)
         assert_equals(
             observation.shape,
             (
@@ -385,7 +384,7 @@ class RLPolicyNode:
         info("First observations received, starting to publish sim state")
         info("=" * 100)
 
-        self.prev_targets = torch.from_numpy(q).float().to(self.device)[None]
+        self.prev_targets = q
 
         # Warm up the policy and publishing
         info("=" * 100)
@@ -416,7 +415,7 @@ class RLPolicyNode:
 
             _ = compute_joint_pos_targets(
                 actions=normalized_action,
-                prev_targets=self.prev_targets,
+                prev_targets=torch.from_numpy(self.prev_targets).float().to(self.device)[None],
                 hand_moving_average=0.1,
                 arm_moving_average=0.1,
                 hand_dof_speed_scale=2.5,
@@ -432,7 +431,7 @@ class RLPolicyNode:
 
             # Publish the targets
             self.publish_targets(joint_pos_targets)
-            self.prev_targets = joint_pos_targets.clone()
+            self.prev_targets = joint_pos_targets.squeeze(dim=0).cpu().numpy()
             time.sleep(self.control_dt)
 
         # Reset rnn state
@@ -638,8 +637,8 @@ if __name__ == "__main__":
         rl_policy_node = RLPolicyNode(
             config_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"),
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/cleanInputs.pth"),
-            checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/noisyInputs.pth"),
-            # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/cleanInputsFinetuned.pth"),
+            # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/noisyInputs.pth"),
+            checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/cleanInputsFinetuned.pth"),
             hand_moving_average=0.1,
             # arm_moving_average=0.02,
             arm_moving_average=0.1,

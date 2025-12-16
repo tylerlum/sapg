@@ -2003,24 +2003,28 @@ class AllegroKukaBase(VecTask):
             delay_index = torch.randint(0, self.obs_queue.shape[1], (self.num_envs,), device=self.device)
             self.obs_buf[:] = self.obs_queue[torch.arange(self.num_envs), delay_index].clone()
 
+        # HACK:
+        # self.obs_buf[:] = self.obs_queue[:, -1].clone()
+
         # Default CHECK_WITH_COMPUTED_OBS = False
         # Set to True to check if the observations are computed correctly
-        CHECK_WITH_COMPUTED_OBS = False
+        CHECK_WITH_COMPUTED_OBS = True
         if CHECK_WITH_COMPUTED_OBS:
             # Create urdf object
             if not hasattr(self, "urdf_object"):
                 self.urdf_object = create_urdf_object(robot_name="iiwa14_left_sharpa_adjusted_restricted")
 
             computed_obs = compute_observation(
-                q=self.arm_hand_dof_pos,
-                qd=self.arm_hand_dof_vel,
-                prev_action_targets=self.prev_targets,
-                object_pose=self.object_pose,
-                goal_object_pose=self.goal_pose,
-                object_scales=self.object_scales,
+                q=self.arm_hand_dof_pos.cpu().numpy(),
+                qd=self.arm_hand_dof_vel.cpu().numpy(),
+                prev_action_targets=self.prev_targets.cpu().numpy(),
+                object_pose=self.object_pose.cpu().numpy(),
+                goal_object_pose=self.goal_pose.cpu().numpy(),
+                object_scales=self.object_scales.cpu().numpy(),
                 urdf=self.urdf_object,
                 obs_list=self.obs_list,
             )
+            computed_obs = torch.from_numpy(computed_obs).float().to(self.device)
 
             # Validate
             assert computed_obs.shape == (self.num_envs, len(OBS_NAMES)), f"computed_obs.shape: {computed_obs.shape}, expected: ({self.num_envs}, {len(OBS_NAMES)})"
@@ -2445,7 +2449,7 @@ class AllegroKukaBase(VecTask):
 
         # Default CHECK_WITH_COMPUTED_JOINT_POS_TARGETS = False
         # Set to True to check if the computed joint pos targets are correct
-        CHECK_WITH_COMPUTED_JOINT_POS_TARGETS = False
+        CHECK_WITH_COMPUTED_JOINT_POS_TARGETS = True
         if CHECK_WITH_COMPUTED_JOINT_POS_TARGETS:
             computed_joint_pos_targets = compute_joint_pos_targets(
                 actions=self.actions,
