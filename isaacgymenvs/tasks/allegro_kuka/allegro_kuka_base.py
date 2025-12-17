@@ -1199,6 +1199,7 @@ class AllegroKukaBase(VecTask):
 
         # Set asset rigid shape properties (friction)
         MODIFY_ASSET_FRICTIONS = True
+
         if MODIFY_ASSET_FRICTIONS:
             self.set_allegro_kuka_asset_rigid_shape_properties(
                 allegro_kuka_asset=allegro_kuka_asset,
