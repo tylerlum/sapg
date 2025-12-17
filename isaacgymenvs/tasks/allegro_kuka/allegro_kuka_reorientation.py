@@ -127,6 +127,10 @@ class AllegroKukaReorientation(AllegroKukaBase):
         goal_states[:, 0:3] = new_goal_pos
         goal_states[:, 3:7] = new_goal_quat_xyzw
         return goal_states
+    
+    def _clip_goal_z(self, env_ids: Tensor):
+        min_z = self.object_init_state[env_ids, 2:3] - 0.05 + self.lifting_bonus_threshold
+        self.goal_states[env_ids, 2:3] = torch.max(min_z, self.goal_states[env_ids, 2:3])
 
     def _reset_target(self, env_ids: Tensor, reset_buf_idxs=None, tensor_reset=True, is_first_goal=True) -> None:
         if len(env_ids) > 0 and reset_buf_idxs is None and tensor_reset:
@@ -138,12 +142,14 @@ class AllegroKukaReorientation(AllegroKukaBase):
                 self.goal_states[env_ids, 0:7] = trajectory_state[batch_indices, current_subgoal_idx, 0:7]
             elif not is_first_goal and self.goal_sampling_type == "delta":
                 self.goal_states[env_ids, 0:7] = self._sample_delta_goal(self.goal_states[env_ids, 0:7], self.delta_goal_distance, self.delta_rotation_degrees)
+                self._clip_goal_z(env_ids)
             elif not is_first_goal and self.goal_sampling_type == "coin_flip":
                 # flip a coin. 50% of envs only get delta translation, 0 rotation and 50% get delta rotation, 0 translation
                 coin_flips = torch_rand_float(0.0, 1.0, (len(env_ids), 1), device=self.device)
                 translation_only_goal_states = self._sample_delta_goal(self.goal_states[env_ids, 0:7], self.delta_goal_distance, 0.0)
                 rotation_only_goal_states = self._sample_delta_goal(self.goal_states[env_ids, 0:7], 0.0, self.delta_rotation_degrees)
                 self.goal_states[env_ids, 0:7] = torch.where(coin_flips < 0.5, translation_only_goal_states, rotation_only_goal_states)
+                self._clip_goal_z(env_ids)
             else:
                 # Randomly sample a target pose
                 target_volume_origin = self.target_volume_origin
@@ -159,6 +165,7 @@ class AllegroKukaReorientation(AllegroKukaBase):
                 self.goal_states[env_ids, 0:3] = target_coords
                 new_rot = self.get_random_quat(env_ids)
                 self.goal_states[env_ids, 3:7] = new_rot
+                self._clip_goal_z(env_ids)
             self.root_state_tensor[self.goal_object_indices[env_ids], 0:7] = self.goal_states[env_ids, 0:7]
             self.root_state_tensor[self.goal_object_indices[env_ids], 7:13] = torch.zeros_like(
                 self.root_state_tensor[self.goal_object_indices[env_ids], 7:13]

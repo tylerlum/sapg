@@ -1,11 +1,11 @@
 #!/bin/bash
 
-CUSTOM_EXPERIMENT_NAME="SCRATCH_cuboidal_mallet_delta"
+CUSTOM_EXPERIMENT_NAME="TESTING"
 WANDB_GROUP="FINETUNING_ACTUAL"
 
 WANDB_ENTITY="kk837"
-WANDB_PROJECT="FINAL_ASYMMETRIC_RUNS"
-OBJECT_TYPE="cuboidal_mallet"
+WANDB_PROJECT="TESTING"
+OBJECT_TYPE="cuboid"
 
 DATETIME=$(date +"%Y-%m-%d_%H-%M-%S")
 EXPERIMENT_NAME="${CUSTOM_EXPERIMENT_NAME}_$DATETIME"
@@ -37,13 +37,13 @@ seed=0 \
 experiment=00_${EXPERIMENT_NAME} \
 hydra.run.dir=${HYDRA_RUN_DIR} \
 task.env.object_type=${OBJECT_TYPE} \
-task.env.dofSpeedScale=2.5 \
 task.env.useRelativeControl=False \
 task.task.randomize=False \
 task=AllegroKukaLSTMAsymmetric \
 task.env.objectBaseSize=0.04 \
 task.env.stateList=["joint_pos","joint_vel","prev_action_targets","palm_pos","palm_rot","palm_vel","object_rot","object_vel","fingertip_pos_rel_palm","keypoints_rel_palm","keypoints_rel_goal","object_scales","closest_keypoint_max_dist","closest_fingertip_dist","lifted_object","progress","successes","reward"] \
 task.env.obsList=["joint_pos","joint_vel","prev_action_targets","palm_pos","palm_rot","object_rot","fingertip_pos_rel_palm","keypoints_rel_palm","keypoints_rel_goal","object_scales"] \
+task.env.dofSpeedScale=2.5 \
 task.env.kukaActionsPenaltyScale=0.03 \
 task.env.allegroActionsPenaltyScale=0.003 \
 task.env.controlFrequencyInv=1 \
