@@ -20,7 +20,7 @@ N_OBS = 140
 N_ACT = 29
 
 HAND_MOVING_AVERAGE = 0.1
-ARM_MOVING_AVERAGE = 0.1
+ARM_MOVING_AVERAGE = 0.05
 HAND_DOF_SPEED_SCALE = 2.5
 
 
@@ -125,10 +125,15 @@ def main():
     CHECKPOINT_PATH = Path(
         # "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/newGains.pth"
         # "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/noisyInput.pth"
-        "/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/cleanInputs.pth"
+        # "/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/cleanInputs.pth"
+        # "/juno/u/kedia/sapg/train_dir/checkpoints/cleanInputsFinetuned.pth",
+        # "/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o1t0.pth",
+        "/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o1t1.pth",
+        # "/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o0t0.pth",
     )
     assert CHECKPOINT_PATH.exists()
 
+    # NOTE: cpu has different physics than training
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
     # DEVICE = "cpu"  # "cpu" faster for single env, but some bugs with cpu like force sensors not working
     env = create_env(
@@ -143,12 +148,15 @@ def main():
             "task.env.resetDofPosRandomIntervalFingers": 0.0,
             "task.env.resetDofPosRandomIntervalArm": 0.0,
             "task.env.resetDofVelRandomInterval": 0.0,
-            "task.env.object_type": "blue_cuboid",
+            # "task.env.object_type": "blue_cuboid",
+            "task.env.object_type": "cuboidal_mallet",
             # "task.env.object_type": "blue_cuboid_fake_hammer",
             # "task.env.forceNoReset": True,
             "task.env.randomizeObjectRotation": False,
-            "task.env.objectStartPose": [0.,  0.,  0.58, 0.,  0.,  0.,  1.],  # x, y, z, qx, qy, qz, qw
-            "task.env.goalObjectPose": [0.,  0.,  0.88, 0.,  0.,  0.,  1.],  # x, y, z, qx, qy, qz, qw
+            # "task.env.objectStartPose": [0.,  0.,  0.58, 0.,  0.,  0.,  1.],  # x, y, z, qx, qy, qz, qw
+            "task.env.objectStartPose": [0.,  0.,  0.58, 0.,  0.,  1.,  0.],  # x, y, z, qx, qy, qz, qw
+            # "task.env.goalObjectPose": [0.,  0.,  0.88, 0.,  0.,  0.,  1.],  # x, y, z, qx, qy, qz, qw
+            "task.env.use_fixed_set_of_goal_states": True,
             "task.env.forceScale": 0.0,
         },
     )

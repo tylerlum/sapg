@@ -284,7 +284,10 @@ class ViserVisualizationNode:
         object_name = rospy.get_param("/object_name", None)
         if object_name is None:
             # DEFAULT_OBJECT_NAME = "blue_cuboid"
-            DEFAULT_OBJECT_NAME = "cuboidal_mallet"
+            # DEFAULT_OBJECT_NAME = "cuboidal_mallet"
+            # DEFAULT_OBJECT_NAME = "mallet"
+            # DEFAULT_OBJECT_NAME = "cuboidal_hammer"
+            DEFAULT_OBJECT_NAME = "scanned_hammer_2"
             # DEFAULT_OBJECT_NAME = "blue_cuboid_fake_hammer"
             # DEFAULT_OBJECT_NAME = "blue_cuboid_real_hammer"
             # DEFAULT_OBJECT_NAME = "blue_cuboid_real_iphone"

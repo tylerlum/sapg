@@ -58,12 +58,17 @@ def main():
     assert Path(CONFIG_PATH).exists()
     CHECKPOINT_PATH = Path(
         # "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/newGains.pth"
-        "/juno/u/kedia/sapg/train_dir/checkpoints/cleanInputsFinetuned.pth"
+        # "/juno/u/kedia/sapg/train_dir/checkpoints/cleanInputsFinetuned.pth"
         # "/juno/u/kedia/sapg/train_dir/checkpoints/fastCheckpoint.pth"
         # "/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/noisyInputs.pth"
+        # "/juno/u/kedia/sapg/train_dir/checkpoints/cleanInputsFinetuned.pth",
+        # "/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o1t0.pth",
+        "/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o1t1.pth",
+        # "/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o0t0.pth",
     )
     assert CHECKPOINT_PATH.exists()
 
+    # NOTE: cpu has different physics than training
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
     # DEVICE = "cpu"  # "cpu" faster for single env, but some bugs with cpu like force sensors not working
     env = create_env(
@@ -97,6 +102,11 @@ def main():
             "task.env.envSpacing": 0.75,
             # "task.env.useObsDelay": True,
             # "task.env.obsDelayMax": 3,
+            # "task.env.useActionDelay": True,
+            # "task.env.actionDelayMax": 3,
+            # "task.env.useObjectStateDelayNoise": True,
+            # "task.env.objectStateDelayMax": 10,
+            # "task.env.armMovingAverage": 0.05,
         },
     )
 

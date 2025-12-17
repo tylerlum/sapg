@@ -312,7 +312,7 @@ class RecordedData:
     def _compute_ee_pose_array(self, q: np.ndarray, joint_names: list[str]) -> np.ndarray:
         from isaacgymenvs.utils.observation_action_utils_sharpa import create_urdf_object, compute_fk_dict
         urdf = create_urdf_object(robot_name="iiwa14_left_sharpa_adjusted_restricted")
-        assert joint_names == urdf.actuated_joint_names, f"joint_names: {joint_names} != urdf.actuated_joint_names: {urdf.actuated_joint_names}"
+        assert list(joint_names) == list(urdf.actuated_joint_names), f"joint_names: {joint_names} != urdf.actuated_joint_names: {urdf.actuated_joint_names}"
         fk_dict = compute_fk_dict(urdf=urdf, q=q, link_names=["iiwa14_link_7"])
         ee_pose_matrix = fk_dict["iiwa14_link_7"]
         return self.T_to_pose(ee_pose_matrix)

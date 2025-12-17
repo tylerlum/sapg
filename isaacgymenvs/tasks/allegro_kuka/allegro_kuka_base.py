@@ -1199,6 +1199,7 @@ class AllegroKukaBase(VecTask):
 
         # Set asset rigid shape properties (friction)
         MODIFY_ASSET_FRICTIONS = True
+
         if MODIFY_ASSET_FRICTIONS:
             self.set_allegro_kuka_asset_rigid_shape_properties(
                 allegro_kuka_asset=allegro_kuka_asset,
@@ -1536,7 +1537,8 @@ class AllegroKukaBase(VecTask):
         resets = self._extra_reset_rules(resets)
 
         # Print resets when there is only one environment
-        if self.num_envs == 1 and resets.item():
+        PRINT_RESET_REASONS = False
+        if self.num_envs == 1 and resets.item() and PRINT_RESET_REASONS:
             print("=" * 100)
             print("REASON FOR RESET:")
             print(f"object_z_low: {object_z_low.item()}")

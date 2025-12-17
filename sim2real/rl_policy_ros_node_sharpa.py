@@ -423,8 +423,8 @@ class RLPolicyNode:
             # We do not actually use the joint pos targets computed by the policy, we use the actual joint states so it doesn't move
             joint_pos_targets = np.clip(
                 q[None],
-                min=Q_LOWER_LIMITS_np,
-                max=Q_UPPER_LIMITS_np,
+                Q_LOWER_LIMITS_np,
+                Q_UPPER_LIMITS_np,
             )
 
             # Publish the targets
@@ -489,8 +489,8 @@ class RLPolicyNode:
             # Clamp
             joint_pos_targets = np.clip(
                 joint_pos_targets,
-                min=Q_LOWER_LIMITS_np,
-                max=Q_UPPER_LIMITS_np,
+                Q_LOWER_LIMITS_np,
+                Q_UPPER_LIMITS_np,
             )
             t04 = time.time()
 
@@ -662,26 +662,27 @@ if __name__ == "__main__":
         rl_policy_node = RLPolicyNode(
             config_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"),
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/cleanInputs.pth"),
-            checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/noisyInputs.pth"),
+            # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/noisyInputs.pth"),
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/cleanInputsFinetuned.pth"),
+            # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o1t0.pth"),
+            # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o1t1.pth"),
+            checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o0t0.pth"),
             hand_moving_average=0.1,
-            # arm_moving_average=0.02,
-            arm_moving_average=0.1,
-            object_scales=np.array([0.24, 0.03, 0.02]) * 25,
+            arm_moving_average=0.05,
+            # arm_moving_average=0.1,
+            # arm_moving_average=0.05,
+            # object_scales=np.array([0.24, 0.03, 0.02]) * 25,
+            object_scales=np.array([0.25, 0.03, 0.02]) * 25,
             # arm_moving_average=0.04,
             # arm_moving_average=0.05,
             # arm_moving_average=0.01,
             # save_foldername=None,
-            save_foldername="isaac_testing",
-            overwrite_targets_filepath=None,
-            # overwrite_targets_filepath=Path("recorded_robot_inputs/isaac/2025-12-12_19-40-52_noisyInputs_arm0.01.npz"),
-            # overwrite_targets_filepath=Path("recorded_robot_inputs/isaac/2025-12-12_19-40-13_noisyInputs_arm0.05.npz"),
-            # overwrite_targets_filepath=Path("recorded_robot_inputs/isaac/2025-12-12_19-43-50_cleanInputs_arm0.01.npz"),
-            # overwrite_targets_filepath=Path("recorded_robot_inputs/isaac/2025-12-12_19-41-34_cleanInputs_arm0.05.npz"),
-            # overwrite_targets_filepath=Path("recorded_robot_inputs/mujoco/2025-12-12_19-45-23_noisyInputs_arm0.05.npz"),
-            # overwrite_targets_filepath=Path("recorded_robot_inputs/mujoco/2025-12-12_19-46-05_noisyInputs_arm0.01.npz"),
-            # overwrite_targets_filepath=Path("recorded_robot_inputs/mujoco/2025-12-12_19-46-50_cleanInputs_arm0.05.npz"),
-            # overwrite_targets_filepath=Path("recorded_robot_inputs/mujoco/2025-12-12_19-47-35_cleanInputs_arm0.01.npz"),
+            save_foldername="2025-12-16_real_world",
+            # overwrite_targets_filepath=None,
+            # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-44-54_noisyInputs_arm0.05.npz"),
+            # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-47-13_finetuned_o0t0_arm0.05.npz"),
+            # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-48-08_finetuned_o1t0_arm0.05.npz"),
+            # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-48-47_finetuned_o1t1_arm0.05.npz"),
         )
         rl_policy_node.run()
     except rospy.ROSInterruptException:
