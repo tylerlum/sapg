@@ -46,15 +46,15 @@ class FakeRobotNode:
         self.sharpa_joint_cmd = None
 
         # Publisher and subscriber
-        self.iiwa_pub = rospy.Publisher("/iiwa/joint_states", JointState, queue_size=10)
+        self.iiwa_pub = rospy.Publisher("/iiwa/joint_states", JointState, queue_size=1)
         self.sharpa_pub = rospy.Publisher(
-            "/sharpa/joint_states", JointState, queue_size=10
+            "/sharpa/joint_states", JointState, queue_size=1
         )
         self.iiwa_cmd_sub = rospy.Subscriber(
-            "/iiwa/joint_cmd", JointState, self.iiwa_joint_cmd_callback
+            "/iiwa/joint_cmd", JointState, self.iiwa_joint_cmd_callback, queue_size=1
         )
         self.sharpa_cmd_sub = rospy.Subscriber(
-            "/sharpa/joint_cmd", JointState, self.sharpa_joint_cmd_callback
+            "/sharpa/joint_cmd", JointState, self.sharpa_joint_cmd_callback, queue_size=1
         )
 
         # State

@@ -6,10 +6,6 @@ from collections import defaultdict
 import yourdfpy
 import numpy as np
 from pathlib import Path
-import torch
-from torch import Tensor
-
-from isaacgymenvs.utils.torch_jit_utils import tensor_clamp
 
 def unscale(x, lower, upper):
     return (2.0 * x - upper - lower) / (upper - lower)
@@ -27,6 +23,9 @@ def quat_rotate(q, v):
         (q_vec.reshape(shape[0], 1, 3) @ v.reshape(shape[0], 3, 1))[..., 0] * 2.0
     return a + b + c
 
+
+def tensor_clamp(t, min_t, max_t):
+    return np.maximum(np.minimum(t, max_t), min_t)
 
 # Constants
 # JOINT_NAMES_ISAACGYM = [
@@ -140,6 +139,20 @@ def create_urdf_object(robot_name: Literal["iiwa14", "iiwa7", "iiwa14_left_sharp
     return yourdfpy.URDF.load(urdf_path)
 
 
+def compute_fk_dict(urdf: yourdfpy.URDF, q: np.ndarray, link_names: list[str]) -> dict[str, np.ndarray]:
+    N = q.shape[0]
+    assert q.shape == (N, 29), f"q.shape: {q.shape}, expected: (N, 29)"
+    fk_dict = defaultdict(list)
+    for i in range(N):
+        urdf.update_cfg(q[i])
+        for link_name in link_names:
+            fk_dict[link_name].append(urdf.get_transform(frame_to=link_name))
+    for link_name in link_names:
+        fk_dict[link_name] = np.stack(fk_dict[link_name], axis=0)
+        assert fk_dict[link_name].shape == (N, 4, 4), f"fk_dict[link_name].shape: {fk_dict[link_name].shape}, expected: (N, 4, 4)"
+    return fk_dict
+
+
 def compute_observation(
     q: np.ndarray,
     qd: np.ndarray,
@@ -149,7 +162,7 @@ def compute_observation(
     object_scales: np.ndarray,
     urdf: yourdfpy.URDF,
     obs_list: list[str],
-) -> Tensor:
+) -> np.ndarray:
     # Assume q and qd are in the order of JOINT_NAMES_ISAACGYM
     # object_pose, goal_object_pose are the pose of the object and goal in world frame (xyz_xyzw)
     # object_scales is the scale of the object [x, y, z]
@@ -196,17 +209,8 @@ def compute_observation(
     # FK to get link poses
     N_FINGERTIPS = 5
     assert JOINT_NAMES_ISAACGYM == urdf.actuated_joint_names, f"JOINT_NAMES_ISAACGYM: {JOINT_NAMES_ISAACGYM} != urdf.actuated_joint_names: {urdf.actuated_joint_names}"
-    fk_dict = defaultdict(list)
     LINK_NAMES = ["iiwa14_link_7"] + ["left_index_DP", "left_middle_DP", "left_ring_DP", "left_thumb_DP", "left_pinky_DP"]
-    for i in range(N):
-        urdf.update_cfg(q[i])
-        for link_name in LINK_NAMES:
-            fk_dict[link_name].append(urdf.get_transform(frame_to=link_name))
-    t2_5 = time.time()
-    for link_name in LINK_NAMES:
-        fk_dict[link_name] = np.stack(fk_dict[link_name], axis=0)
-        assert fk_dict[link_name].shape == (N, 4, 4), f"fk_dict[link_name].shape: {fk_dict[link_name].shape}, expected: (N, 4, 4)"
-
+    fk_dict = compute_fk_dict(urdf=urdf, q=q, link_names=LINK_NAMES)
     t3 = time.time()
     palm_center_pos, palm_rot = _compute_palm_center_pos_and_rot(fk_dict=fk_dict)
     t4 = time.time()
@@ -280,49 +284,49 @@ def compute_observation(
     )
     t14 = time.time()
 
-    print("IN COMPUTE OBS")
-    print("=" * 100)
-    total_dt = t14 - t0
-    # Compute each dt in ms and as a fraction of the total and print as a percentage and absolute value
-    print(f"total_dt: {total_dt:.6f} s")
-    print(f"t1 - t0: {(t1 - t0) * 1000:.1f} ms, {((t1 - t0)) / total_dt * 100:.1f}%")
-    print(f"t2 - t1: {(t2 - t1) * 1000:.1f} ms, {((t2 - t1)) / total_dt * 100:.1f}%")
-    print(f"t2_5 - t2: {(t2_5 - t2) * 1000:.1f} ms, {((t2_5 - t2)) / total_dt * 100:.1f}%")
-    print(f"t3 - t2_5: {(t3 - t2_5) * 1000:.1f} ms, {((t3 - t2_5)) / total_dt * 100:.1f}%")
-    # print(f"t3 - t2: {(t3 - t2) * 1000:.1f} ms, {((t3 - t2)) / total_dt * 100:.1f}%")
-    print(f"t4 - t3: {(t4 - t3) * 1000:.1f} ms, {((t4 - t3)) / total_dt * 100:.1f}%")
-    print(f"t5 - t4: {(t5 - t4) * 1000:.1f} ms, {((t5 - t4)) / total_dt * 100:.1f}%")
-    print(f"t6 - t5: {(t6 - t5) * 1000:.1f} ms, {((t6 - t5)) / total_dt * 100:.1f}%")
-    print(f"t7 - t6: {(t7 - t6) * 1000:.1f} ms, {((t7 - t6)) / total_dt * 100:.1f}%")
-    print(f"t8 - t7: {(t8 - t7) * 1000:.1f} ms, {((t8 - t7)) / total_dt * 100:.1f}%")
-    print(f"t9 - t8: {(t9 - t8) * 1000:.1f} ms, {((t9 - t8)) / total_dt * 100:.1f}%")
-    print(f"t10 - t9: {(t10 - t9) * 1000:.1f} ms, {((t10 - t9)) / total_dt * 100:.1f}%")
-    print(f"t11 - t10: {(t11 - t10) * 1000:.1f} ms, {((t11 - t10)) / total_dt * 100:.1f}%")
-    print(f"t12 - t11: {(t12 - t11) * 1000:.1f} ms, {((t12 - t11)) / total_dt * 100:.1f}%")
-    print(f"t13 - t12: {(t13 - t12) * 1000:.1f} ms, {((t13 - t12)) / total_dt * 100:.1f}%")
-    print(f"t14 - t13: {(t14 - t13) * 1000:.1f} ms, {((t14 - t13)) / total_dt * 100:.1f}%")
-    print("=" * 100)
+    PRINT_TIMING = False
+    if PRINT_TIMING:
+        print("IN COMPUTE OBS")
+        print("=" * 100)
+        total_dt = t14 - t0
+        # Compute each dt in ms and as a fraction of the total and print as a percentage and absolute value
+        print(f"total_dt: {total_dt:.6f} s")
+        print(f"t1 - t0: {(t1 - t0) * 1000:.1f} ms, {((t1 - t0)) / total_dt * 100:.1f}%")
+        print(f"t2 - t1: {(t2 - t1) * 1000:.1f} ms, {((t2 - t1)) / total_dt * 100:.1f}%")
+        print(f"t3 - t2: {(t3 - t2) * 1000:.1f} ms, {((t3 - t2)) / total_dt * 100:.1f}%")
+        print(f"t4 - t3: {(t4 - t3) * 1000:.1f} ms, {((t4 - t3)) / total_dt * 100:.1f}%")
+        print(f"t5 - t4: {(t5 - t4) * 1000:.1f} ms, {((t5 - t4)) / total_dt * 100:.1f}%")
+        print(f"t6 - t5: {(t6 - t5) * 1000:.1f} ms, {((t6 - t5)) / total_dt * 100:.1f}%")
+        print(f"t7 - t6: {(t7 - t6) * 1000:.1f} ms, {((t7 - t6)) / total_dt * 100:.1f}%")
+        print(f"t8 - t7: {(t8 - t7) * 1000:.1f} ms, {((t8 - t7)) / total_dt * 100:.1f}%")
+        print(f"t9 - t8: {(t9 - t8) * 1000:.1f} ms, {((t9 - t8)) / total_dt * 100:.1f}%")
+        print(f"t10 - t9: {(t10 - t9) * 1000:.1f} ms, {((t10 - t9)) / total_dt * 100:.1f}%")
+        print(f"t11 - t10: {(t11 - t10) * 1000:.1f} ms, {((t11 - t10)) / total_dt * 100:.1f}%")
+        print(f"t12 - t11: {(t12 - t11) * 1000:.1f} ms, {((t12 - t11)) / total_dt * 100:.1f}%")
+        print(f"t13 - t12: {(t13 - t12) * 1000:.1f} ms, {((t13 - t12)) / total_dt * 100:.1f}%")
+        print(f"t14 - t13: {(t14 - t13) * 1000:.1f} ms, {((t14 - t13)) / total_dt * 100:.1f}%")
+        print("=" * 100)
 
     assert obs.shape == (N, N_OBS), f"obs.shape: {obs.shape}, expected: (N, {N_OBS})"
     return obs
 
 
 def compute_joint_pos_targets(
-    actions: Tensor,
-    prev_targets: Tensor,
+    actions: np.ndarray,
+    prev_targets: np.ndarray,
     hand_moving_average: float,
     arm_moving_average: float,
     hand_dof_speed_scale: float,
     dt: float,
-) -> Tensor:
+) -> np.ndarray:
     N = actions.shape[0]
     J = 29
     assert actions.shape == (N, J), f"actions.shape: {actions.shape}, expected: (N, J)"
     assert prev_targets.shape == (N, J), (
         f"prev_targets.shape: {prev_targets.shape}, expected: (N, J)"
     )
-    q_lower_limits = torch.from_numpy(Q_LOWER_LIMITS_np).float().to(actions.device)
-    q_upper_limits = torch.from_numpy(Q_UPPER_LIMITS_np).float().to(actions.device)
+    q_lower_limits = Q_LOWER_LIMITS_np
+    q_upper_limits = Q_UPPER_LIMITS_np
     assert q_lower_limits.shape == (J,), (
         f"q_lower_limits.shape: {q_lower_limits.shape}, expected: (J,)"
     )
@@ -337,7 +341,7 @@ def compute_joint_pos_targets(
     )
 
     # hand
-    cur_targets = prev_targets.clone()
+    cur_targets = prev_targets.copy()
     cur_targets[:, 7:29] = scale(
         actions[:, 7:29],
         q_lower_limits[7:29],
@@ -411,22 +415,25 @@ def _compute_palm_center_pos_and_rot(
     )
     t11 = time.time()
     total_dt = t11 - t00
-    # print("IN _compute_palm_center_pos_and_rot")
-    # print("=" * 100)
-    # print(f"total_dt: {total_dt:.6f} s")
-    # print(f"t01 - t00: {(t01 - t00) * 1000:.1f} ms, {((t01 - t00)) / total_dt * 100:.1f}%")
-    # print(f"t02 - t01: {(t02 - t01) * 1000:.1f} ms, {((t02 - t01)) / total_dt * 100:.1f}%")
-    # print(f"t03 - t02: {(t03 - t02) * 1000:.1f} ms, {((t03 - t02)) / total_dt * 100:.1f}%")
-    # print(f"t04 - t03: {(t04 - t03) * 1000:.1f} ms, {((t04 - t03)) / total_dt * 100:.1f}%")
-    # print(f"t05 - t04: {(t05 - t04) * 1000:.1f} ms, {((t05 - t04)) / total_dt * 100:.1f}%")
-    # print(f"t06 - t05: {(t06 - t05) * 1000:.1f} ms, {((t06 - t05)) / total_dt * 100:.1f}%")
-    # print(f"t07 - t06: {(t07 - t06) * 1000:.1f} ms, {((t07 - t06)) / total_dt * 100:.1f}%")
-    # print(f"t07_5 - t07: {(t07_5 - t07) * 1000:.1f} ms, {((t07_5 - t07)) / total_dt * 100:.1f}%")
-    # print(f"t08 - t07_5: {(t08 - t07_5) * 1000:.1f} ms, {((t08 - t07_5)) / total_dt * 100:.1f}%")
-    # print(f"t09 - t08: {(t09 - t08) * 1000:.1f} ms, {((t09 - t08)) / total_dt * 100:.1f}%")
-    # print(f"t10 - t09: {(t10 - t09) * 1000:.1f} ms, {((t10 - t09)) / total_dt * 100:.1f}%")
-    # print(f"t11 - t10: {(t11 - t10) * 1000:.1f} ms, {((t11 - t10)) / total_dt * 100:.1f}%")
-    # print("=" * 100)
+
+    PRINT_TIMING = False
+    if PRINT_TIMING:
+        print("IN _compute_palm_center_pos_and_rot")
+        print("=" * 100)
+        print(f"total_dt: {total_dt:.6f} s")
+        print(f"t01 - t00: {(t01 - t00) * 1000:.1f} ms, {((t01 - t00)) / total_dt * 100:.1f}%")
+        print(f"t02 - t01: {(t02 - t01) * 1000:.1f} ms, {((t02 - t01)) / total_dt * 100:.1f}%")
+        print(f"t03 - t02: {(t03 - t02) * 1000:.1f} ms, {((t03 - t02)) / total_dt * 100:.1f}%")
+        print(f"t04 - t03: {(t04 - t03) * 1000:.1f} ms, {((t04 - t03)) / total_dt * 100:.1f}%")
+        print(f"t05 - t04: {(t05 - t04) * 1000:.1f} ms, {((t05 - t04)) / total_dt * 100:.1f}%")
+        print(f"t06 - t05: {(t06 - t05) * 1000:.1f} ms, {((t06 - t05)) / total_dt * 100:.1f}%")
+        print(f"t07 - t06: {(t07 - t06) * 1000:.1f} ms, {((t07 - t06)) / total_dt * 100:.1f}%")
+        print(f"t07_5 - t07: {(t07_5 - t07) * 1000:.1f} ms, {((t07_5 - t07)) / total_dt * 100:.1f}%")
+        print(f"t08 - t07_5: {(t08 - t07_5) * 1000:.1f} ms, {((t08 - t07_5)) / total_dt * 100:.1f}%")
+        print(f"t09 - t08: {(t09 - t08) * 1000:.1f} ms, {((t09 - t08)) / total_dt * 100:.1f}%")
+        print(f"t10 - t09: {(t10 - t09) * 1000:.1f} ms, {((t10 - t09)) / total_dt * 100:.1f}%")
+        print(f"t11 - t10: {(t11 - t10) * 1000:.1f} ms, {((t11 - t10)) / total_dt * 100:.1f}%")
+        print("=" * 100)
     return palm_center_pos, palm_quat_xyzw
 
 

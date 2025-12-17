@@ -664,7 +664,9 @@ class AllegroKukaBase(VecTask):
             # Some objects don't have a fixed trajectory, so we raise an error
             HAMMER_TRAJECTORY_OBJECTS = set(
                 ["scanned_hammer_1", "scanned_hammer_2", "scanned_hammer_2_coacd", "scanned_hammer_2_coacd2", "YcbHammer", "cuboidal_hammer", "cylindrical_hammer", "cuboidal_hammer_2x", "cylindrical_hammer_2x",]
+                + ["all_hammers", "all_cuboidal_hammers", "all_cylindrical_hammers", "all_cuboidal_and_cylindrical_hammers", "mallet", "cuboidal_mallet"]
             )
+            CUBOID_OBJECTS = set(["cuboid", "blue_cuboid", "blue_cuboid_thick", "blue_cuboid_real_iphone", "blue_cuboid_fake_iphone", "blue_cuboid_real_hammer", "blue_cuboid_fake_hammer", "blue_cuboid_real_screwdriver"])
             if object_type in HAMMER_TRAJECTORY_OBJECTS:
                 self.trajectory_states = get_hammer_trajectory(init_state, device=self.device)
             elif object_type in set(["hairbrush", "hairbrush_modified"]):
@@ -677,16 +679,30 @@ class AllegroKukaBase(VecTask):
                 self.trajectory_states = get_eraser_trajectory(init_state, device=self.device)
             elif object_type == "phone":
                 self.trajectory_states = get_phone_trajectory(init_state, device=self.device)
-            elif object_type in ["all_hammers", "all_cuboidal_hammers", "all_cylindrical_hammers", "all_cuboidal_and_cylindrical_hammers", "mallet", "cuboidal_mallet"]:
-                self.trajectory_states = get_hammer_trajectory(init_state, device=self.device)
-            elif object_type in ["cuboid", "blue_cuboid", "blue_cuboid_thick", "blue_cuboid_real_iphone", "blue_cuboid_fake_iphone", "blue_cuboid_real_hammer", "blue_cuboid_fake_hammer", "blue_cuboid_real_screwdriver"]:
+            elif object_type in CUBOID_OBJECTS:
                 self.trajectory_states = get_cuboid_trajectory(init_state, device=self.device)
             else:
                 raise ValueError(f"The following object_type does not have a fixed trajectory: {object_type}, cannot use USE_FIXED_SET_OF_GOAL_STATES with this object type")
 
+            SAVE_TO_JSON = False
+            if SAVE_TO_JSON:
+                import json
+                from pathlib import Path
+                output_filepath = Path(f"{object_type}_trajectory.json")
+                print(f"Saving trajectory to {output_filepath}")
+
+                trajectory_states_np = self.trajectory_states.cpu().numpy()
+                trajectory_states_np[:, 1] -= 0.8  # Account for initial offset of 0.8 in world frame
+                with open(output_filepath, "w") as f:
+                    json.dump(
+                        trajectory_states_np.tolist(),
+                        f,
+                        indent=4,
+                    )
+                print(f"Saved trajectory to {output_filepath}")
+
             # Set max consecutive successes to the length of the trajectory so we don't run out of goal states
             self.max_consecutive_successes = len(self.trajectory_states)
-
 
         return object_asset_files, object_asset_scales, need_vhacds
 
@@ -1183,6 +1199,7 @@ class AllegroKukaBase(VecTask):
 
         # Set asset rigid shape properties (friction)
         MODIFY_ASSET_FRICTIONS = True
+
         if MODIFY_ASSET_FRICTIONS:
             self.set_allegro_kuka_asset_rigid_shape_properties(
                 allegro_kuka_asset=allegro_kuka_asset,
@@ -1520,7 +1537,8 @@ class AllegroKukaBase(VecTask):
         resets = self._extra_reset_rules(resets)
 
         # Print resets when there is only one environment
-        if self.num_envs == 1 and resets.item():
+        PRINT_RESET_REASONS = False
+        if self.num_envs == 1 and resets.item() and PRINT_RESET_REASONS:
             print("=" * 100)
             print("REASON FOR RESET:")
             print(f"object_z_low: {object_z_low.item()}")
@@ -2003,8 +2021,10 @@ class AllegroKukaBase(VecTask):
             delay_index = torch.randint(0, self.obs_queue.shape[1], (self.num_envs,), device=self.device)
             self.obs_buf[:] = self.obs_queue[torch.arange(self.num_envs), delay_index].clone()
 
-        # HACK:
-        # self.obs_buf[:] = self.obs_queue[:, -1].clone()
+        # HACK: For testing delay, force a fixed full delay
+        FORCE_FULL_DELAY = False
+        if FORCE_FULL_DELAY:
+            self.obs_buf[:] = self.obs_queue[:, -1].clone()
 
         # Default CHECK_WITH_COMPUTED_OBS = False
         # Set to True to check if the observations are computed correctly
@@ -2452,13 +2472,14 @@ class AllegroKukaBase(VecTask):
         CHECK_WITH_COMPUTED_JOINT_POS_TARGETS = False
         if CHECK_WITH_COMPUTED_JOINT_POS_TARGETS:
             computed_joint_pos_targets = compute_joint_pos_targets(
-                actions=self.actions,
-                prev_targets=self.prev_targets,
+                actions=self.actions.cpu().numpy(),
+                prev_targets=self.prev_targets.cpu().numpy(),
                 hand_moving_average=self.hand_moving_average,
                 arm_moving_average=self.arm_moving_average,
                 hand_dof_speed_scale=self.hand_dof_speed_scale,
                 dt=self.dt,
             )
+            computed_joint_pos_targets = torch.from_numpy(computed_joint_pos_targets).float().to(self.device)
             assert computed_joint_pos_targets.shape == (self.num_envs, self.num_hand_arm_dofs), f"computed_joint_pos_targets.shape: {computed_joint_pos_targets.shape}, expected: ({self.num_envs}, {self.num_hand_arm_dofs})"
             assert self.cur_targets.shape == computed_joint_pos_targets.shape, f"self.cur_targets.shape: {self.cur_targets.shape}, expected: {computed_joint_pos_targets.shape}"
 

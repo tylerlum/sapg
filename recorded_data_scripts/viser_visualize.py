@@ -19,7 +19,7 @@ GREEN_RGBA = (0, 255, 0, 0.5)
 AXES_LENGTH = 0.2
 AXES_RADIUS = 0.01
 
-DISABLE_AXES = True
+DISABLE_AXES = False
 if DISABLE_AXES:
     AXES_LENGTH = 0.00001
     AXES_RADIUS = 0.00001
@@ -85,7 +85,8 @@ def main():
         f"KUKA_SHARPA_URDF_PATH not found: {KUKA_SHARPA_URDF_PATH}"
     )
     from isaacgymenvs.utils.objects import NAME_TO_OBJECT
-    DEFAULT_OBJECT_NAME = "blue_cuboid"
+    # DEFAULT_OBJECT_NAME = "blue_cuboid"
+    DEFAULT_OBJECT_NAME = "cuboidal_mallet"
     object_name = DEFAULT_OBJECT_NAME
     if recorded_data.object_name is None:
         print(f"Using default object name: {DEFAULT_OBJECT_NAME}")

@@ -189,25 +189,32 @@ class ViserVisualizationNode:
 
     def initialize_ros_subscribers(self):
         self.iiwa_sub = rospy.Subscriber(
-            "/iiwa/joint_states", JointState, self.iiwa_joint_state_callback
+            "/iiwa/joint_states", JointState, self.iiwa_joint_state_callback,
+            queue_size=1
         )
         self.sharpa_sub = rospy.Subscriber(
-            "/sharpa/joint_states", JointState, self.sharpa_joint_state_callback
+            "/sharpa/joint_states", JointState, self.sharpa_joint_state_callback,
+            queue_size=1
         )
         self.iiwa_cmd_sub = rospy.Subscriber(
-            "/iiwa/joint_cmd", JointState, self.iiwa_joint_cmd_callback
+            "/iiwa/joint_cmd", JointState, self.iiwa_joint_cmd_callback,
+            queue_size=1
         )
         self.sharpa_cmd_sub = rospy.Subscriber(
-            "/sharpa/joint_cmd", JointState, self.sharpa_joint_cmd_callback
+            "/sharpa/joint_cmd", JointState, self.sharpa_joint_cmd_callback,
+            queue_size=1
         )
         self.object_pose_sub = rospy.Subscriber(
-            "/robot_frame/current_object_pose", PoseStamped, self.object_pose_callback
+            "/robot_frame/current_object_pose", PoseStamped, self.object_pose_callback,
+            queue_size=1
         )
         self.goal_object_pose_sub = rospy.Subscriber(
-            "/robot_frame/goal_object_pose", Pose, self.goal_object_pose_callback
+            "/robot_frame/goal_object_pose", Pose, self.goal_object_pose_callback,
+            queue_size=1
         )
         self.joint_targets_sub = rospy.Subscriber(
-            "/joint_targets", JointState, self.joint_targets_callback
+            "/joint_targets", JointState, self.joint_targets_callback,
+            queue_size=1
         )
 
     def initialize_viser(self):

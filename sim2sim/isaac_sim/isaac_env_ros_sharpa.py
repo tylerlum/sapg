@@ -58,10 +58,12 @@ class IsaacEnvRos:
         self.latest_sharpa_joint_cmd = None
 
         self.iiwa_cmd_sub = rospy.Subscriber(
-            "/iiwa/joint_cmd", JointState, self._iiwa_joint_cmd_callback, queue_size=1
+            "/iiwa/joint_cmd", JointState, self._iiwa_joint_cmd_callback,
+            queue_size=1
         )
         self.sharpa_cmd_sub = rospy.Subscriber(
-            "/sharpa/joint_cmd", JointState, self._sharpa_joint_cmd_callback, queue_size=1
+            "/sharpa/joint_cmd", JointState, self._sharpa_joint_cmd_callback,
+            queue_size=1
         )
 
         self.iiwa_pub = rospy.Publisher("/iiwa/joint_states", JointState, queue_size=1)
@@ -239,14 +241,15 @@ class IsaacEnvRos:
 
 def main():
     CONTROL_DT = 1.0 / 60.0
-    UPDATE_AND_PUBLISH_DT = 1.0 / 60.0
+    SUBSTEPS = 2
     CONFIG_PATH = Path(
         "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"
     )
     assert Path(CONFIG_PATH).exists()
 
-    # DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-    DEVICE = "cpu"  # "cpu" faster for single env, but some bugs with cpu like force sensors not working
+    # NOTE: cpu has different physics than training
+    DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+    # DEVICE = "cpu"  # "cpu" faster for single env, but some bugs with cpu like force sensors not working
     env = create_env(
         config_path=str(CONFIG_PATH),
         headless=True,
@@ -267,13 +270,15 @@ def main():
             "task.env.objectStartPose": [0.,  0.,  0.58, 0.,  0.,  1.,  0.],  # x, y, z, qx, qy, qz, qw
             "task.env.goalObjectPose": [0.,  0.,  0.88, 0.,  0.,  0.,  1.],  # x, y, z, qx, qy, qz, qw
             "task.env.forceScale": 0.0,
+            "task.sim.dt": CONTROL_DT,
+            "task.sim.substeps": SUBSTEPS,
         },
     )
 
     isaac_env_ros = IsaacEnvRos(
         env=env,
         control_dt=CONTROL_DT,
-        update_and_publish_dt=0,
+        update_and_publish_dt=0,  # Make this 0 to update and publish as fast as possible
         device=DEVICE,
     )
     isaac_env_ros.run()
