@@ -186,9 +186,9 @@ def compute_mass_and_inertia(scale: Union[Tuple[float, float, float], Tuple[floa
         r = d / 2
         v = math.pi * (r**2) * h
         m = v * density
-        ixx = 0.5 * m * (r**2)
+        izz = 0.5 * m * (r**2)
         iyy = (1/12) * m * (3*r**2 + h**2)
-        izz = iyy
+        ixx = iyy
     else:
         raise ValueError(f"Invalid scale: {scale}")
     return m, ixx, iyy, izz
@@ -208,6 +208,8 @@ def generate_handle_head_urdf_variable_density(
           <box size="{handle_len_x} {handle_len_y} {handle_len_z}"/>
         </geometry>
         """
+        handle_mass, handle_ixx, handle_iyy, handle_izz = compute_mass_and_inertia(scale=handle_scale, density=handle_density)
+
     elif len(handle_scale) == 2:
         # Default z is along cylinder axis
         # We rotate so it is along +x
@@ -219,6 +221,9 @@ def generate_handle_head_urdf_variable_density(
           <cylinder length="{handle_height}" radius="{handle_radius}"/>
         </geometry>
         """
+        # Note we flip ixx to the end because we rotate so it is along +x
+        handle_mass, handle_izz, handle_iyy, handle_ixx = compute_mass_and_inertia(scale=handle_scale, density=handle_density)
+
     else:
         raise ValueError(f"Invalid handle scale: {handle_scale}")
 
@@ -231,6 +236,7 @@ def generate_handle_head_urdf_variable_density(
           <box size="{head_scale[0]} {head_scale[1]} {head_scale[2]}"/>
         </geometry>
         """
+        head_mass, head_ixx, head_iyy, head_izz = compute_mass_and_inertia(scale=head_scale, density=head_density)
     elif len(head_scale) == 2:
         # Default z is along cylinder axis
         # We rotate so it is along +y
@@ -244,12 +250,12 @@ def generate_handle_head_urdf_variable_density(
           <cylinder length="{head_height}" radius="{head_radius}"/>
         </geometry>
         """
+        # Note we flip iyy to the end because we rotate so it is along +y
+        head_mass, head_ixx, head_izz, head_iyy = compute_mass_and_inertia(scale=head_scale, density=head_density)
     else:
         raise ValueError(f"Invalid head scale: {head_scale}")
 
     # Compute mass and inertia
-    handle_mass, handle_ixx, handle_iyy, handle_izz = compute_mass_and_inertia(scale=handle_scale, density=handle_density)
-    head_mass, head_ixx, head_iyy, head_izz = compute_mass_and_inertia(scale=head_scale, density=head_density)
     total_mass = handle_mass + head_mass
 
     # x_offset is the distance from handle center to head center
