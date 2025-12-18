@@ -8,9 +8,13 @@ from scipy.spatial.transform import Rotation as R
 import numpy as np
 import viser
 from viser.extras import ViserUrdf
+from termcolor import colored
 
 from recorded_data_scripts.recorded_data_sharpa import RecordedData
 from isaacgymenvs.utils.utils import get_repo_root_dir
+
+def warn(message: str):
+    print(colored(message, "yellow"))
 
 # ###########
 # Constants
@@ -19,7 +23,7 @@ GREEN_RGBA = (0, 255, 0, 0.5)
 AXES_LENGTH = 0.2
 AXES_RADIUS = 0.01
 
-DISABLE_AXES = False
+DISABLE_AXES = True
 if DISABLE_AXES:
     AXES_LENGTH = 0.00001
     AXES_RADIUS = 0.00001
@@ -86,7 +90,8 @@ def main():
     )
     from isaacgymenvs.utils.objects import NAME_TO_OBJECT
     # DEFAULT_OBJECT_NAME = "blue_cuboid"
-    DEFAULT_OBJECT_NAME = "cuboidal_mallet"
+    # DEFAULT_OBJECT_NAME = "cuboidal_mallet"
+    DEFAULT_OBJECT_NAME = "scanned_hammer_2"
     object_name = DEFAULT_OBJECT_NAME
     if recorded_data.object_name is None:
         print(f"Using default object name: {DEFAULT_OBJECT_NAME}")
@@ -256,6 +261,8 @@ def main():
     # Main loop
     # ###########
     while True:
+        start_loop_time = time.time()
+
         # Get data
         robot_root_state = recorded_data.robot_root_states_array[FRAME_IDX]
         object_root_state = recorded_data.object_root_states_array[FRAME_IDX]
@@ -349,7 +356,13 @@ def main():
         # ###########
         # Sleep and update frame index
         # ###########
-        time.sleep(recorded_data.dt)
+        end_loop_time = time.time()
+        loop_time = end_loop_time - start_loop_time
+        sleep_time = recorded_data.dt - loop_time
+        if sleep_time > 0:
+            time.sleep(sleep_time)
+        else:
+            warn(f"Loop time {loop_time:.6f}s is greater than recorded data dt {recorded_data.dt:.6f}s, not keeping up with recorded data (desired FPS: {1.0 / recorded_data.dt:.1f}, actual FPS: {1.0 / loop_time:.1f})")
         if not PAUSED:
             frame_idx_slider.value = int(
                 np.clip(
