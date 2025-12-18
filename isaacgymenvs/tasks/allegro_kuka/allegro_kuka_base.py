@@ -944,7 +944,7 @@ class AllegroKukaBase(VecTask):
 
         handle_cylinder_heights = np.random.uniform(HANDLE_MIN_LEN_X, HANDLE_MAX_LEN_X, size=NUM_HANDLE_CYLINDERS)
         handle_cylinder_diameters = np.random.uniform(HANDLE_MIN_LEN_Z, HANDLE_MAX_LEN_Z, size=NUM_HANDLE_CYLINDERS)
-        handle_cylinder_scales = np.stack([handle_cylinder_heights, handle_cylinder_diameters, handle_cylinder_diameters], axis=1).tolist()
+        handle_cylinder_scales = np.stack([handle_cylinder_heights, handle_cylinder_diameters], axis=1).tolist()
 
         # #############################
         # Head
@@ -972,7 +972,7 @@ class AllegroKukaBase(VecTask):
 
         head_cylinder_heights = np.random.uniform(HEAD_MIN_LEN_X, HEAD_MAX_LEN_X, size=NUM_HEAD_CYLINDERS)
         head_cylinder_diameters = np.random.uniform(HEAD_MIN_LEN_Z, HEAD_MAX_LEN_Z, size=NUM_HEAD_CYLINDERS)
-        head_cylinder_scales = np.stack([head_cylinder_heights, head_cylinder_diameters, head_cylinder_diameters], axis=1).tolist()
+        head_cylinder_scales = np.stack([head_cylinder_heights, head_cylinder_diameters], axis=1).tolist()
 
         from isaacgymenvs.tasks.allegro_kuka.generate_objects import (
             generate_handle_head_urdf_constant_density,
@@ -1012,13 +1012,20 @@ class AllegroKukaBase(VecTask):
             for idx in range(NUM_HEAD_CYLINDERS, NUM_HANDLE_CYLINDERS)
         ]
         all_files = cuboid_handle_cuboid_head_files + cuboid_handle_no_head_files + cylinder_handle_cylinder_head_files + cylinder_handle_no_head_files
-        all_scales = handle_cuboid_scales + handle_cylinder_scales
+        all_scales = handle_cuboid_scales + [(x[0], x[1], x[1]) for x in handle_cylinder_scales]
         assert len(all_files) == len(all_scales), f"Number of files: {len(all_files)}, number of scales: {len(all_scales)}"
         need_vhacds = [False] * len(all_files)
 
         # Note, we need to make sure all_scales is rescaled by the base size
         all_scales = [(x / self.object_base_size, y / self.object_base_size, z / self.object_base_size) for (x, y, z) in all_scales]
-        print(f"All scales: {all_scales}")
+
+        # Randomize order
+        indices = list(range(len(all_files)))
+        np.random.shuffle(indices)
+        print(f"Indices: {indices}")
+        all_files = [all_files[i] for i in indices]
+        all_scales = [all_scales[i] for i in indices]
+        need_vhacds = [need_vhacds[i] for i in indices]
 
         return all_files, all_scales, need_vhacds
 
