@@ -907,7 +907,6 @@ class AllegroKukaBase(VecTask):
         # There is no relative rotation between the handle and head
 
         # We also will have some number of the objects with no head
-
         NUM_HANDLE_CUBOIDS = 500
         NUM_HANDLE_CYLINDERS = 500
         NUM_HEAD_CUBOIDS = 400
