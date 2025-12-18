@@ -89,7 +89,8 @@ def main():
             # "task.env.object_type": "blue_cuboid_fake_hammer",
             # "task.env.object_type": "cuboidal_hammer",
             # "task.env.object_type": "mallet",
-            "task.env.object_type": "cuboidal_mallet",
+            # "task.env.object_type": "cuboidal_mallet",
+            "task.env.object_type": "tyler_handle_head",
             # "task.env.forceNoReset": True,
             "task.env.randomizeObjectRotation": False,
             # "task.env.objectStartPose": [0.,  0.,  0.58, 0.,  0.,  0.,  1.],  # x, y, z, qx, qy, qz, qw

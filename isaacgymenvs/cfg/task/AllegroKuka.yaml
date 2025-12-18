@@ -111,10 +111,6 @@ env:
   use_hack_object_pos_offset: False
   hack_object_pos_offset: 0.05
 
-  tyler_num_cuboids: 500
-  tyler_num_cylinders: 500
-  tyler_randomize_com: False
-
   record_data: False
   record_data_num_steps: 1000
 
