@@ -1012,6 +1012,8 @@ class AllegroKukaBase(VecTask):
             for idx in range(NUM_HEAD_CYLINDERS, NUM_HANDLE_CYLINDERS)
         ]
         all_files = cuboid_handle_cuboid_head_files + cuboid_handle_no_head_files + cylinder_handle_cylinder_head_files + cylinder_handle_no_head_files
+        # NOTE: We distinguish between cuboid and cylinder by scales being either 3 or 2 elements
+        # However, scales here must be 3 elements, so we always make the third element the same as the second element for cylinders
         all_scales = handle_cuboid_scales + [(x[0], x[1], x[1]) for x in handle_cylinder_scales]
         assert len(all_files) == len(all_scales), f"Number of files: {len(all_files)}, number of scales: {len(all_scales)}"
         need_vhacds = [False] * len(all_files)
