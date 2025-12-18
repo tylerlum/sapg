@@ -180,7 +180,7 @@ env:
 
   handleDensityMin: 300
   handleDensityMax: 600
-  headDensityMin: 800
+  headDensityMin: 600
   headDensityMax: 1500
 
   asset:
