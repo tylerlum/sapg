@@ -115,7 +115,7 @@ def generate_handle_head_urdf_constant_density(
         head_text = f"""\
         <origin xyz="{x_offset} 0 0" rpy="0 0 0"/>
         <geometry>
-          <box size="{head_scale[0]} {head_scale[1]} {head_scale[2]}"/>
+          <box size="{head_len_x} {head_len_y} {head_len_z}"/>
         </geometry>
         """
     elif len(head_scale) == 2:
@@ -223,7 +223,6 @@ def generate_handle_head_urdf_variable_density(
         """
         # Note we flip ixx to the end because we rotate so it is along +x
         handle_mass, handle_izz, handle_iyy, handle_ixx = compute_mass_and_inertia(scale=handle_scale, density=handle_density)
-
     else:
         raise ValueError(f"Invalid handle scale: {handle_scale}")
 
@@ -233,7 +232,7 @@ def generate_handle_head_urdf_variable_density(
         head_text = f"""\
         <origin xyz="{x_offset} 0 0" rpy="0 0 0"/>
         <geometry>
-          <box size="{head_scale[0]} {head_scale[1]} {head_scale[2]}"/>
+          <box size="{head_len_x} {head_len_y} {head_len_z}"/>
         </geometry>
         """
         head_mass, head_ixx, head_iyy, head_izz = compute_mass_and_inertia(scale=head_scale, density=head_density)
