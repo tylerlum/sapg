@@ -897,9 +897,9 @@ class AllegroKukaBase(VecTask):
         # The handle is either a cuboid or a cylinder
         # For now, the head is the same type as the handle
         # The origin of the object is at the center of the handle
-        # For now, the density is uniform for all objects
         # To have different densities, we would need to have 2 links each with a different density, but this breaks the current code
         # An alternative could be to manually compute the mass and inertia rather than using the density field alone
+        # We implement this variable density approach now
 
         # For the handle, we are currently making them 50% cuboids and 50% cylinders
         # The x-direction is along the handle
