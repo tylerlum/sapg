@@ -915,6 +915,9 @@ class AllegroKukaBase(VecTask):
         # #############################
         # Handle
         # #############################
+        # 3D printed objects are about 300-400 kg/m^3
+        HANDLE_MIN_DENSITY, HANDLE_MAX_DENSITY = 300, 600
+        # HANDLE_MIN_DENSITY, HANDLE_MAX_DENSITY = 400, 400
 
         # The length of a marker or whiteboard eraser is 0.12m
         # The length of a screwdriver handle is 0.11-0.13m
@@ -936,6 +939,9 @@ class AllegroKukaBase(VecTask):
         # The thickness of a phone is 0.01m
         HANDLE_MIN_LEN_Z, HANDLE_MAX_LEN_Z = 0.02, 0.05  # Thickness
 
+        handle_cuboid_densities = np.random.uniform(HANDLE_MIN_DENSITY, HANDLE_MAX_DENSITY, size=NUM_HANDLE_CUBOIDS)
+        handle_cylinder_densities = np.random.uniform(HANDLE_MIN_DENSITY, HANDLE_MAX_DENSITY, size=NUM_HANDLE_CYLINDERS)
+
         handle_cuboid_x_lengths = np.random.uniform(HANDLE_MIN_LEN_X, HANDLE_MAX_LEN_X, size=NUM_HANDLE_CUBOIDS)
         handle_cuboid_y_lengths = np.random.uniform(HANDLE_MIN_LEN_Y, HANDLE_MAX_LEN_Y, size=NUM_HANDLE_CUBOIDS)
         handle_cuboid_z_lengths = np.random.uniform(HANDLE_MIN_LEN_Z, HANDLE_MAX_LEN_Z, size=NUM_HANDLE_CUBOIDS)
@@ -948,6 +954,9 @@ class AllegroKukaBase(VecTask):
         # #############################
         # Head
         # #############################
+        # Hammer head and mallet are 800-1500 kg/m^3
+        HEAD_MIN_DENSITY, HEAD_MAX_DENSITY = 800, 1500
+        # HEAD_MIN_DENSITY, HEAD_MAX_DENSITY = 400, 400
 
         # The length of a screwdriver head is 0.08-0.16m
         # The length of a hammer head is 0.02m
@@ -964,6 +973,9 @@ class AllegroKukaBase(VecTask):
         # The thickness of mallet head is 0.045m
         HEAD_MIN_LEN_Z, HEAD_MAX_LEN_Z = 0.01, 0.05  # Thickness
 
+        head_cuboid_densities = np.random.uniform(HEAD_MIN_DENSITY, HEAD_MAX_DENSITY, size=NUM_HEAD_CUBOIDS).tolist()
+        head_cylinder_densities = np.random.uniform(HEAD_MIN_DENSITY, HEAD_MAX_DENSITY, size=NUM_HEAD_CYLINDERS).tolist()
+
         head_cuboid_x_lengths = np.random.uniform(HEAD_MIN_LEN_X, HEAD_MAX_LEN_X, size=NUM_HEAD_CUBOIDS)
         head_cuboid_y_lengths = np.random.uniform(HEAD_MIN_LEN_Y, HEAD_MAX_LEN_Y, size=NUM_HEAD_CUBOIDS)
         head_cuboid_z_lengths = np.random.uniform(HEAD_MIN_LEN_Z, HEAD_MAX_LEN_Z, size=NUM_HEAD_CUBOIDS)
@@ -974,16 +986,19 @@ class AllegroKukaBase(VecTask):
         head_cylinder_scales = np.stack([head_cylinder_heights, head_cylinder_diameters], axis=1).tolist()
 
         from isaacgymenvs.tasks.allegro_kuka.generate_objects import (
-            generate_handle_head_urdf_constant_density,
+            # generate_handle_head_urdf_constant_density,
             generate_cuboid_urdf_constant_density,
             generate_cylinder_urdf_constant_density,
+            generate_handle_head_urdf_variable_density,
         )
         # Create cuboid handles with cuboid heads
         cuboid_handle_cuboid_head_files = [
-            generate_handle_head_urdf_constant_density(
-                filepath=Path(generated_assets_dir) / (f"{idx:03d}_handle_head_{handle_cuboid_scales[idx]}_{head_cuboid_scales[idx]}".replace(".", "-") + ".urdf"),
+            generate_handle_head_urdf_variable_density(
+                filepath=Path(generated_assets_dir) / (f"{idx:03d}_handle_head_{handle_cuboid_scales[idx]}_{head_cuboid_scales[idx]}_{handle_cuboid_densities[idx]}_{head_cuboid_densities[idx]}".replace(".", "-") + ".urdf"),
                 handle_scale=handle_cuboid_scales[idx],
                 head_scale=head_cuboid_scales[idx],
+                handle_density=handle_cuboid_densities[idx],
+                head_density=head_cuboid_densities[idx],
             )
             for idx in range(NUM_HEAD_CUBOIDS)
         ]
@@ -991,14 +1006,17 @@ class AllegroKukaBase(VecTask):
             generate_cuboid_urdf_constant_density(
                 filepath=Path(generated_assets_dir) / (f"{idx:03d}_handle_head_{handle_cuboid_scales[idx]}".replace(".", "-") + ".urdf"),
                 scale=handle_cuboid_scales[idx],
+                density=handle_cuboid_densities[idx],
             )
             for idx in range(NUM_HEAD_CUBOIDS, NUM_HANDLE_CUBOIDS)
         ]
         cylinder_handle_cylinder_head_files = [
-            generate_handle_head_urdf_constant_density(
+            generate_handle_head_urdf_variable_density(
                 filepath=Path(generated_assets_dir) / (f"{idx:03d}_handle_head_{handle_cylinder_scales[idx]}_{head_cylinder_scales[idx]}".replace(".", "-") + ".urdf"),
                 handle_scale=handle_cylinder_scales[idx],
                 head_scale=head_cylinder_scales[idx],
+                handle_density=handle_cylinder_densities[idx],
+                head_density=head_cylinder_densities[idx],
             )
             for idx in range(NUM_HEAD_CYLINDERS)
         ]
@@ -1007,6 +1025,7 @@ class AllegroKukaBase(VecTask):
                 filepath=Path(generated_assets_dir) / (f"{idx:03d}_handle_head_{handle_cylinder_scales[idx]}".replace(".", "-") + ".urdf"),
                 height=handle_cylinder_scales[idx][0],
                 diameter=handle_cylinder_scales[idx][1],
+                density=handle_cylinder_densities[idx],
             )
             for idx in range(NUM_HEAD_CYLINDERS, NUM_HANDLE_CYLINDERS)
         ]
