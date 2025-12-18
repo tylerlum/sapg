@@ -916,7 +916,7 @@ class AllegroKukaBase(VecTask):
         # Handle
         # #############################
         # 3D printed objects are about 300-400 kg/m^3
-        HANDLE_MIN_DENSITY, HANDLE_MAX_DENSITY = 300, 600
+        HANDLE_MIN_DENSITY, HANDLE_MAX_DENSITY = self.cfg["env"]["handleDensityMin"], self.cfg["env"]["handleDensityMax"]
         # HANDLE_MIN_DENSITY, HANDLE_MAX_DENSITY = 400, 400
 
         # The length of a marker or whiteboard eraser is 0.12m
@@ -955,7 +955,7 @@ class AllegroKukaBase(VecTask):
         # Head
         # #############################
         # Hammer head and mallet are 800-1500 kg/m^3
-        HEAD_MIN_DENSITY, HEAD_MAX_DENSITY = 800, 1500
+        HEAD_MIN_DENSITY, HEAD_MAX_DENSITY = self.cfg["env"]["headDensityMin"], self.cfg["env"]["headDensityMax"]
         # HEAD_MIN_DENSITY, HEAD_MAX_DENSITY = 400, 400
 
         # The length of a screwdriver head is 0.08-0.16m
