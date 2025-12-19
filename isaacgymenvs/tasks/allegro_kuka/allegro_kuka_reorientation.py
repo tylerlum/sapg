@@ -65,6 +65,13 @@ class AllegroKukaReorientation(AllegroKukaBase):
     def _load_additional_assets(self, object_asset_root, arm_pose):
         object_asset_options = gymapi.AssetOptions()
         object_asset_options.disable_gravity = True
+
+        # WARNING: This should not be done if trying to set different densities for different parts of the object, unless handled appropriately in the URDF
+        object_asset_options.collapse_fixed_joints = True
+
+        # This should speed up things and make physics better
+        object_asset_options.replace_cylinder_with_capsule = True
+
         self.goal_assets = []
         for object_asset_file in self.object_asset_files:
             object_asset_dir = os.path.dirname(object_asset_file)
@@ -201,6 +208,10 @@ class AllegroKukaReorientation(AllegroKukaBase):
             self.target_tolerance,
             self.tolerance_curriculum_increment,
         )
+
+        HACK_OVERWRITE_SUCCESS_TOLERANCE = False
+        if HACK_OVERWRITE_SUCCESS_TOLERANCE:
+            self.success_tolerance = 0.03
 
     def _true_objective(self) -> Tensor:
         true_objective = tolerance_successes_objective(

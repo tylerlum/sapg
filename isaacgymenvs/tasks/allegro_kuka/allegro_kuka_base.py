@@ -647,9 +647,9 @@ class AllegroKukaBase(VecTask):
             # Use what was already used before
             pass
 
-        elif object_type == "tyler_cuboid_cylinder":
-            object_asset_files, object_asset_scales, need_vhacds = self._tyler_cuboid_cylinder(
-                str(Path(tmp_assets_dir) / "tyler_cuboid_cylinder"),
+        elif object_type == "tyler_handle_head":
+            object_asset_files, object_asset_scales, need_vhacds = self._tyler_handle_head(
+                str(Path(tmp_assets_dir) / "tyler_handle_head"),
             )
 
         else:
@@ -665,29 +665,30 @@ class AllegroKukaBase(VecTask):
             HAMMER_TRAJECTORY_OBJECTS = set(
                 ["scanned_hammer_1", "scanned_hammer_2", "scanned_hammer_2_coacd", "scanned_hammer_2_coacd2", "YcbHammer", "cuboidal_hammer", "cylindrical_hammer", "cuboidal_hammer_2x", "cylindrical_hammer_2x",]
                 + ["all_hammers", "all_cuboidal_hammers", "all_cylindrical_hammers", "all_cuboidal_and_cylindrical_hammers", "mallet", "cuboidal_mallet"]
+                + ["tyler_handle_head"]
             )
             CUBOID_OBJECTS = set(["cuboid", "blue_cuboid", "blue_cuboid_thick", "blue_cuboid_real_iphone", "blue_cuboid_fake_iphone", "blue_cuboid_real_hammer", "blue_cuboid_fake_hammer", "blue_cuboid_real_screwdriver"])
+            SCREWDRIVER_OBJECTS = set(["real_flat_screwdriver", "044_flat_screwdriver"])
             if object_type in HAMMER_TRAJECTORY_OBJECTS:
                 self.trajectory_states = get_hammer_trajectory(init_state, device=self.device)
             elif object_type in set(["hairbrush", "hairbrush_modified"]):
                 self.trajectory_states = get_hairbrush_trajectory(init_state, device=self.device)
-            elif object_type == "screwdriver":
+            elif object_type in SCREWDRIVER_OBJECTS:
                 self.trajectory_states = get_screwdriver_trajectory(init_state, device=self.device)
             elif object_type == "marker":
                 self.trajectory_states = get_marker_trajectory(init_state, device=self.device)
-            elif object_type == "eraser":
+            elif object_type == "whiteboard_eraser":
                 self.trajectory_states = get_eraser_trajectory(init_state, device=self.device)
-            elif object_type == "phone":
+            elif object_type in ["phone", "iphone15pro"]:
                 self.trajectory_states = get_phone_trajectory(init_state, device=self.device)
             elif object_type in CUBOID_OBJECTS:
                 self.trajectory_states = get_cuboid_trajectory(init_state, device=self.device)
             else:
                 raise ValueError(f"The following object_type does not have a fixed trajectory: {object_type}, cannot use USE_FIXED_SET_OF_GOAL_STATES with this object type")
 
-            SAVE_TO_JSON = False
+            SAVE_TO_JSON = True
             if SAVE_TO_JSON:
                 import json
-                from pathlib import Path
                 output_filepath = Path(f"{object_type}_trajectory.json")
                 print(f"Saving trajectory to {output_filepath}")
 
@@ -712,6 +713,12 @@ class AllegroKukaBase(VecTask):
         for object_asset_file, need_vhacd in zip(self.object_asset_files, self.object_need_vhacds):
             object_asset_options = gymapi.AssetOptions()
             object_asset_options.vhacd_enabled = need_vhacd
+
+            # WARNING: This should not be done if trying to set different densities for different parts of the object, unless handled appropriately in the URDF
+            object_asset_options.collapse_fixed_joints = True
+
+            # This should speed up things and make physics better
+            object_asset_options.replace_cylinder_with_capsule = True
 
             object_asset_dir = os.path.dirname(object_asset_file)
             object_asset_fname = os.path.basename(object_asset_file)
@@ -881,7 +888,7 @@ class AllegroKukaBase(VecTask):
 
         return files, scales
 
-    def _tyler_cuboid_cylinder(self, generated_assets_dir):
+    def _tyler_handle_head(self, generated_assets_dir):
         if not os.path.exists(generated_assets_dir):
             os.makedirs(generated_assets_dir)
 
@@ -893,152 +900,168 @@ class AllegroKukaBase(VecTask):
         except Exception as exc:
             print(f"Exception {exc} while removing older procedurally-generated urdf assets")
 
-        NUM_CUBOIDS = self.cfg["env"]["tyler_num_cuboids"]
-        CUBOID_X_MIN, CUBOID_X_MAX = 0.1, 0.4  # Length
-        CUBOID_Y_MIN, CUBOID_Y_MAX = 0.02, 0.1  # Width
-        CUBOID_Z_MIN, CUBOID_Z_MAX = 0.02, 0.1  # Thickness
-        cuboid_x_lengths = np.random.uniform(CUBOID_X_MIN, CUBOID_X_MAX, size=NUM_CUBOIDS)
-        cuboid_y_lengths = np.random.uniform(CUBOID_Y_MIN, CUBOID_Y_MAX, size=NUM_CUBOIDS)
-        cuboid_z_lengths = np.random.uniform(CUBOID_Z_MIN, CUBOID_Z_MAX, size=NUM_CUBOIDS)
-        cuboid_scales = np.stack([cuboid_x_lengths, cuboid_y_lengths, cuboid_z_lengths], axis=1).tolist()
-        if self.cfg["env"]["tyler_randomize_com"]:
-            CUBOID_COM_X_RANGE = 0.1
-            CUBOID_COM_Y_RANGE = 0.02
-            CUBOID_COM_Z_RANGE = 0.02
-        else:
-            CUBOID_COM_X_RANGE = 0
-            CUBOID_COM_Y_RANGE = 0
-            CUBOID_COM_Z_RANGE = 0
-        cuboid_coms = np.stack([
-            np.random.uniform(-CUBOID_COM_X_RANGE, CUBOID_COM_X_RANGE, size=NUM_CUBOIDS),
-            np.random.uniform(-CUBOID_COM_Y_RANGE, CUBOID_COM_Y_RANGE, size=NUM_CUBOIDS),
-            np.random.uniform(-CUBOID_COM_Z_RANGE, CUBOID_COM_Z_RANGE, size=NUM_CUBOIDS),
-        ], axis=1).tolist()
+        # We are generating "handle_head" objects, which consist of a handle and a head
+        # The handle is either a cuboid or a cylinder
+        # For now, the head is the same type as the handle
+        # The origin of the object is at the center of the handle
+        # To have different densities, we would need to have 2 links each with a different density, but this breaks the current code
+        # An alternative could be to manually compute the mass and inertia rather than using the density field alone
+        # We implement this variable density approach now
 
-        cuboid_files = [
-            self.generate_cuboid_urdf(
-                filepath=join(generated_assets_dir, f"{idx:03d}_cuboid_{x_scale}_{y_scale}_{z_scale}".replace(".", "-") + ".urdf"),
-                x_scale=x_scale,
-                y_scale=y_scale,
-                z_scale=z_scale,
-                com_x=cuboid_coms[idx][0],
-                com_y=cuboid_coms[idx][1],
-                com_z=cuboid_coms[idx][2],
-            )
-            for idx, (x_scale, y_scale, z_scale) in enumerate(cuboid_scales)
-        ]
+        # For the handle, we are currently making them 50% cuboids and 50% cylinders
+        # The x-direction is along the handle
+        # The head is at +x from the handle
+        # There is no relative rotation between the handle and head
 
-        NUM_CYLINDERS = self.cfg["env"]["tyler_num_cylinders"]
-        CYLINDER_HEIGHT_MIN, CYLINDER_HEIGHT_MAX = 0.1, 0.4  # Length
-        CYLINDER_DIAMETER_MIN, CYLINDER_DIAMETER_MAX = 0.02, 0.1  # Diameter
-        cylinder_diameters = np.random.uniform(CYLINDER_DIAMETER_MIN, CYLINDER_DIAMETER_MAX, size=NUM_CYLINDERS)
-        cylinder_heights = np.random.uniform(CYLINDER_HEIGHT_MIN, CYLINDER_HEIGHT_MAX, size=NUM_CYLINDERS)
-        cylinder_scales = np.stack([cylinder_heights, cylinder_diameters, cylinder_diameters], axis=1).tolist()
-        if self.cfg["env"]["tyler_randomize_com"]:
-            CYLINDER_COM_X_RANGE = 0.1
-            CYLINDER_COM_Y_RANGE = 0.02
-            CYLINDER_COM_Z_RANGE = 0.02
-        else:
-            CYLINDER_COM_X_RANGE = 0
-            CYLINDER_COM_Y_RANGE = 0
-            CYLINDER_COM_Z_RANGE = 0
-        cylinder_coms = np.stack([
-            np.random.uniform(-CYLINDER_COM_X_RANGE, CYLINDER_COM_X_RANGE, size=NUM_CYLINDERS),
-            np.random.uniform(-CYLINDER_COM_Y_RANGE, CYLINDER_COM_Y_RANGE, size=NUM_CYLINDERS),
-            np.random.uniform(-CYLINDER_COM_Z_RANGE, CYLINDER_COM_Z_RANGE, size=NUM_CYLINDERS),
-        ], axis=1).tolist()
-        cylinder_files = [
-            self.generate_cylinder_urdf(
-                filepath=join(generated_assets_dir, f"{idx:03d}_cylinder_{height}_{diameter}_{diameter}".replace(".", "-") + ".urdf"),
-                height=height,
-                radius=diameter / 2,
-                com_x=cylinder_coms[idx][0],
-                com_y=cylinder_coms[idx][1],
-                com_z=cylinder_coms[idx][2],
-            )
-            for idx, (height, diameter, _) in enumerate(cylinder_scales)
-        ]
+        # We also will have some number of the objects with no head
+        NUM_HANDLE_CUBOIDS = 500
+        NUM_HANDLE_CYLINDERS = 500
+        NUM_HEAD_CUBOIDS = 500
+        NUM_HEAD_CYLINDERS = 500
 
-        RESCALE_FACTOR = 10  # Rescale to try to stay close to 1.0 in magnitude so roughly 0.1 to 4.0
-        files = cuboid_files + cylinder_files
-        scales = (
-            [(x * RESCALE_FACTOR, y * RESCALE_FACTOR, z * RESCALE_FACTOR) for (x, y, z) in cuboid_scales]
-            + [(x * RESCALE_FACTOR, y * RESCALE_FACTOR, z * RESCALE_FACTOR) for (x, y, z) in cylinder_scales]
+        np.random.seed(42)
+
+        # #############################
+        # Handle
+        # #############################
+        # 3D printed objects are about 300-400 kg/m^3
+        HANDLE_MIN_DENSITY, HANDLE_MAX_DENSITY = self.cfg["env"]["handleDensityMin"], self.cfg["env"]["handleDensityMax"]
+        # HANDLE_MIN_DENSITY, HANDLE_MAX_DENSITY = 400, 400
+
+        # The length of a marker or whiteboard eraser is 0.12m
+        # The length of a screwdriver handle is 0.11-0.13m
+        # The length of the hammer handle is 0.25m
+        # The length of a phone is 0.15m
+        HANDLE_MIN_LEN_X, HANDLE_MAX_LEN_X = 0.1, 0.3  # Length
+
+        # The width of a marker is 0.02m
+        # The width of a whiteboard eraser is 0.05m
+        # The width of a screwdriver handle is 0.03-0.035m
+        # The width of the hammer handle is 0.03m
+        # The width of a phone is 0.075m
+        HANDLE_MIN_LEN_Y, HANDLE_MAX_LEN_Y = 0.02, 0.07  # Width
+
+        # The thickness of a marker is 0.02m
+        # The thickness of a whiteboard eraser is 0.03m
+        # The thickness of a screwdriver handle is 0.03-0.035m
+        # The thickness of the hammer handle is 0.02m
+        # The thickness of a phone is 0.01m
+        HANDLE_MIN_LEN_Z, HANDLE_MAX_LEN_Z = 0.02, 0.05  # Thickness
+
+        handle_cuboid_densities = np.random.uniform(HANDLE_MIN_DENSITY, HANDLE_MAX_DENSITY, size=NUM_HANDLE_CUBOIDS)
+        handle_cylinder_densities = np.random.uniform(HANDLE_MIN_DENSITY, HANDLE_MAX_DENSITY, size=NUM_HANDLE_CYLINDERS)
+
+        handle_cuboid_x_lengths = np.random.uniform(HANDLE_MIN_LEN_X, HANDLE_MAX_LEN_X, size=NUM_HANDLE_CUBOIDS)
+        handle_cuboid_y_lengths = np.random.uniform(HANDLE_MIN_LEN_Y, HANDLE_MAX_LEN_Y, size=NUM_HANDLE_CUBOIDS)
+        handle_cuboid_z_lengths = np.random.uniform(HANDLE_MIN_LEN_Z, HANDLE_MAX_LEN_Z, size=NUM_HANDLE_CUBOIDS)
+        handle_cuboid_scales = np.stack([handle_cuboid_x_lengths, handle_cuboid_y_lengths, handle_cuboid_z_lengths], axis=1).tolist()
+
+        handle_cylinder_heights = np.random.uniform(HANDLE_MIN_LEN_X, HANDLE_MAX_LEN_X, size=NUM_HANDLE_CYLINDERS)
+        handle_cylinder_diameters = np.random.uniform(HANDLE_MIN_LEN_Z, HANDLE_MAX_LEN_Z, size=NUM_HANDLE_CYLINDERS)
+        handle_cylinder_scales = np.stack([handle_cylinder_heights, handle_cylinder_diameters], axis=1).tolist()
+
+        # #############################
+        # Head
+        # #############################
+        # Hammer head and mallet are 800-1500 kg/m^3
+        HEAD_MIN_DENSITY, HEAD_MAX_DENSITY = self.cfg["env"]["headDensityMin"], self.cfg["env"]["headDensityMax"]
+        # HEAD_MIN_DENSITY, HEAD_MAX_DENSITY = 400, 400
+
+        # The length of a screwdriver head is 0.08-0.16m
+        # The length of a hammer head is 0.02m
+        # The length of a mallet head is 0.05m
+        HEAD_MIN_LEN_X, HEAD_MAX_LEN_X = 0.02, 0.16  # Length
+
+        # The width of a screwdriver head is 0.01m
+        # The width of a hammer head is 0.02m
+        # The width of a mallet head is 0.08m
+        HEAD_MIN_LEN_Y, HEAD_MAX_LEN_Y = 0.01, 0.08  # Width
+
+        # The thickness of a screwdriver head is 0.01m
+        # The thickness of a hammer head is 0.02m
+        # The thickness of mallet head is 0.045m
+        HEAD_MIN_LEN_Z, HEAD_MAX_LEN_Z = 0.01, 0.05  # Thickness
+
+        head_cuboid_densities = np.random.uniform(HEAD_MIN_DENSITY, HEAD_MAX_DENSITY, size=NUM_HEAD_CUBOIDS).tolist()
+        head_cylinder_densities = np.random.uniform(HEAD_MIN_DENSITY, HEAD_MAX_DENSITY, size=NUM_HEAD_CYLINDERS).tolist()
+
+        head_cuboid_x_lengths = np.random.uniform(HEAD_MIN_LEN_X, HEAD_MAX_LEN_X, size=NUM_HEAD_CUBOIDS)
+        head_cuboid_y_lengths = np.random.uniform(HEAD_MIN_LEN_Y, HEAD_MAX_LEN_Y, size=NUM_HEAD_CUBOIDS)
+        head_cuboid_z_lengths = np.random.uniform(HEAD_MIN_LEN_Z, HEAD_MAX_LEN_Z, size=NUM_HEAD_CUBOIDS)
+        head_cuboid_scales = np.stack([head_cuboid_x_lengths, head_cuboid_y_lengths, head_cuboid_z_lengths], axis=1).tolist()
+
+        head_cylinder_heights = np.random.uniform(HEAD_MIN_LEN_X, HEAD_MAX_LEN_X, size=NUM_HEAD_CYLINDERS)
+        head_cylinder_diameters = np.random.uniform(HEAD_MIN_LEN_Z, HEAD_MAX_LEN_Z, size=NUM_HEAD_CYLINDERS)
+        head_cylinder_scales = np.stack([head_cylinder_heights, head_cylinder_diameters], axis=1).tolist()
+
+        from isaacgymenvs.tasks.allegro_kuka.generate_objects import (
+            # generate_handle_head_urdf_constant_density,
+            generate_cuboid_urdf_constant_density,
+            generate_cylinder_urdf_constant_density,
+            generate_handle_head_urdf_variable_density,
+            generate_handle_head_urdf_variable_density_2_links,
         )
-        need_vhacds = [False] * len(files)
-        return files, scales, need_vhacds
+        # Create cuboid handles with cuboid heads
+        cuboid_handle_cuboid_head_files = [
+            # generate_handle_head_urdf_variable_density(
+            generate_handle_head_urdf_variable_density_2_links(
+                filepath=Path(generated_assets_dir) / (f"{idx:03d}_handle_head_{handle_cuboid_scales[idx]}_{head_cuboid_scales[idx]}_{handle_cuboid_densities[idx]}_{head_cuboid_densities[idx]}".replace(".", "-") + ".urdf"),
+                handle_scale=handle_cuboid_scales[idx],
+                head_scale=head_cuboid_scales[idx],
+                handle_density=handle_cuboid_densities[idx],
+                head_density=head_cuboid_densities[idx],
+            )
+            for idx in range(NUM_HEAD_CUBOIDS)
+        ]
+        cuboid_handle_no_head_files = [
+            generate_cuboid_urdf_constant_density(
+                filepath=Path(generated_assets_dir) / (f"{idx:03d}_handle_head_{handle_cuboid_scales[idx]}_{handle_cuboid_densities[idx]}".replace(".", "-") + ".urdf"),
+                scale=handle_cuboid_scales[idx],
+                density=handle_cuboid_densities[idx],
+            )
+            for idx in range(NUM_HEAD_CUBOIDS, NUM_HANDLE_CUBOIDS)
+        ]
+        cylinder_handle_cylinder_head_files = [
+            # generate_handle_head_urdf_variable_density(
+            generate_handle_head_urdf_variable_density_2_links(
+                filepath=Path(generated_assets_dir) / (f"{idx:03d}_handle_head_{handle_cylinder_scales[idx]}_{head_cylinder_scales[idx]}_{handle_cylinder_densities[idx]}_{head_cylinder_densities[idx]}".replace(".", "-") + ".urdf"),
+                handle_scale=handle_cylinder_scales[idx],
+                head_scale=head_cylinder_scales[idx],
+                handle_density=handle_cylinder_densities[idx],
+                head_density=head_cylinder_densities[idx],
+            )
+            for idx in range(NUM_HEAD_CYLINDERS)
+        ]
+        cylinder_handle_no_head_files = [
+            generate_cylinder_urdf_constant_density(
+                filepath=Path(generated_assets_dir) / (f"{idx:03d}_handle_head_{handle_cylinder_scales[idx]}_{handle_cylinder_densities[idx]}".replace(".", "-") + ".urdf"),
+                height=handle_cylinder_scales[idx][0],
+                diameter=handle_cylinder_scales[idx][1],
+                density=handle_cylinder_densities[idx],
+            )
+            for idx in range(NUM_HEAD_CYLINDERS, NUM_HANDLE_CYLINDERS)
+        ]
+        all_files = cuboid_handle_cuboid_head_files + cuboid_handle_no_head_files + cylinder_handle_cylinder_head_files + cylinder_handle_no_head_files
+        # NOTE: We distinguish between cuboid and cylinder by scales being either 3 or 2 elements
+        # However, scales here must be 3 elements, so we always make the third element the same as the second element for cylinders
+        all_scales = handle_cuboid_scales + [(x[0], x[1], x[1]) for x in handle_cylinder_scales]
+        assert len(all_files) == len(all_scales), f"Number of files: {len(all_files)}, number of scales: {len(all_scales)}"
+        need_vhacds = [False] * len(all_files)
 
-    @staticmethod
-    def generate_cuboid_urdf(filepath, x_scale, y_scale, z_scale, com_x, com_y, com_z):
-        urdf = f"""<?xml version="1.0"?>
-<robot name="cuboid">
+        # Note, we need to make sure all_scales is rescaled by the base size
+        all_scales = [(x / self.object_base_size, y / self.object_base_size, z / self.object_base_size) for (x, y, z) in all_scales]
 
-  <link name="cuboid">
-    <visual>
-      <origin xyz="0 0 0" rpy="0 0 0"/>
-      <geometry>
-        <box size="{x_scale} {y_scale} {z_scale}"/>
-      </geometry>
-      <material name="brown">
-        <color rgba="0.55 0.27 0.07 1.0"/>
-      </material>
-    </visual>
-    <collision>
-      <origin xyz="0 0 0" rpy="0 0 0"/>
-      <geometry>
-        <box size="{x_scale} {y_scale} {z_scale}"/>
-      </geometry>
-    </collision>
+        # Randomize order
+        indices = list(range(len(all_files)))
+        np.random.shuffle(indices)
+        all_files = [all_files[i] for i in indices]
+        all_scales = [all_scales[i] for i in indices]
+        need_vhacds = [need_vhacds[i] for i in indices]
+        # print(f"Indices: {indices}")
+        # print(f"All files: {all_files}")
+        # print(f"All scales: {all_scales}")
 
-    <inertial>
-      <origin xyz="{com_x} {com_y} {com_z}" rpy="0 0 0"/>
-      <mass value="0.1"/>
-      <inertia ixx="0.0001" iyy="0.0001" izz="0.0001" ixy="0" ixz="0" iyz="0"/>
-    </inertial>
-  </link>
-
-</robot>
-"""
-        with open(filepath, "w") as f:
-            f.write(urdf)
-        print(f"✅ URDF written to {filepath}")
-        return filepath
-
-    @staticmethod
-    def generate_cylinder_urdf(filepath, height, radius, com_x, com_y, com_z):
-        urdf = f"""<?xml version="1.0"?>
-<robot name="cylinder">
-
-  <link name="cylinder">
-    <visual>
-      <origin xyz="0 0 0" rpy="0 -1.5707963267948966 0"/>
-      <geometry>
-        <cylinder radius="{radius}" length="{height}"/>
-      </geometry>
-      <material name="brown">
-        <color rgba="0.55 0.27 0.07 1.0"/>
-      </material>
-    </visual>
-    <collision>
-      <origin xyz="0 0 0" rpy="0 -1.5707963267948966 0"/>
-      <geometry>
-        <cylinder radius="{radius}" length="{height}"/>
-      </geometry>
-    </collision>
-
-    <inertial>
-      <origin xyz="{com_x} {com_y} {com_z}" rpy="0 0 0"/>
-      <mass value="0.1"/>
-      <inertia ixx="0.0001" iyy="0.0001" izz="0.0001" ixy="0" ixz="0" iyz="0"/>
-    </inertial>
-  </link>
-
-</robot>
-"""
-        with open(filepath, "w") as f:
-            f.write(urdf)
-        print(f"✅ URDF written to {filepath}")
-        return filepath
+        return all_files, all_scales, need_vhacds
 
     def _create_envs(self, num_envs, spacing, num_per_row):
         if self.should_load_initial_states:

@@ -116,10 +116,6 @@ env:
   use_hack_object_pos_offset: False
   hack_object_pos_offset: 0.05
 
-  tyler_num_cuboids: 500
-  tyler_num_cylinders: 500
-  tyler_randomize_com: False
-
   record_data: False
   record_data_num_steps: 1000
 
@@ -186,6 +182,11 @@ env:
   forceNoReset: False  # If True, will not reset the environment, useful for sim2sim testing
   objectStartPose: ${eval:"None"}  # If None, will use the default object start pose. Otherwise, a 7-element list of [x, y, z, qx, qy, qz, qw]
   goalObjectPose: ${eval:"None"}  # If None, does nothing. Otherwise, forces the goal object pose to be this value. Must be a 7-element list of [x, y, z, qx, qy, qz, qw]
+
+  handleDensityMin: 300
+  handleDensityMax: 600
+  headDensityMin: 600
+  headDensityMax: 1500
 
   # asset Friction settings
   modifyAssetFrictions: True

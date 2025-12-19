@@ -338,7 +338,7 @@ NAME_TO_OBJECT = {
                 / "assets/urdf/tyler_objects_convex_decomp/whiteboard_eraser"
             ).glob("decomp_*.obj")
         ),
-        scale=rescale((3.0, 0.5, 0.5)),
+        scale=rescale_by_factor((0.12965531, 0.0337145 , 0.06038587), factor=25),
         need_vhacd=True,
     ),
     "phone": Object(
@@ -348,7 +348,13 @@ NAME_TO_OBJECT = {
                 get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/phone"
             ).glob("decomp_*.obj")
         ),
-        scale=rescale((3.0, 0.5, 0.5)),
+        scale=rescale_by_factor((0.22601312, 0.1112792 , 0.01462), factor=25),
+        need_vhacd=True,
+    ),
+    "iphone15pro": Object(
+        filepath=(get_repo_root_dir() / "assets/urdf/tyler_objects/iphone15pro/model.urdf"),
+        coacd_filepaths=None,
+        scale=rescale_by_factor((0.15954332, 0.0777093 , 0.01231273), factor=25),
         need_vhacd=True,
     ),
     "044_flat_screwdriver": Object(
@@ -402,7 +408,7 @@ NAME_TO_OBJECT = {
                 / "assets/urdf/tyler_objects_convex_decomp/real_flat_screwdriver"
             ).glob("decomp_*.obj")
         ),
-        scale=rescale((3.0, 0.5, 0.5)),
+        scale=rescale_by_factor((0.1, 0.03, 0.03), factor=25),
         need_vhacd=True,
     ),
     "mallet": Object(
