@@ -161,8 +161,8 @@ env:
   # goal sampling settings
   goalSamplingType: "absolute" # "absolute" or "delta" or "coin_flip"
   targetVolumeRegionScale: 1.0 # scale the target volume region by this factor
-  deltaGoalDistance: 0.05 # distance to the goal in meters
-  deltaRotationDegrees: 20.0 # rotation of the goal in degrees
+  deltaGoalDistance: 0.1 # distance to the goal in meters
+  deltaRotationDegrees: 90.0 # rotation of the goal in degrees
 
   # Delays and noise
   useObsDelay: False
