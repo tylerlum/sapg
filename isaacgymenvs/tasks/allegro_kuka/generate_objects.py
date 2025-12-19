@@ -267,7 +267,6 @@ def generate_handle_head_urdf_variable_density(
     iyy = (handle_iyy + handle_mass * d_handle**2) + (head_iyy + head_mass * d_head**2)
     izz = (handle_izz + handle_mass * d_handle**2) + (head_izz + head_mass * d_head**2)
 
-
     urdf = f"""<?xml version="1.0"?>
 <robot name="handle_head">
 
@@ -300,6 +299,112 @@ def generate_handle_head_urdf_variable_density(
       <inertia ixx="{ixx}" iyy="{iyy}" izz="{izz}" ixy="0" ixz="0" iyz="0"/>
     </inertial>
   </link>
+
+</robot>
+"""
+    with open(filepath, "w") as f:
+        f.write(urdf)
+    print(f"✅ URDF written to {filepath}")
+    return filepath
+
+
+
+def generate_handle_head_urdf_variable_density_2_links(
+    filepath: Path,
+    handle_scale: Union[Tuple[float, float, float], Tuple[float, float]],
+    head_scale: Union[Tuple[float, float, float], Tuple[float, float]],
+    handle_density: float = 400,
+    head_density: float = 800,
+):
+    if len(handle_scale) == 3:
+        handle_len_x, handle_len_y, handle_len_z = handle_scale
+        handle_text = f"""\
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="{handle_len_x} {handle_len_y} {handle_len_z}"/>
+        </geometry>
+        """
+
+    elif len(handle_scale) == 2:
+        # Default z is along cylinder axis
+        # We rotate so it is along +x
+        handle_height, handle_diameter = handle_scale
+        handle_radius = handle_diameter / 2
+        handle_text = f"""\
+        <origin xyz="0 0 0" rpy="0 -1.5707963267948966 0"/>
+        <geometry>
+          <cylinder length="{handle_height}" radius="{handle_radius}"/>
+        </geometry>
+        """
+    else:
+        raise ValueError(f"Invalid handle scale: {handle_scale}")
+
+    if len(head_scale) == 3:
+        head_len_x, head_len_y, head_len_z = head_scale
+        x_offset = handle_scale[0] / 2 + head_len_x / 2
+        head_text = f"""\
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="{head_len_x} {head_len_y} {head_len_z}"/>
+        </geometry>
+        """
+    elif len(head_scale) == 2:
+        # Default z is along cylinder axis
+        # We rotate so it is along +y
+        head_height, head_diameter = head_scale
+        head_radius = head_diameter / 2
+        x_offset = handle_scale[0] / 2 + head_radius
+
+        head_text = f"""\
+        <origin xyz="0 0 0" rpy="-1.5707963267948966 0 0"/>
+        <geometry>
+          <cylinder length="{head_height}" radius="{head_radius}"/>
+        </geometry>
+        """
+    else:
+        raise ValueError(f"Invalid head scale: {head_scale}")
+
+    urdf = f"""<?xml version="1.0"?>
+<robot name="handle_head">
+
+  <link name="handle">
+    <!-- Handle -->
+    <visual>
+      {handle_text}
+      <material name="brown">
+        <color rgba="0.55 0.27 0.07 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      {handle_text}
+    </collision>
+
+    <inertial>
+      <density value="{handle_density}"/>
+    </inertial>
+  </link>
+
+  <link name="head">
+    <!-- Head -->
+    <visual>
+      {head_text}
+      <material name="gray">
+        <color rgba="0.5 0.5 0.5 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      {head_text}
+    </collision>
+    <inertial>
+      <density value="{head_density}"/>
+    </inertial>
+  </link>
+
+  <joint name="handle_head_joint" type="fixed">
+    <origin xyz="{x_offset} 0 0" rpy="0 0 0"/>
+    <parent link="handle"/>
+    <child link="head"/>
+  </joint>
 
 </robot>
 """
