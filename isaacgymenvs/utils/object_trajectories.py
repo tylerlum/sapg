@@ -321,7 +321,7 @@ def get_phone_trajectory(object_init_state, device="cuda"):
     reduce_y_again_again_state[1] += 0.05
 
     trajectory_states = [
-        # pick_up_state,
+        pick_up_state,
         rotate_90_again_state,
         reduce_y_state,
         reduce_y_again_state,

@@ -174,7 +174,7 @@ NAME_TO_OBJECT = {
                 get_repo_root_dir() / "assets/urdf/tyler_objects_convex_decomp/hammer_2"
             ).glob("decomp_*.obj")
         ),
-        scale=rescale((3.0, 0.25, 0.2)),
+        scale=rescale_by_factor((0.25, 0.03, 0.02), factor=25),
         need_vhacd=True,
     ),
     "scanned_hammer_2_coacd": Object(
@@ -324,7 +324,7 @@ NAME_TO_OBJECT = {
                 / "assets/urdf/tyler_objects_convex_decomp/040_large_marker"
             ).glob("decomp_*.obj")
         ),
-        scale=rescale((3.0, 0.5, 0.5)),
+        scale=rescale_by_factor((0.121277, 0.019341, 0.021183), factor=25),
         need_vhacd=True,
     ),
     "whiteboard_eraser": Object(
