@@ -9,8 +9,8 @@ import viser
 from scipy.spatial.transform import Rotation as R
 
 # Constants
-AXES_LENGTH = 0.1
-AXES_RADIUS = 0.01
+AXES_LENGTH = 0.0
+AXES_RADIUS = 0.0
 
 
 def xyzw_to_wxyz(xyzw: np.ndarray) -> np.ndarray:
@@ -30,7 +30,8 @@ def viser_visualize_cuboids_interactive(scales: np.ndarray):
     assert N > 0, f"Expected N to be greater than 0, got {N}"
     assert D == 3, f"Expected D to be 3, got {D}"
 
-    BOX_SCALE = 0.05
+    # BOX_SCALE = 0.05
+    BOX_SCALE = 0.04
     box_scales = scales * BOX_SCALE
 
     # #########################################################
