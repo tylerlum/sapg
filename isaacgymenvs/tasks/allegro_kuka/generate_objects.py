@@ -277,8 +277,8 @@ def compute_mass_and_inertia(scale: Union[Tuple[float, float, float], Tuple[floa
         izz = (1/12) * m * (lx**2 + ly**2)
     elif len(scale) == 2:
         from typing import Literal
-        # MODE: Literal["cylinder", "capsule"] = "capsule"
-        MODE: Literal["cylinder", "capsule"] = "cylinder"
+        MODE: Literal["cylinder", "capsule"] = "capsule"
+        # MODE: Literal["cylinder", "capsule"] = "cylinder"
         if MODE == "cylinder":
             h, d = scale[0], scale[1]
             r = d / 2
@@ -379,6 +379,7 @@ def generate_handle_head_urdf_variable_density(
         </geometry>
         """
         head_mass, head_ixx, head_iyy, head_izz = compute_mass_and_inertia(scale=head_scale, density=head_density)
+
     elif len(head_scale) == 2:
         # Default z is along cylinder axis
         # We rotate so it is along +y
@@ -409,6 +410,29 @@ def generate_handle_head_urdf_variable_density(
     ixx = handle_ixx + head_ixx
     iyy = (handle_iyy + handle_mass * d_handle**2) + (head_iyy + head_mass * d_head**2)
     izz = (handle_izz + handle_mass * d_handle**2) + (head_izz + head_mass * d_head**2)
+
+    DEBUG_PRINT = False
+    if DEBUG_PRINT:
+      print(f"handle_scale: {handle_scale}")
+      print(f"handle_density: {handle_density}")
+      print(f"handle_mass: {handle_mass}")
+      print(f"handle_ixx: {handle_ixx}")
+      print(f"handle_iyy: {handle_iyy}")
+      print(f"handle_izz: {handle_izz}")
+      print(f"head_scale: {head_scale}")
+      print(f"head_density: {head_density}")
+      print(f"head_mass: {head_mass}")
+      print(f"head_ixx: {head_ixx}")
+      print(f"head_iyy: {head_iyy}")
+      print(f"head_izz: {head_izz}")
+      print(f"total_mass: {total_mass}")
+      print(f"com_x: {com_x}")
+      print(f"d_handle: {d_handle}")
+      print(f"d_head: {d_head}")
+      print(f"ixx: {ixx}")
+      print(f"iyy: {iyy}")
+      print(f"izz: {izz}")
+      breakpoint()
 
     urdf = f"""<?xml version="1.0"?>
 <robot name="handle_head">

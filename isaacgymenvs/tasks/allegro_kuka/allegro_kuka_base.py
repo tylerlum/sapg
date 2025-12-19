@@ -719,8 +719,8 @@ class AllegroKukaBase(VecTask):
 
             # This should speed up things and make physics better
             # But self-collision may be an issue
-            # object_asset_options.replace_cylinder_with_capsule = True
-            object_asset_options.replace_cylinder_with_capsule = False
+            object_asset_options.replace_cylinder_with_capsule = True
+            # object_asset_options.replace_cylinder_with_capsule = False
 
             object_asset_dir = os.path.dirname(object_asset_file)
             object_asset_fname = os.path.basename(object_asset_file)
@@ -903,14 +903,12 @@ class AllegroKukaBase(VecTask):
             print(f"Exception {exc} while removing older procedurally-generated urdf assets")
 
         # We are generating "handle_head" objects, which consist of a handle and a head
-        # The handle is either a cuboid or a cylinder
-        # For now, the head is the same type as the handle
+        # The handle and head are either a cuboid or a cylinder
         # The origin of the object is at the center of the handle
         # To have different densities, we would need to have 2 links each with a different density, but this breaks the current code
         # An alternative could be to manually compute the mass and inertia rather than using the density field alone
         # We implement this variable density approach now
 
-        # For the handle, we are currently making them 50% cuboids and 50% cylinders
         # The x-direction is along the handle
         # The head is at +x from the handle
         # There is no relative rotation between the handle and head
@@ -982,15 +980,21 @@ class AllegroKukaBase(VecTask):
         all_scales = [(x / self.object_base_size, y / self.object_base_size, z / self.object_base_size) for (x, y, z) in all_scales]
 
         # Randomize order
-        indices = list(range(len(all_files)))
-        np.random.shuffle(indices)
-        all_files = [all_files[i] for i in indices]
-        all_scales = [all_scales[i] for i in indices]
-        need_vhacds = [need_vhacds[i] for i in indices]
+        RANDOMIZE_ORDER = True
+        if RANDOMIZE_ORDER:
+            indices = list(range(len(all_files)))
+            np.random.shuffle(indices)
+            all_files = [all_files[i] for i in indices]
+            all_scales = [all_scales[i] for i in indices]
+            need_vhacds = [need_vhacds[i] for i in indices]
 
-        # print(f"Indices: {indices}")
-        # print(f"All files: {all_files}")
-        # print(f"All scales: {all_scales}")
+        DEBUG_PRINT = False
+        if DEBUG_PRINT:
+            print(f"all_files[0]: {all_files[0]}")
+            print(f"all_scales[0]: {all_scales[0]}")
+            print(f"need_vhacds[0]: {need_vhacds[0]}")
+            # print(f"All files: {all_files}")
+            # print(f"All scales: {all_scales}")
 
         return all_files, all_scales, need_vhacds
 
@@ -1295,19 +1299,20 @@ class AllegroKukaBase(VecTask):
             self.objects.append(object_handle)
 
         # Default false because this is slow
-        DEBUG_PRINT_OBJECT_MASS_AND_INERTIA = False
+        DEBUG_PRINT_OBJECT_MASS_AND_INERTIA_AND_COM = False
         # Get mass and inertia of object
-        if DEBUG_PRINT_OBJECT_MASS_AND_INERTIA:
-            original_masses, original_inertias = self._get_original_object_masses_and_inertias()
+        if DEBUG_PRINT_OBJECT_MASS_AND_INERTIA_AND_COM:
+            original_masses, original_inertias, original_coms = self._get_original_object_masses_and_inertias_and_coms()
             print(f"Original masses: {original_masses[0]}")
             print(f"Original inertias: {original_inertias[0]}")
+            print(f"Original coms: {original_coms[0]}")
             breakpoint()
 
         # Set mass and inertia of object
         MODIFY_OBJECT_MASS_AND_INERTIA = False
         if MODIFY_OBJECT_MASS_AND_INERTIA:
             # Get mass and inertia of object
-            original_masses, original_inertias = self._get_original_object_masses_and_inertias()
+            original_masses, original_inertias, original_coms = self._get_original_object_masses_and_inertias_and_coms()
             print(f"Original masses: {original_masses[0]}")
             print(f"Original inertias: {original_inertias[0]}")
 
@@ -1363,17 +1368,19 @@ class AllegroKukaBase(VecTask):
         except Exception:
             pass
 
-    def _get_original_object_masses_and_inertias(self) -> Tuple[List[float], List[Tuple[float, float, float]]]:
-        original_masses, original_inertias = [], []
+    def _get_original_object_masses_and_inertias_and_coms(self) -> Tuple[List[float], List[Tuple[float, float, float]], List[Tuple[float, float, float]]]:
+        original_masses, original_inertias, original_coms = [], [], []
         for env, object in zip(self.envs, self.objects):
             object_rb_props = self.gym.get_actor_rigid_body_properties(env, object)
             assert len(object_rb_props) == 1, f"Expected 1 rigid body, got {len(object_rb_props)}"
             object_rb_prop = object_rb_props[0]
             original_mass = object_rb_prop.mass
             original_inertia = (object_rb_prop.inertia.x.x, object_rb_prop.inertia.y.y, object_rb_prop.inertia.z.z)
+            original_com = (object_rb_prop.com.x, object_rb_prop.com.y, object_rb_prop.com.z)
             original_masses.append(original_mass)
             original_inertias.append(original_inertia)
-        return original_masses, original_inertias
+            original_coms.append(original_com)
+        return original_masses, original_inertias, original_coms
 
     def _set_actor_color(self, env, actor, color: Tuple[float, float, float]) -> None:
         for rigid_body_idx in range(self.gym.get_actor_rigid_body_count(env, actor)):

@@ -71,8 +71,8 @@ class AllegroKukaReorientation(AllegroKukaBase):
 
         # This should speed up things and make physics better
         # But self-collision may be an issue
-        # object_asset_options.replace_cylinder_with_capsule = True
-        object_asset_options.replace_cylinder_with_capsule = False
+        object_asset_options.replace_cylinder_with_capsule = True
+        # object_asset_options.replace_cylinder_with_capsule = False
 
         self.goal_assets = []
         for object_asset_file in self.object_asset_files:
