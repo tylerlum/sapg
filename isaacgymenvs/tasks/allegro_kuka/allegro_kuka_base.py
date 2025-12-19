@@ -668,24 +668,25 @@ class AllegroKukaBase(VecTask):
                 + ["tyler_handle_head"]
             )
             CUBOID_OBJECTS = set(["cuboid", "blue_cuboid", "blue_cuboid_thick", "blue_cuboid_real_iphone", "blue_cuboid_fake_iphone", "blue_cuboid_real_hammer", "blue_cuboid_fake_hammer", "blue_cuboid_real_screwdriver"])
+            SCREWDRIVER_OBJECTS = set(["real_flat_screwdriver", "044_flat_screwdriver"])
             if object_type in HAMMER_TRAJECTORY_OBJECTS:
                 self.trajectory_states = get_hammer_trajectory(init_state, device=self.device)
             elif object_type in set(["hairbrush", "hairbrush_modified"]):
                 self.trajectory_states = get_hairbrush_trajectory(init_state, device=self.device)
-            elif object_type == "screwdriver":
+            elif object_type in SCREWDRIVER_OBJECTS:
                 self.trajectory_states = get_screwdriver_trajectory(init_state, device=self.device)
             elif object_type == "marker":
                 self.trajectory_states = get_marker_trajectory(init_state, device=self.device)
-            elif object_type == "eraser":
+            elif object_type == "whiteboard_eraser":
                 self.trajectory_states = get_eraser_trajectory(init_state, device=self.device)
-            elif object_type == "phone":
+            elif object_type in ["phone", "iphone15pro"]:
                 self.trajectory_states = get_phone_trajectory(init_state, device=self.device)
             elif object_type in CUBOID_OBJECTS:
                 self.trajectory_states = get_cuboid_trajectory(init_state, device=self.device)
             else:
                 raise ValueError(f"The following object_type does not have a fixed trajectory: {object_type}, cannot use USE_FIXED_SET_OF_GOAL_STATES with this object type")
 
-            SAVE_TO_JSON = False
+            SAVE_TO_JSON = True
             if SAVE_TO_JSON:
                 import json
                 output_filepath = Path(f"{object_type}_trajectory.json")
@@ -712,6 +713,7 @@ class AllegroKukaBase(VecTask):
         for object_asset_file, need_vhacd in zip(self.object_asset_files, self.object_need_vhacds):
             object_asset_options = gymapi.AssetOptions()
             object_asset_options.vhacd_enabled = need_vhacd
+            # object_asset_options.collapse_fixed_joints = True
 
             object_asset_dir = os.path.dirname(object_asset_file)
             object_asset_fname = os.path.basename(object_asset_file)
@@ -909,8 +911,10 @@ class AllegroKukaBase(VecTask):
         # We also will have some number of the objects with no head
         NUM_HANDLE_CUBOIDS = 500
         NUM_HANDLE_CYLINDERS = 500
-        NUM_HEAD_CUBOIDS = 400
-        NUM_HEAD_CYLINDERS = 400
+        NUM_HEAD_CUBOIDS = 500
+        NUM_HEAD_CYLINDERS = 500
+
+        np.random.seed(42)
 
         # #############################
         # Handle
@@ -990,10 +994,12 @@ class AllegroKukaBase(VecTask):
             generate_cuboid_urdf_constant_density,
             generate_cylinder_urdf_constant_density,
             generate_handle_head_urdf_variable_density,
+            generate_handle_head_urdf_variable_density_2_links,
         )
         # Create cuboid handles with cuboid heads
         cuboid_handle_cuboid_head_files = [
-            generate_handle_head_urdf_variable_density(
+            # generate_handle_head_urdf_variable_density(
+            generate_handle_head_urdf_variable_density_2_links(
                 filepath=Path(generated_assets_dir) / (f"{idx:03d}_handle_head_{handle_cuboid_scales[idx]}_{head_cuboid_scales[idx]}_{handle_cuboid_densities[idx]}_{head_cuboid_densities[idx]}".replace(".", "-") + ".urdf"),
                 handle_scale=handle_cuboid_scales[idx],
                 head_scale=head_cuboid_scales[idx],
@@ -1004,15 +1010,15 @@ class AllegroKukaBase(VecTask):
         ]
         cuboid_handle_no_head_files = [
             generate_cuboid_urdf_constant_density(
-                filepath=Path(generated_assets_dir) / (f"{idx:03d}_handle_head_{handle_cuboid_scales[idx]}".replace(".", "-") + ".urdf"),
+                filepath=Path(generated_assets_dir) / (f"{idx:03d}_handle_head_{handle_cuboid_scales[idx]}_{handle_cuboid_densities[idx]}".replace(".", "-") + ".urdf"),
                 scale=handle_cuboid_scales[idx],
                 density=handle_cuboid_densities[idx],
             )
             for idx in range(NUM_HEAD_CUBOIDS, NUM_HANDLE_CUBOIDS)
         ]
         cylinder_handle_cylinder_head_files = [
-            generate_handle_head_urdf_variable_density(
-                filepath=Path(generated_assets_dir) / (f"{idx:03d}_handle_head_{handle_cylinder_scales[idx]}_{head_cylinder_scales[idx]}".replace(".", "-") + ".urdf"),
+            generate_handle_head_urdf_variable_density_2_links(
+                filepath=Path(generated_assets_dir) / (f"{idx:03d}_handle_head_{handle_cylinder_scales[idx]}_{head_cylinder_scales[idx]}_{handle_cylinder_densities[idx]}_{head_cylinder_densities[idx]}".replace(".", "-") + ".urdf"),
                 handle_scale=handle_cylinder_scales[idx],
                 head_scale=head_cylinder_scales[idx],
                 handle_density=handle_cylinder_densities[idx],
@@ -1022,7 +1028,7 @@ class AllegroKukaBase(VecTask):
         ]
         cylinder_handle_no_head_files = [
             generate_cylinder_urdf_constant_density(
-                filepath=Path(generated_assets_dir) / (f"{idx:03d}_handle_head_{handle_cylinder_scales[idx]}".replace(".", "-") + ".urdf"),
+                filepath=Path(generated_assets_dir) / (f"{idx:03d}_handle_head_{handle_cylinder_scales[idx]}_{handle_cylinder_densities[idx]}".replace(".", "-") + ".urdf"),
                 height=handle_cylinder_scales[idx][0],
                 diameter=handle_cylinder_scales[idx][1],
                 density=handle_cylinder_densities[idx],
@@ -1046,6 +1052,8 @@ class AllegroKukaBase(VecTask):
         all_files = [all_files[i] for i in indices]
         all_scales = [all_scales[i] for i in indices]
         need_vhacds = [need_vhacds[i] for i in indices]
+        print(f"All files: {all_files}")
+        print(f"All scales: {all_scales}")
 
         return all_files, all_scales, need_vhacds
 
@@ -1332,7 +1340,7 @@ class AllegroKukaBase(VecTask):
             self.objects.append(object_handle)
 
         # Default false because this is slow
-        DEBUG_PRINT_OBJECT_MASS_AND_INERTIA = False
+        DEBUG_PRINT_OBJECT_MASS_AND_INERTIA = True
         # Get mass and inertia of object
         if DEBUG_PRINT_OBJECT_MASS_AND_INERTIA:
             original_masses, original_inertias = self._get_original_object_masses_and_inertias()
@@ -1401,8 +1409,11 @@ class AllegroKukaBase(VecTask):
         original_masses, original_inertias = [], []
         for env, object in zip(self.envs, self.objects):
             object_rb_props = self.gym.get_actor_rigid_body_properties(env, object)
-            assert len(object_rb_props) == 1, f"Expected 1 rigid body, got {len(object_rb_props)}"
+            assert len(object_rb_props) in [1, 2], f"Expected 1 or 2 rigid bodies, got {len(object_rb_props)}"
             object_rb_prop = object_rb_props[0]
+            total_mass = sum(prop.mass for prop in object_rb_props)
+            print(f"Total mass: {total_mass}")
+            breakpoint()
             original_mass = object_rb_prop.mass
             original_inertia = (object_rb_prop.inertia.x.x, object_rb_prop.inertia.y.y, object_rb_prop.inertia.z.z)
             original_masses.append(original_mass)

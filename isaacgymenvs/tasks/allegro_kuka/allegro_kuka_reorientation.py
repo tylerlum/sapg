@@ -195,6 +195,10 @@ class AllegroKukaReorientation(AllegroKukaBase):
             self.tolerance_curriculum_increment,
         )
 
+        HACK_OVERWRITE_SUCCESS_TOLERANCE = False
+        if HACK_OVERWRITE_SUCCESS_TOLERANCE:
+            self.success_tolerance = 0.03
+
     def _true_objective(self) -> Tensor:
         true_objective = tolerance_successes_objective(
             self.success_tolerance, self.initial_tolerance, self.target_tolerance, self.successes
