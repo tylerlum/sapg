@@ -675,7 +675,7 @@ class AllegroKukaBase(VecTask):
                 self.trajectory_states = get_hairbrush_trajectory(init_state, device=self.device)
             elif object_type in SCREWDRIVER_OBJECTS:
                 self.trajectory_states = get_screwdriver_trajectory(init_state, device=self.device)
-            elif object_type == "marker":
+            elif object_type == "040_large_marker":
                 self.trajectory_states = get_marker_trajectory(init_state, device=self.device)
             elif object_type == "whiteboard_eraser":
                 self.trajectory_states = get_eraser_trajectory(init_state, device=self.device)
