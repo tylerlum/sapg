@@ -65,6 +65,9 @@ class AllegroKukaReorientation(AllegroKukaBase):
     def _load_additional_assets(self, object_asset_root, arm_pose):
         object_asset_options = gymapi.AssetOptions()
         object_asset_options.disable_gravity = True
+        # This should speed up things and make physics better
+        object_asset_options.replace_cylinder_with_capsule = True
+
         self.goal_assets = []
         for object_asset_file in self.object_asset_files:
             object_asset_dir = os.path.dirname(object_asset_file)
