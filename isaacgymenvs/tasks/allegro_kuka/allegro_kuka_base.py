@@ -718,7 +718,9 @@ class AllegroKukaBase(VecTask):
             object_asset_options.collapse_fixed_joints = True
 
             # This should speed up things and make physics better
-            object_asset_options.replace_cylinder_with_capsule = True
+            # But self-collision may be an issue
+            # object_asset_options.replace_cylinder_with_capsule = True
+            object_asset_options.replace_cylinder_with_capsule = False
 
             object_asset_dir = os.path.dirname(object_asset_file)
             object_asset_fname = os.path.basename(object_asset_file)

@@ -277,7 +277,8 @@ def compute_mass_and_inertia(scale: Union[Tuple[float, float, float], Tuple[floa
         izz = (1/12) * m * (lx**2 + ly**2)
     elif len(scale) == 2:
         from typing import Literal
-        MODE: Literal["cylinder", "capsule"] = "capsule"
+        # MODE: Literal["cylinder", "capsule"] = "capsule"
+        MODE: Literal["cylinder", "capsule"] = "cylinder"
         if MODE == "cylinder":
             h, d = scale[0], scale[1]
             r = d / 2
