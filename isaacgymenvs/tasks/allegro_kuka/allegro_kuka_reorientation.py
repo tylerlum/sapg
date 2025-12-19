@@ -65,6 +65,10 @@ class AllegroKukaReorientation(AllegroKukaBase):
     def _load_additional_assets(self, object_asset_root, arm_pose):
         object_asset_options = gymapi.AssetOptions()
         object_asset_options.disable_gravity = True
+
+        # WARNING: This should not be done if trying to set different densities for different parts of the object, unless handled appropriately in the URDF
+        object_asset_options.collapse_fixed_joints = True
+
         # This should speed up things and make physics better
         object_asset_options.replace_cylinder_with_capsule = True
 

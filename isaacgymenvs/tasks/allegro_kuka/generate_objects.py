@@ -182,16 +182,38 @@ def compute_mass_and_inertia(scale: Union[Tuple[float, float, float], Tuple[floa
         iyy = (1/12) * m * (lx**2 + lz**2)
         izz = (1/12) * m * (lx**2 + ly**2)
     elif len(scale) == 2:
-        h, d = scale[0], scale[1]
-        r = d / 2
-        v = math.pi * (r**2) * h
-        m = v * density
-        izz = 0.5 * m * (r**2)
-        iyy = (1/12) * m * (3*r**2 + h**2)
-        ixx = iyy
+        from typing import Literal
+        MODE: Literal["cylinder", "capsule"] = "capsule"
+        if MODE == "cylinder":
+            h, d = scale[0], scale[1]
+            r = d / 2
+            v = math.pi * (r**2) * h
+            m = v * density
+            izz = 0.5 * m * (r**2)
+            iyy = (1/12) * m * (3*r**2 + h**2)
+            ixx = iyy
+        elif MODE == "capsule":
+            h, d = scale[0], scale[1]  # h = cylindrical height (excluding hemispheres), d = diameter
+            r = d / 2
+
+            # Volume: cylinder + 2 hemispheres (which is one full sphere)
+            cylinder_v = math.pi * r**2 * h
+            sphere_v = (4/3) * math.pi * r**3
+            v = cylinder_v + sphere_v
+
+            # Mass
+            m = v * density
+
+            # Inertia
+            # Approximate formulas for capsule along main axis (z) and perpendicular axes (x, y)
+            izz = 0.5 * m * r**2  # around symmetry axis
+            ixx = iyy = (1/12) * m * (3*r**2 + h**2 + (8/5)*r**2)  # add sphere contribution
+        else:
+            raise ValueError(f"Invalid mode: {MODE}")
     else:
         raise ValueError(f"Invalid scale: {scale}")
     return m, ixx, iyy, izz
+
 
 def generate_handle_head_urdf_variable_density(
     filepath: Path,
@@ -319,11 +341,12 @@ def generate_handle_head_urdf_variable_density_2_links(
     if len(handle_scale) == 3:
         handle_len_x, handle_len_y, handle_len_z = handle_scale
         handle_text = f"""\
-        <origin xyz="0 0 0" rpy="0 0 0"/>
         <geometry>
           <box size="{handle_len_x} {handle_len_y} {handle_len_z}"/>
         </geometry>
         """
+        handle_mass, handle_ixx, handle_iyy, handle_izz = compute_mass_and_inertia(scale=handle_scale, density=handle_density)
+        handle_rpy = "0 0 0"
 
     elif len(handle_scale) == 2:
         # Default z is along cylinder axis
@@ -331,11 +354,12 @@ def generate_handle_head_urdf_variable_density_2_links(
         handle_height, handle_diameter = handle_scale
         handle_radius = handle_diameter / 2
         handle_text = f"""\
-        <origin xyz="0 0 0" rpy="0 -1.5707963267948966 0"/>
         <geometry>
           <cylinder length="{handle_height}" radius="{handle_radius}"/>
         </geometry>
         """
+        handle_mass, handle_izz, handle_iyy, handle_ixx = compute_mass_and_inertia(scale=handle_scale, density=handle_density)
+        handle_rpy = "0 -1.5707963267948966 0"
     else:
         raise ValueError(f"Invalid handle scale: {handle_scale}")
 
@@ -343,11 +367,12 @@ def generate_handle_head_urdf_variable_density_2_links(
         head_len_x, head_len_y, head_len_z = head_scale
         x_offset = handle_scale[0] / 2 + head_len_x / 2
         head_text = f"""\
-        <origin xyz="0 0 0" rpy="0 0 0"/>
         <geometry>
           <box size="{head_len_x} {head_len_y} {head_len_z}"/>
         </geometry>
         """
+        head_mass, head_ixx, head_iyy, head_izz = compute_mass_and_inertia(scale=head_scale, density=head_density)
+        head_rpy = "0 0 0"
     elif len(head_scale) == 2:
         # Default z is along cylinder axis
         # We rotate so it is along +y
@@ -356,13 +381,16 @@ def generate_handle_head_urdf_variable_density_2_links(
         x_offset = handle_scale[0] / 2 + head_radius
 
         head_text = f"""\
-        <origin xyz="0 0 0" rpy="-1.5707963267948966 0 0"/>
         <geometry>
           <cylinder length="{head_height}" radius="{head_radius}"/>
         </geometry>
         """
+        head_mass, head_izz, head_iyy, head_iyy = compute_mass_and_inertia(scale=head_scale, density=head_density)
+        head_rpy = "-1.5707963267948966 0 0"
     else:
         raise ValueError(f"Invalid head scale: {head_scale}")
+
+    # Setting two densities doesn't work
 
     urdf = f"""<?xml version="1.0"?>
 <robot name="handle_head">
@@ -370,33 +398,41 @@ def generate_handle_head_urdf_variable_density_2_links(
   <link name="handle">
     <!-- Handle -->
     <visual>
+      <origin xyz="0 0 0" rpy="{handle_rpy}"/>
       {handle_text}
       <material name="brown">
         <color rgba="0.55 0.27 0.07 1.0"/>
       </material>
     </visual>
     <collision>
+      <origin xyz="0 0 0" rpy="{handle_rpy}"/>
       {handle_text}
     </collision>
 
     <inertial>
-      <density value="{handle_density}"/>
+      <origin xyz="0 0 0" rpy="{handle_rpy}"/>
+      <mass value="{handle_mass}"/>
+      <inertia ixx="{handle_ixx}" iyy="{handle_iyy}" izz="{handle_izz}" ixy="0" ixz="0" iyz="0"/>
     </inertial>
   </link>
 
   <link name="head">
     <!-- Head -->
     <visual>
+      <origin xyz="0 0 0" rpy="{head_rpy}"/>
       {head_text}
       <material name="gray">
         <color rgba="0.5 0.5 0.5 1.0"/>
       </material>
     </visual>
     <collision>
+      <origin xyz="0 0 0" rpy="{head_rpy}"/>
       {head_text}
     </collision>
     <inertial>
-      <density value="{head_density}"/>
+      <origin xyz="0 0 0" rpy="{head_rpy}"/>
+      <mass value="{head_mass}"/>
+      <inertia ixx="{head_ixx}" iyy="{head_iyy}" izz="{head_izz}" ixy="0" ixz="0" iyz="0"/>
     </inertial>
   </link>
 
@@ -412,3 +448,81 @@ def generate_handle_head_urdf_variable_density_2_links(
         f.write(urdf)
     print(f"✅ URDF written to {filepath}")
     return filepath
+
+
+# def generate_handle_head_urdf_variable_density_2_links_new(
+#     filepath: Path,
+#     handle_scale: Union[Tuple[float, float, float], Tuple[float, float]],
+#     head_scale: Union[Tuple[float, float, float], Tuple[float, float]],
+#     handle_density: float = 400,
+#     head_density: float = 800,
+# ):
+#     handle_mass, handle_ixx, handle_iyy, handle_izz = compute_mass_and_inertia(scale=handle_scale, density=handle_density)
+#     head_mass, head_ixx, head_iyy, head_izz = compute_mass_and_inertia(scale=head_scale, density=head_density)
+# 
+#     if len(handle_scale) == 3:
+#         handle_rpy = "0 0 0"
+#     elif len(handle_scale) == 2:
+#         handle_rpy = "0 -1.5707963267948966 0"
+#     else:
+#         raise ValueError(f"Invalid handle scale: {handle_scale}")
+# 
+#     if len(head_scale) == 3:
+#         x_offset = handle_scale[0] / 2 + head_scale[0] / 2
+#     elif len(head_scale) == 2:
+#         x_offset = handle_scale[0] / 2 + head_scale[1] / 2
+#     else:
+#         raise ValueError(f"Invalid head scale: {head_scale}")
+# 
+#     urdf = f"""<?xml version="1.0"?>
+# <robot name="handle_head">
+# 
+#   <link name="handle">
+#     <visual>
+#       <origin xyz="0 0 0" rpy="{handle_rpy}"/>
+#       <geometry>
+#         <box size="{handle_scale[0]} {handle_scale[1]} {handle_scale[2]}"/>
+#       </geometry>
+#     </visual>
+#     <collision>
+#       <origin xyz="0 0 0" rpy="{handle_rpy}"/>
+#       <geometry>
+#         <box size="{handle_scale[0]} {handle_scale[1]} {handle_scale[2]}"/>
+#       </geometry>
+#     </collision>
+#     <inertial>
+#       <mass value="{handle_mass}"/>
+#       <inertia ixx="{handle_ixx}" iyy="{handle_iyy}" izz="{handle_izz}" ixy="0" ixz="0" iyz="0"/>
+#     </inertial>
+#   </link>
+# 
+#   <link name="head">
+#     <visual>
+#       <origin xyz="{x_offset} 0 0" rpy="0 0 0"/>
+#       <geometry>
+#         <box size="{head_scale[0]} {head_scale[1]} {head_scale[2]}"/>
+#       </geometry>
+#     </visual>
+#     <collision>
+#       <origin xyz="{x_offset} 0 0" rpy="0 0 0"/>
+#       <geometry>
+#         <box size="{head_scale[0]} {head_scale[1]} {head_scale[2]}"/>
+#       </geometry>
+#     </collision>
+#     <inertial>
+#       <mass value="{head_mass}"/>
+#       <inertia ixx="{head_ixx}" iyy="{head_iyy}" izz="{head_izz}" ixy="0" ixz="0" iyz="0"/>
+#     </inertial>
+#   </link>
+# 
+#   <joint name="handle_head_joint" type="fixed">
+#     <origin xyz="{x_offset} 0 0" rpy="0 0 0"/>
+#     <parent link="handle"/>
+#     <child link="head"/>
+#   </joint>
+# </robot>
+# """
+#     with open(filepath, "w") as f:
+#         f.write(urdf)
+#     print(f"✅ URDF written to {filepath}")
+#     return filepath

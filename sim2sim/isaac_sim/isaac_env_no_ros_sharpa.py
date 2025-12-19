@@ -106,7 +106,7 @@ def main():
             "task.env.use_fixed_set_of_goal_states": True,
             "task.env.forceScale": 0.0,
             # "task.env.dofSpeedScale": 10.0,
-            "task.env.numEnvs": 1,
+            "task.env.numEnvs": 100,
             "task.env.envSpacing": 0.4,
             # "task.env.useObsDelay": True,
             # "task.env.obsDelayMax": 3,

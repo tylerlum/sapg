@@ -713,7 +713,9 @@ class AllegroKukaBase(VecTask):
         for object_asset_file, need_vhacd in zip(self.object_asset_files, self.object_need_vhacds):
             object_asset_options = gymapi.AssetOptions()
             object_asset_options.vhacd_enabled = need_vhacd
-            # object_asset_options.collapse_fixed_joints = True
+
+            # WARNING: This should not be done if trying to set different densities for different parts of the object, unless handled appropriately in the URDF
+            object_asset_options.collapse_fixed_joints = True
 
             # This should speed up things and make physics better
             object_asset_options.replace_cylinder_with_capsule = True
@@ -1020,6 +1022,7 @@ class AllegroKukaBase(VecTask):
             for idx in range(NUM_HEAD_CUBOIDS, NUM_HANDLE_CUBOIDS)
         ]
         cylinder_handle_cylinder_head_files = [
+            # generate_handle_head_urdf_variable_density(
             generate_handle_head_urdf_variable_density_2_links(
                 filepath=Path(generated_assets_dir) / (f"{idx:03d}_handle_head_{handle_cylinder_scales[idx]}_{head_cylinder_scales[idx]}_{handle_cylinder_densities[idx]}_{head_cylinder_densities[idx]}".replace(".", "-") + ".urdf"),
                 handle_scale=handle_cylinder_scales[idx],
@@ -1343,7 +1346,7 @@ class AllegroKukaBase(VecTask):
             self.objects.append(object_handle)
 
         # Default false because this is slow
-        DEBUG_PRINT_OBJECT_MASS_AND_INERTIA = True
+        DEBUG_PRINT_OBJECT_MASS_AND_INERTIA = False
         # Get mass and inertia of object
         if DEBUG_PRINT_OBJECT_MASS_AND_INERTIA:
             original_masses, original_inertias = self._get_original_object_masses_and_inertias()
@@ -1412,11 +1415,8 @@ class AllegroKukaBase(VecTask):
         original_masses, original_inertias = [], []
         for env, object in zip(self.envs, self.objects):
             object_rb_props = self.gym.get_actor_rigid_body_properties(env, object)
-            assert len(object_rb_props) in [1, 2], f"Expected 1 or 2 rigid bodies, got {len(object_rb_props)}"
+            assert len(object_rb_props) == 1, f"Expected 1 rigid body, got {len(object_rb_props)}"
             object_rb_prop = object_rb_props[0]
-            total_mass = sum(prop.mass for prop in object_rb_props)
-            print(f"Total mass: {total_mass}")
-            breakpoint()
             original_mass = object_rb_prop.mass
             original_inertia = (object_rb_prop.inertia.x.x, object_rb_prop.inertia.y.y, object_rb_prop.inertia.z.z)
             original_masses.append(original_mass)
