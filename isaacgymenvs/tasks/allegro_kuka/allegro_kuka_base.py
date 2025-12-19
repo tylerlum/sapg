@@ -1152,7 +1152,7 @@ class AllegroKukaBase(VecTask):
         table_pose = gymapi.Transform()
         table_pose.p = gymapi.Vec3()
         table_pose.p.x = allegro_pose.p.x
-        table_pose_dy, table_pose_dz = -0.8, 0.38
+        table_pose_dy, table_pose_dz = -0.8, self.cfg["env"]["tableResetZ"]
         table_pose.p.y = allegro_pose.p.y + table_pose_dy
         table_pose.p.z = allegro_pose.p.z + table_pose_dz
 
@@ -1175,6 +1175,7 @@ class AllegroKukaBase(VecTask):
         self.objects = []
 
         object_init_state = []
+        table_init_state = []
         
         self.rigid_body_name_to_idx = {}
 
@@ -1221,22 +1222,22 @@ class AllegroKukaBase(VecTask):
             self.object_rb_handles = list(range(2*self.num_hand_arm_bodies, 2*self.num_hand_arm_bodies + object_rb_count))
 
         # Set asset rigid shape properties (friction)
-        MODIFY_ASSET_FRICTIONS = True
+        MODIFY_ASSET_FRICTIONS = self.cfg["env"]["modifyAssetFrictions"]
 
         if MODIFY_ASSET_FRICTIONS:
             self.set_allegro_kuka_asset_rigid_shape_properties(
                 allegro_kuka_asset=allegro_kuka_asset,
-                friction=0.5,
-                fingertip_friction=1.5,
+                friction=self.cfg["env"]["robotFriction"],
+                fingertip_friction=self.cfg["env"]["fingerTipFriction"],
             )
             self.set_table_asset_rigid_shape_properties(
                 table_asset=table_asset,
-                friction=0.5,
+                friction=self.cfg["env"]["tableFriction"],
             )
             for object_asset_idx_to_modify in range(len(object_assets)):
                 self.set_object_asset_rigid_shape_properties(
                     object_asset=object_assets[object_asset_idx_to_modify],
-                    friction=0.5,
+                    friction=self.cfg["env"]["objectFriction"],
                 )
         else:
             # Still run this because it sets the collision filters to avoid self-collisions between adjacent links
@@ -1331,6 +1332,23 @@ class AllegroKukaBase(VecTask):
 
             # table object
             table_handle = self.gym.create_actor(env_ptr, table_asset, table_pose, "table_object", i, 0, 0)
+            table_init_state.append(
+                [
+                    table_pose.p.x,
+                    table_pose.p.y,
+                    table_pose.p.z,
+                    table_pose.r.x,
+                    table_pose.r.y,
+                    table_pose.r.z,
+                    table_pose.r.w,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                ]
+            )
             table_object_idx = self.gym.get_actor_index(env_ptr, table_handle, gymapi.DOMAIN_SIM)
             table_indices.append(table_object_idx)
             for name in self.gym.get_actor_rigid_body_names(env_ptr, table_handle):
@@ -1377,6 +1395,9 @@ class AllegroKukaBase(VecTask):
         self.object_rb_masses = [prop.mass for prop in object_rb_props]
 
         self.object_init_state = to_torch(object_init_state, device=self.device, dtype=torch.float).view(
+            self.num_envs, 13
+        )
+        self.table_init_state = to_torch(table_init_state, device=self.device, dtype=torch.float).view(
             self.num_envs, 13
         )
         self.goal_states = self.object_init_state.clone()
@@ -2181,14 +2202,20 @@ class AllegroKukaBase(VecTask):
     def reset_object_pose(self, env_ids: Tensor, reset_buf_idxs=None, tensor_reset=True):
         if len(env_ids) > 0 and reset_buf_idxs is None and tensor_reset:
             obj_indices = self.object_indices[env_ids]
-
-            USE_FIXED_INIT_OBJECT_POSE = self.cfg["env"]["use_fixed_init_object_pose"]
+            table_indices = self.table_indices[env_ids]
+            
+            # decide table reset z
+            table_reset_z = torch_rand_float(-self.cfg["env"]["tableResetZRange"], self.cfg["env"]["tableResetZRange"], (len(env_ids),1), device=self.device) + self.cfg["env"]["tableResetZ"] 
+            self.table_init_state[env_ids, 2:3] = table_reset_z
+            self.object_init_state[env_ids, 2:3] = table_reset_z + self.cfg["env"]["tableObjectZOffset"]
 
             # reset object
             rand_pos_floats = torch_rand_float(-1.0, 1.0, (len(env_ids), 3), device=self.device)
+            USE_FIXED_INIT_OBJECT_POSE = self.cfg["env"]["use_fixed_init_object_pose"]
             if USE_FIXED_INIT_OBJECT_POSE:
                 rand_pos_floats[:] = 0.0 #HACK
             self.root_state_tensor[obj_indices] = self.object_init_state[env_ids].clone()
+            self.root_state_tensor[table_indices] = self.table_init_state[env_ids].clone()
 
             # indices 0..2 correspond to the object position
             self.root_state_tensor[obj_indices, 0:1] = (
@@ -2227,6 +2254,7 @@ class AllegroKukaBase(VecTask):
             self.furthest_hand_dist[env_ids] = -1
             self.lifted_object[env_ids] = False
         self.deferred_set_actor_root_state_tensor_indexed([self.object_indices[env_ids]])
+        self.deferred_set_actor_root_state_tensor_indexed([self.table_indices[env_ids]])
 
     def deferred_set_actor_root_state_tensor_indexed(self, obj_indices: List[Tensor]) -> None:
         self.set_actor_root_state_object_indices.extend(obj_indices)
@@ -2305,15 +2333,15 @@ class AllegroKukaBase(VecTask):
                 self.table_sensor_forces_smoothed[env_ids, :] = 0
                 self.max_table_sensor_force_norm_smoothed[env_ids] = 0
 
-        # randomize start object poses
-        self.reset_target_pose(env_ids, reset_buf_idxs, tensor_reset=tensor_reset, is_first_goal=True)
-
         # reset rigid body forces
         if tensor_reset:
             self.rb_forces[env_ids, :, :] = 0.0
 
         # reset object
         self.reset_object_pose(env_ids, reset_buf_idxs, tensor_reset=tensor_reset)
+
+        # randomize start object poses
+        self.reset_target_pose(env_ids, reset_buf_idxs, tensor_reset=tensor_reset, is_first_goal=True)
 
         hand_indices = self.allegro_hand_indices[env_ids].to(torch.int32)
 

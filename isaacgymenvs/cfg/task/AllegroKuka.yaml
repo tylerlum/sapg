@@ -43,6 +43,11 @@ env:
   resetDofPosRandomIntervalArm: 0.1
   resetDofVelRandomInterval: 0.5
 
+  # Table reset settings
+  tableResetZ: 0.38
+  tableResetZRange: 0.025
+  tableObjectZOffset: 0.25
+
   # Random forces applied to the object
   forceScale: 2.0
   forceProbRange: [0.001, 0.1]
@@ -182,6 +187,13 @@ env:
   handleDensityMax: 600
   headDensityMin: 600
   headDensityMax: 1500
+
+  # asset Friction settings
+  modifyAssetFrictions: True
+  robotFriction: 0.5
+  fingerTipFriction: 1.5
+  objectFriction: 0.5
+  tableFriction: 0.5
 
   asset:
     # Whis was the original kuka_allegro asset.

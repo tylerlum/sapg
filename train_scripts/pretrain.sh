@@ -1,10 +1,10 @@
 #!/bin/bash
 
-CUSTOM_EXPERIMENT_NAME="MLP_ASYMMETRIC_prevActions_4cmBaseSize_10xPenalty"
-WANDB_GROUP="PRETRAIN"
+CUSTOM_EXPERIMENT_NAME="TESTING"
+WANDB_GROUP="FINETUNING_ACTUAL"
 
 WANDB_ENTITY="kk837"
-WANDB_PROJECT="FINAL_ASYMMETRIC_RUNS"
+WANDB_PROJECT="TESTING"
 OBJECT_TYPE="cuboid"
 
 DATETIME=$(date +"%Y-%m-%d_%H-%M-%S")
@@ -37,16 +37,24 @@ seed=0 \
 experiment=00_${EXPERIMENT_NAME} \
 hydra.run.dir=${HYDRA_RUN_DIR} \
 task.env.object_type=${OBJECT_TYPE} \
-task.env.dofSpeedScale=10 \
 task.env.useRelativeControl=False \
 task.task.randomize=False \
-task=AllegroKukaMLPAsymmetric \
+task=AllegroKukaLSTMAsymmetric \
 task.env.objectBaseSize=0.04 \
-task.env.stateList=["joint_pos","joint_vel","palm_pos","palm_rot","palm_vel","object_rot","object_vel","fingertip_pos_rel_palm","keypoints_rel_palm","keypoints_rel_goal","object_scales","closest_keypoint_max_dist","closest_fingertip_dist","lifted_object","progress","successes","reward","prev_action_targets"] \
-task.env.obsList=["joint_pos","joint_vel","palm_pos","palm_rot","object_rot","fingertip_pos_rel_palm","keypoints_rel_palm","keypoints_rel_goal","object_scales","prev_action_targets"] \
+task.env.stateList=["joint_pos","joint_vel","prev_action_targets","palm_pos","palm_rot","palm_vel","object_rot","object_vel","fingertip_pos_rel_palm","keypoints_rel_palm","keypoints_rel_goal","object_scales","closest_keypoint_max_dist","closest_fingertip_dist","lifted_object","progress","successes","reward"] \
+task.env.obsList=["joint_pos","joint_vel","prev_action_targets","palm_pos","palm_rot","object_rot","fingertip_pos_rel_palm","keypoints_rel_palm","keypoints_rel_goal","object_scales"] \
+task.env.dofSpeedScale=2.5 \
 task.env.kukaActionsPenaltyScale=0.03 \
 task.env.allegroActionsPenaltyScale=0.003 \
 task.env.controlFrequencyInv=1 \
+task.env.useObsDelay=True \
+task.env.useActionDelay=True \
+task.env.useObjectStateDelayNoise=True \
+task.env.jointVelocityObsNoiseStd=0.01 \
+task.env.goalSamplingType=delta \
+task.env.use_fixed_set_of_goal_states=False \
+task.env.successSteps=10 \
+# checkpoint=/share/portal/kk837/sapg/train_dir/FINAL_ASYMMETRIC_RUNS/NEW_GAINS/NOISY_INPUTS_2.5_Speed_controlFreqInv_1_successSteps_10_delta_2025-12-09_19-50-51/runs/00_NOISY_INPUTS_2.5_Speed_controlFreqInv_1_successSteps_10_delta_2025-12-09_19-50-51/last/model.pth \
 # task.env.observationType=asymmetric \
 # task=AllegroKukaLSTM \
 
