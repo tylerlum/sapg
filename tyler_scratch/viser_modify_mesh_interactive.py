@@ -58,7 +58,7 @@ def viser_modify_mesh_interactive(input_mesh_path: Path, output_mesh_path: Path)
     )
 
     # Load mesh
-    mesh = trimesh.load(input_mesh_path)
+    mesh = trimesh.load(input_mesh_path, force="mesh")
     mesh_vis = server.scene.add_mesh_simple(
         name="/mesh_origin_frame/mesh_frame/mesh",
         vertices=mesh.vertices,
