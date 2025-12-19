@@ -291,18 +291,26 @@ def compute_mass_and_inertia(scale: Union[Tuple[float, float, float], Tuple[floa
             h, d = scale[0], scale[1]  # h = cylindrical height (excluding hemispheres), d = diameter
             r = d / 2
 
-            # Volume: cylinder + 2 hemispheres (which is one full sphere)
-            cylinder_v = math.pi * r**2 * h
-            sphere_v = (4/3) * math.pi * r**3
-            v = cylinder_v + sphere_v
+            # masses
+            m_c = density * math.pi * r**2 * h
+            m_h = density * (2/3) * math.pi * r**3   # one hemisphere
+            m = m_c + 2*m_h
 
-            # Mass
-            m = v * density
+            # cylinder inertias about its centroid (axis = z)
+            I_c_axis = 0.5 * m_c * r**2
+            I_c_perp = (1/12) * m_c * (3*r**2 + h**2)
 
-            # Inertia
-            # Approximate formulas for capsule along main axis (z) and perpendicular axes (x, y)
-            izz = 0.5 * m * r**2  # around symmetry axis
-            ixx = iyy = (1/12) * m * (3*r**2 + h**2 + (8/5)*r**2)  # add sphere contribution
+            # hemisphere inertias about its own centroid
+            I_h_axis = (2/5) * m_h * r**2
+            I_h_perp = (83/320) * m_h * r**2
+
+            # hemisphere COM offset from capsule COM
+            d_com = (h / 2) + (3*r / 8)
+
+            # combine
+            izz = I_c_axis + 2 * I_h_axis
+            ixx = iyy = I_c_perp + 2 * (I_h_perp + m_h * d_com**2)
+
         else:
             raise ValueError(f"Invalid mode: {MODE}")
     else:
