@@ -913,139 +913,67 @@ class AllegroKukaBase(VecTask):
         # The head is at +x from the handle
         # There is no relative rotation between the handle and head
 
-        # We also will have some number of the objects with no head
-        NUM_HANDLE_CUBOIDS = 500
-        NUM_HANDLE_CYLINDERS = 500
-        NUM_HEAD_CUBOIDS = 500
-        NUM_HEAD_CYLINDERS = 500
-
+        NUM_OBJECTS_PER_TYPE = 100
         np.random.seed(42)
 
-        # #############################
-        # Handle
-        # #############################
         # 3D printed objects are about 300-400 kg/m^3
         HANDLE_MIN_DENSITY, HANDLE_MAX_DENSITY = self.cfg["env"]["handleDensityMin"], self.cfg["env"]["handleDensityMax"]
-        # HANDLE_MIN_DENSITY, HANDLE_MAX_DENSITY = 400, 400
 
-        # The length of a marker or whiteboard eraser is 0.12m
-        # The length of a screwdriver handle is 0.11-0.13m
-        # The length of the hammer handle is 0.25m
-        # The length of a phone is 0.15m
-        HANDLE_MIN_LEN_X, HANDLE_MAX_LEN_X = 0.1, 0.3  # Length
-
-        # The width of a marker is 0.02m
-        # The width of a whiteboard eraser is 0.05m
-        # The width of a screwdriver handle is 0.03-0.035m
-        # The width of the hammer handle is 0.03m
-        # The width of a phone is 0.075m
-        HANDLE_MIN_LEN_Y, HANDLE_MAX_LEN_Y = 0.02, 0.07  # Width
-
-        # The thickness of a marker is 0.02m
-        # The thickness of a whiteboard eraser is 0.03m
-        # The thickness of a screwdriver handle is 0.03-0.035m
-        # The thickness of the hammer handle is 0.02m
-        # The thickness of a phone is 0.01m
-        HANDLE_MIN_LEN_Z, HANDLE_MAX_LEN_Z = 0.02, 0.05  # Thickness
-
-        handle_cuboid_densities = np.random.uniform(HANDLE_MIN_DENSITY, HANDLE_MAX_DENSITY, size=NUM_HANDLE_CUBOIDS)
-        handle_cylinder_densities = np.random.uniform(HANDLE_MIN_DENSITY, HANDLE_MAX_DENSITY, size=NUM_HANDLE_CYLINDERS)
-
-        handle_cuboid_x_lengths = np.random.uniform(HANDLE_MIN_LEN_X, HANDLE_MAX_LEN_X, size=NUM_HANDLE_CUBOIDS)
-        handle_cuboid_y_lengths = np.random.uniform(HANDLE_MIN_LEN_Y, HANDLE_MAX_LEN_Y, size=NUM_HANDLE_CUBOIDS)
-        handle_cuboid_z_lengths = np.random.uniform(HANDLE_MIN_LEN_Z, HANDLE_MAX_LEN_Z, size=NUM_HANDLE_CUBOIDS)
-        handle_cuboid_scales = np.stack([handle_cuboid_x_lengths, handle_cuboid_y_lengths, handle_cuboid_z_lengths], axis=1).tolist()
-
-        handle_cylinder_heights = np.random.uniform(HANDLE_MIN_LEN_X, HANDLE_MAX_LEN_X, size=NUM_HANDLE_CYLINDERS)
-        handle_cylinder_diameters = np.random.uniform(HANDLE_MIN_LEN_Z, HANDLE_MAX_LEN_Z, size=NUM_HANDLE_CYLINDERS)
-        handle_cylinder_scales = np.stack([handle_cylinder_heights, handle_cylinder_diameters], axis=1).tolist()
-
-        # #############################
-        # Head
-        # #############################
         # Hammer head and mallet are 800-1500 kg/m^3
         HEAD_MIN_DENSITY, HEAD_MAX_DENSITY = self.cfg["env"]["headDensityMin"], self.cfg["env"]["headDensityMax"]
-        # HEAD_MIN_DENSITY, HEAD_MAX_DENSITY = 400, 400
-
-        # The length of a screwdriver head is 0.08-0.16m
-        # The length of a hammer head is 0.02m
-        # The length of a mallet head is 0.05m
-        HEAD_MIN_LEN_X, HEAD_MAX_LEN_X = 0.02, 0.16  # Length
-
-        # The width of a screwdriver head is 0.01m
-        # The width of a hammer head is 0.02m
-        # The width of a mallet head is 0.08m
-        HEAD_MIN_LEN_Y, HEAD_MAX_LEN_Y = 0.01, 0.08  # Width
-
-        # The thickness of a screwdriver head is 0.01m
-        # The thickness of a hammer head is 0.02m
-        # The thickness of mallet head is 0.045m
-        HEAD_MIN_LEN_Z, HEAD_MAX_LEN_Z = 0.01, 0.05  # Thickness
-
-        head_cuboid_densities = np.random.uniform(HEAD_MIN_DENSITY, HEAD_MAX_DENSITY, size=NUM_HEAD_CUBOIDS).tolist()
-        head_cylinder_densities = np.random.uniform(HEAD_MIN_DENSITY, HEAD_MAX_DENSITY, size=NUM_HEAD_CYLINDERS).tolist()
-
-        head_cuboid_x_lengths = np.random.uniform(HEAD_MIN_LEN_X, HEAD_MAX_LEN_X, size=NUM_HEAD_CUBOIDS)
-        head_cuboid_y_lengths = np.random.uniform(HEAD_MIN_LEN_Y, HEAD_MAX_LEN_Y, size=NUM_HEAD_CUBOIDS)
-        head_cuboid_z_lengths = np.random.uniform(HEAD_MIN_LEN_Z, HEAD_MAX_LEN_Z, size=NUM_HEAD_CUBOIDS)
-        head_cuboid_scales = np.stack([head_cuboid_x_lengths, head_cuboid_y_lengths, head_cuboid_z_lengths], axis=1).tolist()
-
-        head_cylinder_heights = np.random.uniform(HEAD_MIN_LEN_X, HEAD_MAX_LEN_X, size=NUM_HEAD_CYLINDERS)
-        head_cylinder_diameters = np.random.uniform(HEAD_MIN_LEN_Z, HEAD_MAX_LEN_Z, size=NUM_HEAD_CYLINDERS)
-        head_cylinder_scales = np.stack([head_cylinder_heights, head_cylinder_diameters], axis=1).tolist()
 
         from isaacgymenvs.tasks.allegro_kuka.generate_objects import (
-            # generate_handle_head_urdf_constant_density,
-            generate_cuboid_urdf_constant_density,
-            generate_cylinder_urdf_constant_density,
-            generate_handle_head_urdf_variable_density,
-            generate_handle_head_urdf_variable_density_2_links,
+            generate_handle_head_urdf,
         )
-        # Create cuboid handles with cuboid heads
-        cuboid_handle_cuboid_head_files = [
-            # generate_handle_head_urdf_variable_density(
-            generate_handle_head_urdf_variable_density_2_links(
-                filepath=Path(generated_assets_dir) / (f"{idx:03d}_handle_head_{handle_cuboid_scales[idx]}_{head_cuboid_scales[idx]}_{handle_cuboid_densities[idx]}_{head_cuboid_densities[idx]}".replace(".", "-") + ".urdf"),
-                handle_scale=handle_cuboid_scales[idx],
-                head_scale=head_cuboid_scales[idx],
-                handle_density=handle_cuboid_densities[idx],
-                head_density=head_cuboid_densities[idx],
+        from isaacgymenvs.tasks.allegro_kuka.object_size_distributions import OBJECT_SIZE_DISTRIBUTIONS
+        handle_head_types = set(self.cfg["env"]["handleHeadTypes"])
+        object_size_distributions = [obj for obj in OBJECT_SIZE_DISTRIBUTIONS if obj.type in handle_head_types]
+
+        files_list = []
+        scales_list = []
+        for object_size_distribution in object_size_distributions:
+            handle_head_type = object_size_distribution.type
+
+            # Sample densities
+            # Currently same for all objects
+            handle_densities = np.random.uniform(HANDLE_MIN_DENSITY, HANDLE_MAX_DENSITY, size=NUM_OBJECTS_PER_TYPE)
+            head_densities = np.random.uniform(HEAD_MIN_DENSITY, HEAD_MAX_DENSITY, size=NUM_OBJECTS_PER_TYPE)
+
+            # Sample scales
+            # Currently different for each object
+            min_handle_scales = np.array(object_size_distribution.handle_min_lengths)
+            max_handle_scales = np.array(object_size_distribution.handle_max_lengths)
+            min_head_scales = np.array(object_size_distribution.head_min_lengths) if object_size_distribution.head_min_lengths is not None else None
+            max_head_scales = np.array(object_size_distribution.head_max_lengths) if object_size_distribution.head_max_lengths is not None else None
+            handle_scales = np.random.uniform(min_handle_scales, max_handle_scales, size=(NUM_OBJECTS_PER_TYPE, len(min_handle_scales)))
+            head_scales = np.random.uniform(min_head_scales, max_head_scales, size=(NUM_OBJECTS_PER_TYPE, len(min_head_scales))) if min_head_scales is not None and max_head_scales is not None else None
+            assert handle_scales.shape in [(NUM_OBJECTS_PER_TYPE, 2), (NUM_OBJECTS_PER_TYPE, 3)], f"handle_scales shape: {handle_scales.shape}, expected ({NUM_OBJECTS_PER_TYPE}, 2) or ({NUM_OBJECTS_PER_TYPE}, 3)"
+
+            files_list.append([
+                generate_handle_head_urdf(
+                    filepath=Path(generated_assets_dir) / (f"{idx:03d}_{handle_head_type}_handle_head_{handle_scales[idx]}_{head_scales[idx] if head_scales is not None else 'None'}_{handle_densities[idx]}_{head_densities[idx] if head_densities[idx] is not None else 'None'}".replace(".", "-") + ".urdf"),
+                    handle_scale=handle_scales[idx],
+                    head_scale=head_scales[idx] if head_scales is not None else None,
+                    handle_density=handle_densities[idx],
+                    head_density=head_densities[idx] if head_scales is not None else None,
+                )
+                for idx in range(NUM_OBJECTS_PER_TYPE)
+            ]
             )
-            for idx in range(NUM_HEAD_CUBOIDS)
-        ]
-        cuboid_handle_no_head_files = [
-            generate_cuboid_urdf_constant_density(
-                filepath=Path(generated_assets_dir) / (f"{idx:03d}_handle_head_{handle_cuboid_scales[idx]}_{handle_cuboid_densities[idx]}".replace(".", "-") + ".urdf"),
-                scale=handle_cuboid_scales[idx],
-                density=handle_cuboid_densities[idx],
-            )
-            for idx in range(NUM_HEAD_CUBOIDS, NUM_HANDLE_CUBOIDS)
-        ]
-        cylinder_handle_cylinder_head_files = [
-            # generate_handle_head_urdf_variable_density(
-            generate_handle_head_urdf_variable_density_2_links(
-                filepath=Path(generated_assets_dir) / (f"{idx:03d}_handle_head_{handle_cylinder_scales[idx]}_{head_cylinder_scales[idx]}_{handle_cylinder_densities[idx]}_{head_cylinder_densities[idx]}".replace(".", "-") + ".urdf"),
-                handle_scale=handle_cylinder_scales[idx],
-                head_scale=head_cylinder_scales[idx],
-                handle_density=handle_cylinder_densities[idx],
-                head_density=head_cylinder_densities[idx],
-            )
-            for idx in range(NUM_HEAD_CYLINDERS)
-        ]
-        cylinder_handle_no_head_files = [
-            generate_cylinder_urdf_constant_density(
-                filepath=Path(generated_assets_dir) / (f"{idx:03d}_handle_head_{handle_cylinder_scales[idx]}_{handle_cylinder_densities[idx]}".replace(".", "-") + ".urdf"),
-                height=handle_cylinder_scales[idx][0],
-                diameter=handle_cylinder_scales[idx][1],
-                density=handle_cylinder_densities[idx],
-            )
-            for idx in range(NUM_HEAD_CYLINDERS, NUM_HANDLE_CYLINDERS)
-        ]
-        all_files = cuboid_handle_cuboid_head_files + cuboid_handle_no_head_files + cylinder_handle_cylinder_head_files + cylinder_handle_no_head_files
-        # NOTE: We distinguish between cuboid and cylinder by scales being either 3 or 2 elements
-        # However, scales here must be 3 elements, so we always make the third element the same as the second element for cylinders
-        all_scales = handle_cuboid_scales + [(x[0], x[1], x[1]) for x in handle_cylinder_scales]
-        assert len(all_files) == len(all_scales), f"Number of files: {len(all_files)}, number of scales: {len(all_scales)}"
+            scales_list.append(handle_scales)
+
+        all_files = [file for sublist in files_list for file in sublist]
+        all_scales = [scale for sublist in scales_list for scale in sublist]
+        def convert_scale_to_three_elements(scale):
+            # Object scales must have 3 elements
+            # Cylinders currently have 2 elements, so we make the third element the same as the second element
+            if len(scale) == 3:
+                return scale
+            elif len(scale) == 2:
+                return (scale[0], scale[1], scale[1])
+            else:
+                raise ValueError(f"Invalid scale: {scale}")
+        all_scales = [convert_scale_to_three_elements(scale) for scale in all_scales]
         need_vhacds = [False] * len(all_files)
 
         # Note, we need to make sure all_scales is rescaled by the base size
@@ -1057,6 +985,7 @@ class AllegroKukaBase(VecTask):
         all_files = [all_files[i] for i in indices]
         all_scales = [all_scales[i] for i in indices]
         need_vhacds = [need_vhacds[i] for i in indices]
+
         # print(f"Indices: {indices}")
         # print(f"All files: {all_files}")
         # print(f"All scales: {all_scales}")

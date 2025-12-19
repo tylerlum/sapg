@@ -185,8 +185,10 @@ env:
 
   handleDensityMin: 300
   handleDensityMax: 600
-  headDensityMin: 600
-  headDensityMax: 1500
+  headDensityMin: 500
+  headDensityMax: 1000
+  handleHeadTypes: ["hammer", "knife", "screwdriver", "marker", "spatula", "whiteboard_eraser", "phone"]
+  # handleHeadTypes: ["hammer"]
 
   # asset Friction settings
   modifyAssetFrictions: True
