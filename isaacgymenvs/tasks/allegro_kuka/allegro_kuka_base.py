@@ -686,7 +686,7 @@ class AllegroKukaBase(VecTask):
             else:
                 raise ValueError(f"The following object_type does not have a fixed trajectory: {object_type}, cannot use USE_FIXED_SET_OF_GOAL_STATES with this object type")
 
-            SAVE_TO_JSON = True
+            SAVE_TO_JSON = False
             if SAVE_TO_JSON:
                 import json
                 output_filepath = Path(f"{object_type}_trajectory.json")
