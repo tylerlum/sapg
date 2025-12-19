@@ -448,3 +448,183 @@ def generate_handle_head_urdf_variable_density_2_links(
         f.write(urdf)
     print(f"✅ URDF written to {filepath}")
     return filepath
+
+
+
+def generate_handle_head_urdf_variable_density_2_links_cuboid_cuboid(
+    filepath: Path,
+    handle_scale: Tuple[float, float, float],
+    head_scale: Tuple[float, float, float],
+    handle_density: float = 400,
+    head_density: float = 800,
+):
+    handle_len_x, handle_len_y, handle_len_z = handle_scale
+    handle_text = f"""\
+    <geometry>
+      <box size="{handle_len_x} {handle_len_y} {handle_len_z}"/>
+    </geometry>
+    """
+    handle_mass, handle_ixx, handle_iyy, handle_izz = compute_mass_and_inertia(scale=handle_scale, density=handle_density)
+    handle_rpy = "0 0 0"
+
+    head_len_x, head_len_y, head_len_z = head_scale
+    x_offset = handle_scale[0] / 2 + head_len_x / 2
+    head_text = f"""\
+    <geometry>
+      <box size="{head_len_x} {head_len_y} {head_len_z}"/>
+    </geometry>
+    """
+    head_mass, head_ixx, head_iyy, head_izz = compute_mass_and_inertia(scale=head_scale, density=head_density)
+    head_rpy = "0 0 0"
+
+    # Setting two densities doesn't work
+    urdf = f"""<?xml version="1.0"?>
+<robot name="handle_head">
+
+  <link name="handle">
+    <!-- Handle -->
+    <visual>
+      <origin xyz="0 0 0" rpy="{handle_rpy}"/>
+      {handle_text}
+      <material name="brown">
+        <color rgba="0.55 0.27 0.07 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="{handle_rpy}"/>
+      {handle_text}
+    </collision>
+
+    <inertial>
+      <origin xyz="0 0 0" rpy="{handle_rpy}"/>
+      <mass value="{handle_mass}"/>
+      <inertia ixx="{handle_ixx}" iyy="{handle_iyy}" izz="{handle_izz}" ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </link>
+
+  <link name="head">
+    <!-- Head -->
+    <visual>
+      <origin xyz="0 0 0" rpy="{head_rpy}"/>
+      {head_text}
+      <material name="gray">
+        <color rgba="0.5 0.5 0.5 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="{head_rpy}"/>
+      {head_text}
+    </collision>
+    <inertial>
+      <origin xyz="0 0 0" rpy="{head_rpy}"/>
+      <mass value="{head_mass}"/>
+      <inertia ixx="{head_ixx}" iyy="{head_iyy}" izz="{head_izz}" ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </link>
+
+  <joint name="handle_head_joint" type="fixed">
+    <origin xyz="{x_offset} 0 0" rpy="0 0 0"/>
+    <parent link="handle"/>
+    <child link="head"/>
+  </joint>
+
+</robot>
+"""
+    with open(filepath, "w") as f:
+        f.write(urdf)
+    print(f"✅ URDF written to {filepath}")
+    return filepath
+
+def generate_handle_head_urdf_variable_density_2_links_cylinder_cylinder(
+    filepath: Path,
+    handle_scale: Tuple[float, float, float],
+    head_scale: Tuple[float, float, float],
+    handle_density: float = 400,
+    head_density: float = 800,
+):
+    # Default z is along cylinder axis
+    # We rotate so it is along +x
+    handle_height, handle_diameter = handle_scale
+    handle_radius = handle_diameter / 2
+    handle_text = f"""\
+    <geometry>
+      <cylinder length="{handle_height}" radius="{handle_radius}"/>
+    </geometry>
+    """
+    handle_mass, handle_ixx, handle_iyy, handle_izz = compute_mass_and_inertia(scale=handle_scale, density=handle_density)
+    handle_rpy = "0 -1.5707963267948966 0"
+
+    # Default z is along cylinder axis
+    # We rotate so it is along +y
+    head_height, head_diameter = head_scale
+    head_radius = head_diameter / 2
+    x_offset = handle_scale[0] / 2 + head_radius
+
+    head_text = f"""\
+    <geometry>
+      <cylinder length="{head_height}" radius="{head_radius}"/>
+    </geometry>
+    """
+    head_mass, head_ixx, head_iyy, head_izz = compute_mass_and_inertia(scale=head_scale, density=head_density)
+    head_rpy = "-1.5707963267948966 0 0"
+
+    # Setting two densities doesn't work
+
+    urdf = f"""<?xml version="1.0"?>
+<robot name="handle_head">
+
+  <link name="handle">
+    <!-- Handle -->
+    <visual>
+      <origin xyz="0 0 0" rpy="{handle_rpy}"/>
+      {handle_text}
+      <material name="brown">
+        <color rgba="0.55 0.27 0.07 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="{handle_rpy}"/>
+      {handle_text}
+    </collision>
+
+    <inertial>
+      <origin xyz="0 0 0" rpy="{handle_rpy}"/>
+      <mass value="{handle_mass}"/>
+      <inertia ixx="{handle_ixx}" iyy="{handle_iyy}" izz="{handle_izz}" ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </link>
+
+  <link name="head">
+    <!-- Head -->
+    <visual>
+      <origin xyz="0 0 0" rpy="{head_rpy}"/>
+      {head_text}
+      <material name="gray">
+        <color rgba="0.5 0.5 0.5 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="{head_rpy}"/>
+      {head_text}
+    </collision>
+    <inertial>
+      <origin xyz="0 0 0" rpy="{head_rpy}"/>
+      <mass value="{head_mass}"/>
+      <inertia ixx="{head_ixx}" iyy="{head_iyy}" izz="{head_izz}" ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </link>
+
+  <joint name="handle_head_joint" type="fixed">
+    <origin xyz="{x_offset} 0 0" rpy="0 0 0"/>
+    <parent link="handle"/>
+    <child link="head"/>
+  </joint>
+
+</robot>
+"""
+    with open(filepath, "w") as f:
+        f.write(urdf)
+    print(f"✅ URDF written to {filepath}")
+    return filepath
+
+
