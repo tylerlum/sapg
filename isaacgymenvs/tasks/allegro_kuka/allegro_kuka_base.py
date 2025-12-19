@@ -1054,12 +1054,12 @@ class AllegroKukaBase(VecTask):
         # Randomize order
         indices = list(range(len(all_files)))
         np.random.shuffle(indices)
-        print(f"Indices: {indices}")
         all_files = [all_files[i] for i in indices]
         all_scales = [all_scales[i] for i in indices]
         need_vhacds = [need_vhacds[i] for i in indices]
-        print(f"All files: {all_files}")
-        print(f"All scales: {all_scales}")
+        # print(f"Indices: {indices}")
+        # print(f"All files: {all_files}")
+        # print(f"All scales: {all_scales}")
 
         return all_files, all_scales, need_vhacds
 
