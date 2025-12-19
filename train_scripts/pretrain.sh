@@ -1,11 +1,11 @@
 #!/bin/bash
 
-CUSTOM_EXPERIMENT_NAME="TESTING"
-WANDB_GROUP="FINETUNING_ACTUAL"
+CUSTOM_EXPERIMENT_NAME="local_finetune_handle_head_types_density_400"
+WANDB_GROUP="2025-12-19_handle_head_types"
 
-WANDB_ENTITY="kk837"
-WANDB_PROJECT="TESTING"
-OBJECT_TYPE="cuboid"
+WANDB_ENTITY="tylerlum"
+WANDB_PROJECT="dexterous_reorientation"
+OBJECT_TYPE="tyler_handle_head"
 
 DATETIME=$(date +"%Y-%m-%d_%H-%M-%S")
 EXPERIMENT_NAME="${CUSTOM_EXPERIMENT_NAME}_$DATETIME"
@@ -15,7 +15,7 @@ python -m isaacgymenvs.train \
 task/env=reorientation \
 ++task.env.useSparseReward=False \
 headless=True \
-task.env.numEnvs=24576 \
+task.env.numEnvs=12288 \
 train.params.config.minibatch_size=98304 \
 multi_gpu=False \
 train.params.config.good_reset_boundary=0 \
@@ -24,7 +24,7 @@ train.params.config.use_others_experience=lf \
 train.params.config.off_policy_ratio=1.0 \
 train.params.config.expl_type=mixed_expl_learn_param \
 train.params.config.expl_reward_type=entropy \
-train.params.config.expl_coef_block_size=4096 \
+train.params.config.expl_coef_block_size=2048 \
 train.params.config.expl_reward_coef_scale=0.005 \
 train.params.network.space.continuous.fixed_sigma=coef_cond \
 wandb_project=${WANDB_PROJECT} \
@@ -54,6 +54,11 @@ task.env.jointVelocityObsNoiseStd=0.01 \
 task.env.goalSamplingType=delta \
 task.env.use_fixed_set_of_goal_states=False \
 task.env.successSteps=10 \
+task.env.handleDensityMin=400 \
+task.env.handleDensityMax=400 \
+task.env.headDensityMin=400 \
+task.env.headDensityMax=400 \
+checkpoint=/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o0t0.pth \
 # checkpoint=/share/portal/kk837/sapg/train_dir/FINAL_ASYMMETRIC_RUNS/NEW_GAINS/NOISY_INPUTS_2.5_Speed_controlFreqInv_1_successSteps_10_delta_2025-12-09_19-50-51/runs/00_NOISY_INPUTS_2.5_Speed_controlFreqInv_1_successSteps_10_delta_2025-12-09_19-50-51/last/model.pth \
 # task.env.observationType=asymmetric \
 # task=AllegroKukaLSTM \
