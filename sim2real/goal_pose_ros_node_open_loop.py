@@ -145,7 +145,9 @@ if __name__ == "__main__":
             # goal_object_pose_file=Path("goal_pose_listener_ros_node_output/mallet/2025-11-17_15-59-04.json"),
             # goal_object_pose_file=Path("goal_pose_listener_ros_node_output/mallet/2025-11-17_16-17-57.json"),
             # goal_object_pose_file=Path("goal_poses_around_z_axis.json"),
-            goal_object_pose_file=Path("hammer_trajectory.json"),
+            # goal_object_pose_file=Path("hammer_trajectory.json"),
+            # goal_object_pose_file=Path("real_flat_screwdriver_trajectory.json"),
+            goal_object_pose_file=Path("whiteboard_eraser_trajectory.json"),
             # goal_object_pose_file=Path("goal_poses_around_y_axis.json"),
             # goal_object_pose_file=Path("goal_poses_around_x_axis.json"),
         )

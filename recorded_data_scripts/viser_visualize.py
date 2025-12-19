@@ -91,7 +91,8 @@ def main():
     from isaacgymenvs.utils.objects import NAME_TO_OBJECT
     # DEFAULT_OBJECT_NAME = "blue_cuboid"
     # DEFAULT_OBJECT_NAME = "cuboidal_mallet"
-    DEFAULT_OBJECT_NAME = "scanned_hammer_2"
+    # DEFAULT_OBJECT_NAME = "scanned_hammer_2"
+    DEFAULT_OBJECT_NAME = "real_flat_screwdriver"
     object_name = DEFAULT_OBJECT_NAME
     if recorded_data.object_name is None:
         print(f"Using default object name: {DEFAULT_OBJECT_NAME}")

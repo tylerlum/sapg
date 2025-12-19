@@ -260,7 +260,7 @@ def get_eraser_trajectory(object_init_state, device="cuda"):
     # first state is pick up state
     pick_up_state = object_init_state.copy()
     pick_up_state[3:7] = R.from_euler("y", 0, degrees=True).as_quat()
-    pick_up_state[2] += 0.2
+    pick_up_state[2] += 0.15
 
     # next state rotates 90 degrees around z axis wrt last state
     rotate_90_state = pick_up_state.copy()
@@ -270,7 +270,7 @@ def get_eraser_trajectory(object_init_state, device="cuda"):
 
     # next state goes right
     go_right_state = rotate_90_state.copy()
-    go_right_state[0] += 0.2
+    go_right_state[0] += 0.1
 
     # trajectory_states = [pick_up_state, rotate_90_state, go_right_state]
     trajectory_states = [pick_up_state, go_right_state]
@@ -278,7 +278,7 @@ def get_eraser_trajectory(object_init_state, device="cuda"):
     num_strokes = 4
     # define go up state and go down state
     go_up_state = go_right_state.copy()
-    go_up_state[2] += 0.15
+    go_up_state[2] += 0.1
     go_down_state = go_up_state.copy()
     go_down_state[2] -= 0.1
 

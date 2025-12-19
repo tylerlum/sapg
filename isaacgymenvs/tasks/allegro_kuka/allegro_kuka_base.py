@@ -665,10 +665,11 @@ class AllegroKukaBase(VecTask):
             HAMMER_TRAJECTORY_OBJECTS = set(
                 ["scanned_hammer_1", "scanned_hammer_2", "scanned_hammer_2_coacd", "scanned_hammer_2_coacd2", "YcbHammer", "cuboidal_hammer", "cylindrical_hammer", "cuboidal_hammer_2x", "cylindrical_hammer_2x",]
                 + ["all_hammers", "all_cuboidal_hammers", "all_cylindrical_hammers", "all_cuboidal_and_cylindrical_hammers", "mallet", "cuboidal_mallet"]
+                + ["blue_cuboid_real_hammer", "blue_cuboid_fake_hammer"]
                 + ["tyler_handle_head"]
             )
-            CUBOID_OBJECTS = set(["cuboid", "blue_cuboid", "blue_cuboid_thick", "blue_cuboid_real_iphone", "blue_cuboid_fake_iphone", "blue_cuboid_real_hammer", "blue_cuboid_fake_hammer", "blue_cuboid_real_screwdriver"])
-            SCREWDRIVER_OBJECTS = set(["real_flat_screwdriver", "044_flat_screwdriver"])
+            CUBOID_OBJECTS = set(["cuboid", "blue_cuboid", "blue_cuboid_thick"])
+            SCREWDRIVER_OBJECTS = set(["real_flat_screwdriver", "044_flat_screwdriver", "blue_cuboid_real_screwdriver"])
             if object_type in HAMMER_TRAJECTORY_OBJECTS:
                 self.trajectory_states = get_hammer_trajectory(init_state, device=self.device)
             elif object_type in set(["hairbrush", "hairbrush_modified"]):
@@ -679,7 +680,7 @@ class AllegroKukaBase(VecTask):
                 self.trajectory_states = get_marker_trajectory(init_state, device=self.device)
             elif object_type == "whiteboard_eraser":
                 self.trajectory_states = get_eraser_trajectory(init_state, device=self.device)
-            elif object_type in ["phone", "iphone15pro"]:
+            elif object_type in ["phone", "iphone15pro", "blue_cuboid_real_iphone", "blue_cuboid_fake_iphone",]:
                 self.trajectory_states = get_phone_trajectory(init_state, device=self.device)
             elif object_type in CUBOID_OBJECTS:
                 self.trajectory_states = get_cuboid_trajectory(init_state, device=self.device)

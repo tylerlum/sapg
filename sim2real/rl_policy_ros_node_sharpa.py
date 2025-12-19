@@ -668,13 +668,15 @@ if __name__ == "__main__":
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o1t1.pth"),
             checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o0t0.pth"),
             hand_moving_average=0.1,
-            arm_moving_average=0.05,
+            # arm_moving_average=0.05,
+            arm_moving_average=0.03,
             # arm_moving_average=0.1,
             # arm_moving_average=0.05,
             # object_scales=np.array([0.24, 0.03, 0.02]) * 25,  # Mallet
-            object_scales=np.array([0.25, 0.03, 0.02]) * 25,  # scanned hammer 2
+            # object_scales=np.array([0.25, 0.03, 0.02]) * 25,  # scanned hammer 2
             # object_scales=np.array([0.1, 0.03, 0.02]) * 25,  # real flat screwdriver
             # object_scales=np.array([0.121277, 0.019341, 0.021183]) * 25,  # 040 large marker
+            object_scales=np.array([0.121277, 0.015, 0.015]) * 25,  # 040 large marker (smaller)
             # object_scales=np.array([0.12965531, 0.0337145 , 0.06038587]) * 25,  # whiteboard eraser
             # object_scales=np.array([0.15954332, 0.0777093 , 0.01231273]) * 25,  # iphone15pro
             # arm_moving_average=0.04,
