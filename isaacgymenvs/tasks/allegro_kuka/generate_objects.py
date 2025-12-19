@@ -677,7 +677,9 @@ def generate_handle_head_urdf(
             handle_density=handle_density
           )
     elif head_scale is not None and head_density is not None:
-        return generate_handle_head_urdf_variable_density_2_links(
+        # For some reason, the 2-link approach is not working well, causing physics instability
+        # return generate_handle_head_urdf_variable_density_2_links(
+        return generate_handle_head_urdf_variable_density(
             filepath=filepath,
             handle_scale=handle_scale,
             head_scale=head_scale,
