@@ -1,10 +1,15 @@
 #!/bin/bash
 
-CUSTOM_EXPERIMENT_NAME="local_finetune_handle_head_types_density_400"
-WANDB_GROUP="2025-12-19_handle_head_types"
+speed=2.5
+robotFriction=0.5
+tableResetZRange=0.025
+resetWhenDropped=True
 
-WANDB_ENTITY="tylerlum"
-WANDB_PROJECT="dexterous_reorientation"
+CUSTOM_EXPERIMENT_NAME="NORMAL_DENSITY_TYLER_BRANCH"
+WANDB_GROUP="TYLER_HANDLE_HEAD"
+
+WANDB_ENTITY="kk837"
+WANDB_PROJECT="customPretraining"
 OBJECT_TYPE="tyler_handle_head"
 
 DATETIME=$(date +"%Y-%m-%d_%H-%M-%S")
@@ -15,7 +20,7 @@ python -m isaacgymenvs.train \
 task/env=reorientation \
 ++task.env.useSparseReward=False \
 headless=True \
-task.env.numEnvs=12288 \
+task.env.numEnvs=24576 \
 train.params.config.minibatch_size=98304 \
 multi_gpu=False \
 train.params.config.good_reset_boundary=0 \
@@ -24,7 +29,7 @@ train.params.config.use_others_experience=lf \
 train.params.config.off_policy_ratio=1.0 \
 train.params.config.expl_type=mixed_expl_learn_param \
 train.params.config.expl_reward_type=entropy \
-train.params.config.expl_coef_block_size=2048 \
+train.params.config.expl_coef_block_size=4096 \
 train.params.config.expl_reward_coef_scale=0.005 \
 train.params.network.space.continuous.fixed_sigma=coef_cond \
 wandb_project=${WANDB_PROJECT} \
@@ -41,24 +46,27 @@ task.env.useRelativeControl=False \
 task.task.randomize=False \
 task=AllegroKukaLSTMAsymmetric \
 task.env.objectBaseSize=0.04 \
-task.env.stateList=["joint_pos","joint_vel","prev_action_targets","palm_pos","palm_rot","palm_vel","object_rot","object_vel","fingertip_pos_rel_palm","keypoints_rel_palm","keypoints_rel_goal","object_scales","closest_keypoint_max_dist","closest_fingertip_dist","lifted_object","progress","successes","reward"] \
-task.env.obsList=["joint_pos","joint_vel","prev_action_targets","palm_pos","palm_rot","object_rot","fingertip_pos_rel_palm","keypoints_rel_palm","keypoints_rel_goal","object_scales"] \
-task.env.dofSpeedScale=2.5 \
 task.env.kukaActionsPenaltyScale=0.03 \
 task.env.allegroActionsPenaltyScale=0.003 \
+task.env.stateList=["joint_pos","joint_vel","prev_action_targets","palm_pos","palm_rot","palm_vel","object_rot","object_vel","fingertip_pos_rel_palm","keypoints_rel_palm","keypoints_rel_goal","object_scales","closest_keypoint_max_dist","closest_fingertip_dist","lifted_object","progress","successes","reward"] \
+task.env.obsList=["joint_pos","joint_vel","prev_action_targets","palm_pos","palm_rot","object_rot","fingertip_pos_rel_palm","keypoints_rel_palm","keypoints_rel_goal","object_scales"] \
+task.env.use_fixed_set_of_goal_states=False \
 task.env.controlFrequencyInv=1 \
 task.env.useObsDelay=True \
 task.env.useActionDelay=True \
 task.env.useObjectStateDelayNoise=True \
 task.env.jointVelocityObsNoiseStd=0.01 \
-task.env.goalSamplingType=delta \
-task.env.use_fixed_set_of_goal_states=False \
 task.env.successSteps=10 \
-task.env.handleDensityMin=400 \
-task.env.handleDensityMax=400 \
-task.env.headDensityMin=400 \
-task.env.headDensityMax=400 \
-checkpoint=/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o0t0.pth \
+task.env.goalSamplingType=delta \
+task.env.dofSpeedScale=${speed} \
+task.env.robotFriction=${robotFriction} \
+task.env.tableResetZRange=${tableResetZRange} \
+task.env.resetWhenDropped=${resetWhenDropped} \
+# task.env.handleDensityMin=400 \
+# task.env.handleDensityMax=400 \
+# task.env.headDensityMin=400 \
+# task.env.headDensityMax=400 \
+# checkpoint=/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o0t0.pth \
 # checkpoint=/share/portal/kk837/sapg/train_dir/FINAL_ASYMMETRIC_RUNS/NEW_GAINS/NOISY_INPUTS_2.5_Speed_controlFreqInv_1_successSteps_10_delta_2025-12-09_19-50-51/runs/00_NOISY_INPUTS_2.5_Speed_controlFreqInv_1_successSteps_10_delta_2025-12-09_19-50-51/last/model.pth \
 # task.env.observationType=asymmetric \
 # task=AllegroKukaLSTM \
