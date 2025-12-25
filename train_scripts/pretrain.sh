@@ -5,7 +5,7 @@ robotFriction=1.0
 tableResetZRange=0.025
 resetWhenDropped=True
 
-CUSTOM_EXPERIMENT_NAME="speed${speed}_friction${robotFriction}_resetRange${tableResetZRange}_resetWhenDropped${resetWhenDropped}"
+CUSTOM_EXPERIMENT_NAME="DENSITY_VARIATION"
 WANDB_GROUP="newPretrainingRuns"
 
 WANDB_ENTITY="kk837"
@@ -62,3 +62,7 @@ task.env.dofSpeedScale=${speed} \
 task.env.robotFriction=${robotFriction} \
 task.env.tableResetZRange=${tableResetZRange} \
 task.env.resetWhenDropped=${resetWhenDropped} \
+# task.env.handleDensityMin=400 \
+# task.env.handleDensityMax=400 \
+# task.env.headDensityMin=400 \
+# task.env.headDensityMax=400 \
