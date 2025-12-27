@@ -1,21 +1,19 @@
 #!/bin/bash
 
-speed=2.5
-robotFriction=0.5
-tableResetZRange=0.025
-resetWhenDropped=True
+useObsDelay=True
+useActionDelay=False
+useObjectStateDelayNoise=True
+jointVelocityObsNoiseStd=0.01
 
-CUSTOM_EXPERIMENT_NAME="O0T0_tyler_branch"
-WANDB_GROUP="FINETUNE_3x"
+CUSTOM_EXPERIMENT_NAME="Obs_${useObsDelay}_Action_${useActionDelay}_ObjectState_${useObjectStateDelayNoise}_VelNoise_${jointVelocityObsNoiseStd}"
 
 WANDB_ENTITY="kk837"
-WANDB_PROJECT="FINAL_ASYMMETRIC_RUNS"
+WANDB_PROJECT="WHAT_MAKES_TRAINING_SLOW"
 OBJECT_TYPE="cuboid"
-CHECKPOINT=/share/portal/kk837/sapg/train_dir/FINAL_ASYMMETRIC_RUNS/FINETUNE_2x/O0T0_tyler_branch_2025-12-24_22-29-18/runs/00_O0T0_tyler_branch_2025-12-24_22-29-18/last/model.pth
 
 DATETIME=$(date +"%Y-%m-%d_%H-%M-%S")
 EXPERIMENT_NAME="${CUSTOM_EXPERIMENT_NAME}_$DATETIME"
-HYDRA_RUN_DIR=./train_dir/${WANDB_PROJECT}/${WANDB_GROUP}/${EXPERIMENT_NAME}
+HYDRA_RUN_DIR=./train_dir/${WANDB_PROJECT}/${EXPERIMENT_NAME}
 
 python -m isaacgymenvs.train \
 task/env=reorientation \
@@ -36,7 +34,7 @@ train.params.network.space.continuous.fixed_sigma=coef_cond \
 wandb_project=${WANDB_PROJECT} \
 wandb_entity=${WANDB_ENTITY} \
 wandb_activate=True \
-wandb_group=${WANDB_GROUP} \
+wandb_group=${WANDB_PROJECT} \
 wandb_tags=[] \
 ++wandb_notes='' \
 seed=0 \
@@ -53,14 +51,14 @@ task.env.stateList=["joint_pos","joint_vel","prev_action_targets","palm_pos","pa
 task.env.obsList=["joint_pos","joint_vel","prev_action_targets","palm_pos","palm_rot","object_rot","fingertip_pos_rel_palm","keypoints_rel_palm","keypoints_rel_goal","object_scales"] \
 task.env.use_fixed_set_of_goal_states=False \
 task.env.controlFrequencyInv=1 \
-task.env.useObsDelay=True \
-task.env.useActionDelay=True \
-task.env.useObjectStateDelayNoise=True \
-task.env.jointVelocityObsNoiseStd=0.01 \
+task.env.useObsDelay=${useObsDelay} \
+task.env.useActionDelay=${useActionDelay} \
+task.env.useObjectStateDelayNoise=${useObjectStateDelayNoise} \
+task.env.jointVelocityObsNoiseStd=${jointVelocityObsNoiseStd} \
 task.env.successSteps=10 \
 task.env.goalSamplingType=delta \
-task.env.dofSpeedScale=${speed} \
-task.env.robotFriction=${robotFriction} \
-task.env.tableResetZRange=${tableResetZRange} \
-task.env.resetWhenDropped=${resetWhenDropped} \
-checkpoint=${CHECKPOINT} \
+task.env.dofSpeedScale=2.5 \
+task.env.robotFriction=0.5 \
+task.env.tableResetZRange=0.025 \
+task.env.resetWhenDropped=False \
+# checkpoint=${CHECKPOINT} \

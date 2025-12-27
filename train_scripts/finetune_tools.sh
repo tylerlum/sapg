@@ -5,17 +5,20 @@ robotFriction=0.5
 tableResetZRange=0.025
 resetWhenDropped=True
 
-CUSTOM_EXPERIMENT_NAME="O0T0_tyler_branch"
-WANDB_GROUP="FINETUNE_3x"
+CUSTOM_EXPERIMENT_NAME="CONSTANT_DENSITY_FINETUNE_2x"
+WANDB_GROUP="FINETUNE_2x"
 
 WANDB_ENTITY="kk837"
-WANDB_PROJECT="FINAL_ASYMMETRIC_RUNS"
-OBJECT_TYPE="cuboid"
-CHECKPOINT=/share/portal/kk837/sapg/train_dir/FINAL_ASYMMETRIC_RUNS/FINETUNE_2x/O0T0_tyler_branch_2025-12-24_22-29-18/runs/00_O0T0_tyler_branch_2025-12-24_22-29-18/last/model.pth
+WANDB_PROJECT="customPretraining"
+OBJECT_TYPE="tyler_handle_head"
 
 DATETIME=$(date +"%Y-%m-%d_%H-%M-%S")
 EXPERIMENT_NAME="${CUSTOM_EXPERIMENT_NAME}_$DATETIME"
 HYDRA_RUN_DIR=./train_dir/${WANDB_PROJECT}/${WANDB_GROUP}/${EXPERIMENT_NAME}
+
+# CHECKPOINT=/share/portal/kk837/sapg/train_dir/customPretraining/TYLER_HANDLE_HEAD/NORMAL_DENSITY_TYLER_BRANCH_2025-12-24_22-34-55/runs/00_NORMAL_DENSITY_TYLER_BRANCH_2025-12-24_22-34-55/last/model.pth
+
+CHECKPOINT=/share/portal/kk837/sapg/train_dir/customPretraining/TYLER_HANDLE_HEAD/CONSTANT_DENSITY_TYLER_BRANCH_2025-12-24_22-34-27/runs/00_CONSTANT_DENSITY_TYLER_BRANCH_2025-12-24_22-34-27/last/model.pth
 
 python -m isaacgymenvs.train \
 task/env=reorientation \
@@ -64,3 +67,14 @@ task.env.robotFriction=${robotFriction} \
 task.env.tableResetZRange=${tableResetZRange} \
 task.env.resetWhenDropped=${resetWhenDropped} \
 checkpoint=${CHECKPOINT} \
+task.env.handleDensityMin=400 \
+task.env.handleDensityMax=400 \
+task.env.headDensityMin=400 \
+task.env.headDensityMax=400 \
+# checkpoint=/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o0t0.pth \
+# checkpoint=/share/portal/kk837/sapg/train_dir/FINAL_ASYMMETRIC_RUNS/NEW_GAINS/NOISY_INPUTS_2.5_Speed_controlFreqInv_1_successSteps_10_delta_2025-12-09_19-50-51/runs/00_NOISY_INPUTS_2.5_Speed_controlFreqInv_1_successSteps_10_delta_2025-12-09_19-50-51/last/model.pth \
+# task.env.observationType=asymmetric \
+# task=AllegroKukaLSTM \
+
+# task.task.randomization_params.actor_params.object.scale.range=[0.999,1.001] \
+# task.task.randomization_params.actor_params.allegro.scale.range=[0.999,1.001] \
