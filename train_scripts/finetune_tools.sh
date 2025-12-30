@@ -5,8 +5,8 @@ robotFriction=0.5
 tableResetZRange=0.025
 resetWhenDropped=True
 
-CUSTOM_EXPERIMENT_NAME="CONSTANT_DENSITY_FINETUNE_2x"
-WANDB_GROUP="FINETUNE_2x"
+CUSTOM_EXPERIMENT_NAME="NORMAL_DENSITY_FINETUNE_3x"
+WANDB_GROUP="FINETUNE_3x"
 
 WANDB_ENTITY="kk837"
 WANDB_PROJECT="customPretraining"
@@ -16,9 +16,9 @@ DATETIME=$(date +"%Y-%m-%d_%H-%M-%S")
 EXPERIMENT_NAME="${CUSTOM_EXPERIMENT_NAME}_$DATETIME"
 HYDRA_RUN_DIR=./train_dir/${WANDB_PROJECT}/${WANDB_GROUP}/${EXPERIMENT_NAME}
 
-# CHECKPOINT=/share/portal/kk837/sapg/train_dir/customPretraining/TYLER_HANDLE_HEAD/NORMAL_DENSITY_TYLER_BRANCH_2025-12-24_22-34-55/runs/00_NORMAL_DENSITY_TYLER_BRANCH_2025-12-24_22-34-55/last/model.pth
+CHECKPOINT=/share/portal/kk837/sapg/train_dir/customPretraining/FINETUNE_2x/NORMAL_DENSITY_FINETUNE_2x_2025-12-27_18-26-39/runs/00_NORMAL_DENSITY_FINETUNE_2x_2025-12-27_18-26-39/last/model.pth
 
-CHECKPOINT=/share/portal/kk837/sapg/train_dir/customPretraining/TYLER_HANDLE_HEAD/CONSTANT_DENSITY_TYLER_BRANCH_2025-12-24_22-34-27/runs/00_CONSTANT_DENSITY_TYLER_BRANCH_2025-12-24_22-34-27/last/model.pth
+# CHECKPOINT=/share/portal/kk837/sapg/train_dir/customPretraining/TYLER_HANDLE_HEAD/CONSTANT_DENSITY_TYLER_BRANCH_2025-12-24_22-34-27/runs/00_CONSTANT_DENSITY_TYLER_BRANCH_2025-12-24_22-34-27/last/model.pth
 
 python -m isaacgymenvs.train \
 task/env=reorientation \
@@ -67,10 +67,10 @@ task.env.robotFriction=${robotFriction} \
 task.env.tableResetZRange=${tableResetZRange} \
 task.env.resetWhenDropped=${resetWhenDropped} \
 checkpoint=${CHECKPOINT} \
-task.env.handleDensityMin=400 \
-task.env.handleDensityMax=400 \
-task.env.headDensityMin=400 \
-task.env.headDensityMax=400 \
+# task.env.handleDensityMin=400 \
+# task.env.handleDensityMax=400 \
+# task.env.headDensityMin=400 \
+# task.env.headDensityMax=400 \
 # checkpoint=/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o0t0.pth \
 # checkpoint=/share/portal/kk837/sapg/train_dir/FINAL_ASYMMETRIC_RUNS/NEW_GAINS/NOISY_INPUTS_2.5_Speed_controlFreqInv_1_successSteps_10_delta_2025-12-09_19-50-51/runs/00_NOISY_INPUTS_2.5_Speed_controlFreqInv_1_successSteps_10_delta_2025-12-09_19-50-51/last/model.pth \
 # task.env.observationType=asymmetric \

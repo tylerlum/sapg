@@ -5,7 +5,7 @@ useActionDelay=False
 useObjectStateDelayNoise=True
 jointVelocityObsNoiseStd=0.01
 
-CUSTOM_EXPERIMENT_NAME="Obs_${useObsDelay}_Action_${useActionDelay}_ObjectState_${useObjectStateDelayNoise}_VelNoise_${jointVelocityObsNoiseStd}"
+CUSTOM_EXPERIMENT_NAME="SLOWER_SPEED_noActionDelay"
 
 WANDB_ENTITY="kk837"
 WANDB_PROJECT="WHAT_MAKES_TRAINING_SLOW"
@@ -14,6 +14,8 @@ OBJECT_TYPE="cuboid"
 DATETIME=$(date +"%Y-%m-%d_%H-%M-%S")
 EXPERIMENT_NAME="${CUSTOM_EXPERIMENT_NAME}_$DATETIME"
 HYDRA_RUN_DIR=./train_dir/${WANDB_PROJECT}/${EXPERIMENT_NAME}
+
+# CHECKPOINT="/share/portal/kk837/sapg/train_dir/WHAT_MAKES_TRAINING_SLOW/Obs_True_Action_False_ObjectState_True_VelNoise_0.01_2025-12-26_18-40-08/runs/00_Obs_True_Action_False_ObjectState_True_VelNoise_0.01_2025-12-26_18-40-08/last/model.pth"
 
 python -m isaacgymenvs.train \
 task/env=reorientation \
@@ -57,8 +59,9 @@ task.env.useObjectStateDelayNoise=${useObjectStateDelayNoise} \
 task.env.jointVelocityObsNoiseStd=${jointVelocityObsNoiseStd} \
 task.env.successSteps=10 \
 task.env.goalSamplingType=delta \
-task.env.dofSpeedScale=2.5 \
+task.env.dofSpeedScale=1.5 \
 task.env.robotFriction=0.5 \
 task.env.tableResetZRange=0.025 \
 task.env.resetWhenDropped=False \
+# checkpoint=${CHECKPOINT} \
 # checkpoint=${CHECKPOINT} \

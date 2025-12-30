@@ -1,11 +1,11 @@
 #!/bin/bash
 
-speed=2.5
+speed=1.5
 robotFriction=0.5
 tableResetZRange=0.025
 resetWhenDropped=True
 
-CUSTOM_EXPERIMENT_NAME="NORMAL_DENSITY_TYLER_BRANCH"
+CUSTOM_EXPERIMENT_NAME="LOWER_SPEED"
 WANDB_GROUP="TYLER_HANDLE_HEAD"
 
 WANDB_ENTITY="kk837"
@@ -62,6 +62,9 @@ task.env.dofSpeedScale=${speed} \
 task.env.robotFriction=${robotFriction} \
 task.env.tableResetZRange=${tableResetZRange} \
 task.env.resetWhenDropped=${resetWhenDropped} \
+task.env.armMovingAverage=0.1 \
+# task.env.successTolerance=0.04 \
+# task.env.handMovingAverage=0.1 \
 # task.env.handleDensityMin=400 \
 # task.env.handleDensityMax=400 \
 # task.env.headDensityMin=400 \
