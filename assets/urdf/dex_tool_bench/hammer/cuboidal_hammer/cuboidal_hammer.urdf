@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<robot name="cuboidal_hammer">
+
+  <link name="cuboidal_hammer">
+    <!-- Handle -->
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.25 0.03 0.02"/>
+      </geometry>
+      <material name="material">
+        <color rgba="0.639 0.847 0.882 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.25 0.03 0.02"/>
+      </geometry>
+    </collision>
+
+    <!-- Head -->
+    <visual>
+      <origin xyz="0.135 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.02 0.11 0.02"/>
+      </geometry>
+      <material name="material">
+        <color rgba="0.639 0.847 0.882 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.135 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.02 0.11 0.02"/>
+      </geometry>
+    </collision>
+
+    <inertial>
+      <density value="400.0"/>
+    </inertial>
+  </link>
+
+</robot>
