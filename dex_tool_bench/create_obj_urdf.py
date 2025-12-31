@@ -10,6 +10,8 @@ from pathlib import Path
 from typing import Tuple, Union
 import math
 
+import numpy as np
+from PIL import Image
 import trimesh
 
 
@@ -181,7 +183,7 @@ def create_tool_urdf(output_path: Path, config: ToolConfig) -> Path:
 # =============================================================================
 
 def create_tool_obj(output_path: Path, config: ToolConfig) -> Path:
-    """Create a tool OBJ mesh with uniform color and MTL material file."""
+    """Create a tool OBJ mesh with uniform color, MTL material file, and texture image."""
     head_offset = config.get_head_offset()
     color = config.color
     
@@ -195,20 +197,41 @@ def create_tool_obj(output_path: Path, config: ToolConfig) -> Path:
     # Combine meshes
     combined_mesh = trimesh.util.concatenate([handle_mesh, head_mesh])
     
-    # Apply PBR material with color
-    material = trimesh.visual.material.PBRMaterial(
-        baseColorFactor=color,
-        metallicFactor=0.0,
-        roughnessFactor=1.0,
+    # Create output directory
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    # Create a solid-color texture image (for FoundationPose compatibility)
+    texture_path = output_path.with_suffix(".png")
+    texture_size = 64  # Small texture is sufficient for solid color
+    color_rgb = tuple(int(c * 255) for c in color[:3])
+    texture_img = Image.new("RGB", (texture_size, texture_size), color_rgb)
+    texture_img.save(texture_path)
+    print(f"Created texture: {texture_path}")
+    
+    # Create UV coordinates for the mesh (simple planar mapping)
+    # Map all vertices to the center of the texture (since it's a solid color)
+    uv = np.zeros((len(combined_mesh.vertices), 2))
+    uv[:, 0] = 0.5  # u = 0.5
+    uv[:, 1] = 0.5  # v = 0.5
+    
+    # Create material with texture
+    material = trimesh.visual.material.SimpleMaterial(
+        image=texture_img,
+        diffuse=color_rgb,
     )
-    combined_mesh.visual = trimesh.visual.TextureVisuals(material=material)
+    
+    # Apply texture visuals with UV coordinates
+    combined_mesh.visual = trimesh.visual.TextureVisuals(
+        uv=uv,
+        material=material,
+        image=texture_img,
+    )
     
     # Save as OBJ
-    output_path.parent.mkdir(parents=True, exist_ok=True)
     combined_mesh.export(str(output_path), file_type="obj")
     print(f"Created OBJ: {output_path}")
     
-    # Create MTL file
+    # Create MTL file with texture reference
     mtl_path = output_path.with_suffix(".mtl")
     mtl_content = f"""# Material file for {output_path.name}
 
@@ -218,6 +241,7 @@ Kd {color[0]} {color[1]} {color[2]}
 Ks 0.4 0.4 0.4
 Ns 10.0
 d {color[3]}
+map_Kd {texture_path.name}
 """
     with open(mtl_path, "w") as f:
         f.write(mtl_content)
@@ -232,7 +256,7 @@ d {color[3]}
         with open(output_path, "w") as f:
             f.write(obj_content)
 
-    # also store a .stl file
+    # Also store a .stl file
     stl_path = output_path.with_suffix(".stl")
     combined_mesh.export(str(stl_path), file_type="stl")
     print(f"Created STL: {stl_path}")
