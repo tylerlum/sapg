@@ -231,6 +231,11 @@ d {color[3]}
         obj_content = f"mtllib {mtl_path.name}\nusemtl material_0\n" + obj_content
         with open(output_path, "w") as f:
             f.write(obj_content)
+
+    # also store a .stl file
+    stl_path = output_path.with_suffix(".stl")
+    combined_mesh.export(str(stl_path), file_type="stl")
+    print(f"Created STL: {stl_path}")
     
     return output_path
 
