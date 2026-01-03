@@ -6,12 +6,12 @@ tableResetZRange=0.025
 resetWhenDropped=True
 
 CUSTOM_EXPERIMENT_NAME="O0T0_tyler_branch"
-WANDB_GROUP="FINETUNE_4x"
+WANDB_GROUP="FINETUNE_6x"
 
 WANDB_ENTITY="kk837"
 WANDB_PROJECT="FINAL_ASYMMETRIC_RUNS"
 OBJECT_TYPE="cuboid"
-CHECKPOINT=/share/portal/kk837/sapg/train_dir/FINAL_ASYMMETRIC_RUNS/FINETUNE_3x/O0T0_tyler_branch_2025-12-27_18-24-11/runs/00_O0T0_tyler_branch_2025-12-27_18-24-11/last/model.pth
+CHECKPOINT=/share/portal/kk837/sapg/train_dir/FINAL_ASYMMETRIC_RUNS/FINETUNE_5x/O0T0_tyler_branch_2026-01-01_01-32-24/runs/00_O0T0_tyler_branch_2026-01-01_01-32-24/last/model.pth
 
 DATETIME=$(date +"%Y-%m-%d_%H-%M-%S")
 EXPERIMENT_NAME="${CUSTOM_EXPERIMENT_NAME}_$DATETIME"
@@ -63,4 +63,5 @@ task.env.dofSpeedScale=${speed} \
 task.env.robotFriction=${robotFriction} \
 task.env.tableResetZRange=${tableResetZRange} \
 task.env.resetWhenDropped=${resetWhenDropped} \
+train.params.config.max_frames=100_000_000_000_000 \
 checkpoint=${CHECKPOINT} \
