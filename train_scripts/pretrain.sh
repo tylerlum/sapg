@@ -5,8 +5,8 @@ robotFriction=0.5
 tableResetZRange=0.025
 resetWhenDropped=True
 
-CUSTOM_EXPERIMENT_NAME="FINETUNE_4x"
-WANDB_GROUP="FINETUNE_4x"
+CUSTOM_EXPERIMENT_NAME="FINETUNE_5x"
+WANDB_GROUP="FINETUNE_5x"
 
 WANDB_ENTITY="kk837"
 WANDB_PROJECT="customPretraining"
@@ -16,7 +16,7 @@ DATETIME=$(date +"%Y-%m-%d_%H-%M-%S")
 EXPERIMENT_NAME="${CUSTOM_EXPERIMENT_NAME}_$DATETIME"
 HYDRA_RUN_DIR=./train_dir/${WANDB_PROJECT}/${WANDB_GROUP}/${EXPERIMENT_NAME}
 
-CHECKPOINT=/share/portal/kk837/sapg/train_dir/customPretraining/FINETUNE_3x/NORMAL_DENSITY_FINETUNE_3x_2025-12-29_20-05-44/runs/00_NORMAL_DENSITY_FINETUNE_3x_2025-12-29_20-05-44/last/model.pth
+CHECKPOINT=/share/portal/kk837/sapg/train_dir/customPretraining/FINETUNE_4x/FINETUNE_4x_2026-01-01_01-37-23/runs/00_FINETUNE_4x_2026-01-01_01-37-23/last/model.pth
 
 python -m isaacgymenvs.train \
 task/env=reorientation \
@@ -65,6 +65,7 @@ task.env.robotFriction=${robotFriction} \
 task.env.tableResetZRange=${tableResetZRange} \
 task.env.resetWhenDropped=${resetWhenDropped} \
 task.env.armMovingAverage=0.1 \
+train.params.config.max_frames=100_000_000_000_000 \
 checkpoint=${CHECKPOINT} \
 # task.env.successTolerance=0.04 \
 # task.env.handMovingAverage=0.1 \

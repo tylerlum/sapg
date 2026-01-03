@@ -5,7 +5,7 @@ useActionDelay=False
 useObjectStateDelayNoise=True
 jointVelocityObsNoiseStd=0.01
 
-CUSTOM_EXPERIMENT_NAME="FINETUNE4x"
+CUSTOM_EXPERIMENT_NAME="FINETUNE3x_SLOWSPEED"
 
 WANDB_ENTITY="kk837"
 WANDB_PROJECT="WHAT_MAKES_TRAINING_SLOW"
@@ -15,7 +15,7 @@ DATETIME=$(date +"%Y-%m-%d_%H-%M-%S")
 EXPERIMENT_NAME="${CUSTOM_EXPERIMENT_NAME}_$DATETIME"
 HYDRA_RUN_DIR=./train_dir/${WANDB_PROJECT}/${EXPERIMENT_NAME}
 
-CHECKPOINT="/share/portal/kk837/sapg/train_dir/WHAT_MAKES_TRAINING_SLOW/FINETUNE3x_Obs_True_Action_False_ObjectState_True_VelNoise_0.01_2025-12-31_02-28-10/runs/00_FINETUNE3x_Obs_True_Action_False_ObjectState_True_VelNoise_0.01_2025-12-31_02-28-10/last/model.pth"
+CHECKPOINT="/share/portal/kk837/sapg/train_dir/WHAT_MAKES_TRAINING_SLOW/FINETUNE2x_SLOWER_SPEED_2026-01-01_01-35-25/runs/00_FINETUNE2x_SLOWER_SPEED_2026-01-01_01-35-25/last/model.pth"
 
 python -m isaacgymenvs.train \
 task/env=reorientation \
@@ -59,7 +59,7 @@ task.env.useObjectStateDelayNoise=${useObjectStateDelayNoise} \
 task.env.jointVelocityObsNoiseStd=${jointVelocityObsNoiseStd} \
 task.env.successSteps=10 \
 task.env.goalSamplingType=delta \
-task.env.dofSpeedScale=2.5 \
+task.env.dofSpeedScale=1.5 \
 task.env.robotFriction=0.5 \
 task.env.tableResetZRange=0.025 \
 task.env.resetWhenDropped=False \
