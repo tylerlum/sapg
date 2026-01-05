@@ -183,7 +183,7 @@ def main():
     checkpoint_dir = Path("/share/portal/kk837/sapg/train_dir/customPretraining/FINETUNE_4x/FINETUNE_4x_SLOWSPEED_ADD_ACTION_DELAY_2026-01-03_01-32-46")
     object_type = "hammer"
     object_name = "scanned_hammer_2"
-    trajectory_name = "horizontal_swing"
+    trajectory_name = "vertical_swing"
     output_dir = None  # Set to Path("videos") to enable recording
 
     trajectory_path = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
