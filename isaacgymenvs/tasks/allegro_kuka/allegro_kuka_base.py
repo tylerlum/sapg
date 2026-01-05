@@ -63,6 +63,7 @@ from isaacgymenvs.utils.object_trajectories import (
     get_phone_trajectory,
 )
 from pytorch3d.transforms import quaternion_to_matrix, matrix_to_quaternion, axis_angle_to_matrix
+import json
 
 DATETIME_STR = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
@@ -689,7 +690,6 @@ class AllegroKukaBase(VecTask):
 
             SAVE_TO_JSON = False
             if SAVE_TO_JSON:
-                import json
                 output_filepath = Path(f"{object_type}_trajectory.json")
                 print(f"Saving trajectory to {output_filepath}")
 
@@ -705,6 +705,12 @@ class AllegroKukaBase(VecTask):
 
             # Set max consecutive successes to the length of the trajectory so we don't run out of goal states
             self.max_consecutive_successes = len(self.trajectory_states)
+        
+            FIXED_GOAL_STATES = self.cfg["env"]["fixedGoalStates"]
+            if FIXED_GOAL_STATES is not None:
+                self.trajectory_states = torch.tensor(FIXED_GOAL_STATES, device=self.device)
+                # Set max consecutive successes to the length of the trajectory so we don't run out of goal states
+                self.max_consecutive_successes = len(self.trajectory_states)
 
         return object_asset_files, object_asset_scales, need_vhacds
 
