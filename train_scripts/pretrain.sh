@@ -1,11 +1,11 @@
 #!/bin/bash
 
-speed=2.5
+speed=1.5
 robotFriction=0.5
 tableResetZRange=0.025
 resetWhenDropped=True
 
-CUSTOM_EXPERIMENT_NAME="FINETUNE_5x"
+CUSTOM_EXPERIMENT_NAME="FINETUNE_5x_SLOW_SPEED_NO_ACTION_DELAY"
 WANDB_GROUP="FINETUNE_5x"
 
 WANDB_ENTITY="kk837"
@@ -16,7 +16,7 @@ DATETIME=$(date +"%Y-%m-%d_%H-%M-%S")
 EXPERIMENT_NAME="${CUSTOM_EXPERIMENT_NAME}_$DATETIME"
 HYDRA_RUN_DIR=./train_dir/${WANDB_PROJECT}/${WANDB_GROUP}/${EXPERIMENT_NAME}
 
-CHECKPOINT=/share/portal/kk837/sapg/train_dir/customPretraining/FINETUNE_4x/FINETUNE_4x_2026-01-01_01-37-23/runs/00_FINETUNE_4x_2026-01-01_01-37-23/last/model.pth
+CHECKPOINT=/share/portal/kk837/sapg/train_dir/customPretraining/FINETUNE_4x/FINETUNE_4x_SLOWSPEED_NO_ACTION_DELAY_2026-01-03_01-33-08/runs/00_FINETUNE_4x_SLOWSPEED_NO_ACTION_DELAY_2026-01-03_01-33-08/last/model.pth
 
 python -m isaacgymenvs.train \
 task/env=reorientation \
@@ -55,7 +55,7 @@ task.env.obsList=["joint_pos","joint_vel","prev_action_targets","palm_pos","palm
 task.env.use_fixed_set_of_goal_states=False \
 task.env.controlFrequencyInv=1 \
 task.env.useObsDelay=True \
-task.env.useActionDelay=True \
+task.env.useActionDelay=False \
 task.env.useObjectStateDelayNoise=True \
 task.env.jointVelocityObsNoiseStd=0.01 \
 task.env.successSteps=10 \

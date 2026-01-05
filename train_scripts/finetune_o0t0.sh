@@ -6,12 +6,12 @@ tableResetZRange=0.025
 resetWhenDropped=True
 
 CUSTOM_EXPERIMENT_NAME="O0T0_tyler_branch"
-WANDB_GROUP="FINETUNE_7x"
+WANDB_GROUP="FINETUNE_8x"
 
 WANDB_ENTITY="kk837"
 WANDB_PROJECT="FINAL_ASYMMETRIC_RUNS"
 OBJECT_TYPE="cuboid"
-CHECKPOINT=/share/portal/kk837/sapg/train_dir/FINAL_ASYMMETRIC_RUNS/FINETUNE_6x/O0T0_tyler_branch_2026-01-02_17-08-31/runs/00_O0T0_tyler_branch_2026-01-02_17-08-31/last/model.pth
+CHECKPOINT=/share/portal/kk837/sapg/train_dir/FINAL_ASYMMETRIC_RUNS/FINETUNE_7x/O0T0_tyler_branch_2026-01-03_01-44-42/runs/00_O0T0_tyler_branch_2026-01-03_01-44-42/last/model.pth
 
 DATETIME=$(date +"%Y-%m-%d_%H-%M-%S")
 EXPERIMENT_NAME="${CUSTOM_EXPERIMENT_NAME}_$DATETIME"
