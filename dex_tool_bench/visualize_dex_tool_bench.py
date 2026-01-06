@@ -8,6 +8,7 @@ import time
 from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
+from isaacgymenvs.utils.utils import get_repo_root_dir
 
 import trimesh
 import viser
@@ -15,7 +16,7 @@ from viser.extras import ViserUrdf
 
 
 # Base directory for all dex_tool_bench assets
-ASSETS_DIR = Path("/share/portal/kk837/sapg/assets/urdf/dex_tool_bench")
+ASSETS_DIR = get_repo_root_dir() / "assets/urdf/dex_tool_bench"
 
 
 def find_all_tools_by_type(base_dir: Path) -> Dict[str, List[Tuple[Path, Optional[Path]]]]:

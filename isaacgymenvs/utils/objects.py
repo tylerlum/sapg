@@ -424,6 +424,7 @@ NAME_TO_OBJECT = {
         need_vhacd=True,
     ),
 }
+NAME_TO_OBJECT = {}  # Ultra hack to remove all other objects not in DEXTOOL BENCH
 # DEXTOOL BENCH OBJECTS
 
 #HAMMERS
@@ -465,14 +466,16 @@ HAMMER_NAME_TO_OBJECT = {
             get_repo_root_dir()
             / "assets/urdf/dex_tool_bench/hammer/mallet/mallet.urdf"
         ),
-        coacd_filepaths=list(
-            (
-                get_repo_root_dir()
-                / "assets/urdf/tyler_objects_convex_decomp/mallet"
-            ).glob("decomp_*.obj")
-        ),
+        coacd_filepaths=None,
+        # coacd_filepaths=list(
+        #     (
+        #         get_repo_root_dir()
+        #         / "assets/urdf/tyler_objects_convex_decomp/mallet"
+        #     ).glob("decomp_*.obj")
+        # ),
         scale=rescale_by_factor((0.24, 0.03, 0.02), factor=25),
-        need_vhacd=True,
+        # need_vhacd=True,
+        need_vhacd=False,
     ),
 }
 
@@ -537,6 +540,15 @@ ERASER_NAME_TO_OBJECT = {
         scale=rescale_by_factor((0.12, 0.03, 0.06), factor=25),
         need_vhacd=False,
     ),
+    "whiteboard_eraser": Object(
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/dex_tool_bench/eraser/whiteboard_eraser/whiteboard_eraser.urdf"
+        ),
+        coacd_filepaths=None,
+        scale=rescale_by_factor((0.12965531, 0.0337145 , 0.06038587), factor=25),
+        need_vhacd=False,
+    ),
 }
 
 #overwrite NAME_TO_OBJECT with ERASER_NAME_TO_OBJECT even if they share keys
@@ -551,7 +563,7 @@ SPATULA_NAME_TO_OBJECT = {
         ),
         coacd_filepaths=None,
         scale=rescale_by_factor((0.15, 0.02, 0.015), factor=25),
-        need_vhacd=False,
+        need_vhacd=True,
     ),
     "large_spatula": Object(
         filepath=(
@@ -560,7 +572,7 @@ SPATULA_NAME_TO_OBJECT = {
         ),
         coacd_filepaths=None,
         scale=rescale_by_factor((0.18, 0.024, 0.024), factor=25),
-        need_vhacd=False,
+        need_vhacd=True,
     ),
     "black_spatula": Object(
         filepath=(
@@ -568,7 +580,8 @@ SPATULA_NAME_TO_OBJECT = {
             / "assets/urdf/dex_tool_bench/spatula/black_spatula/spatula.urdf"
         ),
         coacd_filepaths=None,
-        scale=rescale_by_factor((0.22, 0.02, 0.01), factor=25),
+        scale=rescale_by_factor((0.22, 0.02, 0.015), factor=25),
+        # need_vhacd=True,
         need_vhacd=False,
     ),
 }

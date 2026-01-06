@@ -145,7 +145,8 @@ class GoalTrajectoryCreator:
 
 
 def main():
-    GoalTrajectoryCreator("knife", "kitchen_knife").run()
+    # GoalTrajectoryCreator("knife", "kitchen_knife").run()
+    GoalTrajectoryCreator("hammer", "hammer_2").run()
 
 
 if __name__ == "__main__":

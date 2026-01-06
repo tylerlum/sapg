@@ -271,15 +271,31 @@ def parse_checkpoint_dir(path: Path) -> Tuple[Path, Path]:
 
 def main():
     # Configuration
-    checkpoint_dir = Path("/share/portal/kk837/sapg/train_dir/FINAL_ASYMMETRIC_RUNS/FINETUNE_8x/O0T0_tyler_branch_2026-01-05_02-16-57")
+    # checkpoint_dir = Path("/share/portal/kk837/sapg/train_dir/FINAL_ASYMMETRIC_RUNS/FINETUNE_8x/O0T0_tyler_branch_2026-01-05_02-16-57")
 
-    checkpoint_dir = Path("/share/portal/kk837/sapg/train_dir/WHAT_MAKES_TRAINING_SLOW/FINETUNE4x_SLOWSPEED_2026-01-05_02-17-46")
+    # checkpoint_dir = Path("/share/portal/kk837/sapg/train_dir/WHAT_MAKES_TRAINING_SLOW/FINETUNE4x_SLOWSPEED_2026-01-05_02-17-46")
 
-    checkpoint_dir = Path("/share/portal/kk837/sapg/train_dir/customPretraining/FINETUNE_5x/FINETUNE_5x_SLOW_SPEED_ADD_ACTION_DELAY_2026-01-05_02-10-22")
+    # checkpoint_dir = Path("/share/portal/kk837/sapg/train_dir/customPretraining/FINETUNE_5x/FINETUNE_5x_SLOW_SPEED_ADD_ACTION_DELAY_2026-01-05_02-10-22")
 
-    object_type = "spatula"
-    object_name = "black_spatula"
-    trajectory_name = "flip_from_left"
+    # object_type = "hammer"
+    # object_name = "hammer_2"
+    # object_name = "mallet"
+    # trajectory_name = "horizontal_swing"
+    # trajectory_name = "horizontal_swing_rotated"
+    # trajectory_name = "vertical_swing"
+    # trajectory_name = "vertical_swing_2"
+
+    # object_type = "spatula"
+    # object_name = "black_spatula"
+    # object_name = "small_spatula"
+    # object_name = "large_spatula"
+    # trajectory_name = "flip_from_left"
+
+    object_type = "eraser"
+    object_name = "whiteboard_eraser"
+    # trajectory_name = "wipe_right"
+    trajectory_name = "wipe_left"
+
     output_dir = None  # Set to Path("videos") to enable recording
 
     # Load trajectory
@@ -289,10 +305,22 @@ def main():
         traj_data = json.load(f)
 
     # Create environment
-    config_path, checkpoint_path = parse_checkpoint_dir(checkpoint_dir)
+    # config_path, checkpoint_path = parse_checkpoint_dir(checkpoint_dir)
+
+    # folder_path = Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/o0t0_fullSpeed")
+    folder_path = Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed")
+    # folder_path = Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_fastSpeed")
+    config_path = folder_path / "config.yaml"
+    checkpoint_path = folder_path / "model.pth"
+
+    # Original one we tried in eral
+    # config_path = Path("/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml")
+    # checkpoint_path = Path("/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o0t0.pth")
+
     env = create_env(
         config_path=str(config_path),
-        headless=True,
+        # headless=True,
+        headless=False,
         device="cuda" if torch.cuda.is_available() else "cpu",
         overrides={
             "task.env.resetPositionNoiseX": 0.0,
@@ -317,6 +345,8 @@ def main():
             "task.env.useObsDelay": False,
             "task.env.useObjectStateDelayNoise": False,
             "task.env.resetWhenDropped": False,
+            # "task.env.armMovingAverage": 0.05,
+            "task.env.armMovingAverage": 0.1,
         },
     )
 
