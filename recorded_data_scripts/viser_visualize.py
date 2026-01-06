@@ -92,7 +92,9 @@ def main():
     # DEFAULT_OBJECT_NAME = "blue_cuboid"
     # DEFAULT_OBJECT_NAME = "cuboidal_mallet"
     # DEFAULT_OBJECT_NAME = "scanned_hammer_2"
-    DEFAULT_OBJECT_NAME = "real_flat_screwdriver"
+    # DEFAULT_OBJECT_NAME = "real_flat_screwdriver"
+    # DEFAULT_OBJECT_NAME = "040_large_marker"
+    DEFAULT_OBJECT_NAME = "whiteboard_eraser"
     object_name = DEFAULT_OBJECT_NAME
     if recorded_data.object_name is None:
         print(f"Using default object name: {DEFAULT_OBJECT_NAME}")
