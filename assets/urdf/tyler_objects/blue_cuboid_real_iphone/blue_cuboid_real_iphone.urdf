@@ -13,8 +13,12 @@
                 <density value="400"/>
             </inertial>
             <visual>
+                <material name="light_blue">
+                    <color rgba="0.639 0.847 0.882 1.0"/>
+                </material>
             <geometry>
-                <mesh filename="cuboid.obj" scale="1 1 1"/>
+                <!-- <mesh filename="cuboid.obj" scale="1 1 1"/> -->
+                <box size="0.15 0.07 0.01"/>
             </geometry>
             <!-- The following material makes the object white in Isaac Gym, so we comment it out.
             <material name="white"> <color rgba="1. 1. 1. 1."/> </material>
@@ -22,7 +26,8 @@
             </visual>
             <collision>
             <geometry>
-                <mesh filename="cuboid.obj" scale="1 1 1"/>
+                <!-- <mesh filename="cuboid.obj" scale="1 1 1"/> -->
+                <box size="0.15 0.07 0.01"/>
             </geometry>
             </collision>
         </link>

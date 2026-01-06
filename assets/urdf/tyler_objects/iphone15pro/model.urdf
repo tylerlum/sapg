@@ -8,8 +8,8 @@
                 <contact_erp value="1.0"/>
             </contact>
             <inertial>
-                <!-- <density value="400"/> -->
-                <density value="2200"/>
+                <density value="400"/>
+                <!-- <density value="2200"/> -->
             </inertial>
             <visual>
             <geometry>

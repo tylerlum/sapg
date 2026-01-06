@@ -263,11 +263,15 @@ def main():
             "task.env.resetDofPosRandomIntervalArm": 0.0,
             "task.env.resetDofVelRandomInterval": 0.0,
             # "task.env.object_type": "blue_cuboid",
-            "task.env.object_type": "cuboidal_mallet",
+            # "task.env.object_type": "cuboidal_mallet",
+            # "task.env.object_type": "040_large_marker",
+            # "task.env.object_type": "whiteboard_eraser",
+            "task.env.object_type": "iphone15pro",
             "task.env.forceNoReset": True,
             "task.env.randomizeObjectRotation": False,
-            # "task.env.objectStartPose": [0.,  0.,  0.58, 0.,  0.,  0.,  1.],  # x, y, z, qx, qy, qz, qw
-            "task.env.objectStartPose": [0.,  0.,  0.58, 0.,  0.,  1.,  0.],  # x, y, z, qx, qy, qz, qw
+            # "task.env.objectStartPose": [0.,  0.,  0.58, 0.7071068,  0.,  0.,  0.7071068],  # x, y, z, qx, qy, qz, qw (rotated 90 deg around x)
+            "task.env.objectStartPose": [0.,  0.,  0.58, 0.,  0.,  0.,  1.],  # x, y, z, qx, qy, qz, qw
+            # "task.env.objectStartPose": [0.,  0.,  0.58, 0.,  0.,  1.,  0.],  # x, y, z, qx, qy, qz, qw
             "task.env.goalObjectPose": [0.,  0.,  0.88, 0.,  0.,  0.,  1.],  # x, y, z, qx, qy, qz, qw
             "task.env.forceScale": 0.0,
             "task.sim.dt": CONTROL_DT,

@@ -1,11 +1,32 @@
 from pathlib import Path
 import math
-from typing import Tuple, Union
+from typing import Tuple, Union, Optional
 
 
 def generate_cuboid_urdf_constant_density(
     filepath: Path, scale: Tuple[float, float, float], density: float = 400
 ) -> Path:
+    """
+    Generate a URDF file for a cuboid with uniform density.
+
+    Parameters
+    ----------
+    filepath : Path
+        Path where the URDF file will be saved.
+    scale : tuple of float (length, width, height)
+        Dimensions of the cuboid along x, y, z axes.
+    density : float, default=400
+        Material density in kg/m^3.
+
+    Returns
+    -------
+    Path
+        Path to the written URDF file.
+
+    Notes
+    -----
+    The cuboid's origin is at its center. Visual and collision geometries are identical.
+    """
     urdf = f"""<?xml version="1.0"?>
 <robot name="cuboid">
 
@@ -36,13 +57,37 @@ def generate_cuboid_urdf_constant_density(
 """
     with open(filepath, "w") as f:
         f.write(urdf)
-    print(f"✅ URDF written to {filepath}")
+    # print(f"✅ URDF written to {filepath}")
     return filepath
 
 
 def generate_cylinder_urdf_constant_density(
     filepath: Path, height: float, diameter: float, density: float = 400
 ) -> Path:
+    """
+    Generate a URDF file for a cylinder with uniform density.
+
+    Parameters
+    ----------
+    filepath : Path
+        Path where the URDF file will be saved.
+    height : float
+        Cylinder height along the +x axis (after rotation).
+    diameter : float
+        Cylinder diameter.
+    density : float, default=400
+        Material density in kg/m^3.
+
+    Returns
+    -------
+    Path
+        Path to the written URDF file.
+
+    Notes
+    -----
+    The cylinder is rotated so that its main axis aligns with +x in the URDF.
+    Visual and collision geometries are identical.
+    """
     # In URDFs, cylinders are along z axis
     # But we rotate them to be along +x
     # Height is along +x
@@ -77,7 +122,7 @@ def generate_cylinder_urdf_constant_density(
 """
     with open(filepath, "w") as f:
         f.write(urdf)
-    print(f"✅ URDF written to {filepath}")
+    # print(f"✅ URDF written to {filepath}")
     return filepath
 
 
@@ -87,6 +132,33 @@ def generate_handle_head_urdf_constant_density(
     head_scale: Union[Tuple[float, float, float], Tuple[float, float]],
     density: float = 400,
 ):
+    """
+    Generate a URDF file for a composite handle-head object with uniform density.
+
+    Parameters
+    ----------
+    filepath : Path
+        Path where the URDF file will be saved.
+    handle_scale : tuple
+        Dimensions of the handle. Can be:
+        - 3D tuple (length_x, length_y, length_z) for a cuboid
+        - 2D tuple (height, diameter) for a cylinder
+    head_scale : tuple
+        Dimensions of the head. Same format as handle_scale.
+    density : float, default=400
+        Material density in kg/m^3 for both handle and head.
+
+    Returns
+    -------
+    Path
+        Path to the written URDF file.
+
+    Notes
+    -----
+    - The handle is placed at the origin.
+    - The head is offset along +x based on handle and head dimensions.
+    - Visual and collision geometries are identical.
+    """
     if len(handle_scale) == 3:
         handle_len_x, handle_len_y, handle_len_z = handle_scale
         handle_text = f"""\
@@ -169,11 +241,33 @@ def generate_handle_head_urdf_constant_density(
 """
     with open(filepath, "w") as f:
         f.write(urdf)
-    print(f"✅ URDF written to {filepath}")
+    # print(f"✅ URDF written to {filepath}")
     return filepath
 
 
 def compute_mass_and_inertia(scale: Union[Tuple[float, float, float], Tuple[float, float]], density: float):
+    """
+    Compute the mass and principal moments of inertia for a cuboid, cylinder, or capsule.
+
+    Parameters
+    ----------
+    scale : tuple
+        Shape dimensions.
+        - Cuboid: (lx, ly, lz)
+        - Cylinder or capsule: (height, diameter)
+    density : float
+        Material density in kg/m^3.
+
+    Returns
+    -------
+    tuple
+        (mass, ixx, iyy, izz) in kg and kg·m².
+
+    Notes
+    -----
+    - Capsule inertia is approximated as cylinder + sphere contribution along main axis.
+    - For cylinders, orientation affects which axis is considered main.
+    """
     if len(scale) == 3:
         lx, ly, lz = scale
         v = lx * ly * lz
@@ -184,6 +278,7 @@ def compute_mass_and_inertia(scale: Union[Tuple[float, float, float], Tuple[floa
     elif len(scale) == 2:
         from typing import Literal
         MODE: Literal["cylinder", "capsule"] = "capsule"
+        # MODE: Literal["cylinder", "capsule"] = "cylinder"
         if MODE == "cylinder":
             h, d = scale[0], scale[1]
             r = d / 2
@@ -196,18 +291,26 @@ def compute_mass_and_inertia(scale: Union[Tuple[float, float, float], Tuple[floa
             h, d = scale[0], scale[1]  # h = cylindrical height (excluding hemispheres), d = diameter
             r = d / 2
 
-            # Volume: cylinder + 2 hemispheres (which is one full sphere)
-            cylinder_v = math.pi * r**2 * h
-            sphere_v = (4/3) * math.pi * r**3
-            v = cylinder_v + sphere_v
+            # masses
+            m_c = density * math.pi * r**2 * h
+            m_h = density * (2/3) * math.pi * r**3   # one hemisphere
+            m = m_c + 2*m_h
 
-            # Mass
-            m = v * density
+            # cylinder inertias about its centroid (axis = z)
+            I_c_axis = 0.5 * m_c * r**2
+            I_c_perp = (1/12) * m_c * (3*r**2 + h**2)
 
-            # Inertia
-            # Approximate formulas for capsule along main axis (z) and perpendicular axes (x, y)
-            izz = 0.5 * m * r**2  # around symmetry axis
-            ixx = iyy = (1/12) * m * (3*r**2 + h**2 + (8/5)*r**2)  # add sphere contribution
+            # hemisphere inertias about its own centroid
+            I_h_axis = (2/5) * m_h * r**2
+            I_h_perp = (83/320) * m_h * r**2
+
+            # hemisphere COM offset from capsule COM
+            d_com = (h / 2) + (3*r / 8)
+
+            # combine
+            izz = I_c_axis + 2 * I_h_axis
+            ixx = iyy = I_c_perp + 2 * (I_h_perp + m_h * d_com**2)
+
         else:
             raise ValueError(f"Invalid mode: {MODE}")
     else:
@@ -222,6 +325,32 @@ def generate_handle_head_urdf_variable_density(
     handle_density: float = 400,
     head_density: float = 800,
 ):
+    """
+    Generate a URDF for a handle-head object with independent densities for handle and head.
+
+    Parameters
+    ----------
+    filepath : Path
+        Path to save the URDF file.
+    handle_scale : tuple
+        Dimensions of the handle. Cuboid (lx, ly, lz) or cylinder (height, diameter).
+    head_scale : tuple
+        Dimensions of the head. Cuboid or cylinder.
+    handle_density : float, default=400
+        Material density of the handle.
+    head_density : float, default=800
+        Material density of the head.
+
+    Returns
+    -------
+    Path
+        Path to the written URDF file.
+
+    Notes
+    -----
+    - Computes the center of mass of the combined object.
+    - Adjusts inertial matrix to reflect parallel axis theorem.
+    """
     if len(handle_scale) == 3:
         handle_len_x, handle_len_y, handle_len_z = handle_scale
         handle_text = f"""\
@@ -258,6 +387,7 @@ def generate_handle_head_urdf_variable_density(
         </geometry>
         """
         head_mass, head_ixx, head_iyy, head_izz = compute_mass_and_inertia(scale=head_scale, density=head_density)
+
     elif len(head_scale) == 2:
         # Default z is along cylinder axis
         # We rotate so it is along +y
@@ -288,6 +418,29 @@ def generate_handle_head_urdf_variable_density(
     ixx = handle_ixx + head_ixx
     iyy = (handle_iyy + handle_mass * d_handle**2) + (head_iyy + head_mass * d_head**2)
     izz = (handle_izz + handle_mass * d_handle**2) + (head_izz + head_mass * d_head**2)
+
+    DEBUG_PRINT = False
+    if DEBUG_PRINT:
+      print(f"handle_scale: {handle_scale}")
+      print(f"handle_density: {handle_density}")
+      print(f"handle_mass: {handle_mass}")
+      print(f"handle_ixx: {handle_ixx}")
+      print(f"handle_iyy: {handle_iyy}")
+      print(f"handle_izz: {handle_izz}")
+      print(f"head_scale: {head_scale}")
+      print(f"head_density: {head_density}")
+      print(f"head_mass: {head_mass}")
+      print(f"head_ixx: {head_ixx}")
+      print(f"head_iyy: {head_iyy}")
+      print(f"head_izz: {head_izz}")
+      print(f"total_mass: {total_mass}")
+      print(f"com_x: {com_x}")
+      print(f"d_handle: {d_handle}")
+      print(f"d_head: {d_head}")
+      print(f"ixx: {ixx}")
+      print(f"iyy: {iyy}")
+      print(f"izz: {izz}")
+      breakpoint()
 
     urdf = f"""<?xml version="1.0"?>
 <robot name="handle_head">
@@ -326,7 +479,7 @@ def generate_handle_head_urdf_variable_density(
 """
     with open(filepath, "w") as f:
         f.write(urdf)
-    print(f"✅ URDF written to {filepath}")
+    # print(f"✅ URDF written to {filepath}")
     return filepath
 
 
@@ -338,6 +491,32 @@ def generate_handle_head_urdf_variable_density_2_links(
     handle_density: float = 400,
     head_density: float = 800,
 ):
+    """
+    Generate a URDF with separate links for handle and head with independent densities.
+
+    Parameters
+    ----------
+    filepath : Path
+        Path to save the URDF.
+    handle_scale : tuple
+        Handle dimensions (cuboid or cylinder).
+    head_scale : tuple
+        Head dimensions (cuboid or cylinder).
+    handle_density : float, default=400
+        Material density of the handle.
+    head_density : float, default=800
+        Material density of the head.
+
+    Returns
+    -------
+    Path
+        Path to the written URDF file.
+
+    Notes
+    -----
+    - The head is attached via a fixed joint to the handle.
+    - Useful when separate link dynamics are desired.
+    """
     if len(handle_scale) == 3:
         handle_len_x, handle_len_y, handle_len_z = handle_scale
         handle_text = f"""\
@@ -446,5 +625,98 @@ def generate_handle_head_urdf_variable_density_2_links(
 """
     with open(filepath, "w") as f:
         f.write(urdf)
-    print(f"✅ URDF written to {filepath}")
+    # print(f"✅ URDF written to {filepath}")
     return filepath
+
+
+def generate_handle_urdf(
+  filepath: Path,
+  handle_scale: Union[Tuple[float, float, float], Tuple[float, float]],
+  handle_density: float = 400,
+):
+    """
+    Generate a URDF for a single handle (cuboid or cylinder) with specified density.
+
+    Parameters
+    ----------
+    filepath : Path
+        Path to save the URDF file.
+    handle_scale : tuple
+        Dimensions of the handle. Cuboid (lx, ly, lz) or cylinder (height, diameter).
+    handle_density : float, default=400
+        Material density of the handle.
+
+    Returns
+    -------
+    Path
+        Path to the written URDF file.
+    """
+    if len(handle_scale) == 3:
+        return generate_cuboid_urdf_constant_density(
+            filepath=filepath,
+            scale=handle_scale,
+            density=handle_density)
+    elif len(handle_scale) == 2:
+        return generate_cylinder_urdf_constant_density(
+            filepath=filepath,
+            height=handle_scale[0],
+            diameter=handle_scale[1],
+            density=handle_density)
+    else:
+        raise ValueError(f"Invalid handle scale: {handle_scale}")
+
+def generate_handle_head_urdf(
+  filepath: Path,
+  handle_scale: Union[Tuple[float, float, float], Tuple[float, float]],
+  head_scale: Union[Tuple[float, float, float], Tuple[float, float], None],
+  handle_density: float = 400,
+  head_density: Optional[float] = 800,
+):
+    """
+    Generate a URDF for a handle or a composite handle-head object.
+
+    Parameters
+    ----------
+    filepath : Path
+        Path to save the URDF file.
+    handle_scale : tuple
+        Dimensions of the handle. Cuboid (lx, ly, lz) or cylinder (height, diameter).
+    head_scale : tuple or None
+        Dimensions of the head. If None, only the handle is created.
+    handle_density : float, default=400
+        Density of the handle.
+    head_density : float or None, default=800
+        Density of the head. Must be provided if head_scale is not None.
+
+    Returns
+    -------
+    Path
+        Path to the written URDF file.
+
+    Raises
+    ------
+    ValueError
+        If head_scale and head_density are inconsistent.
+
+    Notes
+    -----
+    - Automatically chooses between single-link or two-link URDF generation.
+    """
+    if head_scale is None and head_density is None:
+        return generate_handle_urdf(
+            filepath=filepath,
+            handle_scale=handle_scale,
+            handle_density=handle_density
+          )
+    elif head_scale is not None and head_density is not None:
+        # For some reason, the 2-link approach is not working well, causing physics instability
+        # return generate_handle_head_urdf_variable_density_2_links(
+        return generate_handle_head_urdf_variable_density(
+            filepath=filepath,
+            handle_scale=handle_scale,
+            head_scale=head_scale,
+            handle_density=handle_density,
+            head_density=head_density
+          )
+    else:
+        raise ValueError(f"Invalid head scale: {head_scale} and head density: {head_density}")
