@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<robot name="spatula">
+
+  <link name="spatula">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="spatula.obj" scale="1.0 1.0 1.0"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="spatula.obj" scale="1.0 1.0 1.0"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <density value="400"/>
+    </inertial>
+  </link>
+
+</robot>

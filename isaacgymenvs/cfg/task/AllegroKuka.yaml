@@ -112,7 +112,7 @@ env:
   object_type: "scanned_hammer_1"
   use_fixed_set_of_goal_states: False
   use_fixed_init_object_pose: False
-  fixedGoalStates: None
+  fixedGoalStates: null
 
   use_hack_object_pos_offset: False
   hack_object_pos_offset: 0.05

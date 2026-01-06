@@ -19,12 +19,16 @@ def quat_xyzw_to_wxyz(q):
 
 
 class GoalTrajectoryCreator:
-    def __init__(self, object_name, port=8080):
+    def __init__(self, object_type, object_name, port=8080):
         self.port = port
+        self.object_type = object_type
         self.object_name = object_name
         self.server = viser.ViserServer(host="0.0.0.0", port=port)
         self.start_pose = None
         self.goals = []
+        # Euler angles (degrees) are the source of truth for orientation
+        self._euler_deg = np.array([0.0, 0.0, 0.0])
+        self._position = np.array([0.0, 0.0, 0.85])
         self._setup_scene()
 
     def _setup_scene(self):
@@ -50,20 +54,20 @@ class GoalTrajectoryCreator:
         self.server.gui.add_markdown("---")
 
         # Position sliders
-        self.slider_x = self.server.gui.add_slider("X", min=-0.3, max=0.3, step=0.01, initial_value=0.0)
-        self.slider_y = self.server.gui.add_slider("Y", min=-0.3, max=0.3, step=0.01, initial_value=0.0)
-        self.slider_z = self.server.gui.add_slider("Z", min=0.5, max=1.2, step=0.01, initial_value=0.85)
-        # Rotation sliders (euler angles in degrees)
-        self.slider_roll = self.server.gui.add_slider("Roll", min=-180, max=180, step=1, initial_value=0)
-        self.slider_pitch = self.server.gui.add_slider("Pitch", min=-180, max=180, step=1, initial_value=0)
-        self.slider_yaw = self.server.gui.add_slider("Yaw", min=-180, max=180, step=1, initial_value=0)
+        self.slider_x = self.server.gui.add_slider("X", min=-0.3, max=0.3, step=0.01, initial_value=self._position[0])
+        self.slider_y = self.server.gui.add_slider("Y", min=-0.3, max=0.3, step=0.01, initial_value=self._position[1])
+        self.slider_z = self.server.gui.add_slider("Z", min=0.5, max=1.2, step=0.01, initial_value=self._position[2])
+        # Rotation sliders (euler angles in degrees) - these are the source of truth
+        self.slider_roll = self.server.gui.add_slider("Roll", min=-180, max=180, step=1, initial_value=self._euler_deg[0])
+        self.slider_pitch = self.server.gui.add_slider("Pitch", min=-180, max=180, step=1, initial_value=self._euler_deg[1])
+        self.slider_yaw = self.server.gui.add_slider("Yaw", min=-180, max=180, step=1, initial_value=self._euler_deg[2])
 
-        self.slider_x.on_update(lambda _: self._update_from_sliders())
-        self.slider_y.on_update(lambda _: self._update_from_sliders())
-        self.slider_z.on_update(lambda _: self._update_from_sliders())
-        self.slider_roll.on_update(lambda _: self._update_from_sliders())
-        self.slider_pitch.on_update(lambda _: self._update_from_sliders())
-        self.slider_yaw.on_update(lambda _: self._update_from_sliders())
+        self.slider_x.on_update(lambda _: self._on_slider_update())
+        self.slider_y.on_update(lambda _: self._on_slider_update())
+        self.slider_z.on_update(lambda _: self._on_slider_update())
+        self.slider_roll.on_update(lambda _: self._on_slider_update())
+        self.slider_pitch.on_update(lambda _: self._on_slider_update())
+        self.slider_yaw.on_update(lambda _: self._on_slider_update())
 
         self.server.gui.add_markdown("---")
         self.start_pose_text = self.server.gui.add_markdown("**Start:** --")
@@ -76,32 +80,23 @@ class GoalTrajectoryCreator:
         self.server.gui.add_button("Undo Last Goal").on_click(lambda _: self._undo_goal())
         self.server.gui.add_button("Save Trajectory").on_click(lambda _: self._save())
 
-        self._updating_from_sliders = False
+    def _euler_to_quat_xyzw(self):
+        """Convert internal Euler angles (degrees) to quaternion (xyzw)."""
+        euler_rad = np.deg2rad(self._euler_deg)
+        return R.from_euler("xyz", euler_rad).as_quat()
 
     def _get_pose(self):
-        return np.concatenate([np.array(self.object_control.position), quat_wxyz_to_xyzw(self.object_control.wxyz)])
+        """Get current pose as [x, y, z, qx, qy, qz, qw] from internal state."""
+        quat_xyzw = self._euler_to_quat_xyzw()
+        return np.concatenate([self._position, quat_xyzw])
 
-    def _update_from_sliders(self):
-        self._updating_from_sliders = True
-        pos = (self.slider_x.value, self.slider_y.value, self.slider_z.value)
-        euler = np.deg2rad([self.slider_roll.value, self.slider_pitch.value, self.slider_yaw.value])
-        quat_xyzw = R.from_euler("xyz", euler).as_quat()
-        self.object_control.position = pos
-        self.object_control.wxyz = quat_xyzw_to_wxyz(quat_xyzw)
-        self._updating_from_sliders = False
-
-    def _update_sliders_from_control(self):
-        if self._updating_from_sliders:
-            return
-        pos = self.object_control.position
-        quat_xyzw = quat_wxyz_to_xyzw(self.object_control.wxyz)
-        euler = np.rad2deg(R.from_quat(quat_xyzw).as_euler("xyz"))
-        self.slider_x.value = pos[0]
-        self.slider_y.value = pos[1]
-        self.slider_z.value = pos[2]
-        self.slider_roll.value = euler[0]
-        self.slider_pitch.value = euler[1]
-        self.slider_yaw.value = euler[2]
+    def _on_slider_update(self):
+        """Update internal state and object control from slider values."""
+        self._position = np.array([self.slider_x.value, self.slider_y.value, self.slider_z.value])
+        self._euler_deg = np.array([self.slider_roll.value, self.slider_pitch.value, self.slider_yaw.value])
+        # Update visual - quaternion computed post-hoc from Euler angles
+        self.object_control.position = tuple(self._position)
+        self.object_control.wxyz = quat_xyzw_to_wxyz(self._euler_to_quat_xyzw())
 
     def _set_start(self):
         self.start_pose = self._get_pose()
@@ -132,7 +127,7 @@ class GoalTrajectoryCreator:
     def _save(self):
         if self.start_pose is None or not self.goals:
             return
-        output_dir = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories/hammer" / self.object_name
+        output_dir = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / self.object_type / self.object_name
         output_dir.mkdir(parents=True, exist_ok=True)
         name = self.trajectory_name.value.strip().replace(" ", "_") or "default"
         output_path = output_dir / f"{name}.json"
@@ -142,14 +137,15 @@ class GoalTrajectoryCreator:
 
     def run(self):
         print(f"Viser: http://localhost:{self.port}")
+        # Initialize the visual from internal state
+        self._on_slider_update()
         while True:
-            self._update_sliders_from_control()
             self.current_pose_text.content = f"**Current:** {self._format_pose(self._get_pose())}"
             time.sleep(0.1)
 
 
 def main():
-    GoalTrajectoryCreator("scanned_hammer_2").run()
+    GoalTrajectoryCreator("knife", "kitchen_knife").run()
 
 
 if __name__ == "__main__":

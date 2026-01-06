@@ -668,23 +668,32 @@ class AllegroKukaBase(VecTask):
                 + ["all_hammers", "all_cuboidal_hammers", "all_cylindrical_hammers", "all_cuboidal_and_cylindrical_hammers", "mallet", "cuboidal_mallet"]
                 + ["blue_cuboid_real_hammer", "blue_cuboid_fake_hammer"]
                 + ["tyler_handle_head"]
+                + ["hammer_2"]
             )
             CUBOID_OBJECTS = set(["cuboid", "blue_cuboid", "blue_cuboid_thick"])
-            SCREWDRIVER_OBJECTS = set(["real_flat_screwdriver", "044_flat_screwdriver", "blue_cuboid_real_screwdriver"])
+            SCREWDRIVER_OBJECTS = set(["real_flat_screwdriver", "044_flat_screwdriver", "blue_cuboid_real_screwdriver", "cuboidal_screwdriver", "cylindrical_screwdriver"])
+            ERASER_OBJECTS = set(["large_eraser", "small_eraser", "whiteboard_eraser"])
+            SPATULA_OBJECTS = set(["small_spatula", "large_spatula", "black_spatula"])
+            MARKER_OBJECTS = set(["040_large_marker", "thick_marker", "thin_marker"])
+            KNIFE_OBJECTS = set(["kitchen_knife", "blue_cuboid_real_knife", "blue_cuboid_fake_knife", "pairing_knife"])
             if object_type in HAMMER_TRAJECTORY_OBJECTS:
                 self.trajectory_states = get_hammer_trajectory(init_state, device=self.device)
             elif object_type in set(["hairbrush", "hairbrush_modified"]):
                 self.trajectory_states = get_hairbrush_trajectory(init_state, device=self.device)
             elif object_type in SCREWDRIVER_OBJECTS:
                 self.trajectory_states = get_screwdriver_trajectory(init_state, device=self.device)
-            elif object_type == "040_large_marker":
+            elif object_type in MARKER_OBJECTS:
                 self.trajectory_states = get_marker_trajectory(init_state, device=self.device)
-            elif object_type == "whiteboard_eraser":
+            elif object_type in SPATULA_OBJECTS:
+                self.trajectory_states = get_hammer_trajectory(init_state, device=self.device)
+            elif object_type in ERASER_OBJECTS:
                 self.trajectory_states = get_eraser_trajectory(init_state, device=self.device)
             elif object_type in ["phone", "iphone15pro", "blue_cuboid_real_iphone", "blue_cuboid_fake_iphone",]:
                 self.trajectory_states = get_phone_trajectory(init_state, device=self.device)
             elif object_type in CUBOID_OBJECTS:
                 self.trajectory_states = get_cuboid_trajectory(init_state, device=self.device)
+            elif object_type in KNIFE_OBJECTS:
+                self.trajectory_states = get_hammer_trajectory(init_state, device=self.device)
             else:
                 raise ValueError(f"The following object_type does not have a fixed trajectory: {object_type}, cannot use USE_FIXED_SET_OF_GOAL_STATES with this object type")
 

@@ -424,3 +424,215 @@ NAME_TO_OBJECT = {
         need_vhacd=True,
     ),
 }
+# DEXTOOL BENCH OBJECTS
+
+#HAMMERS
+HAMMER_NAME_TO_OBJECT = {
+    "cuboidal_hammer": Object(
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/dex_tool_bench/hammer/cuboidal_hammer/cuboidal_hammer.urdf"
+        ),
+        coacd_filepaths=None,
+        scale=rescale_by_factor((0.25, 0.03, 0.02), factor=25),
+        need_vhacd=False,
+    ),
+    "cuboidal_mallet": Object(
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/dex_tool_bench/hammer/cuboidal_mallet/cuboidal_mallet.urdf"
+        ),
+        coacd_filepaths=None,
+        scale=rescale_by_factor((0.24, 0.03, 0.02), factor=25),
+        need_vhacd=False,
+    ),
+    "hammer_2": Object(
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/dex_tool_bench/hammer/hammer_2/hammer_2.urdf"
+        ),
+        coacd_filepaths=list(
+            (
+                get_repo_root_dir()
+                / "assets/urdf/tyler_objects_convex_decomp/scanned_hammer_2"
+            ).glob("decomp_*.obj")
+        ),
+        scale=rescale_by_factor((0.25, 0.03, 0.02), factor=25),
+        need_vhacd=True,
+    ),
+    "mallet": Object(
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/dex_tool_bench/hammer/mallet/mallet.urdf"
+        ),
+        coacd_filepaths=list(
+            (
+                get_repo_root_dir()
+                / "assets/urdf/tyler_objects_convex_decomp/mallet"
+            ).glob("decomp_*.obj")
+        ),
+        scale=rescale_by_factor((0.24, 0.03, 0.02), factor=25),
+        need_vhacd=True,
+    ),
+}
+
+#overwrite NAME_TO_OBJECT with HAMMER_NAME_TO_OBJECT even if they share keys
+NAME_TO_OBJECT.update(HAMMER_NAME_TO_OBJECT)
+
+##SCREWDRIVERS
+SCREWDRIVER_NAME_TO_OBJECT = {
+    "cuboidal_screwdriver": Object(
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/dex_tool_bench/screwdriver/cuboidal_screwdriver/cuboidal_screwdriver.urdf"
+        ),
+        coacd_filepaths=None,
+        scale=rescale_by_factor((0.15, 0.025, 0.025), factor=25),
+        need_vhacd=False,
+    ),
+    "cylindrical_screwdriver": Object(
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/dex_tool_bench/screwdriver/cylindrical_screwdriver/cylindrical_screwdriver.urdf"
+        ),
+        coacd_filepaths=None,
+        scale=rescale_by_factor((0.18, 0.03, 0.03), factor=25),
+        need_vhacd=False,
+    ),
+    "real_flat_screwdriver": Object(
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/dex_tool_bench/screwdriver/real_flat_screwdriver/real_flat_screwdriver.urdf"
+        ),
+        coacd_filepaths=list(
+            (
+                get_repo_root_dir()
+                / "assets/urdf/tyler_objects_convex_decomp/real_flat_screwdriver"
+            ).glob("decomp_*.obj")
+        ),
+        scale=rescale_by_factor((0.1, 0.03, 0.03), factor=25),
+        need_vhacd=True,
+    ),
+}
+#overwrite NAME_TO_OBJECT with SCREWDRIVER_NAME_TO_OBJECT even if they share keys
+NAME_TO_OBJECT.update(SCREWDRIVER_NAME_TO_OBJECT)
+
+# ERASERS
+ERASER_NAME_TO_OBJECT = {
+    "small_eraser": Object(
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/dex_tool_bench/eraser/small_eraser/small_eraser.urdf"
+        ),
+        coacd_filepaths=None,
+        scale=rescale_by_factor((0.1, 0.025, 0.05), factor=25),
+        need_vhacd=False,
+    ),
+    "large_eraser": Object(
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/dex_tool_bench/eraser/large_eraser/large_eraser.urdf"
+        ),
+        coacd_filepaths=None,
+        scale=rescale_by_factor((0.12, 0.03, 0.06), factor=25),
+        need_vhacd=False,
+    ),
+}
+
+#overwrite NAME_TO_OBJECT with ERASER_NAME_TO_OBJECT even if they share keys
+NAME_TO_OBJECT.update(ERASER_NAME_TO_OBJECT)
+
+#SPATULAS
+SPATULA_NAME_TO_OBJECT = {
+    "small_spatula": Object(
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/dex_tool_bench/spatula/small_spatula/small_spatula.urdf"
+        ),
+        coacd_filepaths=None,
+        scale=rescale_by_factor((0.15, 0.02, 0.015), factor=25),
+        need_vhacd=False,
+    ),
+    "large_spatula": Object(
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/dex_tool_bench/spatula/large_spatula/large_spatula.urdf"
+        ),
+        coacd_filepaths=None,
+        scale=rescale_by_factor((0.18, 0.024, 0.024), factor=25),
+        need_vhacd=False,
+    ),
+    "black_spatula": Object(
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/dex_tool_bench/spatula/black_spatula/spatula.urdf"
+        ),
+        coacd_filepaths=None,
+        scale=rescale_by_factor((0.22, 0.02, 0.01), factor=25),
+        need_vhacd=False,
+    ),
+}
+#overwrite NAME_TO_OBJECT with SPATULA_NAME_TO_OBJECT even if they share keys
+NAME_TO_OBJECT.update(SPATULA_NAME_TO_OBJECT)
+
+#MARKERS
+MARKER_NAME_TO_OBJECT = {
+    "thin_marker": Object(
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/dex_tool_bench/marker/thin_marker/thin_marker.urdf"
+        ),
+        coacd_filepaths=None,
+        scale=rescale_by_factor((0.12, 0.012, 0.012), factor=25),
+        need_vhacd=False,
+    ),
+    "thick_marker": Object(
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/dex_tool_bench/marker/thick_marker/thick_marker.urdf"
+        ),
+        coacd_filepaths=None,
+        scale=rescale_by_factor((0.14, 0.024, 0.024), factor=25),
+        need_vhacd=False,
+    ),
+    "040_large_marker": Object(
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/dex_tool_bench/marker/040_large_marker/040_large_marker.urdf"
+        ),
+        coacd_filepaths=list(
+            (
+                get_repo_root_dir()
+                / "assets/urdf/tyler_objects_convex_decomp/040_large_marker"
+            ).glob("decomp_*.obj")
+        ),
+        scale=rescale_by_factor((0.121277, 0.019341, 0.021183), factor=25),
+        need_vhacd=True,
+    ),  
+}
+#overwrite NAME_TO_OBJECT with MARKER_NAME_TO_OBJECT even if they share keys
+NAME_TO_OBJECT.update(MARKER_NAME_TO_OBJECT)
+
+#KNIVES
+KNIFE_NAME_TO_OBJECT = {
+    "kitchen_knife": Object(
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/dex_tool_bench/knife/kitchen_knife/kitchen_knife.urdf"
+        ),
+        coacd_filepaths=None,
+        scale=rescale_by_factor((0.12, 0.025, 0.02), factor=25),
+        need_vhacd=False,
+    ),
+    "paring_knife": Object(
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/dex_tool_bench/knife/paring_knife/paring_knife.urdf"
+        ),
+        coacd_filepaths=None,
+        scale=rescale_by_factor((0.10, 0.024, 0.024), factor=25),
+        need_vhacd=False,
+    ),
+}
+#overwrite NAME_TO_OBJECT with KNIFE_NAME_TO_OBJECT even if they share keys
+NAME_TO_OBJECT.update(KNIFE_NAME_TO_OBJECT)
