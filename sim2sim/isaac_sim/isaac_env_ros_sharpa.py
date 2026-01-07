@@ -261,8 +261,8 @@ def main():
     # trajectory_name = "wipe_left"
 
     object_type = "hammer"
-    object_name = "mallet"
-    trajectory_name = "vertical_swing"
+    object_name = "hammer_2"
+    trajectory_name = "horizontal_swing_higher"
     # trajectory_name = "horizontal_swing"
 
     trajectory_path = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
@@ -298,6 +298,7 @@ def main():
             "task.env.forceScale": 0.0,
             "task.sim.dt": CONTROL_DT,
             "task.sim.substeps": SUBSTEPS,
+            "task.env.tableResetZRange": 0.0,
         },
     )
 

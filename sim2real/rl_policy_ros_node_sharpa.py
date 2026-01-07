@@ -669,29 +669,29 @@ if __name__ == "__main__":
     try:
         rl_policy_node = RLPolicyNode(
             # Old
-            config_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"),
+            # config_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"),
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/cleanInputs.pth"),
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/noisyInputs.pth"),
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/cleanInputsFinetuned.pth"),
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o1t0.pth"),
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o1t1.pth"),
-            checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o0t0.pth"),
+            # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o0t0.pth"),
 
             # New on tools
-            # config_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed/config.yaml"),
-            # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed/model.pth"),
+            config_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed/config.yaml"),
+            checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed/model.pth"),
 
             # Continue finetuning on cuboids
             # config_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/o0t0_fullSpeed/config.yaml"),
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/o0t0_fullSpeed/model.pth"),
 
             hand_moving_average=0.1,
-            arm_moving_average=0.05,
+            # arm_moving_average=0.05,
             # arm_moving_average=0.03,
             # arm_moving_average=0.075,
-            # arm_moving_average=0.1,
-            hand_dof_speed_scale=2.5,
-            # hand_dof_speed_scale=1.5,
+            arm_moving_average=0.1,
+            # hand_dof_speed_scale=2.5,
+            hand_dof_speed_scale=1.5,
 
             # object_scales=np.array([0.24, 0.03, 0.02]) * 25,  # Mallet
             # object_scales=np.array([0.25, 0.03, 0.02]) * 25,  # scanned hammer 2
