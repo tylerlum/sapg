@@ -57,7 +57,8 @@ class ViserServer:
         # Table
         table_urdf = get_repo_root_dir() / "assets/urdf/table_narrow.urdf"
         self.server.scene.add_frame("/table", position=(0, 0, 0.38), wxyz=(1, 0, 0, 0), show_axes=False)
-        ViserUrdf(self.server, table_urdf, root_node_name="/table", mesh_color_override=(0, 0, 0, 0.5))
+        # ViserUrdf(self.server, table_urdf, root_node_name="/table", mesh_color_override=(0, 0, 0, 0.5))
+        ViserUrdf(self.server, table_urdf, root_node_name="/table", mesh_color_override=(0, 0, 0, 1.0))
 
         # Object and goal
         object_urdf = NAME_TO_OBJECT[object_name].filepath
@@ -277,10 +278,10 @@ def main():
 
     # checkpoint_dir = Path("/share/portal/kk837/sapg/train_dir/customPretraining/FINETUNE_5x/FINETUNE_5x_SLOW_SPEED_ADD_ACTION_DELAY_2026-01-05_02-10-22")
 
-    # object_type = "hammer"
-    # object_name = "hammer_2"
+    object_type = "hammer"
+    object_name = "hammer_2"
     # object_name = "mallet"
-    # trajectory_name = "horizontal_swing"
+    trajectory_name = "horizontal_swing_higher"
     # trajectory_name = "horizontal_swing_rotated"
     # trajectory_name = "vertical_swing"
     # trajectory_name = "vertical_swing_2"
@@ -296,9 +297,9 @@ def main():
     # trajectory_name = "wipe_right"
     # trajectory_name = "wipe_left"
 
-    object_type = "screwdriver"
-    object_name = "real_flat_screwdriver"
-    trajectory_name = "top_down_screwing"
+    # object_type = "screwdriver"
+    # object_name = "real_flat_screwdriver"
+    # trajectory_name = "top_down_screwing"
 
     output_dir = None  # Set to Path("videos") to enable recording
 
@@ -339,7 +340,7 @@ def main():
             "task.env.forceScale": 0.0,
             "task.env.numEnvs": 1,
             "task.env.envSpacing": 0.4,
-            "task.env.tableResetRange": 0.0,
+            "task.env.tableResetZRange": 0.0,
             "task.env.capture_video": False,
             "task.env.use_fixed_set_of_goal_states": True,
             "task.env.fixedGoalStates": traj_data["goals"],
