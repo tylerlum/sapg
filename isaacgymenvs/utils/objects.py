@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import trimesh
 import numpy as np
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Dict
 
 from isaacgymenvs.utils.utils import get_repo_root_dir
 
@@ -424,7 +424,7 @@ NAME_TO_OBJECT = {
         need_vhacd=True,
     ),
 }
-NAME_TO_OBJECT = {}  # Ultra hack to remove all other objects not in DEXTOOL BENCH
+NAME_TO_OBJECT: Dict[str, Object] = {}  # Ultra hack to remove all other objects not in DEXTOOL BENCH
 # DEXTOOL BENCH OBJECTS
 
 #HAMMERS

@@ -22,6 +22,9 @@ from isaacgymenvs.utils.observation_action_utils_sharpa import (
     Q_LOWER_LIMITS_restricted_np as Q_LOWER_LIMITS_np,
     Q_UPPER_LIMITS_restricted_np as Q_UPPER_LIMITS_np,
 )
+from isaacgymenvs.utils.objects import (
+    NAME_TO_OBJECT,
+)
 
 
 T_W_R = np.eye(4)
@@ -660,30 +663,29 @@ class RLPolicyNode:
 if __name__ == "__main__":
     try:
         rl_policy_node = RLPolicyNode(
-            config_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"),
+            # config_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"),
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/cleanInputs.pth"),
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/noisyInputs.pth"),
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/cleanInputsFinetuned.pth"),
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o1t0.pth"),
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o1t1.pth"),
-            checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o0t0.pth"),
+            # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o0t0.pth"),
+            config_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed/config.yaml"),
+            checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed/model.pth"),
             hand_moving_average=0.1,
             # arm_moving_average=0.05,
-            arm_moving_average=0.03,
-            # arm_moving_average=0.1,
-            # arm_moving_average=0.05,
+            # arm_moving_average=0.03,
+            arm_moving_average=0.1,
             # object_scales=np.array([0.24, 0.03, 0.02]) * 25,  # Mallet
             # object_scales=np.array([0.25, 0.03, 0.02]) * 25,  # scanned hammer 2
             # object_scales=np.array([0.1, 0.03, 0.02]) * 25,  # real flat screwdriver
             # object_scales=np.array([0.121277, 0.019341, 0.021183]) * 25,  # 040 large marker
-            object_scales=np.array([0.121277, 0.015, 0.015]) * 25,  # 040 large marker (smaller)
+            # object_scales=np.array([0.121277, 0.015, 0.015]) * 25,  # 040 large marker (smaller)
             # object_scales=np.array([0.12965531, 0.0337145 , 0.06038587]) * 25,  # whiteboard eraser
             # object_scales=np.array([0.15954332, 0.0777093 , 0.01231273]) * 25,  # iphone15pro
-            # arm_moving_average=0.04,
-            # arm_moving_average=0.05,
-            # arm_moving_average=0.01,
+            object_scales=np.array(NAME_TO_OBJECT["whiteboard_eraser"].scale),
             # save_foldername=None,
-            save_foldername="2025-12-19_real_world",
+            save_foldername="2026-01-06_isaac_debugging",
             # overwrite_targets_filepath=None,
             # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-44-54_noisyInputs_arm0.05.npz"),
             # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-47-13_finetuned_o0t0_arm0.05.npz"),

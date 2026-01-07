@@ -6,6 +6,10 @@ import time
 from typing import Literal
 import torch
 from isaacgymenvs.utils.observation_action_utils_sharpa import _compute_keypoint_positions
+from isaacgymenvs.utils.utils import get_repo_root_dir
+from isaacgymenvs.utils.objects import (
+    NAME_TO_OBJECT,
+)
 
 import numpy as np
 import rospy
@@ -185,8 +189,25 @@ class GoalPoseNode:
                 print()
                 loop_no_sleep_dts, loop_dts = [], []
 
+def main():
+    # Load trajectory
+    # This makes it easier to change object and trajectory
+    object_type = "eraser"
+    object_name = "whiteboard_eraser"
+    trajectory_name = "wipe_left"
+    trajectory_path = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
+    assert trajectory_path.exists(), f"Trajectory file not found: {trajectory_path}"
+    with open(trajectory_path) as f:
+        traj_data = json.load(f)
 
-if __name__ == "__main__":
+    # Account for robot to world frame
+    goals_world_frame = traj_data["goals"]
+    goals_robot_frame = [[x, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
+
+    tmp_file = Path("tmp.json")
+    with open(tmp_file, "w") as f:
+        json.dump(goals_robot_frame, f)
+
     try:
         # Create and run the GoalPoseNode
         node = GoalPoseNode(
@@ -202,13 +223,15 @@ if __name__ == "__main__":
             # goal_object_pose_file=Path("hammer_trajectory_2.json"),
             # goal_object_pose_file=Path("hammer_trajectory.json"),
             # goal_object_pose_file=Path("real_flat_screwdriver_trajectory.json"),
-            goal_object_pose_file=Path("040_large_marker_trajectory.json"),
+            # goal_object_pose_file=Path("040_large_marker_trajectory.json"),
             # goal_object_pose_file=Path("whiteboard_eraser_trajectory.json"),
+            goal_object_pose_file=tmp_file,
             # object_scales=np.array([5.0, 0.9375, 1.25]),
             # object_scales=np.array([0.24, 0.03, 0.02]) * 25,  # Mallet
             # object_scales=np.array([0.25, 0.03, 0.02]) * 25,  # scanned hammer 2
             # object_scales=np.array([0.1, 0.03, 0.02]) * 25,  # real flat screwdriver
-            object_scales=np.array([0.121277, 0.019341, 0.021183]) * 25,  # 040 large marker
+            # object_scales=np.array([0.121277, 0.019341, 0.021183]) * 25,  # 040 large marker
+            object_scales=np.array(NAME_TO_OBJECT[object_name].scale),
             # object_scales=np.array([0.12965531, 0.0337145 , 0.06038587]) * 25,  # whiteboard eraser
             # object_scales=np.array([0.15954332, 0.0777093 , 0.01231273]) * 25,  # iphone15pro
             # success_threshold=0.01,
@@ -219,3 +242,6 @@ if __name__ == "__main__":
         node.run()
     except rospy.ROSInterruptException:
         pass
+
+if __name__ == "__main__":
+    main()

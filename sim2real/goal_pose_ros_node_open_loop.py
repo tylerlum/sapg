@@ -6,6 +6,7 @@ import time
 from typing import Literal
 import torch
 from isaacgymenvs.utils.observation_action_utils_sharpa import _compute_keypoint_positions
+from isaacgymenvs.utils.utils import get_repo_root_dir
 
 import numpy as np
 import rospy
@@ -133,7 +134,25 @@ class GoalPoseNode:
                 loop_no_sleep_dts, loop_dts = [], []
 
 
-if __name__ == "__main__":
+def main():
+    # Load trajectory
+    # This makes it easier to change object and trajectory
+    object_type = "eraser"
+    object_name = "whiteboard_eraser"
+    trajectory_name = "wipe_left"
+    trajectory_path = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
+    assert trajectory_path.exists(), f"Trajectory file not found: {trajectory_path}"
+    with open(trajectory_path) as f:
+        traj_data = json.load(f)
+
+    # Account for robot to world frame
+    goals_world_frame = traj_data["goals"]
+    goals_robot_frame = [[x, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
+
+    tmp_file = Path("tmp.json")
+    with open(tmp_file, "w") as f:
+        json.dump(goals_robot_frame, f)
+
     try:
         # Create and run the GoalPoseNode
         node = GoalPoseNode(
@@ -147,10 +166,14 @@ if __name__ == "__main__":
             # goal_object_pose_file=Path("goal_poses_around_z_axis.json"),
             # goal_object_pose_file=Path("hammer_trajectory.json"),
             # goal_object_pose_file=Path("real_flat_screwdriver_trajectory.json"),
-            goal_object_pose_file=Path("whiteboard_eraser_trajectory.json"),
+            # goal_object_pose_file=Path("whiteboard_eraser_trajectory.json"),
+            goal_object_pose_file=tmp_file,
             # goal_object_pose_file=Path("goal_poses_around_y_axis.json"),
             # goal_object_pose_file=Path("goal_poses_around_x_axis.json"),
         )
         node.run()
     except rospy.ROSInterruptException:
         pass
+
+if __name__ == "__main__":
+    main()
