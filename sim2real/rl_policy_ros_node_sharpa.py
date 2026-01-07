@@ -690,7 +690,8 @@ if __name__ == "__main__":
             # object_scales=np.array([0.121277, 0.015, 0.015]) * 25,  # 040 large marker (smaller)
             # object_scales=np.array([0.12965531, 0.0337145 , 0.06038587]) * 25,  # whiteboard eraser
             # object_scales=np.array([0.15954332, 0.0777093 , 0.01231273]) * 25,  # iphone15pro
-            object_scales=np.array(NAME_TO_OBJECT["whiteboard_eraser"].scale),
+            # object_scales=np.array(NAME_TO_OBJECT["whiteboard_eraser"].scale),
+            object_scales=np.array(NAME_TO_OBJECT["mallet"].scale),
             # save_foldername=None,
             save_foldername="2026-01-06_isaac_debugging",
             # overwrite_targets_filepath=None,

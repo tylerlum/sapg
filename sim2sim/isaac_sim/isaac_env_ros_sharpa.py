@@ -245,7 +245,8 @@ def main():
     CONTROL_DT = 1.0 / 60.0
     SUBSTEPS = 2
     CONFIG_PATH = Path(
-        "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"
+        # "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"
+        "/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed/config.yaml"
     )
     assert Path(CONFIG_PATH).exists()
 
@@ -255,9 +256,15 @@ def main():
 
     # Load trajectory
     # This makes it easier to change object and trajectory
-    object_type = "eraser"
-    object_name = "whiteboard_eraser"
-    trajectory_name = "wipe_left"
+    # object_type = "eraser"
+    # object_name = "whiteboard_eraser"
+    # trajectory_name = "wipe_left"
+
+    object_type = "hammer"
+    object_name = "mallet"
+    # trajectory_name = "vertical_swing_2"
+    trajectory_name = "horizontal_swing"
+
     trajectory_path = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
     assert trajectory_path.exists(), f"Trajectory file not found: {trajectory_path}"
     with open(trajectory_path) as f:
