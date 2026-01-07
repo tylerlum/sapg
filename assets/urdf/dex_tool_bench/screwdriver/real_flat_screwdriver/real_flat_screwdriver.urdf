@@ -19,9 +19,25 @@
             <!-- The following material makes the object white in Isaac Gym, so we comment it out. -->
             <!-- <material name="white"> <color rgba="1. 1. 1. 1."/> </material> -->
             </visual>
+
+            <!-- Original collision mesh -->
+            <!--
             <collision>
             <geometry>
                 <mesh filename="real_flat_screwdriver.obj" scale="1 1 1"/>
+            </geometry>
+            </collision>
+            -->
+
+            <!-- COACD collision meshes -->
+            <collision>
+            <geometry>
+                <mesh filename="../../../tyler_objects_convex_decomp/real_flat_screwdriver/decomp_0.obj" scale="1 1 1"/>
+            </geometry>
+            </collision>
+            <collision>
+            <geometry>
+                <mesh filename="../../../tyler_objects_convex_decomp/real_flat_screwdriver/decomp_1.obj" scale="1 1 1"/>
             </geometry>
             </collision>
         </link>

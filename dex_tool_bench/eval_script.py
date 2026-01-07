@@ -291,10 +291,14 @@ def main():
     # object_name = "large_spatula"
     # trajectory_name = "flip_from_left"
 
-    object_type = "eraser"
-    object_name = "whiteboard_eraser"
+    # object_type = "eraser"
+    # object_name = "whiteboard_eraser"
     # trajectory_name = "wipe_right"
-    trajectory_name = "wipe_left"
+    # trajectory_name = "wipe_left"
+
+    object_type = "screwdriver"
+    object_name = "real_flat_screwdriver"
+    trajectory_name = "top_down_screwing"
 
     output_dir = None  # Set to Path("videos") to enable recording
 
