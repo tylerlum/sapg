@@ -77,6 +77,5 @@ checkpoint=${CHECKPOINT} \
 # checkpoint=/share/portal/kk837/sapg/train_dir/FINAL_ASYMMETRIC_RUNS/NEW_GAINS/NOISY_INPUTS_2.5_Speed_controlFreqInv_1_successSteps_10_delta_2025-12-09_19-50-51/runs/00_NOISY_INPUTS_2.5_Speed_controlFreqInv_1_successSteps_10_delta_2025-12-09_19-50-51/last/model.pth \
 # task.env.observationType=asymmetric \
 # task=AllegroKukaLSTM \
-
 # task.task.randomization_params.actor_params.object.scale.range=[0.999,1.001] \
 # task.task.randomization_params.actor_params.allegro.scale.range=[0.999,1.001] \
