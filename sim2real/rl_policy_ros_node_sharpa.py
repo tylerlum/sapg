@@ -668,21 +668,30 @@ class RLPolicyNode:
 if __name__ == "__main__":
     try:
         rl_policy_node = RLPolicyNode(
-            # config_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"),
+            # Old
+            config_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"),
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/cleanInputs.pth"),
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/noisyInputs.pth"),
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/cleanInputsFinetuned.pth"),
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o1t0.pth"),
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o1t1.pth"),
-            # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o0t0.pth"),
-            config_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed/config.yaml"),
-            checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed/model.pth"),
+            checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o0t0.pth"),
+
+            # New on tools
+            # config_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed/config.yaml"),
+            # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed/model.pth"),
+
+            # Continue finetuning on cuboids
+            # config_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/o0t0_fullSpeed/config.yaml"),
+            # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/o0t0_fullSpeed/model.pth"),
+
             hand_moving_average=0.1,
-            # arm_moving_average=0.05,
+            arm_moving_average=0.05,
             # arm_moving_average=0.03,
-            arm_moving_average=0.1,
-            # hand_dof_speed_scale=2.5,
-            hand_dof_speed_scale=1.5,
+            # arm_moving_average=0.1,
+            hand_dof_speed_scale=2.5,
+            # hand_dof_speed_scale=1.5,
+
             # object_scales=np.array([0.24, 0.03, 0.02]) * 25,  # Mallet
             # object_scales=np.array([0.25, 0.03, 0.02]) * 25,  # scanned hammer 2
             # object_scales=np.array([0.1, 0.03, 0.02]) * 25,  # real flat screwdriver
@@ -691,9 +700,10 @@ if __name__ == "__main__":
             # object_scales=np.array([0.12965531, 0.0337145 , 0.06038587]) * 25,  # whiteboard eraser
             # object_scales=np.array([0.15954332, 0.0777093 , 0.01231273]) * 25,  # iphone15pro
             # object_scales=np.array(NAME_TO_OBJECT["whiteboard_eraser"].scale),
-            object_scales=np.array(NAME_TO_OBJECT["mallet"].scale),
+            # object_scales=np.array(NAME_TO_OBJECT["mallet"].scale),
+            object_scales=np.array(NAME_TO_OBJECT["hammer_2"].scale),
             # save_foldername=None,
-            save_foldername="2026-01-06_isaac_debugging",
+            save_foldername="2026-01-06_real_world_testing_old_policy",
             # overwrite_targets_filepath=None,
             # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-44-54_noisyInputs_arm0.05.npz"),
             # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-47-13_finetuned_o0t0_arm0.05.npz"),
