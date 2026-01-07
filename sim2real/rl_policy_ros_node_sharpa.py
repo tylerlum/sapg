@@ -101,6 +101,7 @@ class RLPolicyNode:
         checkpoint_path: Path,
         hand_moving_average: float,
         arm_moving_average: float,
+        hand_dof_speed_scale: float,
         object_scales: np.ndarray,
         save_foldername: Optional[str] = None,
         overwrite_targets_filepath: Optional[Path] = None,
@@ -109,6 +110,7 @@ class RLPolicyNode:
         self.checkpoint_path = checkpoint_path
         self.hand_moving_average = hand_moving_average
         self.arm_moving_average = arm_moving_average
+        self.hand_dof_speed_scale = hand_dof_speed_scale
         self.object_scales = object_scales
         self.save_foldername = save_foldername
         self.overwrite_targets_filepath = overwrite_targets_filepath
@@ -414,13 +416,17 @@ class RLPolicyNode:
             # normalized_action = torch.zeros(1, self.num_actions, device=self.device)
             assert_equals(normalized_action.shape, (1, self.num_actions))
 
+            DUMMY_HAND_MOVING_AVERAGE = 0.1
+            DUMMY_ARM_MOVING_AVERAGE = 0.1
+            DUMMY_HAND_DOF_SPEED_SCALE = 2.5
+            DUMMY_DT = 1/60
             _ = compute_joint_pos_targets(
                 actions=normalized_action.cpu().numpy(),
                 prev_targets=self.prev_targets[None],
-                hand_moving_average=0.1,
-                arm_moving_average=0.1,
-                hand_dof_speed_scale=2.5,
-                dt=1/60,
+                hand_moving_average=DUMMY_HAND_MOVING_AVERAGE,
+                arm_moving_average=DUMMY_ARM_MOVING_AVERAGE,
+                hand_dof_speed_scale=DUMMY_HAND_DOF_SPEED_SCALE,
+                dt=DUMMY_DT,
             )
 
             # We do not actually use the joint pos targets computed by the policy, we use the actual joint states so it doesn't move
@@ -476,14 +482,13 @@ class RLPolicyNode:
             t02 = time.time()
             assert_equals(normalized_action.shape, (1, self.num_actions))
 
-            HAND_DOF_SPEED_SCALE = 2.5
             DT = 1 / 60
             joint_pos_targets = compute_joint_pos_targets(
                 actions=normalized_action.cpu().numpy(),
                 prev_targets=self.prev_targets[None],
                 hand_moving_average=self.hand_moving_average,
                 arm_moving_average=self.arm_moving_average,
-                hand_dof_speed_scale=HAND_DOF_SPEED_SCALE,
+                hand_dof_speed_scale=self.hand_dof_speed_scale,
                 dt=DT,
             )
             t03 = time.time()
@@ -676,6 +681,8 @@ if __name__ == "__main__":
             # arm_moving_average=0.05,
             # arm_moving_average=0.03,
             arm_moving_average=0.1,
+            # hand_dof_speed_scale=2.5,
+            hand_dof_speed_scale=1.5,
             # object_scales=np.array([0.24, 0.03, 0.02]) * 25,  # Mallet
             # object_scales=np.array([0.25, 0.03, 0.02]) * 25,  # scanned hammer 2
             # object_scales=np.array([0.1, 0.03, 0.02]) * 25,  # real flat screwdriver
