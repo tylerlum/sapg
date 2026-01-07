@@ -228,11 +228,11 @@ def main():
             # goal_object_pose_file=Path("goal_poses_around_z_axis.json"),
             # goal_object_pose_file=Path("goal_poses_around_y_axis.json"),
             # goal_object_pose_file=Path("hammer_trajectory_2.json"),
-            # goal_object_pose_file=Path("hammer_trajectory.json"),
+            goal_object_pose_file=Path("hammer_trajectory.json"),
             # goal_object_pose_file=Path("real_flat_screwdriver_trajectory.json"),
             # goal_object_pose_file=Path("040_large_marker_trajectory.json"),
             # goal_object_pose_file=Path("whiteboard_eraser_trajectory.json"),
-            goal_object_pose_file=tmp_file,
+            # goal_object_pose_file=tmp_file,
             # object_scales=np.array([5.0, 0.9375, 1.25]),
             # object_scales=np.array([0.24, 0.03, 0.02]) * 25,  # Mallet
             # object_scales=np.array([0.25, 0.03, 0.02]) * 25,  # scanned hammer 2

@@ -688,6 +688,7 @@ if __name__ == "__main__":
             hand_moving_average=0.1,
             arm_moving_average=0.05,
             # arm_moving_average=0.03,
+            # arm_moving_average=0.075,
             # arm_moving_average=0.1,
             hand_dof_speed_scale=2.5,
             # hand_dof_speed_scale=1.5,
@@ -702,6 +703,7 @@ if __name__ == "__main__":
             # object_scales=np.array(NAME_TO_OBJECT["whiteboard_eraser"].scale),
             # object_scales=np.array(NAME_TO_OBJECT["mallet"].scale),
             object_scales=np.array(NAME_TO_OBJECT["hammer_2"].scale),
+            # object_scales=np.array([0.25, 0.03, 0.02]) * 25,  # scanned hammer 2
             # save_foldername=None,
             save_foldername="2026-01-06_real_world_testing_old_policy",
             # overwrite_targets_filepath=None,
