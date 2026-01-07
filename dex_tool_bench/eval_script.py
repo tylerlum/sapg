@@ -57,6 +57,7 @@ class ViserServer:
         # Table
         table_urdf = get_repo_root_dir() / "assets/urdf/table_narrow.urdf"
         self.server.scene.add_frame("/table", position=(0, 0, 0.38), wxyz=(1, 0, 0, 0), show_axes=False)
+        # self.server.scene.add_frame("/table", position=(0, 0, 0.38 + 0.02), wxyz=(1, 0, 0, 0), show_axes=False)
         # ViserUrdf(self.server, table_urdf, root_node_name="/table", mesh_color_override=(0, 0, 0, 0.5))
         ViserUrdf(self.server, table_urdf, root_node_name="/table", mesh_color_override=(0, 0, 0, 1.0))
 
@@ -84,6 +85,7 @@ class ViserServer:
         self.server.gui.add_markdown("---")
         self.progress_text = self.server.gui.add_markdown("**Progress:** --")
         self.stats_text = self.server.gui.add_markdown("**Stats:** No episodes completed")
+        self.object_state_text = self.server.gui.add_markdown("**Object State:** --")
         self.server.gui.add_markdown("---")
 
         # Controls
@@ -126,6 +128,10 @@ class ViserServer:
         """Update progress display."""
         pct = 100 * current / total if total > 0 else 0
         self.progress_text.content = f"**Time:** {timestep / control_hz:.1f}s | **Goal:** {current}/{total} ({pct:.0f}%)"
+
+    def update_object_state(self, object_state: np.ndarray):
+        object_pos = object_state[:3]
+        self.object_state_text.content = f"**Object State:** {object_pos[0]:.3f}, {object_pos[1]:.3f}, {object_pos[2]:.3f}"
 
     def update_stats(self, num_episodes: int, avg_goal_pct: float, avg_time_sec: float):
         """Update statistics display."""
@@ -203,6 +209,7 @@ class EvalRunner:
         self.viser.update(*self._get_state())
         self.obs, done = self._step(self.policy.get_normalized_action(self.obs, deterministic_actions=True))
         self.viser.update_progress(int(self.env.successes[0].item()), self.env.max_consecutive_successes, timestep, self.control_hz)
+        self.viser.update_object_state(self.env.object_state[0].cpu().numpy())
 
         elapsed = time.time() - t0
         if (sleep_time := self.control_dt - elapsed) > 0:
@@ -341,6 +348,7 @@ def main():
             "task.env.numEnvs": 1,
             "task.env.envSpacing": 0.4,
             "task.env.tableResetZRange": 0.0,
+            # "task.env.tableResetZ": 0.38 + 0.02,
             "task.env.capture_video": False,
             "task.env.use_fixed_set_of_goal_states": True,
             "task.env.fixedGoalStates": traj_data["goals"],

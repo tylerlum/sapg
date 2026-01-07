@@ -1806,6 +1806,28 @@ class AllegroKukaBase(VecTask):
         self.object_pose = self.root_state_tensor[self.object_indices, 0:7]
         self.object_pos = self.root_state_tensor[self.object_indices, 0:3]
 
+        # Ultra hack: Move the perceived object position up by 0.1 meters
+        # from copy import deepcopy
+        # D = [0.00, 0.02, -0.02]
+        # D = [0.0, 0.0, 0.015]
+        # D = [0.0, 0.0, -0.015]
+        # D = [0.0, 0.01, 0.0]
+        # DX = D[0]
+        # DY = D[1]
+        # DZ = D[2]
+        # self.object_state = deepcopy(self.object_state)
+        # self.object_state[:, 0] += DX
+        # self.object_state[:, 1] += DY
+        # self.object_state[:, 2] += DZ
+        # self.object_pose = deepcopy(self.object_pose)
+        # self.object_pose[:, 0] += DX
+        # self.object_pose[:, 1] += DY
+        # self.object_pose[:, 2] += DZ
+        # self.object_pos = deepcopy(self.object_pos)
+        # self.object_pos[:, 0] += DX
+        # self.object_pos[:, 1] += DY
+        # self.object_pos[:, 2] += DZ
+
         self.object_rot = self.root_state_tensor[self.object_indices, 3:7]
         self.object_linvel = self.root_state_tensor[self.object_indices, 7:10]
         self.object_angvel = self.root_state_tensor[self.object_indices, 10:13]
