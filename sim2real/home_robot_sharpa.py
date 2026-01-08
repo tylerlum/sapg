@@ -11,7 +11,8 @@ CURRENT_JOINT_POS_IIWA = None
 CURRENT_JOINT_POS_SHARPA = None
 
 # Home joint positions
-HOME_JOINT_POS_IIWA = np.array([-1.571, 1.571, -0.000, 1.376, -0.000, 1.485, 1.308])
+# HOME_JOINT_POS_IIWA = np.array([-1.571, 1.571, -0.000, 1.376, -0.000, 1.485, 1.308])
+HOME_JOINT_POS_IIWA = np.array([-1.571, 1.571 - np.deg2rad(10), -0.000, 1.376 + np.deg2rad(10), -0.000, 1.485, 1.308])
 HOME_JOINT_POS_SHARPA = np.zeros(22)
 HOME_JOINT_POS = np.concatenate([HOME_JOINT_POS_IIWA, HOME_JOINT_POS_SHARPA])
 

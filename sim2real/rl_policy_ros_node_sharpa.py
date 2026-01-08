@@ -705,7 +705,7 @@ if __name__ == "__main__":
             object_scales=np.array(NAME_TO_OBJECT["hammer_2"].scale),
             # object_scales=np.array([0.25, 0.03, 0.02]) * 25,  # scanned hammer 2
             # save_foldername=None,
-            save_foldername="2026-01-06_real_world_testing_old_policy",
+            save_foldername="2026-01-07_real_world_testing",
             # overwrite_targets_filepath=None,
             # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-44-54_noisyInputs_arm0.05.npz"),
             # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-47-13_finetuned_o0t0_arm0.05.npz"),

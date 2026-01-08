@@ -200,7 +200,8 @@ def main():
     # object_name = "mallet"
     object_name = "hammer_2"
     # trajectory_name = "vertical_swing"
-    trajectory_name = "horizontal_swing"
+    # trajectory_name = "horizontal_swing"
+    trajectory_name = "horizontal_swing_higher"
 
     trajectory_path = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
     assert trajectory_path.exists(), f"Trajectory file not found: {trajectory_path}"
@@ -228,11 +229,11 @@ def main():
             # goal_object_pose_file=Path("goal_poses_around_z_axis.json"),
             # goal_object_pose_file=Path("goal_poses_around_y_axis.json"),
             # goal_object_pose_file=Path("hammer_trajectory_2.json"),
-            goal_object_pose_file=Path("hammer_trajectory.json"),
+            # goal_object_pose_file=Path("hammer_trajectory.json"),
             # goal_object_pose_file=Path("real_flat_screwdriver_trajectory.json"),
             # goal_object_pose_file=Path("040_large_marker_trajectory.json"),
             # goal_object_pose_file=Path("whiteboard_eraser_trajectory.json"),
-            # goal_object_pose_file=tmp_file,
+            goal_object_pose_file=tmp_file,
             # object_scales=np.array([5.0, 0.9375, 1.25]),
             # object_scales=np.array([0.24, 0.03, 0.02]) * 25,  # Mallet
             # object_scales=np.array([0.25, 0.03, 0.02]) * 25,  # scanned hammer 2
@@ -241,8 +242,9 @@ def main():
             object_scales=np.array(NAME_TO_OBJECT[object_name].scale),
             # object_scales=np.array([0.12965531, 0.0337145 , 0.06038587]) * 25,  # whiteboard eraser
             # object_scales=np.array([0.15954332, 0.0777093 , 0.01231273]) * 25,  # iphone15pro
+            success_threshold=0.0,
             # success_threshold=0.01,
-            success_threshold=0.02,
+            # success_threshold=0.02,
             # success_threshold=0.05,
             success_steps=10,
         )
