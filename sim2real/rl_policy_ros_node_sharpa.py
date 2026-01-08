@@ -702,7 +702,9 @@ if __name__ == "__main__":
             # object_scales=np.array([0.15954332, 0.0777093 , 0.01231273]) * 25,  # iphone15pro
             # object_scales=np.array(NAME_TO_OBJECT["whiteboard_eraser"].scale),
             # object_scales=np.array(NAME_TO_OBJECT["mallet"].scale),
-            object_scales=np.array(NAME_TO_OBJECT["hammer_2"].scale),
+            # object_scales=np.array(NAME_TO_OBJECT["hammer_2"].scale),
+            object_scales=np.array(NAME_TO_OBJECT["hammer_2"].scale) * 0.75,
+            # object_scales=np.array([0.25, 0.02, 0.015]) * 25,  # scanned hammer 2
             # object_scales=np.array([0.25, 0.03, 0.02]) * 25,  # scanned hammer 2
             # save_foldername=None,
             save_foldername="2026-01-07_real_world_testing",

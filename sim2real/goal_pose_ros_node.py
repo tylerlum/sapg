@@ -239,11 +239,12 @@ def main():
             # object_scales=np.array([0.25, 0.03, 0.02]) * 25,  # scanned hammer 2
             # object_scales=np.array([0.1, 0.03, 0.02]) * 25,  # real flat screwdriver
             # object_scales=np.array([0.121277, 0.019341, 0.021183]) * 25,  # 040 large marker
-            object_scales=np.array(NAME_TO_OBJECT[object_name].scale),
+            # object_scales=np.array(NAME_TO_OBJECT[object_name].scale),
+            object_scales=np.array(NAME_TO_OBJECT[object_name].scale) * 0.75,
             # object_scales=np.array([0.12965531, 0.0337145 , 0.06038587]) * 25,  # whiteboard eraser
             # object_scales=np.array([0.15954332, 0.0777093 , 0.01231273]) * 25,  # iphone15pro
-            success_threshold=0.0,
-            # success_threshold=0.01,
+            # success_threshold=0.0,
+            success_threshold=0.01,
             # success_threshold=0.02,
             # success_threshold=0.05,
             success_steps=10,
