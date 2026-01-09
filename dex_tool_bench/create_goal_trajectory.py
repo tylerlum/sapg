@@ -19,7 +19,7 @@ def quat_xyzw_to_wxyz(q):
 
 
 class GoalTrajectoryCreator:
-    def __init__(self, object_type, object_name, port=8080):
+    def __init__(self, object_type, object_name, table_urdf="urdf/table_narrow.urdf", port=8080):
         self.port = port
         self.object_type = object_type
         self.object_name = object_name
@@ -29,6 +29,7 @@ class GoalTrajectoryCreator:
         # Euler angles (degrees) are the source of truth for orientation
         self._euler_deg = np.array([0.0, 0.0, 0.0])
         self._position = np.array([0.0, 0.0, 0.85])
+        self.table_urdf = table_urdf
         self._setup_scene()
 
     def _setup_scene(self):
@@ -45,7 +46,7 @@ class GoalTrajectoryCreator:
         goal_volume_size = goal_volume_max - goal_volume_min
         self.server.scene.add_box("/goal_volume", position=goal_volume_position, dimensions=goal_volume_size, color=(0, 255, 0), opacity=0.5)
         self.server.scene.add_grid("/ground", width=2, height=2, cell_size=0.1)
-        table_urdf = get_repo_root_dir() / "assets/urdf/table_narrow.urdf"
+        table_urdf = get_repo_root_dir() / "assets" / self.table_urdf
         self.server.scene.add_frame("/table", position=(0, 0, 0.38), wxyz=(1, 0, 0, 0), show_axes=False)
         ViserUrdf(self.server, table_urdf, root_node_name="/table", mesh_color_override=(0, 0, 0, 0.5))
 
@@ -155,8 +156,10 @@ def main():
     # GoalTrajectoryCreator("knife", "kitchen_knife").run()
     # GoalTrajectoryCreator("hammer", "hammer_2").run()
     # GoalTrajectoryCreator("eraser", "whiteboard_eraser").run()
-    GoalTrajectoryCreator("screwdriver", "real_flat_screwdriver").run()
+    # GoalTrajectoryCreator("screwdriver", "real_flat_screwdriver").run()
+    # GoalTrajectoryCreator("hammer", "hammer_2", table_urdf="urdf/table_narrow_nail.urdf").run()
 
+    GoalTrajectoryCreator("marker", "040_large_marker", table_urdf="urdf/table_narrow_whiteboard.urdf").run()
 
 if __name__ == "__main__":
     main()

@@ -30,12 +30,13 @@ def quat_xyzw_to_wxyz(q):
 class ViserServer:
     """Viser-based visualization server for robot manipulation."""
 
-    def __init__(self, object_name: str, trajectory_name: str, num_keypoints: int, port: int = 8080):
+    def __init__(self, object_name: str, trajectory_name: str, num_keypoints: int, table_urdf: str, port: int = 8080):
         self.port = port
         self.num_keypoints = num_keypoints
         self.is_paused = False
         self.show_keypoints = True
         self.server = viser.ViserServer(host="0.0.0.0", port=port)
+        self.table_urdf = table_urdf
         self._setup_scene(object_name, trajectory_name)
 
     def _setup_scene(self, object_name: str, trajectory_name: str):
@@ -55,7 +56,7 @@ class ViserServer:
         self.robot.update_cfg(np.zeros(29))
 
         # Table
-        table_urdf = get_repo_root_dir() / "assets/urdf/table_narrow.urdf"
+        table_urdf = get_repo_root_dir() / "assets" / self.table_urdf
         self.server.scene.add_frame("/table", position=(0, 0, 0.38), wxyz=(1, 0, 0, 0), show_axes=False)
         # self.server.scene.add_frame("/table", position=(0, 0, 0.38 + 0.02), wxyz=(1, 0, 0, 0), show_axes=False)
         # ViserUrdf(self.server, table_urdf, root_node_name="/table", mesh_color_override=(0, 0, 0, 0.5))
@@ -149,7 +150,7 @@ class EvalRunner:
     """Runs policy evaluation with viser visualization."""
 
     def __init__(self, env, config_path: Path, checkpoint_path: Path,
-                 object_name: str, trajectory_name: str, output_dir: Optional[Path] = None):
+                 object_name: str, trajectory_name: str, table_urdf: str, output_dir: Optional[Path] = None):
         self.env = env
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.n_act = 29
@@ -177,7 +178,7 @@ class EvalRunner:
             print(colored(f"Recording to: {self.session_dir}", "cyan"))
 
         # Visualization
-        self.viser = ViserServer(object_name, trajectory_name, env.num_keypoints)
+        self.viser = ViserServer(object_name, trajectory_name, env.num_keypoints, table_urdf)
         print(colored(f"Viser: http://localhost:{self.viser.port}", "green"))
         self.obs = self._reset()
 
@@ -285,10 +286,10 @@ def main():
 
     # checkpoint_dir = Path("/share/portal/kk837/sapg/train_dir/customPretraining/FINETUNE_5x/FINETUNE_5x_SLOW_SPEED_ADD_ACTION_DELAY_2026-01-05_02-10-22")
 
-    object_type = "hammer"
-    object_name = "hammer_2"
+    # object_type = "hammer"
+    # object_name = "hammer_2"
     # object_name = "mallet"
-    trajectory_name = "horizontal_swing_higher"
+    # trajectory_name = "horizontal_swing_nail"
     # trajectory_name = "horizontal_swing_rotated"
     # trajectory_name = "vertical_swing"
     # trajectory_name = "vertical_swing_2"
@@ -303,12 +304,31 @@ def main():
     # object_name = "whiteboard_eraser"
     # trajectory_name = "wipe_right"
     # trajectory_name = "wipe_left"
+    # trajectory_name = "wipe_left_slanted"
+    # trajectory_name = "wipe_left_slanted_higher"
+    # trajectory_name = "wipe_left_vertical"
+    # trajectory_name = "wipe_left_vertical_farther"
+    # trajectory_name = "wipe_left_slanted_higher_farther"
 
     # object_type = "screwdriver"
     # object_name = "real_flat_screwdriver"
     # trajectory_name = "top_down_screwing"
+    # trajectory_name = "top_down_screwing_closer"
+    # trajectory_name = "top_down_screwing_closer_lower"
+
+    object_type = "marker"
+    object_name = "040_large_marker"
+    # trajectory_name = "write_circle_whiteboard"
+    trajectory_name = "write_circle_whiteboard_adjusted"
 
     output_dir = None  # Set to Path("videos") to enable recording
+
+    TABLE_URDF = "urdf/table_narrow.urdf"
+    TABLE_WHITEBOARD_URDF = "urdf/table_narrow_whiteboard.urdf"
+    TABLE_NAIL_URDF = "urdf/table_narrow_nail.urdf"
+
+    # SELECTED_TABLE_URDF = TABLE_NAIL_URDF
+    SELECTED_TABLE_URDF = TABLE_WHITEBOARD_URDF
 
     # Load trajectory
     trajectory_path = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
@@ -346,6 +366,7 @@ def main():
             "task.env.randomizeObjectRotation": False,
             "task.env.forceScale": 0.0,
             "task.env.numEnvs": 1,
+            # "task.env.numEnvs": 100,
             "task.env.envSpacing": 0.4,
             "task.env.tableResetZRange": 0.0,
             # "task.env.tableResetZ": 0.38 + 0.02,
@@ -360,10 +381,13 @@ def main():
             "task.env.resetWhenDropped": False,
             # "task.env.armMovingAverage": 0.05,
             "task.env.armMovingAverage": 0.1,
+            # "task.env.evalSuccessTolerance": 0.01,
+            "task.env.evalSuccessTolerance": 0.02,
+            "task.env.asset.table": str(SELECTED_TABLE_URDF),
         },
     )
 
-    EvalRunner(env, config_path, checkpoint_path, object_name, trajectory_name, output_dir).run()
+    EvalRunner(env, config_path, checkpoint_path, object_name, trajectory_name, SELECTED_TABLE_URDF, output_dir).run()
 
 
 if __name__ == "__main__":
