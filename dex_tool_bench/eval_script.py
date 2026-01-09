@@ -312,23 +312,33 @@ def main():
 
     # object_type = "screwdriver"
     # object_name = "real_flat_screwdriver"
+    # object_name = "cylindrical_screwdriver"
     # trajectory_name = "top_down_screwing"
     # trajectory_name = "top_down_screwing_closer"
     # trajectory_name = "top_down_screwing_closer_lower"
+    # trajectory_name = "top_down_screwing_closer_lower_hole"
 
-    object_type = "marker"
-    object_name = "040_large_marker"
+    # object_type = "marker"
+    # object_name = "040_large_marker"
     # trajectory_name = "write_circle_whiteboard"
-    trajectory_name = "write_circle_whiteboard_adjusted"
+    # trajectory_name = "write_circle_whiteboard_adjusted"
+
+    object_type = "knife"
+    object_name = "kitchen_knife"
+    trajectory_name = "knife_on_cutting_board"
 
     output_dir = None  # Set to Path("videos") to enable recording
 
     TABLE_URDF = "urdf/table_narrow.urdf"
     TABLE_WHITEBOARD_URDF = "urdf/table_narrow_whiteboard.urdf"
     TABLE_NAIL_URDF = "urdf/table_narrow_nail.urdf"
+    TABLE_SCREWDRIVER_HOLE_URDF = "urdf/table_narrow_screwdriver_hole.urdf"
+    TABLE_CUTTINGBOARD_URDF = "urdf/table_narrow_cuttingboard.urdf"
 
     # SELECTED_TABLE_URDF = TABLE_NAIL_URDF
-    SELECTED_TABLE_URDF = TABLE_WHITEBOARD_URDF
+    # SELECTED_TABLE_URDF = TABLE_WHITEBOARD_URDF
+    # SELECTED_TABLE_URDF = TABLE_SCREWDRIVER_HOLE_URDF
+    SELECTED_TABLE_URDF = TABLE_CUTTINGBOARD_URDF
 
     # Load trajectory
     trajectory_path = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
@@ -381,8 +391,10 @@ def main():
             "task.env.resetWhenDropped": False,
             # "task.env.armMovingAverage": 0.05,
             "task.env.armMovingAverage": 0.1,
-            # "task.env.evalSuccessTolerance": 0.01,
-            "task.env.evalSuccessTolerance": 0.02,
+            # "task.env.evalSuccessTolerance": 0.0075,
+            "task.env.evalSuccessTolerance": 0.01,
+            # "task.env.evalSuccessTolerance": 0.02,
+            "task.env.successSteps": 20,
             "task.env.asset.table": str(SELECTED_TABLE_URDF),
         },
     )

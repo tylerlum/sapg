@@ -159,7 +159,9 @@ def main():
     # GoalTrajectoryCreator("screwdriver", "real_flat_screwdriver").run()
     # GoalTrajectoryCreator("hammer", "hammer_2", table_urdf="urdf/table_narrow_nail.urdf").run()
 
-    GoalTrajectoryCreator("marker", "040_large_marker", table_urdf="urdf/table_narrow_whiteboard.urdf").run()
+    # GoalTrajectoryCreator("marker", "040_large_marker", table_urdf="urdf/table_narrow_whiteboard.urdf").run()
+
+    GoalTrajectoryCreator("knife", "kitchen_knife", table_urdf="urdf/table_narrow_cuttingboard.urdf").run()
 
 if __name__ == "__main__":
     main()
