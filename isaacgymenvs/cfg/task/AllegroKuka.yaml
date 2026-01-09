@@ -96,6 +96,7 @@ env:
   observationType: "full_state"
   successTolerance: 0.075
   targetSuccessTolerance: 0.01
+  evalSuccessTolerance: null  # If None, will use the default success tolerance. Otherwise, will use this value for evaluation.
   toleranceCurriculumIncrement: 0.9  # multiplicative
   toleranceCurriculumInterval: 3000  # in env steps across all agents, with 8192 this is 3000 * 8192 = 24.6M env steps
   maxConsecutiveSuccesses: 50
@@ -208,6 +209,8 @@ env:
     # kukaAllegro: "urdf/kuka_allegro_description/iiwa14_right_sharpa.urdf"
     # kukaAllegro: "urdf/kuka_allegro_description/iiwa14_left_sharpa.urdf"
     kukaAllegro: "urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted_restricted.urdf"
+
+    table: "urdf/table_narrow.urdf"
 
     # This is the URDF which has more accurate collision shapes and weights.
     # I believe since the hand is much lighter, the policy has more control over the movement of both arm and

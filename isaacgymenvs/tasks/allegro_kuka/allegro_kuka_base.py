@@ -181,7 +181,7 @@ class AllegroKukaBase(VecTask):
 
         self.asset_files_dict = {
             "block": "urdf/objects/cube_multicolor.urdf",  # 0.05m box
-            "table": "urdf/table_narrow.urdf",
+            "table": self.cfg["env"]["asset"]["table"],
             "bucket": "urdf/objects/bucket.urdf",
             "lightbulb": "lightbulb/A60_E27_SI.urdf",
             "socket": "E27SocketSimple.urdf",
