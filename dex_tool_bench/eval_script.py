@@ -323,9 +323,15 @@ def main():
     # trajectory_name = "write_circle_whiteboard"
     # trajectory_name = "write_circle_whiteboard_adjusted"
 
-    object_type = "knife"
-    object_name = "kitchen_knife"
-    trajectory_name = "knife_on_cutting_board"
+    # object_type = "knife"
+    # object_name = "kitchen_knife"
+    # trajectory_name = "knife_on_cutting_board"
+
+    object_type = "spatula"
+    object_name = "black_spatula"
+    # trajectory_name = "pick_and_place"
+    # trajectory_name = "pick_and_place_hardinit"
+    trajectory_name = "pick_and_place_hardinit2"
 
     output_dir = None  # Set to Path("videos") to enable recording
 
@@ -334,11 +340,13 @@ def main():
     TABLE_NAIL_URDF = "urdf/table_narrow_nail.urdf"
     TABLE_SCREWDRIVER_HOLE_URDF = "urdf/table_narrow_screwdriver_hole.urdf"
     TABLE_CUTTINGBOARD_URDF = "urdf/table_narrow_cuttingboard.urdf"
+    TABLE_BOWL_PLATE_URDF = "urdf/table_narrow_bowl_plate.urdf"
 
     # SELECTED_TABLE_URDF = TABLE_NAIL_URDF
     # SELECTED_TABLE_URDF = TABLE_WHITEBOARD_URDF
     # SELECTED_TABLE_URDF = TABLE_SCREWDRIVER_HOLE_URDF
-    SELECTED_TABLE_URDF = TABLE_CUTTINGBOARD_URDF
+    # SELECTED_TABLE_URDF = TABLE_CUTTINGBOARD_URDF
+    SELECTED_TABLE_URDF = TABLE_BOWL_PLATE_URDF
 
     # Load trajectory
     trajectory_path = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
@@ -394,7 +402,7 @@ def main():
             # "task.env.evalSuccessTolerance": 0.0075,
             "task.env.evalSuccessTolerance": 0.01,
             # "task.env.evalSuccessTolerance": 0.02,
-            "task.env.successSteps": 20,
+            "task.env.successSteps": 10,
             "task.env.asset.table": str(SELECTED_TABLE_URDF),
         },
     )

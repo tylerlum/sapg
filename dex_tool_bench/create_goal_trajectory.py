@@ -161,7 +161,8 @@ def main():
 
     # GoalTrajectoryCreator("marker", "040_large_marker", table_urdf="urdf/table_narrow_whiteboard.urdf").run()
 
-    GoalTrajectoryCreator("knife", "kitchen_knife", table_urdf="urdf/table_narrow_cuttingboard.urdf").run()
+    # GoalTrajectoryCreator("knife", "kitchen_knife", table_urdf="urdf/table_narrow_cuttingboard.urdf").run()
+    GoalTrajectoryCreator("spatula", "black_spatula", table_urdf="urdf/table_narrow_bowl_plate.urdf").run()
 
 if __name__ == "__main__":
     main()

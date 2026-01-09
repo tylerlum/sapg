@@ -331,6 +331,11 @@ class AllegroKukaBase(VecTask):
         if self.use_sharpa:
             desired_kuka_pos = torch.tensor([-1.571, 1.571, -0.000, 1.376, -0.000, 1.485, 1.308])  # same as above but 60 deg offset for the mount
 
+        START_HIGHER = False
+        if START_HIGHER:
+            desired_kuka_pos[1] -= np.deg2rad(10)
+            desired_kuka_pos[3] += np.deg2rad(10)
+
         self.hand_arm_default_dof_pos[:7] = desired_kuka_pos
 
         self.arm_hand_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, : self.num_hand_arm_dofs]
