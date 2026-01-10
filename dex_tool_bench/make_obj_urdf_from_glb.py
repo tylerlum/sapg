@@ -474,7 +474,7 @@ class MeshEditor:
 
 def main():
     # ============ SPECIFY YOUR GLB PATH HERE ============
-    glb_path = Path("/share/portal/kk837/sapg/assets/urdf/dex_tool_bench/brush/green_brush/green_brush.glb")
+    glb_path = Path("/share/portal/kk837/sapg/assets/urdf/dex_tool_bench/brush/green_brush_segment/green_brush_segment.glb")
     # ====================================================
     
     if not glb_path.exists():
