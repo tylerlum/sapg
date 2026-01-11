@@ -579,6 +579,12 @@ class RLPolicyNode:
             dt01_ms = (t1 - t0).to_sec() * 1000
             dt11_5_ms = (t1_5 - t1).to_sec() * 1000
             t06 = time.time()
+            # Sanity check that the joint pos targets are not too far from the current joint positions
+            q_arm_diff_deg = np.rad2deg(np.abs(joint_pos_targets[0, :7] - q[:7]))
+            MAX_Q_ARM_DIFF_DEG = 10
+            if q_arm_diff_deg.max() > MAX_Q_ARM_DIFF_DEG:
+                print(colored(f"Joint pos targets are too far from current joint positions, q_arm_diff: {q_arm_diff_deg} (max: {MAX_Q_ARM_DIFF_DEG})", "red"))
+                breakpoint()
             self.publish_targets(joint_pos_targets)
             t07 = time.time()
             self.prev_targets = joint_pos_targets[0]
