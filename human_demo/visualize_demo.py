@@ -5,6 +5,9 @@ from pathlib import Path
 from typing import Optional
 from isaacgymenvs.utils.utils import get_repo_root_dir
 from typing import Literal
+import pytorch_kinematics as pk
+from pytorch_kinematics.transforms.rotation_conversions import matrix_to_axis_angle
+import torch
 
 import numpy as np
 import tyro
@@ -53,13 +56,6 @@ def normalize(v: np.ndarray) -> np.ndarray:
     norm = np.linalg.norm(v)
     assert norm > 0, f"norm: {norm}"
     return v / norm
-
-
-# TODO: Remove unused functions here
-
-"""
-Transforms point by transform T
-"""
 
 
 def transform_point(T: np.ndarray, point: np.ndarray) -> np.ndarray:
@@ -140,12 +136,103 @@ def create_urdf(
         f.write(urdf_text)
     return urdf_filepath
 
+
+def control_ik(
+    j_eef: torch.Tensor, dpose: torch.Tensor, damping: float = 0.5
+) -> torch.Tensor:
+    # solve damped least squares
+
+    # Set controller parameters
+    NUM_ENVS, NUM_EE_DIMS, NUM_JOINTS = j_eef.shape
+    assert dpose.shape == (NUM_ENVS, NUM_EE_DIMS), f"dpose.shape: {dpose.shape}"
+
+    j_eef_T = torch.transpose(j_eef, 1, 2)
+    assert j_eef_T.shape == (
+        NUM_ENVS,
+        NUM_JOINTS,
+        NUM_EE_DIMS,
+    ), f"j_eef_T.shape: {j_eef_T.shape}"
+
+    lmbda = torch.eye(NUM_EE_DIMS, device=j_eef.device) * (damping**2)
+    assert lmbda.shape == (NUM_EE_DIMS, NUM_EE_DIMS), f"lmbda.shape: {lmbda.shape}"
+
+    # u = J.T @ (J @ J.T + lambda)^-1 @ dpose
+    u = torch.bmm(
+        j_eef_T,
+        torch.bmm(
+            torch.inverse(torch.bmm(j_eef, j_eef_T) + lmbda[None]),
+            dpose.unsqueeze(dim=-1),
+        ),
+    ).squeeze(dim=-1)
+    assert u.shape == (NUM_ENVS, NUM_JOINTS), f"u.shape: {u.shape}"
+
+    return u
+
+def compute_new_q_arm(arm_pk_chain: pk.SerialChain, target_wrist_pose: np.ndarray, q_arm: np.ndarray) -> np.ndarray:
+    NUM_ARM_JOINTS = 7
+    assert target_wrist_pose.shape == (4, 4), f"target_wrist_pose.shape: {target_wrist_pose.shape}"
+    assert q_arm.shape == (NUM_ARM_JOINTS,), f"q_arm.shape: {q_arm.shape}"
+
+    device = arm_pk_chain.device
+    q_arm_torch = torch.from_numpy(q_arm).float().to(device)
+    target_wrist_pose_torch = torch.from_numpy(target_wrist_pose).float().to(device)
+
+    # Compute current wrist pose
+    wrist_pose = arm_pk_chain.forward_kinematics(q_arm_torch).get_matrix()[0]
+    assert wrist_pose.shape == (
+        4,
+        4,
+    ), f"wrist_pose.shape: {wrist_pose.shape}"
+
+    # Compute wrist error
+    wrist_pos_error = (target_wrist_pose_torch[:3, 3] - wrist_pose[:3, 3])[None]
+    wrist_rot_error = (target_wrist_pose_torch[:3, :3] @ wrist_pose[:3, :3].T)[None]
+    wrist_rot_error = matrix_to_axis_angle(wrist_rot_error)
+    wrist_error = torch.cat([wrist_pos_error, wrist_rot_error], dim=-1)
+    NUM_XYZRPY = 6
+    assert wrist_error.shape == (
+        1,
+        NUM_XYZRPY,
+    ), f"wrist_error.shape: {wrist_error.shape}"
+
+    # Compute jacobian
+    jacobian = arm_pk_chain.jacobian(q_arm_torch[None])
+    assert jacobian.shape == (
+        1,
+        NUM_XYZRPY,
+        NUM_ARM_JOINTS,
+    ), f"jacobian.shape: {jacobian.shape}"
+    pos_only = False
+    if pos_only:
+        jacobian = jacobian[:, 0:3]
+        NUM_XYZ = 3
+        assert jacobian.shape == (
+            1,
+            NUM_XYZ,
+            NUM_ARM_JOINTS,
+        ), f"jacobian.shape: {jacobian.shape}"
+
+    # Compute delta arm joint position
+    delta_q_arm = control_ik(
+        j_eef=jacobian,
+        dpose=wrist_error,
+    )
+
+    new_q_arm = q_arm_torch + delta_q_arm
+    assert new_q_arm.shape == (
+        1,
+        NUM_ARM_JOINTS,
+    ), f"new_q_arm.shape: {new_q_arm.shape}"
+    return new_q_arm.cpu().numpy()[0]
+
+
 @dataclass
 class Args:
     object_path: Path
     object_poses_json_path: Path
     hand_poses_dir: Path
     visualize_hand_meshes: bool = False
+    retarget_robot: bool = False
     dt: float = 1.0 / 30
     start_idx: int = 0
 
@@ -213,6 +300,13 @@ def create_transformed_keypoint_to_xyz(hand_json: dict, T_W_C: np.ndarray) -> di
         ],
         axis=0,
     )
+    mean_wrist = np.mean(
+        [
+            kpt_map["wrist_back"],
+            kpt_map["wrist_front"],
+        ],
+        axis=0,
+    )
     palm_normal = normalize(
         np.cross(
             normalize(kpt_map["index_0_front"] - kpt_map["ring_0_front"]),
@@ -220,10 +314,12 @@ def create_transformed_keypoint_to_xyz(hand_json: dict, T_W_C: np.ndarray) -> di
         )
     )
     kpt_map["PALM_TARGET"] = (
-        mean_middle_0
-        # VERSION 1
-        - normalize(kpt_map["middle_0_front"] - kpt_map["wrist_front"]) * 0.03
-        - palm_normal * 0.03
+        # VERSION 0
+        mean_wrist
+        # mean_middle_0
+        # # VERSION 1
+        # - normalize(kpt_map["middle_0_front"] - kpt_map["wrist_front"]) * 0.03
+        # - palm_normal * 0.03
         #
         # VERSION 2
         # - palm_normal * 0.03 * np.sqrt(2)
@@ -256,17 +352,17 @@ def create_transformed_keypoint_to_xyz(hand_json: dict, T_W_C: np.ndarray) -> di
 
 def compute_r_R_P(keypoint_to_xyz: dict) -> np.ndarray:
     # Z = palm to middle finger
-    # Y = palm to thumb
+    # Y = thumb to palm
     # X = palm normal
     kpt_map = keypoint_to_xyz
     palm_to_middle_finger = normalize(
         kpt_map["middle_0_front"] - kpt_map["wrist_front"]
     )
-    palm_to_thumb = normalize(kpt_map["index_0_front"] - kpt_map["ring_0_front"])
-    _palm_normal = normalize(np.cross(palm_to_middle_finger, palm_to_thumb))
+    thumb_to_palm = normalize(kpt_map["ring_0_front"] - kpt_map["index_0_front"])
+    _palm_normal = normalize(np.cross(thumb_to_palm, palm_to_middle_finger))
 
     Z = palm_to_middle_finger
-    Y_not_orthogonal = palm_to_thumb
+    Y_not_orthogonal = thumb_to_palm
     Y = normalize(Y_not_orthogonal - np.dot(Y_not_orthogonal, Z) * Z)
     X = normalize(
         np.cross(
@@ -405,6 +501,15 @@ def main():
     hand_frames = hand_frames[:N_TIMESTEPS]
     hand_visers = hand_visers[:N_TIMESTEPS]
 
+    if args.retarget_robot:
+        with open(KUKA_SHARPA_URDF_PATH, "rb") as f:
+            urdf_str = f.read()
+        DEVICE = "cpu"
+        arm_pk_chain = pk.build_serial_chain_from_urdf(
+            urdf_str,
+            end_link_name="left_hand_C_MC",
+        ).to(device=DEVICE)
+
     # Visualization loop
     while True:
         for i, (T_W_O, hand_keypoint_to_xyz) in tqdm(
@@ -442,6 +547,28 @@ def main():
                 )
                 hand_frame.position = hand_xyz
                 hand_frame.wxyz = xyzw_to_wxyz(hand_quat_xyzw)
+
+            # Retarget robot
+            if args.retarget_robot:
+                T_W_P = np.eye(4)
+                T_W_P[:3, 3] = hand_keypoint_to_xyz["PALM_TARGET"]
+                r_R_P = compute_r_R_P(keypoint_to_xyz=hand_keypoint_to_xyz)
+                r_W_R = T_W_R[:3, :3]
+                r_W_P = r_W_R @ r_R_P
+                T_W_P[:3, :3] = r_W_P
+
+                T_R_W = np.linalg.inv(T_W_R)
+                T_R_P = T_R_W @ T_W_P
+
+                q = np.array(kuka_sharpa_viser._urdf.cfg)
+                q_arm = q[:7]
+                new_q_arm = compute_new_q_arm(
+                    arm_pk_chain=arm_pk_chain,
+                    target_wrist_pose=T_R_P,
+                    q_arm=q_arm,
+                )
+                new_q = np.concatenate([new_q_arm, q[7:]])
+                kuka_sharpa_viser.update_cfg(new_q)
 
             end_time = time.time()
             extra_dt = args.dt - (end_time - start_time)
