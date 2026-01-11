@@ -68,7 +68,9 @@ class GoalPoseNode:
             self.current_step = 0
         self.current_step += 1
 
-        UPDATE_EVERY_N_SECONDS = 1.0
+
+        UPDATE_EVERY_N_SECONDS = 0.1
+        # UPDATE_EVERY_N_SECONDS = 1/30
         UPDATE_EVERY_N_STEPS = int(UPDATE_EVERY_N_SECONDS / self.dt)
         if self.current_step % UPDATE_EVERY_N_STEPS == 0:
             self.current_goal_object_pose_index += 1
@@ -137,9 +139,18 @@ class GoalPoseNode:
 def main():
     # Load trajectory
     # This makes it easier to change object and trajectory
-    object_type = "eraser"
-    object_name = "whiteboard_eraser"
-    trajectory_name = "wipe_left"
+    # object_type = "eraser"
+    # object_name = "whiteboard_eraser"
+    # trajectory_name = "wipe_left"
+
+    object_type = "hammer"
+    object_name = "mallet"
+    # object_name = "hammer_2"
+    # trajectory_name = "vertical_swing"
+    # trajectory_name = "horizontal_swing"
+    # trajectory_name = "horizontal_swing_higher"
+    trajectory_name = "horizontal_swing_human"
+
     trajectory_path = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
     assert trajectory_path.exists(), f"Trajectory file not found: {trajectory_path}"
     with open(trajectory_path) as f:

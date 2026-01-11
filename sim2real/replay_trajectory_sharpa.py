@@ -228,8 +228,8 @@ def main():
             # move_time=0.2,
             # move_time=0.1,
             # move_time=1 / 20,
-            # move_time=1 / 30,
-            move_time=1 / 60,
+            move_time=1 / 30,
+            # move_time=1 / 60,
         )
     end_time = time.time()
     print(f"Time taken: {end_time - start_time:.2f} seconds")

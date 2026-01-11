@@ -517,7 +517,7 @@ class RLPolicyNode:
                     self.object_lifted = False
 
                 # Check if the object has been lifted
-                LIFTED_Z = 0.6
+                LIFTED_Z = 0.65
                 prev_object_lifted = self.object_lifted
                 self.object_lifted = prev_object_lifted or (self.object_pose_msg.pose.position.z >= LIFTED_Z)
 
@@ -548,13 +548,15 @@ class RLPolicyNode:
                     from human_demo.visualize_demo import compute_current_T_R_P
                     self.T_R_P_lifted = compute_current_T_R_P(arm_pk_chain=self.arm_pk_chain, q_arm=self.q_arm_lifted)
                     self.T_W_P_lifted = T_W_R @ self.T_R_P_lifted
-                    self.T_W_O_lifted = pose_msg_to_T(copy.deepcopy(self.object_pose_msg))
+                    # self.T_W_O_lifted = pose_msg_to_T(copy.deepcopy(self.object_pose_msg.pose))
+                    self.T_W_O_lifted = pose_msg_to_T(copy.deepcopy(self.goal_object_pose_msg))
                     self.T_O_P_lifted = np.linalg.inv(self.T_W_O_lifted) @ self.T_W_P_lifted
                 if self.object_lifted:
                     print(colored(f"Object lifted, using relative object pose", "yellow"))
                     from human_demo.visualize_demo import compute_new_q_arm
                     # Set the target pose to have the same relative pose to the object as it did at the time of lifting
-                    T_W_O = pose_msg_to_T(copy.deepcopy(self.object_pose_msg))
+                    # T_W_O = pose_msg_to_T(copy.deepcopy(self.object_pose_msg.pose))
+                    T_W_O = pose_msg_to_T(copy.deepcopy(self.goal_object_pose_msg))
                     T_W_P_using_lifted_object_pose = T_W_O @ self.T_O_P_lifted
                     T_R_W = np.linalg.inv(T_W_R)
                     T_R_P_using_lifted_object_pose = T_R_W @ T_W_P_using_lifted_object_pose
@@ -581,6 +583,7 @@ class RLPolicyNode:
             t06 = time.time()
             # Sanity check that the joint pos targets are not too far from the current joint positions
             q_arm_diff_deg = np.rad2deg(np.abs(joint_pos_targets[0, :7] - q[:7]))
+            print(colored(f"q_arm_diff_deg: {q_arm_diff_deg}", "yellow"))
             MAX_Q_ARM_DIFF_DEG = 10
             if q_arm_diff_deg.max() > MAX_Q_ARM_DIFF_DEG:
                 print(colored(f"Joint pos targets are too far from current joint positions, q_arm_diff: {q_arm_diff_deg} (max: {MAX_Q_ARM_DIFF_DEG})", "red"))
@@ -779,7 +782,7 @@ if __name__ == "__main__":
             # object_scales=np.array([0.25, 0.02, 0.015]) * 25,  # scanned hammer 2
             # object_scales=np.array([0.25, 0.03, 0.02]) * 25,  # scanned hammer 2
             # save_foldername=None,
-            save_foldername="2026-01-11_real_world_testing",
+            save_foldername="2026-01-11_sim_testing",
             # overwrite_targets_filepath=None,
             # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-44-54_noisyInputs_arm0.05.npz"),
             # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-47-13_finetuned_o0t0_arm0.05.npz"),
