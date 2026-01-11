@@ -195,19 +195,34 @@ def compute_new_q_arm(arm_pk_chain: pk.SerialChain, target_wrist_pose: np.ndarra
         4,
     ), f"wrist_pose.shape: {wrist_pose.shape}"
 
-    # Compute wrist error
+    # Tunable Parameters
+    MAX_POS_ERROR = 0.02  # Max 2cm step per iteration
+    MAX_ROT_ERROR = 0.1   # Max ~5.7 degrees step per iteration
+
+    # 1. Compute Raw Errors
     wrist_pos_error = (target_wrist_pose_torch[:3, 3] - wrist_pose[:3, 3])[None]
-    wrist_rot_error = (target_wrist_pose_torch[:3, :3] @ wrist_pose[:3, :3].T)[None]
-    wrist_rot_error = matrix_to_axis_angle(wrist_rot_error)
-    wrist_error = torch.cat([wrist_pos_error, wrist_rot_error], dim=-1)
-    NUM_XYZRPY = 6
-    assert wrist_error.shape == (
-        1,
-        NUM_XYZRPY,
-    ), f"wrist_error.shape: {wrist_error.shape}"
+
+    # Orientation error (Axis-Angle)
+    wrist_rot_matrix_error = (target_wrist_pose_torch[:3, :3] @ wrist_pose[:3, :3].T)[None]
+    wrist_rot_error = matrix_to_axis_angle(wrist_rot_matrix_error)
+
+    # 2. Rescale Position Error (Preserve Direction)
+    pos_norm = torch.linalg.norm(wrist_pos_error, dim=-1, keepdim=True)
+    # Calculate scale factor: if norm < max, factor is 1.0. If norm > max, factor < 1.0
+    pos_scale = torch.clamp(MAX_POS_ERROR / (pos_norm + 1e-6), max=1.0)
+    wrist_pos_error_scaled = wrist_pos_error * pos_scale
+
+    # 3. Rescale Rotation Error (Preserve Axis, Reduce Angle)
+    rot_norm = torch.linalg.norm(wrist_rot_error, dim=-1, keepdim=True)
+    rot_scale = torch.clamp(MAX_ROT_ERROR / (rot_norm + 1e-6), max=1.0)
+    wrist_rot_error_scaled = wrist_rot_error * rot_scale
+
+    # 4. Concatenate and Solve
+    wrist_error = torch.cat([wrist_pos_error_scaled, wrist_rot_error_scaled], dim=-1)
 
     # Compute jacobian
     jacobian = arm_pk_chain.jacobian(q_arm_torch[None])
+    NUM_XYZRPY = 6
     assert jacobian.shape == (
         1,
         NUM_XYZRPY,
@@ -222,7 +237,8 @@ def compute_new_q_arm(arm_pk_chain: pk.SerialChain, target_wrist_pose: np.ndarra
     )
 
     # Clamp delta arm joint position to avoid sudden movements
-    new_q_arm = q_arm_torch + delta_q_arm.clamp(min=-np.deg2rad(2), max=np.deg2rad(2))
+    MAX_DELTA_Q_ARM = np.deg2rad(2)
+    new_q_arm = q_arm_torch + delta_q_arm.clamp(min=-MAX_DELTA_Q_ARM, max=MAX_DELTA_Q_ARM)
     assert new_q_arm.shape == (
         1,
         NUM_ARM_JOINTS,
