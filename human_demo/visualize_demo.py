@@ -197,7 +197,7 @@ def compute_new_q_arm(arm_pk_chain: pk.SerialChain, target_wrist_pose: np.ndarra
 
     # Tunable Parameters
     MAX_POS_ERROR = 0.02  # Max 2cm step per iteration
-    MAX_ROT_ERROR = 0.1   # Max ~5.7 degrees step per iteration
+    MAX_ROT_ERROR = np.deg2rad(5.7)    # Max ~5.7 degrees step per iteration
 
     # 1. Compute Raw Errors
     wrist_pos_error = (target_wrist_pose_torch[:3, 3] - wrist_pose[:3, 3])[None]
