@@ -1,5 +1,6 @@
 import json
 import time
+from typing import List
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -225,6 +226,50 @@ def compute_new_q_arm(arm_pk_chain: pk.SerialChain, target_wrist_pose: np.ndarra
     ), f"new_q_arm.shape: {new_q_arm.shape}"
     return new_q_arm.cpu().numpy()[0]
 
+def solve_fingertip_ik(
+    allegro_id: int,
+    fingertip_pos_list: List[np.ndarray],
+    fingertip_idx_list: List[int],
+    num_hand_joints: int,
+    num_fingers: int,
+) -> np.ndarray:
+    # HACK: Hide pybullet import in functions that use it to avoid
+    import pybullet as pb
+
+    allegro_link_name_to_id = get_link_name_to_idx(allegro)
+
+    # HACK: For numerous reasons, it was hard to do the hand IK while constraining the arm joints
+    # Thus, we simply load the allegro hand robot and use it for the hand IK
+    # This code should change per hand
+    target_q = []
+
+    N_FINGERS = 4
+    assert num_fingers == N_FINGERS, (
+        f"num_fingers: {num_fingers} != N_FINGERS: {N_FINGERS}"
+    )
+    assert len(fingertip_pos_list) == N_FINGERS, (
+        f"len(fingertip_pos_list): {len(fingertip_pos_list)} != N_FINGERS: {N_FINGERS}"
+    )
+    assert len(fingertip_idx_list) == N_FINGERS, (
+        f"len(fingertip_idx_list): {len(fingertip_idx_list)} != N_FINGERS: {N_FINGERS}"
+    )
+
+    for i in range(N_FINGERS):
+        result = pb.calculateInverseKinematics(
+            allegro_id,
+            fingertip_idx_list[i],
+            fingertip_pos_list[i],
+            maxNumIterations=2000,
+            residualThreshold=0.001,
+        )
+        result = np.array(result)
+        assert result.shape == (num_hand_joints,), f"result.shape: {result.shape}"
+        target_q += result[4 * i : 4 * (i + 1)].tolist()
+
+    target_q = np.array(target_q)
+    assert target_q.shape == (num_hand_joints,), f"target_q.shape: {target_q.shape}"
+    return target_q
+
 
 @dataclass
 class Args:
@@ -416,6 +461,16 @@ def main():
     HOME_JOINT_POS = np.concatenate([HOME_JOINT_POS_IIWA, HOME_JOINT_POS_SHARPA])
     kuka_sharpa_viser.update_cfg(HOME_JOINT_POS)
 
+    SHARPA_URDF_PATH = get_repo_root_dir() / "assets/urdf/left_sharpa_ha4/left_sharpa_ha4_v2_1_adjusted_restricted.urdf"
+    assert SHARPA_URDF_PATH.exists(), (
+        f"SHARPA_URDF_PATH not found: {SHARPA_URDF_PATH}"
+    )
+    sharpa_frame = SERVER.scene.add_frame(
+        "/sharpa", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS, position=(100, 0, 0), wxyz=(1, 0, 0, 0),
+    )
+    sharpa_viser = ViserUrdf(SERVER, SHARPA_URDF_PATH, root_node_name="/sharpa")
+    sharpa_viser.update_cfg(HOME_JOINT_POS_SHARPA)
+
     # Load object poses
     assert args.object_poses_json_path.exists(), (
         f"Object poses json path {args.object_poses_json_path} does not exist"
@@ -509,6 +564,13 @@ def main():
             urdf_str,
             end_link_name="left_hand_C_MC",
         ).to(device=DEVICE)
+        import pybullet as pb
+        SHARPA_URDF_PATH = get_repo_root_dir() / "assets/urdf/left_sharpa_ha4/left_sharpa_ha4_v2_1_adjusted_restricted.urdf"
+        assert SHARPA_URDF_PATH.exists(), (
+            f"SHARPA_URDF_PATH not found: {SHARPA_URDF_PATH}"
+        )
+        pb.connect(pb.DIRECT)
+        hand_pb = pb.loadURDF(str(SHARPA_URDF_PATH))
 
     # Visualization loop
     while True:
@@ -550,6 +612,7 @@ def main():
 
             # Retarget robot
             if args.retarget_robot:
+                # Arm IK
                 T_W_P = np.eye(4)
                 T_W_P[:3, 3] = hand_keypoint_to_xyz["PALM_TARGET"]
                 r_R_P = compute_r_R_P(keypoint_to_xyz=hand_keypoint_to_xyz)
@@ -567,6 +630,21 @@ def main():
                     target_wrist_pose=T_R_P,
                     q_arm=q_arm,
                 )
+
+                # Move floating hand to wrist pose
+                sharpa_frame.position = T_W_P[:3, 3]
+                sharpa_frame.wxyz = xyzw_to_wxyz(R.from_matrix(T_W_P[:3, :3]).as_quat())
+
+                # # Hand IK
+                # q_hand = q[7:]
+                # new_q_hand = solve_fingertip_ik(
+                #     hand_pb=hand_pb,
+                #     hand_keypoint_to_xyz=hand_keypoint_to_xyz,
+                #     num_hand_joints=22,
+                #     num_fingers=5,
+                # )
+
+                # new_q = np.concatenate([new_q_arm, new_q_hand])
                 new_q = np.concatenate([new_q_arm, q[7:]])
                 kuka_sharpa_viser.update_cfg(new_q)
 
