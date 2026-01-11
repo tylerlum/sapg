@@ -1,6 +1,6 @@
 import json
 import time
-from typing import List
+from typing import List, Dict
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -144,7 +144,7 @@ def filter_poses(poses: np.ndarray, sigma: float = 2.0) -> np.ndarray:
     quats = R.from_matrix(rot_matrices).as_quat()  # Returns (N, 4)
 
     # 2. Fix Quaternion Discontinuities (Sign Flips)
-    # q and -q represent the same rotation. To smooth properly, we must 
+    # q and -q represent the same rotation. To smooth properly, we must
     # ensure consecutive quaternions lie on the same "hemisphere".
     fixed_quats = quats.copy()
     for i in range(1, N):
@@ -170,8 +170,63 @@ def filter_poses(poses: np.ndarray, sigma: float = 2.0) -> np.ndarray:
 
     return smoothed_poses
 
+
+def filter_positions(positions: np.ndarray, sigma: float = 2.0) -> np.ndarray:
+    from scipy.ndimage import gaussian_filter1d
+    """
+    Smooths a trajectory of 3D positions using a Gaussian kernel.
+
+    Args:
+        positions: (N, 3) numpy array of XYZ coordinates.
+        sigma: Standard deviation for Gaussian kernel. Higher = smoother.
+
+    Returns:
+        (N, 3) numpy array of smoothed positions.
+    """
+    # Safety check for short trajectories
+    if positions.shape[0] < 2:
+        return positions.copy()
+
+    return gaussian_filter1d(positions, sigma=sigma, axis=0)
+
+def filter_keypoint_to_xyzs(keypoint_to_xyzs: List[Dict], sigma: float = 2.0) -> List[Dict]:
+    # 1. Identify all keypoint names (e.g., 'index_tip', 'thumb_tip', etc.)
+    keypoints = [
+        "wrist_back",
+        "wrist_front",
+        "index_0_back",
+        "index_0_front",
+        "middle_0_back",
+        "middle_0_front",
+        "ring_0_back",
+        "ring_0_front",
+        "index_3",
+        "middle_3",
+        "ring_3",
+        "thumb_3",
+        "pinky_3",
+        "PALM_TARGET",
+    ]
+    filtered_trajectories = {}
+
+    # 2. Extract and filter each keypoint's history independently
+    for keypoint in keypoints:
+        # Stack into (N, 3) array
+        raw_traj = np.array([frame[keypoint] for frame in keypoint_to_xyzs])
+
+        # Apply the filter
+        filtered_trajectories[keypoint] = filter_positions(raw_traj, sigma=sigma)
+
+    # 3. Repack back into List[Dict] structure for the loop
+    N_TIMESTEPS = len(keypoint_to_xyzs)
+    keypoint_to_xyzs = [
+        {keypoint: filtered_trajectories[keypoint][i] for keypoint in keypoints}
+        for i in range(N_TIMESTEPS)
+    ]
+    return keypoint_to_xyzs
+
 def control_ik(
-    j_eef: torch.Tensor, dpose: torch.Tensor, damping: float = 0.1, 
+    j_eef: torch.Tensor, dpose: torch.Tensor, damping: float = 0.1,
     pos_only: bool = False,
 ) -> torch.Tensor:
     if pos_only:
@@ -414,7 +469,7 @@ def solve_fingertip_ik(
 
 def reset_base_pose_pb(body_id, target_pos, target_orn=(0, 0, 0, 1)):
     """
-    Moves the body so that its base link origin is at target_pos/target_orn, 
+    Moves the body so that its base link origin is at target_pos/target_orn,
     compensating for the inertial offset.
     """
     import pybullet as pb
@@ -424,14 +479,14 @@ def reset_base_pose_pb(body_id, target_pos, target_orn=(0, 0, 0, 1)):
     dynamics_info = pb.getDynamicsInfo(body_id, -1)
     inertial_pos = dynamics_info[3]
     inertial_orn = dynamics_info[4]
-    
+
     # 2. Calculate the specific World CoM pose that results in the desired visual pose
     # Formula: Target_CoM = Target_Visual * Local_Inertial_Offset
     final_pos, final_orn = pb.multiplyTransforms(
         target_pos, target_orn,  # Where we want the visual origin to be
         inertial_pos, inertial_orn # The offset from visual to CoM
     )
-    
+
     # 3. Apply the reset
     pb.resetBasePositionAndOrientation(body_id, final_pos, final_orn)
 
@@ -672,6 +727,9 @@ def main():
     hand_keypoint_to_xyzs = [
         create_transformed_keypoint_to_xyz(hand_json, T_W_C) for hand_json in hand_jsons
     ]
+
+    # Filter
+    hand_keypoint_to_xyzs = filter_keypoint_to_xyzs(hand_keypoint_to_xyzs)
 
     FAR_AWAY_POSITION = np.ones(3) * 100
     # Load hand meshes
