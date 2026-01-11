@@ -261,9 +261,11 @@ def main():
     # trajectory_name = "wipe_left"
 
     object_type = "hammer"
-    object_name = "hammer_2"
-    trajectory_name = "horizontal_swing_higher"
+    # object_name = "hammer_2"
+    object_name = "mallet"
+    # trajectory_name = "horizontal_swing_higher"
     # trajectory_name = "horizontal_swing"
+    trajectory_name = "horizontal_swing_human"
 
     trajectory_path = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
     assert trajectory_path.exists(), f"Trajectory file not found: {trajectory_path}"
