@@ -105,6 +105,7 @@ class RLPolicyNode:
         object_scales: np.ndarray,
         save_foldername: Optional[str] = None,
         overwrite_targets_filepath: Optional[Path] = None,
+        use_relative_object_pose_once_lifted: bool = False,
     ):
         self.config_path = config_path
         self.checkpoint_path = checkpoint_path
@@ -114,6 +115,7 @@ class RLPolicyNode:
         self.object_scales = object_scales
         self.save_foldername = save_foldername
         self.overwrite_targets_filepath = overwrite_targets_filepath
+        self.use_relative_object_pose_once_lifted = use_relative_object_pose_once_lifted
 
         assert_equals(object_scales.shape, (3,))
 
@@ -509,6 +511,63 @@ class RLPolicyNode:
                 assert self.current_step < self.q_targets_from_file.shape[0], f"current_step: {self.current_step}, expected: < {self.q_targets_from_file.shape[0]}"
                 joint_pos_targets = self.q_targets_from_file[self.current_step][None]
                 self.current_step += 1
+
+            if self.use_relative_object_pose_once_lifted:
+                if not hasattr(self, "object_lifted"):
+                    self.object_lifted = False
+
+                # Check if the object has been lifted
+                LIFTED_Z = 0.6
+                prev_object_lifted = self.object_lifted
+                self.object_lifted = prev_object_lifted or (self.object_pose_msg.pose.position.z >= LIFTED_Z)
+
+                just_lifted = self.object_lifted and not prev_object_lifted
+                if just_lifted:
+                    print(colored(f"Object just lifted, initializing", "yellow"))
+                    import pytorch_kinematics as pk
+                    from isaacgymenvs.utils.utils import get_repo_root_dir
+                    KUKA_SHARPA_URDF_PATH = get_repo_root_dir() / "assets/urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted_restricted.urdf"
+                    assert KUKA_SHARPA_URDF_PATH.exists(), (
+                        f"KUKA_SHARPA_URDF_PATH not found: {KUKA_SHARPA_URDF_PATH}"
+                    )
+                    with open(KUKA_SHARPA_URDF_PATH, "rb") as f:
+                        urdf_str = f.read()
+                    DEVICE = "cpu"
+                    self.arm_pk_chain = pk.build_serial_chain_from_urdf(
+                        urdf_str,
+                        end_link_name="left_hand_C_MC",
+                    ).to(device=DEVICE)
+
+                    self.q_arm_lifted = q[0, :7].copy()  # Store the arm joint positions when the object was lifted
+                    self.q_hand_lifted_target = joint_pos_targets[0, 7:].copy()  # Will keep this hand target fixed moving forward
+
+                    # We want to store T_O_P_lifted, which is the pose of the palm relative to the object at the time of lifting
+                    # We want this constant over time moving forward
+                    from human_demo.visualize_demo import compute_current_T_R_P
+                    self.T_R_P_lifted = compute_current_T_R_P(arm_pk_chain=self.arm_pk_chain, q_arm=self.q_arm_lifted)
+                    self.T_W_P_lifted = T_W_R @ self.T_R_P_lifted
+                    self.T_W_O_lifted = pose_msg_to_T(copy.deepcopy(self.object_pose_msg))
+                    self.T_O_P_lifted = np.linalg.inv(self.T_W_O_lifted) @ self.T_W_P_lifted
+                if self.object_lifted:
+                    print(colored(f"Object lifted, using relative object pose", "yellow"))
+                    from human_demo.visualize_demo import compute_new_q_arm
+                    # Set the target pose to have the same relative pose to the object as it did at the time of lifting
+                    T_W_O = pose_msg_to_T(copy.deepcopy(self.object_pose_msg))
+                    T_W_P_using_lifted_object_pose = T_W_O @ self.T_O_P_lifted
+                    T_R_W = np.linalg.inv(T_W_R)
+                    T_R_P_using_lifted_object_pose = T_R_W @ T_W_P_using_lifted_object_pose
+
+                    # Compute the new arm joint positions to reach the target wrist pose
+                    # Delta from the current arm joint positions
+                    q_arm = q[0, :7].copy()
+                    new_q_arm_target = compute_new_q_arm(
+                        arm_pk_chain=self.arm_pk_chain,
+                        target_wrist_pose=T_R_P_using_lifted_object_pose,
+                        q_arm=q_arm,
+                    )
+                    new_q_target = np.concatenate([new_q_arm_target, self.q_hand_lifted_target])
+                    joint_pos_targets = new_q_target[None]
+
             t05 = time.time()
 
             # Publish the targets
@@ -716,6 +775,7 @@ if __name__ == "__main__":
             # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-47-13_finetuned_o0t0_arm0.05.npz"),
             # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-48-08_finetuned_o1t0_arm0.05.npz"),
             # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-48-47_finetuned_o1t1_arm0.05.npz"),
+            use_relative_object_pose_once_lifted=False,
         )
         rl_policy_node.run()
     except rospy.ROSInterruptException:
