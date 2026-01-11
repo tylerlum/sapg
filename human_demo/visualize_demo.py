@@ -123,8 +123,13 @@ def create_urdf(
 
 
 def control_ik(
-    j_eef: torch.Tensor, dpose: torch.Tensor, damping: float = 0.1
+    j_eef: torch.Tensor, dpose: torch.Tensor, damping: float = 0.1, 
+    pos_only: bool = False,
 ) -> torch.Tensor:
+    if pos_only:
+        j_eef = j_eef[:, 0:3]
+        dpose = dpose[:, 0:3]
+
     # solve damped least squares
 
     # Set controller parameters
@@ -208,22 +213,15 @@ def compute_new_q_arm(arm_pk_chain: pk.SerialChain, target_wrist_pose: np.ndarra
         NUM_XYZRPY,
         NUM_ARM_JOINTS,
     ), f"jacobian.shape: {jacobian.shape}"
-    pos_only = False
-    if pos_only:
-        jacobian = jacobian[:, 0:3]
-        NUM_XYZ = 3
-        assert jacobian.shape == (
-            1,
-            NUM_XYZ,
-            NUM_ARM_JOINTS,
-        ), f"jacobian.shape: {jacobian.shape}"
 
     # Compute delta arm joint position
     delta_q_arm = control_ik(
         j_eef=jacobian,
         dpose=wrist_error,
+        pos_only=False,
     )
 
+    # Clamp delta arm joint position to avoid sudden movements
     new_q_arm = q_arm_torch + delta_q_arm.clamp(min=-np.deg2rad(2), max=np.deg2rad(2))
     assert new_q_arm.shape == (
         1,
