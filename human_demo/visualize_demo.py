@@ -138,7 +138,7 @@ def create_urdf(
 
 
 def control_ik(
-    j_eef: torch.Tensor, dpose: torch.Tensor, damping: float = 0.5
+    j_eef: torch.Tensor, dpose: torch.Tensor, damping: float = 0.1
 ) -> torch.Tensor:
     # solve damped least squares
 
@@ -218,7 +218,7 @@ def compute_new_q_arm(arm_pk_chain: pk.SerialChain, target_wrist_pose: np.ndarra
         dpose=wrist_error,
     )
 
-    new_q_arm = q_arm_torch + delta_q_arm
+    new_q_arm = q_arm_torch + delta_q_arm.clamp(min=-np.deg2rad(2), max=np.deg2rad(2))
     assert new_q_arm.shape == (
         1,
         NUM_ARM_JOINTS,
