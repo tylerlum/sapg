@@ -538,8 +538,10 @@ class RLPolicyNode:
                         end_link_name="left_hand_C_MC",
                     ).to(device=DEVICE)
 
-                    self.q_arm_lifted = q[0, :7].copy()  # Store the arm joint positions when the object was lifted
+                    self.q_arm_lifted = q[:7].copy()  # Store the arm joint positions when the object was lifted
+                    assert self.q_arm_lifted.shape == (7,), f"self.q_arm_lifted.shape: {self.q_arm_lifted.shape}, expected: (7,)"
                     self.q_hand_lifted_target = joint_pos_targets[0, 7:].copy()  # Will keep this hand target fixed moving forward
+                    assert self.q_hand_lifted_target.shape == (22,), f"self.q_hand_lifted_target.shape: {self.q_hand_lifted_target.shape}, expected: (22,)"
 
                     # We want to store T_O_P_lifted, which is the pose of the palm relative to the object at the time of lifting
                     # We want this constant over time moving forward
@@ -559,13 +561,15 @@ class RLPolicyNode:
 
                     # Compute the new arm joint positions to reach the target wrist pose
                     # Delta from the current arm joint positions
-                    q_arm = q[0, :7].copy()
+                    q_arm = q[:7].copy()
+                    assert q_arm.shape == (7,), f"q_arm.shape: {q_arm.shape}, expected: (7,)"
                     new_q_arm_target = compute_new_q_arm(
                         arm_pk_chain=self.arm_pk_chain,
                         target_wrist_pose=T_R_P_using_lifted_object_pose,
                         q_arm=q_arm,
                     )
                     new_q_target = np.concatenate([new_q_arm_target, self.q_hand_lifted_target])
+                    assert new_q_target.shape == (29,), f"new_q_target.shape: {new_q_target.shape}, expected: (29,)"
                     joint_pos_targets = new_q_target[None]
 
             t05 = time.time()
