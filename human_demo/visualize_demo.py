@@ -226,48 +226,94 @@ def compute_new_q_arm(arm_pk_chain: pk.SerialChain, target_wrist_pose: np.ndarra
     ), f"new_q_arm.shape: {new_q_arm.shape}"
     return new_q_arm.cpu().numpy()[0]
 
+def get_link_name_to_idx(robot: int) -> dict:
+    """
+    Get link name to index mapping for robot
+    """
+    # HACK: Hide pybullet import in functions that use it to avoid messy tyro autocomplete
+    import pybullet as pb
+
+    link_name_to_idx = {}
+    for i in range(pb.getNumJoints(robot)):
+        joint_info = pb.getJointInfo(robot, i)
+        link_name_to_idx[joint_info[12].decode("utf-8")] = i
+    return link_name_to_idx
+
+def get_joint_names(
+    robot: int,
+) -> List[str]:
+    # HACK: Hide pybullet import in functions that use it to avoid messy tyro autocomplete
+    import pybullet as pb
+
+    joint_names = []
+    for i in range(pb.getNumJoints(robot)):
+        joint_info = pb.getJointInfo(robot, i)
+        if joint_info[2] == pb.JOINT_FIXED:
+            continue
+        joint_names.append(joint_info[1])
+    return joint_names
+
 def solve_fingertip_ik(
-    allegro_id: int,
-    fingertip_pos_list: List[np.ndarray],
-    fingertip_idx_list: List[int],
-    num_hand_joints: int,
-    num_fingers: int,
+    hand_pb: int,
+    hand_keypoint_to_xyz: dict,
+    target_wrist_pose: np.ndarray,
 ) -> np.ndarray:
     # HACK: Hide pybullet import in functions that use it to avoid
     import pybullet as pb
+    target_wrist_pos = target_wrist_pose[:3, 3]
+    target_wrist_quat = R.from_matrix(target_wrist_pose[:3, :3]).as_quat()
+    pb.resetBasePositionAndOrientation(hand_pb, target_wrist_pos, target_wrist_quat)
 
-    allegro_link_name_to_id = get_link_name_to_idx(allegro)
+    hand_link_name_to_id = get_link_name_to_idx(hand_pb)
+    hand_joint_names = get_joint_names(hand_pb)
+    print(f"hand_joint_names: {hand_joint_names}")
 
     # HACK: For numerous reasons, it was hard to do the hand IK while constraining the arm joints
     # Thus, we simply load the allegro hand robot and use it for the hand IK
     # This code should change per hand
     target_q = []
 
-    N_FINGERS = 4
-    assert num_fingers == N_FINGERS, (
-        f"num_fingers: {num_fingers} != N_FINGERS: {N_FINGERS}"
-    )
-    assert len(fingertip_pos_list) == N_FINGERS, (
-        f"len(fingertip_pos_list): {len(fingertip_pos_list)} != N_FINGERS: {N_FINGERS}"
-    )
-    assert len(fingertip_idx_list) == N_FINGERS, (
-        f"len(fingertip_idx_list): {len(fingertip_idx_list)} != N_FINGERS: {N_FINGERS}"
-    )
+    thumb_result = np.array(pb.calculateInverseKinematics(
+        hand_pb,
+        hand_link_name_to_id["left_thumb_fingertip"],
+        hand_keypoint_to_xyz["thumb_3"],
+        maxNumIterations=2000,
+        residualThreshold=0.001,
+    ))
+    index_result = np.array(pb.calculateInverseKinematics(
+        hand_pb,
+        hand_link_name_to_id["left_index_fingertip"],
+        hand_keypoint_to_xyz["index_3"] + np.array([0, 0, 0.05]),
+        maxNumIterations=2000,
+        residualThreshold=0.001,
+    ))
+    middle_result = np.array(pb.calculateInverseKinematics(
+        hand_pb,
+        hand_link_name_to_id["left_middle_fingertip"],
+        hand_keypoint_to_xyz["middle_3"],
+        maxNumIterations=2000,
+        residualThreshold=0.001,
+    ))
+    ring_result = np.array(pb.calculateInverseKinematics(
+        hand_pb,
+        hand_link_name_to_id["left_ring_fingertip"],
+        hand_keypoint_to_xyz["ring_3"],
+        maxNumIterations=2000,
+        residualThreshold=0.001,
+    ))
+    pinky_result = np.array(pb.calculateInverseKinematics(
+        hand_pb,
+        hand_link_name_to_id["left_pinky_fingertip"],
+        hand_keypoint_to_xyz["pinky_3"],
+        maxNumIterations=2000,
+        residualThreshold=0.001,
+    ))
+    # return thumb_result
+    return index_result
 
-    for i in range(N_FINGERS):
-        result = pb.calculateInverseKinematics(
-            allegro_id,
-            fingertip_idx_list[i],
-            fingertip_pos_list[i],
-            maxNumIterations=2000,
-            residualThreshold=0.001,
-        )
-        result = np.array(result)
-        assert result.shape == (num_hand_joints,), f"result.shape: {result.shape}"
-        target_q += result[4 * i : 4 * (i + 1)].tolist()
 
-    target_q = np.array(target_q)
-    assert target_q.shape == (num_hand_joints,), f"target_q.shape: {target_q.shape}"
+    target_q = np.concatenate([thumb_result[:5], index_result[5:9], middle_result[9:13], ring_result[13:17], pinky_result[17:]])
+    assert target_q.shape == (22,), f"target_q.shape: {target_q.shape}"
     return target_q
 
 
@@ -283,7 +329,7 @@ class Args:
 
 
 def set_keypoint_sphere_positions(hand_keypoint_to_xyz: dict, server: viser.ViserServer) -> None:
-    from human_demo.colors import RED_TRANSLUCENT_RGBA, RED_RGBA, GREEN_TRANSLUCENT_RGBA, GREEN_RGBA, BLUE_TRANSLUCENT_RGBA, BLUE_RGBA, YELLOW_TRANSLUCENT_RGBA, YELLOW_RGBA, MAGENTA_RGBA, CYAN_RGBA
+    from human_demo.colors import RED_TRANSLUCENT_RGBA, RED_RGBA, GREEN_TRANSLUCENT_RGBA, GREEN_RGBA, BLUE_TRANSLUCENT_RGBA, BLUE_RGBA, YELLOW_TRANSLUCENT_RGBA, YELLOW_RGBA, MAGENTA_RGBA, BLACK_RGBA, CYAN_RGBA
     keypoint_to_rgba = {
         "wrist_back": RED_TRANSLUCENT_RGBA,
         "wrist_front": RED_RGBA,
@@ -297,6 +343,7 @@ def set_keypoint_sphere_positions(hand_keypoint_to_xyz: dict, server: viser.Vise
         "middle_3": BLUE_RGBA,
         "ring_3": YELLOW_RGBA,
         "thumb_3": MAGENTA_RGBA,
+        "pinky_3": BLACK_RGBA,
         "PALM_TARGET": CYAN_RGBA,
     }
     keypoints = keypoint_to_rgba.keys()
@@ -327,6 +374,7 @@ def create_transformed_keypoint_to_xyz(hand_json: dict, T_W_C: np.ndarray) -> di
         "middle_3",
         "ring_3",
         "thumb_3",
+        "pinky_3",
     ]
     for keypoint in keypoints:
         assert keypoint in keypoint_to_xyz, (
@@ -636,17 +684,17 @@ def main():
                 sharpa_frame.wxyz = xyzw_to_wxyz(R.from_matrix(T_W_P[:3, :3]).as_quat())
 
                 # # Hand IK
-                # q_hand = q[7:]
-                # new_q_hand = solve_fingertip_ik(
-                #     hand_pb=hand_pb,
-                #     hand_keypoint_to_xyz=hand_keypoint_to_xyz,
-                #     num_hand_joints=22,
-                #     num_fingers=5,
-                # )
+                q_hand = q[7:]
+                new_q_hand = solve_fingertip_ik(
+                    hand_pb=hand_pb,
+                    hand_keypoint_to_xyz=hand_keypoint_to_xyz,
+                    target_wrist_pose=T_W_P,
+                )
 
-                # new_q = np.concatenate([new_q_arm, new_q_hand])
-                new_q = np.concatenate([new_q_arm, q[7:]])
-                kuka_sharpa_viser.update_cfg(new_q)
+                new_q = np.concatenate([new_q_arm, new_q_hand])
+                # kuka_sharpa_viser.update_cfg(new_q)
+                sharpa_viser.update_cfg(new_q_hand)
+                breakpoint()
 
             end_time = time.time()
             extra_dt = args.dt - (end_time - start_time)
