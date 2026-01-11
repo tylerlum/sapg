@@ -874,24 +874,27 @@ def main():
                     if i == idx_lifted:
                         q_arm_lifted = q_arm.copy()
                         q_hand_lifted = q_hand.copy()
+
                         T_R_P_lifted = compute_current_T_R_P(arm_pk_chain=arm_pk_chain, q_arm=q_arm_lifted)
                         T_W_P_lifted = T_W_R @ T_R_P_lifted
                         T_W_O_lifted = T_W_Os[idx_lifted]
                         T_O_P_lifted = np.linalg.inv(T_W_O_lifted) @ T_W_P_lifted
 
+                        T_W_Ps_using_lifted_object_pose = np.array([T_W_O @ T_O_P_lifted for T_W_O in T_W_Os])
+
                     # Use relative object pose now
-                    T_W_P = T_W_Os[i] @ T_O_P_lifted
+                    T_W_P_using_lifted_object_pose = T_W_Ps_using_lifted_object_pose[i]
                     T_R_W = np.linalg.inv(T_W_R)
-                    T_R_P = T_R_W @ T_W_P
+                    T_R_P_using_lifted_object_pose = T_R_W @ T_W_P_using_lifted_object_pose
                     new_q_arm = compute_new_q_arm(
                         arm_pk_chain=arm_pk_chain,
-                        target_wrist_pose=T_R_P,
+                        target_wrist_pose=T_R_P_using_lifted_object_pose,
                         q_arm=q_arm,
                     )
 
                     # Move floating hand to wrist pose
-                    sharpa_frame.position = T_W_P[:3, 3]
-                    sharpa_frame.wxyz = xyzw_to_wxyz(R.from_matrix(T_W_P[:3, :3]).as_quat())
+                    sharpa_frame.position = T_W_P_using_lifted_object_pose[:3, 3]
+                    sharpa_frame.wxyz = xyzw_to_wxyz(R.from_matrix(T_W_P_using_lifted_object_pose[:3, :3]).as_quat())
 
                     new_q_hand = q_hand_lifted.copy()
 
