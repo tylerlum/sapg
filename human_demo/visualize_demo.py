@@ -1,6 +1,7 @@
 import json
 import time
 from typing import List, Dict
+from datetime import datetime
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -9,6 +10,7 @@ from typing import Literal
 import pytorch_kinematics as pk
 from pytorch_kinematics.transforms.rotation_conversions import matrix_to_axis_angle
 import torch
+from termcolor import colored
 
 import numpy as np
 import tyro
@@ -47,6 +49,13 @@ def pose_to_T(pose: np.ndarray) -> np.ndarray:
     T[:3, :3] = R.from_quat(xyzw).as_matrix()
     T[:3, 3] = xyz
     return T
+
+def T_to_pose(T: np.ndarray) -> np.ndarray:
+    assert T.shape == (4, 4), f"T.shape: {T.shape}"
+    pose = np.zeros(7)
+    pose[:3] = T[:3, 3]
+    pose[3:7] = R.from_matrix(T[:3, :3]).as_quat()
+    return pose
 
 def normalize(v: np.ndarray) -> np.ndarray:
     """
@@ -499,6 +508,8 @@ class Args:
     visualize_hand_meshes: bool = False
     retarget_robot: bool = False
     retarget_robot_using_object_relative_pose: bool = False
+    save_retargeted_robot_to_file: bool = False
+    output_retargeted_robot_path: Path = Path("retargeted_robot") / (datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + ".npz")
     dt: float = 1.0 / 30
     start_idx: int = 0
 
@@ -634,6 +645,71 @@ def compute_r_R_P(keypoint_to_xyz: dict) -> np.ndarray:
         axis=1,
     )
     return r_R_P
+
+
+def save_to_file(file_path: Path, q_array: np.ndarray, object_pose_array: np.ndarray, dt: float):
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+    print(colored(f"Saving to file: {file_path}", "blue"))
+
+    T = len(q_array)
+    assert q_array.shape == (T, 29), (
+        f"q_array.shape: {q_array.shape}, expected: (T, 29)"
+    )
+
+    robot_root_states_array = np.zeros((T, 13))
+    robot_root_states_array[:, 1] = 0.8
+    robot_root_states_array[:, 6] = 1.0  # quaternion xyzw has w=1
+    object_root_states_array = np.zeros((T, 13))
+    object_root_states_array[:, :7] = object_pose_array
+    table_root_states_array = np.zeros((T, 13))
+    table_root_states_array[:, :3] = np.array([0.0, 0.0, 0.38])[None]
+    goal_root_states_array = np.zeros((T, 13))
+    goal_root_states_array[:, :7] = object_pose_array
+
+    robot_joint_positions = q_array
+    robot_joint_velocities = np.zeros((T, 29))
+    robot_joint_pos_targets = q_array
+    time_array = np.linspace(0, T * dt, T)
+
+    assert robot_joint_positions.shape == (T, 29), (
+        f"robot_joint_positions.shape: {robot_joint_positions.shape}, expected: (T, 29)"
+    )
+    assert robot_joint_velocities.shape == (T, 29), (
+        f"robot_joint_velocities.shape: {robot_joint_velocities.shape}, expected: (T, 29)"
+    )
+    assert robot_joint_pos_targets.shape == (T, 29), (
+        f"robot_joint_pos_targets.shape: {robot_joint_pos_targets.shape}, expected: (T, 29)"
+    )
+    assert object_root_states_array.shape == (T, 13), (
+        f"object_root_states_array.shape: {object_root_states_array.shape}, expected: (T, 13)"
+    )
+    assert time_array.shape == (T,), (
+        f"time_array.shape: {time_array.shape}, expected: (T,)"
+    )
+
+    JOINT_NAMES = [
+        'iiwa14_joint_1', 'iiwa14_joint_2', 'iiwa14_joint_3', 'iiwa14_joint_4', 'iiwa14_joint_5', 'iiwa14_joint_6', 'iiwa14_joint_7',
+        'left_1_thumb_CMC_FE', 'left_thumb_CMC_AA', 'left_thumb_MCP_FE', 'left_thumb_MCP_AA', 'left_thumb_IP',
+        'left_2_index_MCP_FE', 'left_index_MCP_AA', 'left_index_PIP', 'left_index_DIP',
+        'left_3_middle_MCP_FE', 'left_middle_MCP_AA', 'left_middle_PIP', 'left_middle_DIP',
+        'left_4_ring_MCP_FE', 'left_ring_MCP_AA', 'left_ring_PIP', 'left_ring_DIP',
+        'left_5_pinky_CMC', 'left_pinky_MCP_FE', 'left_pinky_MCP_AA', 'left_pinky_PIP', 'left_pinky_DIP',
+    ]
+
+    from recorded_data_scripts.recorded_data_sharpa import RecordedData
+
+    recorded_data = RecordedData(
+        robot_root_states_array=robot_root_states_array,
+        object_root_states_array=object_root_states_array,
+        robot_joint_positions_array=robot_joint_positions,
+        time_array=time_array,
+        robot_joint_names=JOINT_NAMES,
+        robot_joint_velocities_array=robot_joint_velocities,
+        robot_joint_pos_targets_array=robot_joint_pos_targets,
+        goal_root_states_array=goal_root_states_array,
+    )
+    recorded_data.to_file(file_path)
+
 
 
 def main():
@@ -784,7 +860,7 @@ def main():
                 idx_lifted = i
                 break
         assert idx_lifted is not None, f"No object pose with z >= {LIFTED_Z} found"
-        print(f"First object pose with z >= {LIFTED_Z} is at index {idx_lifted}")
+        print(colored(f"First object pose with z >= {LIFTED_Z} is at index {idx_lifted}", "green"))
 
     if args.retarget_robot:
         with open(KUKA_SHARPA_URDF_PATH, "rb") as f:
@@ -929,14 +1005,34 @@ def main():
                     kuka_sharpa_viser.update_cfg(new_q)
                     sharpa_viser.update_cfg(new_q_hand)
 
+                if args.save_retargeted_robot_to_file:
+                    # Create lists to store values
+                    if i == 0:
+                        q_list = []
+                        object_pose_list = []
+
+                    # Append values to lists
+                    q_list.append(new_q.copy())
+                    object_pose_list.append(T_to_pose(T_W_O))
+
+                    # Save to file
+                    if i == N_TIMESTEPS - 1:
+                        save_to_file(
+                            file_path=args.output_retargeted_robot_path,
+                            q_array=np.array(q_list),
+                            object_pose_array=np.array(object_pose_list),
+                            dt=args.dt,
+                        )
+
             end_time = time.time()
             extra_dt = args.dt - (end_time - start_time)
             if extra_dt > 0:
                 time.sleep(extra_dt)
             else:
-                print(
-                    f"Visualization is running slow, late by {-extra_dt * 1000:.2f} ms"
-                )
+                print(colored(
+                    f"Visualization is running slow, late by {-extra_dt * 1000:.2f} ms",
+                    "yellow"
+                ))
 
         print("=" * 80)
         print("Setting breakpoint. Continue to start over")
