@@ -332,6 +332,7 @@ class AllegroKukaBase(VecTask):
             desired_kuka_pos = torch.tensor([-1.571, 1.571, -0.000, 1.376, -0.000, 1.485, 1.308])  # same as above but 60 deg offset for the mount
 
         START_HIGHER = False
+        # START_HIGHER = True
         if START_HIGHER:
             desired_kuka_pos[1] -= np.deg2rad(10)
             desired_kuka_pos[3] += np.deg2rad(10)

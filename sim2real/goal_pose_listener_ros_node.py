@@ -182,7 +182,7 @@ class GoalPoseListenerNode:
 
 if __name__ == "__main__":
     try:
-        object_name = "mallet"
+        object_name = "black_spatula"
         output_dir = Path("goal_pose_listener_ros_node_output") / object_name
         output_dir.mkdir(parents=True, exist_ok=True)
 

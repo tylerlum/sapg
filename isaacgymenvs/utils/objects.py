@@ -514,6 +514,7 @@ SCREWDRIVER_NAME_TO_OBJECT = {
             ).glob("decomp_*.obj")
         ),
         scale=rescale_by_factor((0.1, 0.03, 0.03), factor=25),
+        # scale=rescale_by_factor((0.1, 0.035, 0.025), factor=25),
         # need_vhacd=True,
         need_vhacd=False,
     ),

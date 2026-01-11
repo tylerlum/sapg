@@ -21,6 +21,9 @@ from isaacgymenvs.utils.utils import get_repo_root_dir
 from sim2real.rl_player import RlPlayer
 from sim2sim.isaac_sim.isaac_env import create_env
 
+# TABLE_Z = 0.38
+TABLE_Z = 0.37
+
 
 def quat_xyzw_to_wxyz(q):
     """Convert quaternion from xyzw to wxyz format."""
@@ -57,8 +60,7 @@ class ViserServer:
 
         # Table
         table_urdf = get_repo_root_dir() / "assets" / self.table_urdf
-        self.server.scene.add_frame("/table", position=(0, 0, 0.38), wxyz=(1, 0, 0, 0), show_axes=False)
-        # self.server.scene.add_frame("/table", position=(0, 0, 0.38 + 0.02), wxyz=(1, 0, 0, 0), show_axes=False)
+        self.server.scene.add_frame("/table", position=(0, 0, TABLE_Z), wxyz=(1, 0, 0, 0), show_axes=False)
         # ViserUrdf(self.server, table_urdf, root_node_name="/table", mesh_color_override=(0, 0, 0, 0.5))
         ViserUrdf(self.server, table_urdf, root_node_name="/table", mesh_color_override=(0, 0, 0, 1.0))
 
@@ -293,6 +295,7 @@ def main():
     # trajectory_name = "horizontal_swing_rotated"
     # trajectory_name = "vertical_swing"
     # trajectory_name = "vertical_swing_2"
+    # trajectory_name = "horizontal_swing_human"
 
     # object_type = "spatula"
     # object_name = "black_spatula"
@@ -309,6 +312,8 @@ def main():
     # trajectory_name = "wipe_left_vertical"
     # trajectory_name = "wipe_left_vertical_farther"
     # trajectory_name = "wipe_left_slanted_higher_farther"
+    # trajectory_name = "wipe_left_human"
+    # trajectory_name = "wipe_left_human_2"
 
     # object_type = "screwdriver"
     # object_name = "real_flat_screwdriver"
@@ -317,21 +322,27 @@ def main():
     # trajectory_name = "top_down_screwing_closer"
     # trajectory_name = "top_down_screwing_closer_lower"
     # trajectory_name = "top_down_screwing_closer_lower_hole"
+    # trajectory_name = "top_down_screwing_human"
+    # trajectory_name = "top_down_screwing_human_easyinit"
 
     # object_type = "marker"
     # object_name = "040_large_marker"
     # trajectory_name = "write_circle_whiteboard"
     # trajectory_name = "write_circle_whiteboard_adjusted"
+    # trajectory_name = "draw_circle_human"
+    # trajectory_name = "draw_circle_human_hardinit"
 
-    # object_type = "knife"
-    # object_name = "kitchen_knife"
-    # trajectory_name = "knife_on_cutting_board"
+    object_type = "knife"
+    object_name = "kitchen_knife"
+    trajectory_name = "knife_on_cutting_board"
 
-    object_type = "spatula"
-    object_name = "black_spatula"
+    # object_type = "spatula"
+    # object_name = "black_spatula"
     # trajectory_name = "pick_and_place"
     # trajectory_name = "pick_and_place_hardinit"
-    trajectory_name = "pick_and_place_hardinit2"
+    # trajectory_name = "pick_and_place_hardinit2"
+    # trajectory_name = "pick_and_place_human"
+    # trajectory_name = "pick_and_place_human_hardinit"
 
     output_dir = None  # Set to Path("videos") to enable recording
 
@@ -342,11 +353,12 @@ def main():
     TABLE_CUTTINGBOARD_URDF = "urdf/table_narrow_cuttingboard.urdf"
     TABLE_BOWL_PLATE_URDF = "urdf/table_narrow_bowl_plate.urdf"
 
+    # SELECTED_TABLE_URDF = TABLE_URDF
     # SELECTED_TABLE_URDF = TABLE_NAIL_URDF
     # SELECTED_TABLE_URDF = TABLE_WHITEBOARD_URDF
     # SELECTED_TABLE_URDF = TABLE_SCREWDRIVER_HOLE_URDF
-    # SELECTED_TABLE_URDF = TABLE_CUTTINGBOARD_URDF
-    SELECTED_TABLE_URDF = TABLE_BOWL_PLATE_URDF
+    SELECTED_TABLE_URDF = TABLE_CUTTINGBOARD_URDF
+    # SELECTED_TABLE_URDF = TABLE_BOWL_PLATE_URDF
 
     # Load trajectory
     trajectory_path = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
@@ -402,8 +414,12 @@ def main():
             # "task.env.evalSuccessTolerance": 0.0075,
             "task.env.evalSuccessTolerance": 0.01,
             # "task.env.evalSuccessTolerance": 0.02,
-            "task.env.successSteps": 10,
+            # "task.env.evalSuccessTolerance": 0.025,
+            # "task.env.evalSuccessTolerance": 0.03,
+            # "task.env.successSteps": 3,
+            "task.env.successSteps": 1,
             "task.env.asset.table": str(SELECTED_TABLE_URDF),
+            "task.env.tableResetZ": TABLE_Z,
         },
     )
 
