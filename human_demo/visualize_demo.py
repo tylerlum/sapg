@@ -121,6 +121,54 @@ def create_urdf(
         f.write(urdf_text)
     return urdf_filepath
 
+def filter_poses(poses: np.ndarray, sigma: float = 2.0) -> np.ndarray:
+    from scipy.ndimage import gaussian_filter1d
+    """
+    Smooths a trajectory of homogeneous transformation matrices using a Gaussian kernel.
+    Handles the proper interpolation of rotations via quaternions.
+
+    Args:
+        poses: (N, 4, 4) numpy array of homogeneous matrices.
+        sigma: Standard deviation for Gaussian kernel. Start with 2.0.
+
+    Returns:
+        (N, 4, 4) numpy array of smoothed matrices.
+    """
+    N = poses.shape[0]
+    if N < 2:
+        return poses.copy()
+
+    # 1. Decompose Matrix -> Translation + Quaternion
+    translations = poses[:, :3, 3]
+    rot_matrices = poses[:, :3, :3]
+    quats = R.from_matrix(rot_matrices).as_quat()  # Returns (N, 4)
+
+    # 2. Fix Quaternion Discontinuities (Sign Flips)
+    # q and -q represent the same rotation. To smooth properly, we must 
+    # ensure consecutive quaternions lie on the same "hemisphere".
+    fixed_quats = quats.copy()
+    for i in range(1, N):
+        # If dot product is negative, the vectors point in opposite directions
+        if np.sum(fixed_quats[i] * fixed_quats[i-1]) < 0:
+            fixed_quats[i] = -fixed_quats[i]
+
+    # 3. Apply Gaussian Smoothing
+    smoothed_trans = gaussian_filter1d(translations, sigma=sigma, axis=0)
+    smoothed_quats_raw = gaussian_filter1d(fixed_quats, sigma=sigma, axis=0)
+
+    # 4. Re-normalize Quaternions
+    # Averaging shrinks magnitude; restore to unit length to be valid rotations
+    norms = np.linalg.norm(smoothed_quats_raw, axis=1, keepdims=True)
+    smoothed_quats = smoothed_quats_raw / (norms + 1e-8)
+
+    # 5. Reconstruct (N, 4, 4) Matrices
+    smoothed_rots = R.from_quat(smoothed_quats).as_matrix()
+
+    smoothed_poses = np.eye(4).reshape(1, 4, 4).repeat(N, axis=0)
+    smoothed_poses[:, :3, :3] = smoothed_rots
+    smoothed_poses[:, :3, 3] = smoothed_trans
+
+    return smoothed_poses
 
 def control_ik(
     j_eef: torch.Tensor, dpose: torch.Tensor, damping: float = 0.1, 
@@ -589,7 +637,8 @@ def main():
     with open(args.object_poses_json_path, "r") as f:
         object_poses_data = json.load(f)
     T_W_O_start = pose_to_T(np.array(object_poses_data["start_pose"]))
-    T_W_Os = [pose_to_T(np.array(pose)) for pose in object_poses_data["goals"]]
+    T_W_Os = np.array([pose_to_T(np.array(pose)) for pose in object_poses_data["goals"]])
+    T_W_Os = filter_poses(T_W_Os)
 
     # Load object
     assert args.object_path.exists(), f"Object path {args.object_path} does not exist"
@@ -664,6 +713,7 @@ def main():
     print(f"len(T_W_Os): {len(T_W_Os)}, len(hand_keypoint_to_xyzs): {len(hand_keypoint_to_xyzs)}, N_TIMESTEPS: {N_TIMESTEPS}")
     T_W_Os = T_W_Os[:N_TIMESTEPS]
     hand_keypoint_to_xyzs = hand_keypoint_to_xyzs[:N_TIMESTEPS]
+    T_R_Ps = filter_poses(np.array([compute_T_R_P(hand_keypoint_to_xyz=hand_keypoint_to_xyz) for hand_keypoint_to_xyz in hand_keypoint_to_xyzs]))
     hand_frames = hand_frames[:N_TIMESTEPS]
     hand_visers = hand_visers[:N_TIMESTEPS]
 
@@ -707,7 +757,7 @@ def main():
             q_arm = q[:7]
 
             # Arm IK
-            T_R_P = compute_T_R_P(hand_keypoint_to_xyz=hand_keypoint_to_xyzs[0])
+            T_R_P = T_R_Ps[0]
             new_q_arm = compute_new_q_arm(
                 arm_pk_chain=arm_pk_chain,
                 target_wrist_pose=T_R_P,
@@ -720,8 +770,8 @@ def main():
             new_q = np.concatenate([new_q_arm, new_q_hand])
             kuka_sharpa_viser.update_cfg(new_q)
 
-        for i, (T_W_O, hand_keypoint_to_xyz) in tqdm(
-            enumerate(zip(T_W_Os, hand_keypoint_to_xyzs)),
+        for i, (T_W_O, T_R_P, hand_keypoint_to_xyz) in tqdm(
+            enumerate(zip(T_W_Os, T_R_Ps, hand_keypoint_to_xyzs)),
             total=N_TIMESTEPS,
             desc="Visualizing trajectory",
         ):
@@ -795,7 +845,6 @@ def main():
                     q_arm = q[:7]
 
                     # Arm IK
-                    T_R_P = compute_T_R_P(hand_keypoint_to_xyz=hand_keypoint_to_xyz)
                     new_q_arm = compute_new_q_arm(
                         arm_pk_chain=arm_pk_chain,
                         target_wrist_pose=T_R_P,
