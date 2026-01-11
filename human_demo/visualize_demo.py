@@ -12,23 +12,11 @@ import torch
 
 import numpy as np
 import tyro
-import yaml
 from scipy.spatial.transform import Rotation as R
 from tqdm import tqdm
 
 import viser
 from viser.extras import ViserUrdf
-
-BLUE_RGB = [0, 0, 1]
-RED_RGB = [1, 0, 0]
-GREEN_RGB = [0, 1, 0]
-YELLOW_RGB = [1, 1, 0]
-CYAN_RGB = [0, 1, 1]
-MAGENTA_RGB = [1, 0, 1]
-WHITE_RGB = [1, 1, 1]
-BLACK_RGB = [0, 0, 0]
-
-BLUE_RGBA = [*BLUE_RGB, 1]
 
 T_W_R = np.eye(4)
 T_W_R[:3, 3] = np.array([0.0, 0.8, 0.0])
@@ -79,21 +67,6 @@ def transform_point(T: np.ndarray, point: np.ndarray) -> np.ndarray:
     point = np.concatenate([point, [1]])
     transformed_point = T @ point
     return transformed_point[:3]
-
-
-def create_transform(
-    pos: np.ndarray,
-    rot: np.ndarray,
-) -> np.ndarray:
-    """
-    Create transform T from position and rotation
-    """
-    assert pos.shape == (3,)
-    assert rot.shape == (3, 3)
-    T = np.eye(4)
-    T[:3, :3] = rot
-    T[:3, 3] = pos
-    return T
 
 
 def create_urdf(
@@ -305,9 +278,7 @@ def solve_fingertip_ik(
     import pybullet as pb
     target_wrist_pos = target_wrist_pose[:3, 3]
     target_wrist_quat = R.from_matrix(target_wrist_pose[:3, :3]).as_quat()
-    print(f"target_wrist_pos: {target_wrist_pos}, target_wrist_quat: {target_wrist_quat}")
-    # pb.resetBasePositionAndOrientation(hand_pb, target_wrist_pos, target_wrist_quat)
-    reset_base_visual_pose(hand_pb, target_pos=target_wrist_pos, target_orn=target_wrist_quat)
+    reset_base_pose_pb(hand_pb, target_pos=target_wrist_pos, target_orn=target_wrist_quat)
 
     hand_link_name_to_id = get_link_name_to_idx(hand_pb)
     hand_joint_names = get_joint_names(hand_pb)
@@ -352,53 +323,18 @@ def solve_fingertip_ik(
         maxNumIterations=2000,
         residualThreshold=0.001,
     ))
-    combined_result = np.concatenate([thumb_result[:5], index_result[5:9], middle_result[9:13], ring_result[13:17], pinky_result[17:]])
-    set_robot_state(hand_pb, combined_result)
-    # return thumb_result
-    # return index_result
+    target_q = np.concatenate([thumb_result[:5], index_result[5:9], middle_result[9:13], ring_result[13:17], pinky_result[17:]])
+    set_robot_state(hand_pb, target_q)
 
-    target_q = combined_result
     assert target_q.shape == (22,), f"target_q.shape: {target_q.shape}"
     return target_q
 
-
-
-def add_sphere(radius, position, rgbaColor=BLUE_RGBA):
-    # HACK: Hide pybullet import in functions that use it to avoid messy tyro autocomplete
-    import pybullet as pb
-
-    # Create a visual shape for the sphere
-    visualShapeId = pb.createVisualShape(
-        shapeType=pb.GEOM_SPHERE, radius=radius, rgbaColor=rgbaColor
-    )  # Blue color
-
-    # Create a collision shape for the sphere
-    collisionShapeId = pb.createCollisionShape(shapeType=pb.GEOM_SPHERE, radius=radius)
-
-    # Create the sphere as a rigid body
-    sphereId = pb.createMultiBody(
-        baseMass=1,  # Mass of the sphere
-        baseCollisionShapeIndex=collisionShapeId,
-        baseVisualShapeIndex=visualShapeId,
-        basePosition=position,
-    )  # Initial position (x, y, z)
-    return sphereId
-
-
-def move_sphere(sphereId, position):
-    # HACK: Hide pybullet import in functions that use it to avoid messy tyro autocomplete
-    import pybullet as pb
-
-    pb.resetBasePositionAndOrientation(sphereId, position, [0, 0, 0, 1])
-
-
-import pybullet as pb
-
-def reset_base_visual_pose(body_id, target_pos, target_orn=(0, 0, 0, 1)):
+def reset_base_pose_pb(body_id, target_pos, target_orn=(0, 0, 0, 1)):
     """
-    Moves the body so that its visual/link origin is at target_pos/target_orn, 
+    Moves the body so that its base link origin is at target_pos/target_orn, 
     compensating for the inertial offset.
     """
+    import pybullet as pb
     # 1. Get the offset of the CoM relative to the URDF link origin
     # dynamics_info[3] is localInertialFramePosition
     # dynamics_info[4] is localInertialFrameOrientation
@@ -415,70 +351,6 @@ def reset_base_visual_pose(body_id, target_pos, target_orn=(0, 0, 0, 1)):
     
     # 3. Apply the reset
     pb.resetBasePositionAndOrientation(body_id, final_pos, final_orn)
-
-def set_keypoint_sphere_positions_pb(hand_keypoint_to_xyz: dict) -> None:
-    FAR_AWAY_POSITION = [100, 100, 100]
-
-    BLUE_RGB = [0, 0, 1]
-    RED_RGB = [1, 0, 0]
-    GREEN_RGB = [0, 1, 0]
-    YELLOW_RGB = [1, 1, 0]
-    CYAN_RGB = [0, 1, 1]
-    MAGENTA_RGB = [1, 0, 1]
-    WHITE_RGB = [1, 1, 1]
-    BLACK_RGB = [0, 0, 0]
-
-    BLUE_RGBA = [*BLUE_RGB, 1]
-    RED_RGBA = [*RED_RGB, 1]
-    GREEN_RGBA = [*GREEN_RGB, 1]
-    YELLOW_RGBA = [*YELLOW_RGB, 1]
-    CYAN_RGBA = [*CYAN_RGB, 1]
-    MAGENTA_RGBA = [*MAGENTA_RGB, 1]
-    WHITE_RGBA = [*WHITE_RGB, 1]
-    BLACK_RGBA = [*BLACK_RGB, 1]
-
-    BLUE_TRANSLUCENT_RGBA = [*BLUE_RGB, 0.5]
-    RED_TRANSLUCENT_RGBA = [*RED_RGB, 0.5]
-    GREEN_TRANSLUCENT_RGBA = [*GREEN_RGB, 0.5]
-    YELLOW_TRANSLUCENT_RGBA = [*YELLOW_RGB, 0.5]
-    CYAN_TRANSLUCENT_RGBA = [*CYAN_RGB, 0.5]
-    MAGENTA_TRANSLUCENT_RGBA = [*MAGENTA_RGB, 0.5]
-    WHITE_TRANSLUCENT_RGBA = [*WHITE_RGB, 0.5]
-    BLACK_TRANSLUCENT_RGBA = [*BLACK_RGB, 0.5]
-
-
-    keypoint_to_color = {
-        "wrist_back": RED_TRANSLUCENT_RGBA,
-        "wrist_front": RED_RGBA,
-        "index_0_back": GREEN_TRANSLUCENT_RGBA,
-        "index_0_front": GREEN_RGBA,
-        "middle_0_back": BLUE_TRANSLUCENT_RGBA,
-        "middle_0_front": BLUE_RGBA,
-        "ring_0_back": YELLOW_TRANSLUCENT_RGBA,
-        "ring_0_front": YELLOW_RGBA,
-        "index_3": GREEN_RGBA,
-        "middle_3": BLUE_RGBA,
-        "ring_3": YELLOW_RGBA,
-        "thumb_3": MAGENTA_RGBA,
-        "PALM_TARGET": CYAN_RGBA,
-    }
-    keypoints = keypoint_to_color.keys()
-
-    if not hasattr(set_keypoint_sphere_positions_pb, "sphere_ids"):
-        set_keypoint_sphere_positions_pb.sphere_ids = [
-            add_sphere(
-                radius=0.02,
-                position=hand_keypoint_to_xyz[keypoint],
-                rgbaColor=keypoint_to_color[keypoint],
-            )
-            for keypoint in keypoints
-        ]
-    else:
-        for i, keypoint in enumerate(keypoints):
-            move_sphere(
-                set_keypoint_sphere_positions_pb.sphere_ids[i],
-                hand_keypoint_to_xyz[keypoint],
-            )
 
 
 @dataclass
@@ -573,8 +445,8 @@ def create_transformed_keypoint_to_xyz(hand_json: dict, T_W_C: np.ndarray) -> di
     kpt_map["PALM_TARGET"] = (
         # VERSION 0
         mean_wrist
-        # mean_middle_0
         # # VERSION 1
+        # mean_middle_0
         # - normalize(kpt_map["middle_0_front"] - kpt_map["wrist_front"]) * 0.03
         # - palm_normal * 0.03
         #
@@ -592,7 +464,6 @@ def create_transformed_keypoint_to_xyz(hand_json: dict, T_W_C: np.ndarray) -> di
 
     # HACK: add global_orient
     transformed_keypoint_to_xyz["global_orient"] = kpt_map["global_orient"]
-    transformed_keypoint_to_xyz["index_3"] += np.array([0, -0.01, 0.01])
     return transformed_keypoint_to_xyz
 
 
@@ -770,8 +641,8 @@ def main():
         assert SHARPA_URDF_PATH.exists(), (
             f"SHARPA_URDF_PATH not found: {SHARPA_URDF_PATH}"
         )
-        # pb.connect(pb.DIRECT)
-        pb.connect(pb.GUI)
+        pb.connect(pb.DIRECT)
+        # pb.connect(pb.GUI)
         hand_pb = pb.loadURDF(str(SHARPA_URDF_PATH))
         robot_pb = pb.loadURDF(str(KUKA_SHARPA_URDF_PATH), basePosition=(0, 0.8, 0), baseOrientation=(0, 0, 0, 1))
 
@@ -815,7 +686,6 @@ def main():
 
             # Retarget robot
             if args.retarget_robot:
-                set_keypoint_sphere_positions_pb(hand_keypoint_to_xyz)
                 # Arm IK
                 T_W_P = np.eye(4)
                 T_W_P[:3, 3] = hand_keypoint_to_xyz["PALM_TARGET"]
@@ -838,9 +708,8 @@ def main():
                 # Move floating hand to wrist pose
                 sharpa_frame.position = T_W_P[:3, 3]
                 sharpa_frame.wxyz = xyzw_to_wxyz(R.from_matrix(T_W_P[:3, :3]).as_quat())
-                print(f"sharpa_frame.position: {sharpa_frame.position}, sharpa_frame.wxyz: {sharpa_frame.wxyz}")
 
-                # # Hand IK
+                # Hand IK
                 q_hand = q[7:]
                 new_q_hand = solve_fingertip_ik(
                     hand_pb=hand_pb,
@@ -851,26 +720,7 @@ def main():
                 new_q = np.concatenate([new_q_arm, new_q_hand])
                 kuka_sharpa_viser.update_cfg(new_q)
                 sharpa_viser.update_cfg(new_q_hand)
-                hand_link_name_to_id = get_link_name_to_idx(hand_pb)
-                index_fingertip_com, index_fingertip_quat, *_ = pb.getLinkState(
-                    hand_pb,
-                    hand_link_name_to_id["left_index_fingertip"],
-                    computeForwardKinematics=1,
-                )
-                index_fingertip_link_pose = sharpa_viser._urdf.get_transform(frame_to="left_index_fingertip").copy()
-                index_fingertip_link_pos = index_fingertip_link_pose[:3, 3]
-                index_fingertip_link_quat = R.from_matrix(index_fingertip_link_pose[:3, :3]).as_quat()
-                print(f"index_fingertip_com: {index_fingertip_com}, index_fingertip_quat: {index_fingertip_quat}")
-                print(f"index_fingertip_link_pos: {index_fingertip_link_pos}, index_fingertip_link_quat: {index_fingertip_link_quat}")
                 set_robot_state(robot_pb, new_q)
-                # sphere = SERVER.scene.add_icosphere(
-                #     "/index_fingertip",
-                #     radius=0.02,
-                #     color=[0, 0, 0],
-                #     position=index_fingertip_com,
-                #     wxyz=xyzw_to_wxyz(index_fingertip_quat),
-                # )
-                breakpoint()
 
             end_time = time.time()
             extra_dt = args.dt - (end_time - start_time)
