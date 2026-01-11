@@ -587,6 +587,8 @@ def main():
 
     FAR_AWAY_POSITION = np.ones(3) * 100
     # Load hand meshes
+    hand_frames = []
+    hand_visers = []
     if args.visualize_hand_meshes:
         # Each timestep has a different hand mesh because they can change shape
         # So this is slow to load
@@ -604,8 +606,6 @@ def main():
                 R.from_matrix(T_W_C[:3, :3]).as_quat(),
             )
 
-        hand_frames = []
-        hand_visers = []
         for i, hand_urdf_file in tqdm(enumerate(hand_urdf_files), desc="Loading hands", total=len(hand_urdf_files)):
             hand_frame = SERVER.scene.add_frame(
                 f"/hand/{i}",
