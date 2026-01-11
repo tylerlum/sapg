@@ -163,6 +163,17 @@ def compute_current_T_R_P(arm_pk_chain: pk.SerialChain, q_arm: np.ndarray) -> np
     assert wrist_pose.shape == (4, 4), f"wrist_pose.shape: {wrist_pose.shape}"
     return wrist_pose.cpu().numpy()
 
+def compute_T_R_P(hand_keypoint_to_xyz: dict) -> np.ndarray:
+    T_W_P = np.eye(4)
+    T_W_P[:3, 3] = hand_keypoint_to_xyz["PALM_TARGET"]
+    r_R_P = compute_r_R_P(keypoint_to_xyz=hand_keypoint_to_xyz)
+    r_W_R = T_W_R[:3, :3]
+    r_W_P = r_W_R @ r_R_P
+    T_W_P[:3, :3] = r_W_P
+    T_R_W = np.linalg.inv(T_W_R)
+    T_R_P = T_R_W @ T_W_P
+    return T_R_P
+
 def compute_new_q_arm(arm_pk_chain: pk.SerialChain, target_wrist_pose: np.ndarray, q_arm: np.ndarray) -> np.ndarray:
     NUM_ARM_JOINTS = 7
     assert target_wrist_pose.shape == (4, 4), f"target_wrist_pose.shape: {target_wrist_pose.shape}"
@@ -682,16 +693,7 @@ def main():
             q_arm = q[:7]
 
             # Arm IK
-            T_W_P = np.eye(4)
-            T_W_P[:3, 3] = hand_keypoint_to_xyzs[0]["PALM_TARGET"]
-            r_R_P = compute_r_R_P(keypoint_to_xyz=hand_keypoint_to_xyzs[0])
-            r_W_R = T_W_R[:3, :3]
-            r_W_P = r_W_R @ r_R_P
-            T_W_P[:3, :3] = r_W_P
-
-            T_R_W = np.linalg.inv(T_W_R)
-            T_R_P = T_R_W @ T_W_P
-
+            T_R_P = compute_T_R_P(hand_keypoint_to_xyz=hand_keypoint_to_xyzs[0])
             new_q_arm = compute_new_q_arm(
                 arm_pk_chain=arm_pk_chain,
                 target_wrist_pose=T_R_P,
@@ -703,8 +705,6 @@ def main():
 
             new_q = np.concatenate([new_q_arm, new_q_hand])
             kuka_sharpa_viser.update_cfg(new_q)
-
-
 
         for i, (T_W_O, hand_keypoint_to_xyz) in tqdm(
             enumerate(zip(T_W_Os, hand_keypoint_to_xyzs)),
@@ -781,16 +781,7 @@ def main():
                     q_arm = q[:7]
 
                     # Arm IK
-                    T_W_P = np.eye(4)
-                    T_W_P[:3, 3] = hand_keypoint_to_xyz["PALM_TARGET"]
-                    r_R_P = compute_r_R_P(keypoint_to_xyz=hand_keypoint_to_xyz)
-                    r_W_R = T_W_R[:3, :3]
-                    r_W_P = r_W_R @ r_R_P
-                    T_W_P[:3, :3] = r_W_P
-
-                    T_R_W = np.linalg.inv(T_W_R)
-                    T_R_P = T_R_W @ T_W_P
-
+                    T_R_P = compute_T_R_P(hand_keypoint_to_xyz=hand_keypoint_to_xyz)
                     new_q_arm = compute_new_q_arm(
                         arm_pk_chain=arm_pk_chain,
                         target_wrist_pose=T_R_P,
@@ -798,6 +789,7 @@ def main():
                     )
 
                     # Move floating hand to wrist pose
+                    T_W_P = T_W_R @ T_R_P
                     sharpa_frame.position = T_W_P[:3, 3]
                     sharpa_frame.wxyz = xyzw_to_wxyz(R.from_matrix(T_W_P[:3, :3]).as_quat())
 
