@@ -153,6 +153,16 @@ def control_ik(
 
     return u
 
+def compute_current_T_R_P(arm_pk_chain: pk.SerialChain, q_arm: np.ndarray) -> np.ndarray:
+    NUM_ARM_JOINTS = 7
+    assert q_arm.shape == (NUM_ARM_JOINTS,), f"q_arm.shape: {q_arm.shape}"
+
+    device = arm_pk_chain.device
+    q_arm_torch = torch.from_numpy(q_arm).float().to(device)
+    wrist_pose = arm_pk_chain.forward_kinematics(q_arm_torch).get_matrix()[0]
+    assert wrist_pose.shape == (4, 4), f"wrist_pose.shape: {wrist_pose.shape}"
+    return wrist_pose.cpu().numpy()
+
 def compute_new_q_arm(arm_pk_chain: pk.SerialChain, target_wrist_pose: np.ndarray, q_arm: np.ndarray) -> np.ndarray:
     NUM_ARM_JOINTS = 7
     assert target_wrist_pose.shape == (4, 4), f"target_wrist_pose.shape: {target_wrist_pose.shape}"
@@ -360,9 +370,13 @@ class Args:
     hand_poses_dir: Path
     visualize_hand_meshes: bool = False
     retarget_robot: bool = False
+    retarget_robot_using_object_relative_pose: bool = False
     dt: float = 1.0 / 30
     start_idx: int = 0
 
+    def __post_init__(self) -> None:
+        if self.retarget_robot_using_object_relative_pose:
+            assert self.retarget_robot, "retarget_robot_using_object_relative_pose requires retarget_robot to be True"
 
 def set_keypoint_sphere_positions(hand_keypoint_to_xyz: dict, server: viser.ViserServer) -> None:
     from human_demo.colors import RED_TRANSLUCENT_RGBA, RED_RGBA, GREEN_TRANSLUCENT_RGBA, GREEN_RGBA, BLUE_TRANSLUCENT_RGBA, BLUE_RGBA, YELLOW_TRANSLUCENT_RGBA, YELLOW_RGBA, MAGENTA_RGBA, BLACK_RGBA, CYAN_RGBA
@@ -628,6 +642,17 @@ def main():
     hand_frames = hand_frames[:N_TIMESTEPS]
     hand_visers = hand_visers[:N_TIMESTEPS]
 
+    if args.retarget_robot_using_object_relative_pose:
+        idx_lifted = None
+        LIFTED_Z = 0.6
+        for i, T_W_O in enumerate(T_W_Os):
+            z = T_W_O[:3, 3][2]
+            if z >= LIFTED_Z:
+                idx_lifted = i
+                break
+        assert idx_lifted is not None, f"No object pose with z >= {LIFTED_Z} found"
+        print(f"First object pose with z >= {LIFTED_Z} is at index {idx_lifted}")
+
     if args.retarget_robot:
         with open(KUKA_SHARPA_URDF_PATH, "rb") as f:
             urdf_str = f.read()
@@ -644,10 +669,43 @@ def main():
         pb.connect(pb.DIRECT)
         # pb.connect(pb.GUI)
         hand_pb = pb.loadURDF(str(SHARPA_URDF_PATH))
-        robot_pb = pb.loadURDF(str(KUKA_SHARPA_URDF_PATH), basePosition=(0, 0.8, 0), baseOrientation=(0, 0, 0, 1))
 
     # Visualization loop
     while True:
+        kuka_sharpa_viser.update_cfg(HOME_JOINT_POS)
+        sharpa_viser.update_cfg(HOME_JOINT_POS_SHARPA)
+
+        # Solve arm IK first time
+        N_IK_STEPS = 10
+        for i in range(N_IK_STEPS):
+            q = np.array(kuka_sharpa_viser._urdf.cfg)
+            q_arm = q[:7]
+
+            # Arm IK
+            T_W_P = np.eye(4)
+            T_W_P[:3, 3] = hand_keypoint_to_xyzs[0]["PALM_TARGET"]
+            r_R_P = compute_r_R_P(keypoint_to_xyz=hand_keypoint_to_xyzs[0])
+            r_W_R = T_W_R[:3, :3]
+            r_W_P = r_W_R @ r_R_P
+            T_W_P[:3, :3] = r_W_P
+
+            T_R_W = np.linalg.inv(T_W_R)
+            T_R_P = T_R_W @ T_W_P
+
+            new_q_arm = compute_new_q_arm(
+                arm_pk_chain=arm_pk_chain,
+                target_wrist_pose=T_R_P,
+                q_arm=q_arm,
+            )
+
+            q_hand = q[7:]
+            new_q_hand = q_hand
+
+            new_q = np.concatenate([new_q_arm, new_q_hand])
+            kuka_sharpa_viser.update_cfg(new_q)
+
+
+
         for i, (T_W_O, hand_keypoint_to_xyz) in tqdm(
             enumerate(zip(T_W_Os, hand_keypoint_to_xyzs)),
             total=N_TIMESTEPS,
@@ -686,41 +744,74 @@ def main():
 
             # Retarget robot
             if args.retarget_robot:
-                # Arm IK
-                T_W_P = np.eye(4)
-                T_W_P[:3, 3] = hand_keypoint_to_xyz["PALM_TARGET"]
-                r_R_P = compute_r_R_P(keypoint_to_xyz=hand_keypoint_to_xyz)
-                r_W_R = T_W_R[:3, :3]
-                r_W_P = r_W_R @ r_R_P
-                T_W_P[:3, :3] = r_W_P
+                if args.retarget_robot_using_object_relative_pose and i >= idx_lifted:
+                    q = np.array(kuka_sharpa_viser._urdf.cfg)
+                    q_arm = q[:7]
+                    q_hand = q[7:]
 
-                T_R_W = np.linalg.inv(T_W_R)
-                T_R_P = T_R_W @ T_W_P
+                    if i == idx_lifted:
+                        q_arm_lifted = q_arm.copy()
+                        q_hand_lifted = q_hand.copy()
+                        T_R_P_lifted = compute_current_T_R_P(arm_pk_chain=arm_pk_chain, q_arm=q_arm_lifted)
+                        T_W_P_lifted = T_W_R @ T_R_P_lifted
+                        T_W_O_lifted = T_W_Os[idx_lifted]
+                        T_O_P_lifted = np.linalg.inv(T_W_O_lifted) @ T_W_P_lifted
 
-                q = np.array(kuka_sharpa_viser._urdf.cfg)
-                q_arm = q[:7]
-                new_q_arm = compute_new_q_arm(
-                    arm_pk_chain=arm_pk_chain,
-                    target_wrist_pose=T_R_P,
-                    q_arm=q_arm,
-                )
+                    # Use relative object pose now
+                    T_W_P = T_W_Os[i] @ T_O_P_lifted
+                    T_R_W = np.linalg.inv(T_W_R)
+                    T_R_P = T_R_W @ T_W_P
+                    new_q_arm = compute_new_q_arm(
+                        arm_pk_chain=arm_pk_chain,
+                        target_wrist_pose=T_R_P,
+                        q_arm=q_arm,
+                    )
 
-                # Move floating hand to wrist pose
-                sharpa_frame.position = T_W_P[:3, 3]
-                sharpa_frame.wxyz = xyzw_to_wxyz(R.from_matrix(T_W_P[:3, :3]).as_quat())
+                    # Move floating hand to wrist pose
+                    sharpa_frame.position = T_W_P[:3, 3]
+                    sharpa_frame.wxyz = xyzw_to_wxyz(R.from_matrix(T_W_P[:3, :3]).as_quat())
 
-                # Hand IK
-                q_hand = q[7:]
-                new_q_hand = solve_fingertip_ik(
-                    hand_pb=hand_pb,
-                    hand_keypoint_to_xyz=hand_keypoint_to_xyz,
-                    target_wrist_pose=T_W_P,
-                )
+                    new_q_hand = q_hand_lifted.copy()
 
-                new_q = np.concatenate([new_q_arm, new_q_hand])
-                kuka_sharpa_viser.update_cfg(new_q)
-                sharpa_viser.update_cfg(new_q_hand)
-                set_robot_state(robot_pb, new_q)
+                    new_q = np.concatenate([new_q_arm, new_q_hand])
+                    kuka_sharpa_viser.update_cfg(new_q)
+                    sharpa_viser.update_cfg(new_q_hand)
+                else:
+                    q = np.array(kuka_sharpa_viser._urdf.cfg)
+                    q_arm = q[:7]
+
+                    # Arm IK
+                    T_W_P = np.eye(4)
+                    T_W_P[:3, 3] = hand_keypoint_to_xyz["PALM_TARGET"]
+                    r_R_P = compute_r_R_P(keypoint_to_xyz=hand_keypoint_to_xyz)
+                    r_W_R = T_W_R[:3, :3]
+                    r_W_P = r_W_R @ r_R_P
+                    T_W_P[:3, :3] = r_W_P
+
+                    T_R_W = np.linalg.inv(T_W_R)
+                    T_R_P = T_R_W @ T_W_P
+
+                    new_q_arm = compute_new_q_arm(
+                        arm_pk_chain=arm_pk_chain,
+                        target_wrist_pose=T_R_P,
+                        q_arm=q_arm,
+                    )
+
+                    # Move floating hand to wrist pose
+                    sharpa_frame.position = T_W_P[:3, 3]
+                    sharpa_frame.wxyz = xyzw_to_wxyz(R.from_matrix(T_W_P[:3, :3]).as_quat())
+
+                    # Hand IK
+                    q_hand = q[7:]
+                    new_q_hand = solve_fingertip_ik(
+                        hand_pb=hand_pb,
+                        hand_keypoint_to_xyz=hand_keypoint_to_xyz,
+                        target_wrist_pose=T_W_P,
+                    )
+
+                    new_q = np.concatenate([new_q_arm, new_q_hand])
+                    kuka_sharpa_viser.update_cfg(new_q)
+                    sharpa_viser.update_cfg(new_q_hand)
 
             end_time = time.time()
             extra_dt = args.dt - (end_time - start_time)
