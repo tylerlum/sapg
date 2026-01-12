@@ -143,13 +143,17 @@ def main():
     # object_name = "whiteboard_eraser"
     # trajectory_name = "wipe_left"
 
-    object_type = "hammer"
-    object_name = "mallet"
+    # object_type = "hammer"
+    # object_name = "mallet"
     # object_name = "hammer_2"
     # trajectory_name = "vertical_swing"
     # trajectory_name = "horizontal_swing"
     # trajectory_name = "horizontal_swing_higher"
-    trajectory_name = "horizontal_swing_human"
+    # trajectory_name = "horizontal_swing_human"
+
+    object_type = "spatula"
+    object_name = "black_spatula"
+    trajectory_name = "pick_and_place_human"
 
     trajectory_path = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
     assert trajectory_path.exists(), f"Trajectory file not found: {trajectory_path}"

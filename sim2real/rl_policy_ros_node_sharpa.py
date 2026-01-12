@@ -947,8 +947,9 @@ if __name__ == "__main__":
             # object_scales=np.array(NAME_TO_OBJECT["hammer_2"].scale),
             # object_scales=np.array(NAME_TO_OBJECT["hammer_2"].scale) * 0.75,
             # object_scales=np.array(NAME_TO_OBJECT["mallet"].scale) * 0.75,
-            object_scales=np.array(NAME_TO_OBJECT["mallet"].scale),
+            # object_scales=np.array(NAME_TO_OBJECT["mallet"].scale),
             # object_scales=np.array(NAME_TO_OBJECT["mallet"].scale) * 0.9,
+            object_scales=np.array(NAME_TO_OBJECT["black_spatula"].scale) * 0.9,
             # object_scales=np.array([0.25, 0.02, 0.015]) * 25,  # scanned hammer 2
             # object_scales=np.array([0.25, 0.03, 0.02]) * 25,  # scanned hammer 2
             # save_foldername=None,
