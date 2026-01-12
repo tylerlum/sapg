@@ -652,3 +652,26 @@ KNIFE_NAME_TO_OBJECT = {
 }
 #overwrite NAME_TO_OBJECT with KNIFE_NAME_TO_OBJECT even if they share keys
 NAME_TO_OBJECT.update(KNIFE_NAME_TO_OBJECT)
+
+BRUSH_NAME_TO_OBJECT = {
+    "red_brush": Object(
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/dex_tool_bench/brush/red_brush/red_brush.urdf"
+        ),
+        coacd_filepaths=None,
+        scale=rescale_by_factor((0.15, 0.02, 0.015), factor=25),
+        need_vhacd=False,
+    ),
+    "green_brush": Object(
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/dex_tool_bench/brush/green_brush/green_brush.urdf"
+        ),
+        coacd_filepaths=None,
+        scale=rescale_by_factor((0.15, 0.02, 0.015), factor=25),
+        need_vhacd=False,
+    ),
+}
+#overwrite NAME_TO_OBJECT with BRUSH_NAME_TO_OBJECT even if they share keys
+NAME_TO_OBJECT.update(BRUSH_NAME_TO_OBJECT)
