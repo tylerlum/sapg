@@ -580,18 +580,6 @@ class RLPolicyNode:
                         end_link_name="left_hand_C_MC",
                     ).to(device=DEVICE)
 
-                    # Load goal object pose trajectory
-                    # Stop listening to the published one
-                    import json
-                    object_type = "hammer"
-                    object_name = "mallet"
-                    trajectory_name = "horizontal_swing_human"
-                    object_pose_trajectory_filepath = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
-                    assert object_pose_trajectory_filepath.exists(), f"object_pose_trajectory_filepath not found: {object_pose_trajectory_filepath}"
-                    with open(object_pose_trajectory_filepath, "r") as f:
-                        goal_object_pose_trajectory = np.array(json.load(f)["goals"])
-                    self.goal_object_pose_trajectory = goal_object_pose_trajectory
-
                     # Store the arm joint positions and hand target when the object was lifted
                     self.q_arm_lifted = q[:7].copy()  # Store the arm joint positions when the object was lifted
                     assert self.q_arm_lifted.shape == (7,), f"self.q_arm_lifted.shape: {self.q_arm_lifted.shape}, expected: (7,)"
@@ -612,7 +600,7 @@ class RLPolicyNode:
                     import json
                     object_type = "hammer"
                     object_name = "mallet"
-                    trajectory_name = "horizontal_swing_human"
+                    trajectory_name = "horizontal_swing_human_closer"
                     object_pose_trajectory_filepath = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
                     assert object_pose_trajectory_filepath.exists(), f"object_pose_trajectory_filepath not found: {object_pose_trajectory_filepath}"
                     with open(object_pose_trajectory_filepath, "r") as f:
@@ -723,6 +711,9 @@ class RLPolicyNode:
                     #             warn(f"Loop too slow! Desired FPS = 60, Actual FPS = {1/loop_dt:.1f}")
                     #     breakpoint()
 
+                    # Publisher
+                    self.goal_object_pose_pub = rospy.Publisher("/robot_frame/goal_object_pose", Pose, queue_size=1)
+
                 if self.object_lifted:
                     print(colored(f"Object lifted, using relative object pose", "yellow"))
                     self.q_idx += 1
@@ -735,6 +726,23 @@ class RLPolicyNode:
                     assert new_q_target.shape == (29,), f"new_q_target.shape: {new_q_target.shape}, expected: (29,)"
                     joint_pos_targets = new_q_target[None]
 
+                    # Publish the goal object pose
+                    goal_idx = self.goal_idx + self.q_idx
+                    # assert goal_idx < self.goal_object_pose_trajectory.shape[0], f"goal_idx: {goal_idx}, expected: < {self.goal_object_pose_trajectory.shape[0]}"
+                    if goal_idx >= self.goal_object_pose_trajectory.shape[0]:
+                        warn(colored(f"Goal idx is out of bounds, setting to last target", "red"))
+                        goal_idx = self.goal_object_pose_trajectory.shape[0] - 1
+                    current_goal_object_pose_xyzw = self.goal_object_pose_trajectory[goal_idx]
+                    goal_object_pose_msg = Pose()
+                    goal_object_pose_msg.position.x = current_goal_object_pose_xyzw[0]
+                    goal_object_pose_msg.position.y = current_goal_object_pose_xyzw[1] - 0.8
+                    goal_object_pose_msg.position.z = current_goal_object_pose_xyzw[2]
+                    goal_object_pose_msg.orientation.x = current_goal_object_pose_xyzw[3]
+                    goal_object_pose_msg.orientation.y = current_goal_object_pose_xyzw[4]
+                    goal_object_pose_msg.orientation.z = current_goal_object_pose_xyzw[5]
+                    goal_object_pose_msg.orientation.w = current_goal_object_pose_xyzw[6]
+                    self.goal_object_pose_pub.publish(goal_object_pose_msg)
+
             t05 = time.time()
 
             # Publish the targets
@@ -745,8 +753,8 @@ class RLPolicyNode:
             # Sanity check that the joint pos targets are not too far from the current joint positions
             q_arm_diff_deg = np.rad2deg(np.abs(joint_pos_targets[0, :7] - q[:7]))
             print(colored(f"q_arm_diff_deg.max(): {q_arm_diff_deg.max()}", "yellow"))
-            MAX_Q_ARM_DIFF_DEG = 10
-            # MAX_Q_ARM_DIFF_DEG = 100  #HACK
+            # MAX_Q_ARM_DIFF_DEG = 10
+            MAX_Q_ARM_DIFF_DEG = 100  #HACK
             if q_arm_diff_deg.max() > MAX_Q_ARM_DIFF_DEG:
                 print(colored(f"Joint pos targets are too far from current joint positions, q_arm_diff: {q_arm_diff_deg} (max: {MAX_Q_ARM_DIFF_DEG})", "red"))
                 breakpoint()

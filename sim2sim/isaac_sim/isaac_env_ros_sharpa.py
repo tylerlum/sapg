@@ -265,7 +265,8 @@ def main():
     object_name = "mallet"
     # trajectory_name = "horizontal_swing_higher"
     # trajectory_name = "horizontal_swing"
-    trajectory_name = "horizontal_swing_human"
+    # trajectory_name = "horizontal_swing_human"
+    trajectory_name = "horizontal_swing_human_closer"
 
     trajectory_path = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
     assert trajectory_path.exists(), f"Trajectory file not found: {trajectory_path}"
