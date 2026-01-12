@@ -753,8 +753,8 @@ class RLPolicyNode:
             # Sanity check that the joint pos targets are not too far from the current joint positions
             q_arm_diff_deg = np.rad2deg(np.abs(joint_pos_targets[0, :7] - q[:7]))
             print(colored(f"q_arm_diff_deg.max(): {q_arm_diff_deg.max()}", "yellow"))
-            # MAX_Q_ARM_DIFF_DEG = 10
-            MAX_Q_ARM_DIFF_DEG = 100  #HACK
+            MAX_Q_ARM_DIFF_DEG = 10
+            # MAX_Q_ARM_DIFF_DEG = 100  #HACK
             if q_arm_diff_deg.max() > MAX_Q_ARM_DIFF_DEG:
                 print(colored(f"Joint pos targets are too far from current joint positions, q_arm_diff: {q_arm_diff_deg} (max: {MAX_Q_ARM_DIFF_DEG})", "red"))
                 breakpoint()
@@ -952,13 +952,13 @@ if __name__ == "__main__":
             # object_scales=np.array([0.25, 0.02, 0.015]) * 25,  # scanned hammer 2
             # object_scales=np.array([0.25, 0.03, 0.02]) * 25,  # scanned hammer 2
             # save_foldername=None,
-            save_foldername="2026-01-11_sim_testing",
+            save_foldername="2026-01-11_real_testing",
             # overwrite_targets_filepath=None,
             # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-44-54_noisyInputs_arm0.05.npz"),
             # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-47-13_finetuned_o0t0_arm0.05.npz"),
             # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-48-08_finetuned_o1t0_arm0.05.npz"),
             # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-48-47_finetuned_o1t1_arm0.05.npz"),
-            use_relative_object_pose_once_lifted=True,
+            use_relative_object_pose_once_lifted=False,
         )
         rl_policy_node.run()
     except rospy.ROSInterruptException:
