@@ -959,7 +959,7 @@ if __name__ == "__main__":
             # object_scales=np.array(NAME_TO_OBJECT["real_flat_screwdriver"].scale),
             # object_scales=np.array([0.25, 0.02, 0.015]) * 25,  # scanned hammer 2
             # object_scales=np.array([0.25, 0.03, 0.02]) * 25,  # scanned hammer 2
-            object_scales=np.array(NAME_TO_OBJECT["green_brush"].scale),
+            object_scales=np.array(NAME_TO_OBJECT["red_brush"].scale),
             # save_foldername=None,
             save_foldername="2026-01-11_real_testing",
             # overwrite_targets_filepath=None,
