@@ -942,7 +942,10 @@ if __name__ == "__main__":
             # object_scales=np.array([0.121277, 0.015, 0.015]) * 25,  # 040 large marker (smaller)
             # object_scales=np.array([0.12965531, 0.0337145 , 0.06038587]) * 25,  # whiteboard eraser
             # object_scales=np.array([0.15954332, 0.0777093 , 0.01231273]) * 25,  # iphone15pro
-            object_scales=np.array(NAME_TO_OBJECT["whiteboard_eraser"].scale),
+            # object_scales=np.array(NAME_TO_OBJECT["whiteboard_eraser"].scale),
+            # object_scales=np.array(NAME_TO_OBJECT["040_large_marker"].scale),
+            object_scales=np.array(NAME_TO_OBJECT["040_large_marker"].scale) * 0.8,
+            # object_scales=np.array(NAME_TO_OBJECT["040_large_marker"].scale) * 0.9,
             # object_scales=np.array(NAME_TO_OBJECT["mallet"].scale),
             # object_scales=np.array(NAME_TO_OBJECT["hammer_2"].scale),
             # object_scales=np.array(NAME_TO_OBJECT["hammer_2"].scale) * 0.75,

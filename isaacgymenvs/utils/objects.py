@@ -621,7 +621,8 @@ MARKER_NAME_TO_OBJECT = {
                 / "assets/urdf/tyler_objects_convex_decomp/040_large_marker"
             ).glob("decomp_*.obj")
         ),
-        scale=rescale_by_factor((0.121277, 0.019341, 0.021183), factor=25),
+        # scale=rescale_by_factor((0.121277, 0.019341, 0.021183), factor=25),
+        scale=rescale_by_factor((0.09, 0.018, 0.018), factor=25),  # Re-measured in real
         need_vhacd=True,
     ),  
 }
