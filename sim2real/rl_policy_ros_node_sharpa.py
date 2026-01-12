@@ -509,10 +509,7 @@ class RLPolicyNode:
             # t3 is the time that the robot receives the targets (not captured here)
 
             # Create observation from the latest messages
-            t1 = rospy.Time.now()
-            t00 = time.time()
             obs, q, t0 = self.create_observation()
-            t01 = time.time()
             assert obs is not None and q is not None, f"obs: {obs}, q: {q}"
 
             assert_equals(obs.shape, (1, self.num_observations))
@@ -522,7 +519,6 @@ class RLPolicyNode:
                 obs=obs,
                 deterministic_actions=True,
             )
-            t02 = time.time()
             assert_equals(normalized_action.shape, (1, self.num_actions))
 
             DT = 1 / 60
@@ -534,7 +530,6 @@ class RLPolicyNode:
                 hand_dof_speed_scale=self.hand_dof_speed_scale,
                 dt=DT,
             )
-            t03 = time.time()
             assert_equals(joint_pos_targets.shape, (1, self.num_actions))
 
             # Clamp
@@ -543,7 +538,6 @@ class RLPolicyNode:
                 Q_LOWER_LIMITS_np,
                 Q_UPPER_LIMITS_np,
             )
-            t04 = time.time()
 
             if self.overwrite_targets_filepath is not None:
                 if self.current_step >= self.q_targets_from_file.shape[0]:
@@ -743,13 +737,7 @@ class RLPolicyNode:
                     goal_object_pose_msg.orientation.w = current_goal_object_pose_xyzw[6]
                     self.goal_object_pose_pub.publish(goal_object_pose_msg)
 
-            t05 = time.time()
-
             # Publish the targets
-            t1_5 = rospy.Time.now()
-            dt01_ms = (t1 - t0).to_sec() * 1000
-            dt11_5_ms = (t1_5 - t1).to_sec() * 1000
-            t06 = time.time()
             # Sanity check that the joint pos targets are not too far from the current joint positions
             q_arm_diff_deg = np.rad2deg(np.abs(joint_pos_targets[0, :7] - q[:7]))
             print(colored(f"q_arm_diff_deg.max(): {q_arm_diff_deg.max()}", "yellow"))
@@ -759,33 +747,12 @@ class RLPolicyNode:
                 print(colored(f"Joint pos targets are too far from current joint positions, q_arm_diff: {q_arm_diff_deg} (max: {MAX_Q_ARM_DIFF_DEG})", "red"))
                 breakpoint()
             self.publish_targets(joint_pos_targets)
-            t07 = time.time()
             self.prev_targets = joint_pos_targets[0]
-            t08 = time.time()
-            t2 = rospy.Time.now()
-            dt1_5_2_ms = (t2 - t1_5).to_sec() * 1000
 
             # End of loop timekeeping
             end_loop_no_sleep_time = time.time()
             loop_no_sleep_dt = end_loop_no_sleep_time - start_loop_no_sleep_time
             loop_no_sleep_dts.append(loop_no_sleep_dt)
-
-            # Print timing information
-            PRINT_TIMING = False
-            if PRINT_TIMING:
-                print(f"dt01_ms: {dt01_ms:.1f}, dt11_5_ms: {dt11_5_ms:.1f}, dt1_5_2_ms: {dt1_5_2_ms:.1f} ms, loop_no_sleep_dt: {loop_no_sleep_dt * 1000:.1f} ms")
-
-                total_dt = t08 - t00
-                print(f"total_dt: {total_dt:.6f} s")
-                print(f"t01 - t00: {(t01 - t00) * 1000:.1f} ms, {((t01 - t00)) / total_dt * 100:.1f}%")
-                print(f"t02 - t01: {(t02 - t01) * 1000:.1f} ms, {((t02 - t01)) / total_dt * 100:.1f}%")
-                print(f"t03 - t02: {(t03 - t02) * 1000:.1f} ms, {((t03 - t02)) / total_dt * 100:.1f}%")
-                print(f"t04 - t03: {(t04 - t03) * 1000:.1f} ms, {((t04 - t03)) / total_dt * 100:.1f}%")
-                print(f"t05 - t04: {(t05 - t04) * 1000:.1f} ms, {((t05 - t04)) / total_dt * 100:.1f}%")
-                print(f"t06 - t05: {(t06 - t05) * 1000:.1f} ms, {((t06 - t05)) / total_dt * 100:.1f}%")
-                print(f"t07 - t06: {(t07 - t06) * 1000:.1f} ms, {((t07 - t06)) / total_dt * 100:.1f}%")
-                print(f"t08 - t07: {(t08 - t07) * 1000:.1f} ms, {((t08 - t07)) / total_dt * 100:.1f}%")
-                print("=" * 100)
 
             sleep_dt = self.control_dt - loop_no_sleep_dt
             if sleep_dt > 0:
