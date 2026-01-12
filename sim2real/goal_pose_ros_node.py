@@ -205,10 +205,15 @@ def main():
     # trajectory_name = "horizontal_swing_human"
     # trajectory_name = "horizontal_swing_human_closer"
 
-    object_type = "spatula"
-    object_name = "black_spatula"
+    # object_type = "spatula"
+    # object_name = "black_spatula"
     # trajectory_name = "pick_and_place_human"
-    trajectory_name = "pick_and_place_human_hardinit"
+    # trajectory_name = "pick_and_place_human_hardinit"
+
+    object_type = "screwdriver"
+    object_name = "real_flat_screwdriver"
+    trajectory_name = "top_down_screwing_human_easyinit"
+    # trajectory_name = "top_down_screwing_human"
 
     trajectory_path = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
     assert trajectory_path.exists(), f"Trajectory file not found: {trajectory_path}"
@@ -251,8 +256,8 @@ def main():
             # object_scales=np.array([0.12965531, 0.0337145 , 0.06038587]) * 25,  # whiteboard eraser
             # object_scales=np.array([0.15954332, 0.0777093 , 0.01231273]) * 25,  # iphone15pro
             # success_threshold=0.0,
-            success_threshold=0.01,
-            # success_threshold=0.02,
+            # success_threshold=0.01,
+            success_threshold=0.02,
             # success_threshold=0.05,
             success_steps=1,
         )

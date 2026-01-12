@@ -151,10 +151,15 @@ def main():
     # trajectory_name = "horizontal_swing_higher"
     # trajectory_name = "horizontal_swing_human"
 
-    object_type = "spatula"
-    object_name = "black_spatula"
+    # object_type = "spatula"
+    # object_name = "black_spatula"
     # trajectory_name = "pick_and_place_human"
-    trajectory_name = "pick_and_place_human_hardinit"
+    # trajectory_name = "pick_and_place_human_hardinit"
+
+    object_type = "screwdriver"
+    object_name = "real_flat_screwdriver"
+    trajectory_name = "top_down_screwing_human_easyinit"
+    # trajectory_name = "top_down_screwing_human"
 
     trajectory_path = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
     assert trajectory_path.exists(), f"Trajectory file not found: {trajectory_path}"
