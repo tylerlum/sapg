@@ -153,7 +153,8 @@ def main():
 
     object_type = "spatula"
     object_name = "black_spatula"
-    trajectory_name = "pick_and_place_human"
+    # trajectory_name = "pick_and_place_human"
+    trajectory_name = "pick_and_place_human_hardinit"
 
     trajectory_path = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
     assert trajectory_path.exists(), f"Trajectory file not found: {trajectory_path}"
