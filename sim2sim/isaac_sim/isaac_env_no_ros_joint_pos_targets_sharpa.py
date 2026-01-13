@@ -46,7 +46,7 @@ class IsaacEnvNoRosJointPosTargets:
         self.urdf = urdf
 
     def reset(self) -> torch.Tensor:
-        obs, _, _, _ = self.env.step(torch.zeros((1, N_ACT), device=self.device))
+        obs, _, _, _ = self.env.step(torch.zeros((self.env.num_envs, N_ACT), device=self.device))
         return obs["obs"]
 
     def step_with_joint_pos_targets(
@@ -149,15 +149,30 @@ def main():
             "task.env.resetDofPosRandomIntervalArm": 0.0,
             "task.env.resetDofVelRandomInterval": 0.0,
             # "task.env.object_type": "blue_cuboid",
-            "task.env.object_type": "cuboidal_mallet",
+            "task.env.object_type": "tyler_handle_head",
             # "task.env.object_type": "blue_cuboid_fake_hammer",
             # "task.env.forceNoReset": True,
             "task.env.randomizeObjectRotation": False,
             # "task.env.objectStartPose": [0.,  0.,  0.58, 0.,  0.,  0.,  1.],  # x, y, z, qx, qy, qz, qw
             "task.env.objectStartPose": [0.,  0.,  0.58, 0.,  0.,  1.,  0.],  # x, y, z, qx, qy, qz, qw
             # "task.env.goalObjectPose": [0.,  0.,  0.88, 0.,  0.,  0.,  1.],  # x, y, z, qx, qy, qz, qw
-            "task.env.use_fixed_set_of_goal_states": True,
+            # "task.env.use_fixed_set_of_goal_states": True,
+            "task.env.use_fixed_set_of_goal_states": False,
             "task.env.forceScale": 0.0,
+            "task.env.numEnvs": 100,
+            # "task.env.numEnvs": 1,
+            "task.env.envSpacing": 0.4,
+            "task.env.tableResetZRange": 0.0,
+            "task.env.capture_video": False,
+            "task.env.useActionDelay": False,
+            "task.env.useObsDelay": False,
+            "task.env.useObjectStateDelayNoise": False,
+            "task.env.resetWhenDropped": False,
+            "task.env.armMovingAverage": 0.1,
+            "task.env.evalSuccessTolerance": 0.02,
+            "task.env.successSteps": 1,
+            "task.env.fixedSizeKeypointReward": True,
+            "task.env.forceOnlyWhenLifted": True,
         },
     )
 
@@ -172,6 +187,7 @@ def main():
         config_path=CONFIG_PATH,
         checkpoint_path=CHECKPOINT_PATH,
         device=DEVICE,
+        num_envs=env.num_envs,
     )
 
     urdf = create_urdf_object(robot_name="iiwa14_left_sharpa_adjusted_restricted")
@@ -190,8 +206,8 @@ def main():
         observation, _, done, _ = (
             isaac_env_no_ros_joint_pos_targets.step_with_joint_pos_targets(action)
         )
-        if done.item():
-            observation = isaac_env_no_ros_joint_pos_targets.reset()
+        # if done.item():
+        #     observation = isaac_env_no_ros_joint_pos_targets.reset()
         end_time = time.time()
         sleep_time = CONTROL_DT - (end_time - start_time)
         if sleep_time > 0:
