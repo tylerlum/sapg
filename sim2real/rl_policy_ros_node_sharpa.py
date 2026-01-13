@@ -432,7 +432,7 @@ class RLPolicyNode:
         assert_equals(q_target.shape, (29,))
         assert_equals(T_R_O_lifted.shape, (4, 4))
 
-        info("=" * 100, "yellow")
+        info("=" * 100)
         info("Initializing relative object pose logic")
         info("=" * 100)
 
@@ -500,7 +500,7 @@ class RLPolicyNode:
         info(f"Goal idx starting at: {self.goal_idx}")
 
         # Store the trajectory after the object was lifted
-        self.T_W_O_trajectory = np.array([T_W_O_trajectory_full_repeated[i] @ T_O_P_lifted for i in range(len(T_W_O_trajectory_full_repeated)) if i >= self.goal_idx])
+        self.T_W_O_trajectory = np.array([T_W_O_trajectory_full_repeated[i] for i in range(len(T_W_O_trajectory_full_repeated)) if i >= self.goal_idx])
 
         # Compute the wrist pose trajectory for the trajectory after the object was lifted
         self.T_W_Ps_using_lifted_object_pose = np.array([self.T_W_O_trajectory[i] @ T_O_P_lifted for i in range(len(self.T_W_O_trajectory))])
@@ -538,10 +538,11 @@ class RLPolicyNode:
         assert self.q_targets_using_lifted_object_pose.shape == (TRAJECTORY_LENGTH, 29), f"self.q_targets_using_lifted_object_pose.shape: {self.q_targets_using_lifted_object_pose.shape}, expected: (TRAJECTORY_LENGTH, 29)"
 
 
-    def _visualize_relative_object_pose_logic(self, q_targets_using_lifted_object_pose: np.ndarray, T_W_Ps_using_lifted_object_pose: np.ndarray) -> None:
+    def _visualize_relative_object_pose_logic(self, q_targets_using_lifted_object_pose: np.ndarray, T_W_Ps_using_lifted_object_pose: np.ndarray, T_W_O_trajectory: np.ndarray) -> None:
         TRAJECTORY_LENGTH = q_targets_using_lifted_object_pose.shape[0]
         assert q_targets_using_lifted_object_pose.shape == (TRAJECTORY_LENGTH, 29), f"q_targets_using_lifted_object_pose.shape: {q_targets_using_lifted_object_pose.shape}, expected: (TRAJECTORY_LENGTH, 29)"
         assert T_W_Ps_using_lifted_object_pose.shape == (TRAJECTORY_LENGTH, 4, 4), f"T_W_Ps_using_lifted_object_pose.shape: {T_W_Ps_using_lifted_object_pose.shape}, expected: (TRAJECTORY_LENGTH, 4, 4)"
+        assert T_W_O_trajectory.shape == (TRAJECTORY_LENGTH, 4, 4), f"T_W_O_trajectory.shape: {T_W_O_trajectory.shape}, expected: (TRAJECTORY_LENGTH, 4, 4)"
 
         import viser
         from viser.extras import ViserUrdf
@@ -587,8 +588,36 @@ class RLPolicyNode:
         sharpa_viser = ViserUrdf(SERVER, SHARPA_URDF_PATH, root_node_name="/sharpa")
         sharpa_viser.update_cfg(HOME_JOINT_POS_SHARPA)
 
+        # Load object
+        from isaacgymenvs.utils.objects import NAME_TO_OBJECT
         while True:
-            for i in range(TRAJECTORY_LENGTH):
+            # Ask user for object name
+            available_objects = list(NAME_TO_OBJECT.keys())
+            info(f"Available objects: {', '.join(available_objects)}")
+            user_input = input(colored("Enter object name (or 'q' for default 'mallet'): ", "cyan"))
+
+            if user_input.lower() == 'q':
+                object_name = "mallet"
+                info(f"Using default object: {object_name}")
+                break
+            elif user_input in NAME_TO_OBJECT:
+                object_name = user_input
+                info(f"Using object: {object_name}")
+                break
+            else:
+                warn(f"Object '{user_input}' not found in NAME_TO_OBJECT. Please try again.")
+        OBJECT_URDF_PATH = NAME_TO_OBJECT[object_name].filepath
+        object_frame_viser = SERVER.scene.add_frame(
+            "/object",
+            position=(100, 0, 0),
+            wxyz=(1, 0, 0, 0),
+            show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS,
+        )
+        object_viser = ViserUrdf(SERVER, OBJECT_URDF_PATH, root_node_name=object_frame_viser.name)
+
+        from tqdm import tqdm
+        while True:
+            for i in tqdm(range(TRAJECTORY_LENGTH), desc="Visualizing trajectory"):
                 start_time = time.time()
 
                 # Update joints
@@ -601,6 +630,10 @@ class RLPolicyNode:
                 T_W_P_using_lifted_object_pose = T_W_Ps_using_lifted_object_pose[i]
                 sharpa_frame.position = T_W_P_using_lifted_object_pose[:3, 3]
                 sharpa_frame.wxyz = xyzw_to_wxyz(R.from_matrix(T_W_P_using_lifted_object_pose[:3, :3]).as_quat())
+
+                # Update object position
+                object_frame_viser.position = T_W_O_trajectory[i][:3, 3]
+                object_frame_viser.wxyz = xyzw_to_wxyz(R.from_matrix(T_W_O_trajectory[i][:3, :3]).as_quat())
 
                 end_time = time.time()
                 loop_dt = end_time - start_time
@@ -773,8 +806,13 @@ class RLPolicyNode:
                 # When just lifted, initialize the relative object pose logic and visualize it
                 if just_lifted:
                     T_R_O_lifted = pose_msg_to_T(copy.deepcopy(self.object_pose_msg.pose))  # Object pose in robot frame
+                    # T_R_O_lifted = pose_msg_to_T(copy.deepcopy(self.goal_object_pose_msg))  # Goal object pose in robot frame
                     self._initialize_relative_object_pose_logic(q=q, q_target=joint_pos_targets[0], T_R_O_lifted=T_R_O_lifted)
-                    self._visualize_relative_object_pose_logic()
+                    self._visualize_relative_object_pose_logic(
+                        q_targets_using_lifted_object_pose=self.q_targets_using_lifted_object_pose,
+                        T_W_Ps_using_lifted_object_pose=self.T_W_Ps_using_lifted_object_pose,
+                        T_W_O_trajectory=self.T_W_O_trajectory,
+                    )
 
                     self.goal_object_pose_pub = rospy.Publisher("/robot_frame/goal_object_pose", Pose, queue_size=1)
 
@@ -984,7 +1022,7 @@ if __name__ == "__main__":
             # object_scales=np.array(NAME_TO_OBJECT["hammer_2"].scale),
             # object_scales=np.array(NAME_TO_OBJECT["hammer_2"].scale) * 0.75,
             # object_scales=np.array(NAME_TO_OBJECT["mallet"].scale) * 0.75,
-            # object_scales=np.array(NAME_TO_OBJECT["mallet"].scale),
+            object_scales=np.array(NAME_TO_OBJECT["mallet"].scale),
             # object_scales=np.array(NAME_TO_OBJECT["mallet"].scale) * 0.9,
             # object_scales=np.array(NAME_TO_OBJECT["black_spatula"].scale) * 0.9,
             # object_scales=np.array(NAME_TO_OBJECT["black_spatula"].scale),
@@ -993,7 +1031,7 @@ if __name__ == "__main__":
             # object_scales=np.array(NAME_TO_OBJECT["real_flat_screwdriver"].scale),
             # object_scales=np.array([0.25, 0.02, 0.015]) * 25,  # scanned hammer 2
             # object_scales=np.array([0.25, 0.03, 0.02]) * 25,  # scanned hammer 2
-            object_scales=np.array(NAME_TO_OBJECT["red_brush"].scale),
+            # object_scales=np.array(NAME_TO_OBJECT["red_brush"].scale),
             # save_foldername=None,
             save_foldername="2026-01-11_real_testing",
             # overwrite_targets_filepath=None,
@@ -1001,7 +1039,7 @@ if __name__ == "__main__":
             # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-47-13_finetuned_o0t0_arm0.05.npz"),
             # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-48-08_finetuned_o1t0_arm0.05.npz"),
             # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-48-47_finetuned_o1t1_arm0.05.npz"),
-            use_relative_object_pose_once_lifted=False,
+            use_relative_object_pose_once_lifted=True,
         )
         rl_policy_node.run()
     except rospy.ROSInterruptException:

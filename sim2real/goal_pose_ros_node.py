@@ -192,18 +192,15 @@ class GoalPoseNode:
 def main():
     # Load trajectory
     # This makes it easier to change object and trajectory
-    # object_type = "eraser"
-    # object_name = "whiteboard_eraser"
-    # trajectory_name = "wipe_left"
 
-    # object_type = "hammer"
-    # object_name = "mallet"
+    object_type = "hammer"
+    object_name = "mallet"
     # object_name = "hammer_2"
     # trajectory_name = "vertical_swing"
     # trajectory_name = "horizontal_swing"
     # trajectory_name = "horizontal_swing_higher"
     # trajectory_name = "horizontal_swing_human"
-    # trajectory_name = "horizontal_swing_human_closer"
+    trajectory_name = "horizontal_swing_human_closer"
 
     # object_type = "spatula"
     # object_name = "black_spatula"
@@ -225,10 +222,10 @@ def main():
     # trajectory_name = "draw_circle_human"
     # trajectory_name = "draw_circle_human_hardinit"
 
-    object_type = "brush"
-    object_name = "green_brush"
+    # object_type = "brush"
+    # object_name = "green_brush"
     # trajectory_name = "simple"
-    trajectory_name = "complex"
+    # trajectory_name = "complex"
 
     trajectory_path = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
     assert trajectory_path.exists(), f"Trajectory file not found: {trajectory_path}"
