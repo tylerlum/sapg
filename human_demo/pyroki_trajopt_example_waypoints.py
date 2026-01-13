@@ -49,14 +49,18 @@ def main():
     world_coll = [ground_coll, wall_coll]
 
     # --- Define Problem ---
-    timesteps, dt = 25, 0.05
+    timesteps, dt = 25, 0.5
+    total_time = timesteps * dt
+    print(f"Creating a trajectory with {timesteps} waypoints, each {dt} seconds apart, for a total time of {total_time} seconds")
     down_wxyz = np.array([0, 1, 0, 0]) 
     
-    mid_pos = np.array([0.5, 0.0, 0.6]) # High Z to clear wall
-    end_pos = np.array([0.5, 0.4, 0.2])
+    early_pos = np.array([0.5, 0.0, 0.6]) # High Z to clear wall
+    mid_pos = np.array([0.5, -0.4, 0.2])  # One side
+    end_pos = np.array([0.5, 0.4, 0.2])  # Other side
 
     # --- WAYPOINT API ---
     waypoints = {
+        2: (early_pos, down_wxyz),
         12: (mid_pos, down_wxyz),
         24: (end_pos, down_wxyz)
     }

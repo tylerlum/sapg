@@ -469,8 +469,9 @@ def solve_waypoint_trajopt(
     anchors = {0: start_cfg}
     
     current_bias = start_cfg
+    from tqdm import tqdm
     
-    for t in sorted_steps:
+    for t in tqdm(sorted_steps, desc="Solving IK for waypoints"):
         target_pos, target_wxyz = waypoints[t]
         
         # Solve IK for this waypoint, biased towards the PREVIOUS anchor
@@ -493,7 +494,7 @@ def solve_waypoint_trajopt(
     # Ensure we cover the full range up to `timesteps`
     all_stops = sorted_steps + [timesteps - 1] if sorted_steps[-1] < timesteps - 1 else sorted_steps
 
-    for t in all_stops:
+    for t in tqdm(all_stops, desc="Interpolating trajectory"):
         # If t is in anchors, we have a target. If not (it's the end padding), use last known.
         target_cfg = anchors[t] if t in anchors else anchors[sorted_steps[-1]]
         
