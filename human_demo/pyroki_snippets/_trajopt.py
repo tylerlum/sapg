@@ -371,3 +371,110 @@ def solve_iks_with_collision(
 
     sol = jaxls.LeastSquaresProblem(factors, vars).analyze().solve(verbose=False)
     return sol[joint_var_0], sol[joint_var_1]
+
+
+from typing import Dict, Tuple, Optional
+
+def solve_waypoint_trajopt(
+    robot: pk.Robot,
+    robot_coll: pk.collision.RobotCollision,
+    world_coll: Sequence[pk.collision.CollGeom],
+    target_link_name: str,
+    start_cfg: ArrayLike,              # Fixed joint config for t=0
+    waypoints: Dict[int, Tuple[ArrayLike, ArrayLike]], # {t: (pos, wxyz)}
+    timesteps: int,
+    dt: float,
+) -> onp.ndarray:
+    
+    # 1. Setup
+    target_link_index = robot.links.names.index(target_link_name)
+    start_cfg = jnp.array(start_cfg)
+    
+    # Initialize trajectory with the start configuration repeated
+    # (Since we don't have an end_cfg to interpolate towards, this is a safe default)
+    init_traj = jnp.tile(start_cfg, (timesteps, 1))
+    
+    traj_vars = robot.joint_var_cls(jnp.arange(timesteps))
+    
+    # Batch wrappers
+    robot_b = jax.tree.map(lambda x: x[None], robot)
+    robot_coll_b = jax.tree.map(lambda x: x[None], robot_coll)
+
+    factors: list[jaxls.Cost] = []
+
+    # --- 2. START CONFIGURATION CONSTRAINT (t=0) ---
+    # Force the trajectory to begin exactly at start_cfg
+    factors.append(
+        jaxls.Cost(
+            lambda vals, var: ((vals[var] - start_cfg) * 100.0).flatten(),
+            (robot.joint_var_cls(0),),
+            name="start_cfg_constraint",
+        )
+    )
+
+    # --- 3. WAYPOINT CONSTRAINTS (Intermediate + End) ---
+    # Loop through the dictionary and add a pose cost for each requested timestep
+    for t, (pos, wxyz) in waypoints.items():
+        if t < 0 or t >= timesteps:
+            continue # specific check to avoid index errors
+            
+        factors.append(
+            pk.costs.pose_cost(
+                robot,
+                robot.joint_var_cls(t),
+                jaxlie.SE3.from_rotation_and_translation(
+                    jaxlie.SO3(jnp.array(wxyz)), jnp.array(pos)
+                ),
+                jnp.array(target_link_index),
+                jnp.array([20.0] * 3), # High weight for Position
+                jnp.array([10.0] * 3), # Medium weight for Rotation
+            )
+        )
+
+    # --- 4. STANDARD COSTS (Collision, Smoothness) ---
+    
+    # Collision Avoidance
+    def compute_world_coll_residual(vals, r, rc, wc, prev, curr):
+        coll = rc.get_swept_capsules(r, vals[prev], vals[curr])
+        dist = pk.collision.collide(coll.reshape((-1, 1)), wc.reshape((1, -1)))
+        colldist = pk.collision.colldist_from_sdf(dist, 0.1)
+        return (colldist * 20.0).flatten()
+
+    for world_coll_obj in world_coll:
+        factors.append(
+            jaxls.Cost(
+                compute_world_coll_residual,
+                (
+                    robot_b, robot_coll_b, jax.tree.map(lambda x: x[None], world_coll_obj),
+                    robot.joint_var_cls(jnp.arange(0, timesteps - 1)),
+                    robot.joint_var_cls(jnp.arange(1, timesteps)),
+                ),
+                name="World Collision",
+            )
+        )
+
+    # Regularization
+    factors.extend([
+        # Smoothness (minimize velocity)
+        pk.costs.smoothness_cost(
+            robot.joint_var_cls(jnp.arange(1, timesteps)),
+            robot.joint_var_cls(jnp.arange(0, timesteps - 1)),
+            jnp.array([0.1])[None],
+        ),
+        # Joint Limits
+        pk.costs.limit_cost(
+            robot_b, traj_vars, jnp.array([100.0])[None],
+        ),
+        # Stay close to default pose (regularization)
+        pk.costs.rest_cost(
+            traj_vars, traj_vars.default_factory()[None], jnp.array([0.01])[None],
+        ),
+    ])
+
+    # 5. Solve
+    solution = (
+        jaxls.LeastSquaresProblem(factors, [traj_vars])
+        .analyze()
+        .solve(initial_vals=jaxls.VarValues.make((traj_vars.with_value(init_traj),)))
+    )
+    return onp.array(solution[traj_vars])
