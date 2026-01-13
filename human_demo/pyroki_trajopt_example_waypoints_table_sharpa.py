@@ -50,15 +50,15 @@ def main():
     
     # Pyroki only works with halfspaces, capsules, and spheres
     # Boxes are not supported
-    # table_coll = pk.collision.HalfSpace.from_point_and_normal(
-    #     point=table_center,
-    #     normal=np.array([0.0, 0.0, 1.0])
-    # )
     table_coll = pk.collision.Capsule.from_radius_height(
         position=table_center,
         radius=np.array([table_size[0]/2]),
         height=np.array([table_size[2]])
     )
+    # table_coll = pk.collision.Box.from_extents(
+    #     position=table_center,
+    #     extents=table_size
+    # )
     world_coll = [table_coll]
 
     # --- Define Problem ---
@@ -113,10 +113,20 @@ def main():
     
     server.scene.add_mesh_trimesh(
         "table",
-        trimesh.creation.box(
-            extents=table_size,
-            transform=trimesh.transformations.translation_matrix(table_center)
-        )
+        # trimesh.creation.box(
+        #     extents=table_size,
+        #     transform=trimesh.transformations.translation_matrix(table_center)
+        # )
+        # trimesh.creation.capsule(
+        #     radius=table_size[0]/2,
+        #     height=table_size[2],
+        #     transform=trimesh.transformations.translation_matrix(table_center)
+        # )
+        table_coll.to_trimesh()
+    )
+    server.scene.add_mesh_trimesh(
+        "robot_coll",
+        robot_coll.coll.to_trimesh()
     )
 
     for t, (pos, wxyz) in waypoints.items():
