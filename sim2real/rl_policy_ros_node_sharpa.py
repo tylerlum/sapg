@@ -39,6 +39,9 @@ def wxyz_to_xyzw(wxyz: np.ndarray) -> np.ndarray:
     w, x, y, z = wxyz
     return np.array([x, y, z, w])
 
+def error(message: str):
+    print(colored(message, "red"))
+
 def warn(message: str):
     print(colored(message, "yellow"))
 
@@ -102,12 +105,21 @@ def T_to_pos_quat_xyzw(T: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     quat_xyzw = R.from_matrix(T[:3, :3]).as_quat()
     return pos, quat_xyzw
 
+def T_to_pose(T: np.ndarray) -> np.ndarray:
+    pos, quat_xyzw = T_to_pos_quat_xyzw(T)
+    pose = np.concatenate([pos, quat_xyzw])
+    return pose
+
 
 def pos_quat_xyzw_to_T(pos: np.ndarray, quat_xyzw: np.ndarray) -> np.ndarray:
     T = np.eye(4)
     T[:3, 3] = pos
     T[:3, :3] = R.from_quat(quat_xyzw).as_matrix()
     return T
+
+def pose_to_T(pose: np.ndarray) -> np.ndarray:
+    pos, quat_xyzw = pose[:3], pose[3:]
+    return pos_quat_xyzw_to_T(pos, quat_xyzw)
 
 
 def dist_Ts(T1s: np.ndarray, T2s: np.ndarray, rot_weight: float = 1.0) -> np.ndarray:
@@ -415,6 +427,207 @@ class RLPolicyNode:
         sharpa_msg.position = joint_pos_targets[7:].tolist()
         self.sharpa_joint_cmd_pub.publish(sharpa_msg)
 
+    def _initialize_relative_object_pose_logic(self, q: np.ndarray, q_target: np.ndarray, T_R_O_lifted: np.ndarray):
+        assert_equals(q.shape, (29,))
+        assert_equals(q_target.shape, (29,))
+        assert_equals(T_R_O_lifted.shape, (4, 4))
+
+        info("=" * 100, "yellow")
+        info("Initializing relative object pose logic")
+        info("=" * 100)
+
+        # Load PK chain for fk and jacobian for ik
+        import pytorch_kinematics as pk
+        from isaacgymenvs.utils.utils import get_repo_root_dir
+        KUKA_SHARPA_URDF_PATH = get_repo_root_dir() / "assets/urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted_restricted.urdf"
+        assert KUKA_SHARPA_URDF_PATH.exists(), (
+            f"KUKA_SHARPA_URDF_PATH not found: {KUKA_SHARPA_URDF_PATH}"
+        )
+        with open(KUKA_SHARPA_URDF_PATH, "rb") as f:
+            urdf_str = f.read()
+        DEVICE = "cpu"
+        self.arm_pk_chain = pk.build_serial_chain_from_urdf(
+            urdf_str,
+            end_link_name="left_hand_C_MC",
+        ).to(device=DEVICE)
+
+        # Store the hand target when the object was lifted
+        # Will keep this hand target fixed moving forward
+        q_hand_lifted_target = q_target[7:].copy()  # Will keep this hand target fixed moving forward
+        assert q_hand_lifted_target.shape == (22,), f"q_hand_lifted_target.shape: {q_hand_lifted_target.shape}, expected: (22,)"
+
+        # We want to store T_O_P_lifted, which is the pose of the palm relative to the object at the time of lifting
+        # We want this constant over time moving forward
+        # Note that O here refers to the OBJECT not the GOAL OBJECT
+        # This is because we are initializing based on the object being lifted, not necessarily the goal object pose being reached
+        # Thus, we care about the palm relative to the object, not relative to the goal object
+        from human_demo.visualize_demo import compute_current_T_R_P
+        q_arm_lifted = q[:7].copy()
+        assert q_arm_lifted.shape == (7,), f"q_arm_lifted.shape: {q_arm_lifted.shape}, expected: (7,)"
+        T_R_P_lifted = compute_current_T_R_P(arm_pk_chain=self.arm_pk_chain, q_arm=q_arm_lifted)
+        T_O_P_lifted = np.linalg.inv(T_R_O_lifted) @ T_R_P_lifted
+
+        # Load goal object pose trajectory
+        # Assumes this is in world frame
+        # Stop listening to the published one
+        import json
+        object_type = "hammer"
+        object_name = "mallet"
+        trajectory_name = "horizontal_swing_human_closer"
+        object_pose_trajectory_filepath = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
+        assert object_pose_trajectory_filepath.exists(), f"object_pose_trajectory_filepath not found: {object_pose_trajectory_filepath}"
+        with open(object_pose_trajectory_filepath, "r") as f:
+            goal_pose_trajectory_full = np.array(json.load(f)["goals"])
+        old_T = len(goal_pose_trajectory_full)
+
+        # Upsample the goal object pose trajectory
+        SLOWDOWN_FACTOR = 4  # This runs at 60Hz, data is at 30Hz, prob run 2x slower too
+        assert goal_pose_trajectory_full.shape == (old_T, 7), f"goal_pose_trajectory_full.shape: {goal_pose_trajectory_full.shape}, expected: (old_T, 7)"
+        new_T = old_T * SLOWDOWN_FACTOR
+        goal_pose_trajectory_full_repeated = goal_pose_trajectory_full.reshape(old_T, 1, 7).repeat(SLOWDOWN_FACTOR, axis=1).reshape(new_T, 7)
+
+        # Remove the initial part of trajectory that is before the object was lifted
+        # Find idx that minimizes dist(goal_object_pose_trajectory[idx], T_W_O_lifted)
+        # TODO: Consider using T_W_G_lifted instead of T_W_O_lifted
+        T_W_O_lifted = T_W_R @ T_R_O_lifted
+        T_W_O_trajectory_full_repeated = np.array([pose_to_T(goal_pose_trajectory_full_repeated[idx]) for idx in range(new_T)])
+        distances = dist_Ts(
+            T1s=T_W_O_trajectory_full_repeated,
+            T2s=T_W_O_lifted[None].repeat(new_T, axis=0),
+        )
+        self.goal_idx = np.argmin(distances)
+        info(f"Distances: {distances.tolist()}")
+        info(f"Goal idx starting at: {self.goal_idx}")
+
+        # Store the trajectory after the object was lifted
+        self.T_W_O_trajectory = np.array([T_W_O_trajectory_full_repeated[i] @ T_O_P_lifted for i in range(len(T_W_O_trajectory_full_repeated)) if i >= self.goal_idx])
+
+        # Compute the wrist pose trajectory for the trajectory after the object was lifted
+        self.T_W_Ps_using_lifted_object_pose = np.array([self.T_W_O_trajectory[i] @ T_O_P_lifted for i in range(len(self.T_W_O_trajectory))])
+
+        # Filter the poses
+        from human_demo.visualize_demo import filter_poses
+        self.T_W_Ps_using_lifted_object_pose = filter_poses(self.T_W_Ps_using_lifted_object_pose)
+
+        TRAJECTORY_LENGTH = self.T_W_Ps_using_lifted_object_pose.shape[0]
+        assert self.T_W_O_trajectory.shape == (TRAJECTORY_LENGTH, 4, 4), f"self.T_W_O_trajectory.shape: {self.T_W_O_trajectory.shape}, expected: (TRAJECTORY_LENGTH, 4, 4)"
+        assert self.T_W_Ps_using_lifted_object_pose.shape == (TRAJECTORY_LENGTH, 4, 4), f"self.T_W_Ps_using_lifted_object_pose.shape: {self.T_W_Ps_using_lifted_object_pose.shape}, expected: (TRAJECTORY_LENGTH, 4, 4)"
+
+        # IK for the arm targets, starting from the current arm joint positions
+        # This uses pseudoinverse IK which needs to be relative to some reference arm joint positions
+        # We start from the current arm joint positions and iteratively compute the next arm joint positions
+        q_arm = q[:7].copy()
+        q_arm_targets_using_lifted_object_pose = []
+        from tqdm import tqdm
+        for i in tqdm(range(TRAJECTORY_LENGTH), desc="Computing arm targets using lifted object pose"):
+            from human_demo.visualize_demo import compute_new_q_arm
+            T_W_P_using_lifted_object_pose = self.T_W_Ps_using_lifted_object_pose[i]
+            T_R_W = np.linalg.inv(T_W_R)
+            T_R_P_using_lifted_object_pose = T_R_W @ T_W_P_using_lifted_object_pose
+            q_arm = compute_new_q_arm(
+                arm_pk_chain=self.arm_pk_chain,
+                target_wrist_pose=T_R_P_using_lifted_object_pose,
+                q_arm=q_arm,
+            )
+            q_arm_targets_using_lifted_object_pose.append(q_arm.copy())
+        q_arm_targets_using_lifted_object_pose = np.array(q_arm_targets_using_lifted_object_pose)
+        assert q_arm_targets_using_lifted_object_pose.shape == (TRAJECTORY_LENGTH, 7), f"q_arm_targets_using_lifted_object_pose.shape: {q_arm_targets_using_lifted_object_pose.shape}, expected: (TRAJECTORY_LENGTH, 7)"
+
+        # Concatenate the arm targets and the hand target
+        self.q_targets_using_lifted_object_pose = np.concatenate([q_arm_targets_using_lifted_object_pose, q_hand_lifted_target[None].repeat(TRAJECTORY_LENGTH, axis=0)], axis=1)
+        assert self.q_targets_using_lifted_object_pose.shape == (TRAJECTORY_LENGTH, 29), f"self.q_targets_using_lifted_object_pose.shape: {self.q_targets_using_lifted_object_pose.shape}, expected: (TRAJECTORY_LENGTH, 29)"
+
+
+    def _visualize_relative_object_pose_logic(self, q_targets_using_lifted_object_pose: np.ndarray, T_W_Ps_using_lifted_object_pose: np.ndarray) -> None:
+        TRAJECTORY_LENGTH = q_targets_using_lifted_object_pose.shape[0]
+        assert q_targets_using_lifted_object_pose.shape == (TRAJECTORY_LENGTH, 29), f"q_targets_using_lifted_object_pose.shape: {q_targets_using_lifted_object_pose.shape}, expected: (TRAJECTORY_LENGTH, 29)"
+        assert T_W_Ps_using_lifted_object_pose.shape == (TRAJECTORY_LENGTH, 4, 4), f"T_W_Ps_using_lifted_object_pose.shape: {T_W_Ps_using_lifted_object_pose.shape}, expected: (TRAJECTORY_LENGTH, 4, 4)"
+
+        import viser
+        from viser.extras import ViserUrdf
+        from isaacgymenvs.utils.utils import get_repo_root_dir
+
+        SERVER = viser.ViserServer()
+        AXES_LENGTH = 0.0
+        AXES_RADIUS = 0.0
+
+        # Load table
+        TABLE_URDF_PATH = get_repo_root_dir() / "assets/urdf/table_narrow.urdf"
+        assert TABLE_URDF_PATH.exists(), f"TABLE_URDF_PATH not found: {TABLE_URDF_PATH}"
+
+        table_frame = SERVER.scene.add_frame(
+            "/table", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS, position=(0, 0, 0.38), wxyz=(1, 0, 0, 0),
+        )
+        table_viser = ViserUrdf(SERVER, TABLE_URDF_PATH, root_node_name="/table")
+
+        # Load robot
+        KUKA_SHARPA_URDF_PATH = get_repo_root_dir() / "assets/urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted_restricted.urdf"
+        assert KUKA_SHARPA_URDF_PATH.exists(), (
+            f"KUKA_SHARPA_URDF_PATH not found: {KUKA_SHARPA_URDF_PATH}"
+        )
+        kuka_sharpa_frame = SERVER.scene.add_frame(
+            "/robot/state", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS, position=(0, 0.8, 0), wxyz=(1, 0, 0, 0),
+        )
+        kuka_sharpa_viser = ViserUrdf(
+            SERVER, KUKA_SHARPA_URDF_PATH, root_node_name="/robot/state"
+        )
+        HOME_JOINT_POS_IIWA = np.array([-1.571, 1.571 - np.deg2rad(10), -0.000, 1.376 + np.deg2rad(10), -0.000, 1.485, 1.308])
+        HOME_JOINT_POS_SHARPA = np.zeros(22)
+        HOME_JOINT_POS = np.concatenate([HOME_JOINT_POS_IIWA, HOME_JOINT_POS_SHARPA])
+        kuka_sharpa_viser.update_cfg(HOME_JOINT_POS)
+
+        # Load floating hand
+        SHARPA_URDF_PATH = get_repo_root_dir() / "assets/urdf/left_sharpa_ha4/left_sharpa_ha4_v2_1_adjusted_restricted.urdf"
+        assert SHARPA_URDF_PATH.exists(), (
+            f"SHARPA_URDF_PATH not found: {SHARPA_URDF_PATH}"
+        )
+        sharpa_frame = SERVER.scene.add_frame(
+            "/sharpa", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS, position=(100, 0, 0), wxyz=(1, 0, 0, 0),
+        )
+        sharpa_viser = ViserUrdf(SERVER, SHARPA_URDF_PATH, root_node_name="/sharpa")
+        sharpa_viser.update_cfg(HOME_JOINT_POS_SHARPA)
+
+        while True:
+            for i in range(TRAJECTORY_LENGTH):
+                start_time = time.time()
+
+                # Update joints
+                q_target = q_targets_using_lifted_object_pose[i]
+                assert q_target.shape == (29,), f"q_target.shape: {q_target.shape}, expected: (29,)"
+                kuka_sharpa_viser.update_cfg(q_target)
+                sharpa_viser.update_cfg(q_target[7:])
+
+                # Update floating hand position
+                T_W_P_using_lifted_object_pose = T_W_Ps_using_lifted_object_pose[i]
+                sharpa_frame.position = T_W_P_using_lifted_object_pose[:3, 3]
+                sharpa_frame.wxyz = xyzw_to_wxyz(R.from_matrix(T_W_P_using_lifted_object_pose[:3, :3]).as_quat())
+
+                end_time = time.time()
+                loop_dt = end_time - start_time
+                sleep_dt = 1/60 - loop_dt
+                if sleep_dt > 0:
+                    time.sleep(sleep_dt)
+                else:
+                    warn(f"Loop too slow! Desired FPS = 60, Actual FPS = {1/loop_dt:.1f}")
+
+            # Ask user if they want to continue or revisualize
+            while True:
+                user_input = input(colored("Press 'r' to revisualize, or 'c' to continue, or 'b' to breakpoint: ", "cyan"))
+                if user_input.lower() == 'r':
+                    info("Restarting visualization loop")
+                    break
+                elif user_input.lower() == 'c':
+                    info("Continuing to use this trajectory")
+                    break
+                elif user_input.lower() == 'b':
+                    info("Breakpointing")
+                    breakpoint()
+                else:
+                    warn("Invalid input. Please enter 'r' or 'c'.")
+
+            if user_input.lower() == 'c':
+                break
+
     def _wait_and_warmup(self):
         assert not self._warmup_completed, "Warmup already completed"
 
@@ -509,7 +722,7 @@ class RLPolicyNode:
             # t3 is the time that the robot receives the targets (not captured here)
 
             # Create observation from the latest messages
-            obs, q, t0 = self.create_observation()
+            obs, q, _ = self.create_observation()
             assert obs is not None and q is not None, f"obs: {obs}, q: {q}"
 
             assert_equals(obs.shape, (1, self.num_observations))
@@ -555,181 +768,30 @@ class RLPolicyNode:
                 LIFTED_Z = 0.65
                 prev_object_lifted = self.object_lifted
                 self.object_lifted = prev_object_lifted or (self.object_pose_msg.pose.position.z >= LIFTED_Z)
-
                 just_lifted = self.object_lifted and not prev_object_lifted
+
+                # When just lifted, initialize the relative object pose logic and visualize it
                 if just_lifted:
-                    print(colored(f"Object just lifted, initializing", "yellow"))
-                    # Load PK chain for fk and jacobian for ik
-                    import pytorch_kinematics as pk
-                    from isaacgymenvs.utils.utils import get_repo_root_dir
-                    KUKA_SHARPA_URDF_PATH = get_repo_root_dir() / "assets/urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted_restricted.urdf"
-                    assert KUKA_SHARPA_URDF_PATH.exists(), (
-                        f"KUKA_SHARPA_URDF_PATH not found: {KUKA_SHARPA_URDF_PATH}"
-                    )
-                    with open(KUKA_SHARPA_URDF_PATH, "rb") as f:
-                        urdf_str = f.read()
-                    DEVICE = "cpu"
-                    self.arm_pk_chain = pk.build_serial_chain_from_urdf(
-                        urdf_str,
-                        end_link_name="left_hand_C_MC",
-                    ).to(device=DEVICE)
+                    T_R_O_lifted = pose_msg_to_T(copy.deepcopy(self.object_pose_msg.pose))  # Object pose in robot frame
+                    self._initialize_relative_object_pose_logic(q=q, q_target=joint_pos_targets[0], T_R_O_lifted=T_R_O_lifted)
+                    self._visualize_relative_object_pose_logic()
 
-                    # Store the arm joint positions and hand target when the object was lifted
-                    self.q_arm_lifted = q[:7].copy()  # Store the arm joint positions when the object was lifted
-                    assert self.q_arm_lifted.shape == (7,), f"self.q_arm_lifted.shape: {self.q_arm_lifted.shape}, expected: (7,)"
-                    self.q_hand_lifted_target = joint_pos_targets[0, 7:].copy()  # Will keep this hand target fixed moving forward
-                    assert self.q_hand_lifted_target.shape == (22,), f"self.q_hand_lifted_target.shape: {self.q_hand_lifted_target.shape}, expected: (22,)"
-
-                    # We want to store T_O_P_lifted, which is the pose of the palm relative to the object at the time of lifting
-                    # We want this constant over time moving forward
-                    from human_demo.visualize_demo import compute_current_T_R_P
-                    self.T_R_P_lifted = compute_current_T_R_P(arm_pk_chain=self.arm_pk_chain, q_arm=self.q_arm_lifted)
-                    self.T_W_P_lifted = T_W_R @ self.T_R_P_lifted
-                    self.T_R_O_lifted = pose_msg_to_T(copy.deepcopy(self.goal_object_pose_msg))
-                    self.T_W_O_lifted = T_W_R @ self.T_R_O_lifted
-                    self.T_O_P_lifted = np.linalg.inv(self.T_W_O_lifted) @ self.T_W_P_lifted
-
-                    # Load goal object pose trajectory
-                    # Stop listening to the published one
-                    import json
-                    object_type = "hammer"
-                    object_name = "mallet"
-                    trajectory_name = "horizontal_swing_human_closer"
-                    object_pose_trajectory_filepath = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
-                    assert object_pose_trajectory_filepath.exists(), f"object_pose_trajectory_filepath not found: {object_pose_trajectory_filepath}"
-                    with open(object_pose_trajectory_filepath, "r") as f:
-                        goal_object_pose_trajectory = np.array(json.load(f)["goals"])
-                    self.goal_object_pose_trajectory = goal_object_pose_trajectory
-                    T = len(self.goal_object_pose_trajectory)
-                    SLOWDOWN_FACTOR = 4  # This runs at 60Hz, data is at 30Hz, prob run 2x slower too
-                    assert self.goal_object_pose_trajectory.shape == (T, 7), f"self.goal_object_pose_trajectory.shape: {self.goal_object_pose_trajectory.shape}, expected: (T, 7)"
-
-                    new_T = T * SLOWDOWN_FACTOR
-                    self.goal_object_pose_trajectory = self.goal_object_pose_trajectory.reshape(T, 1, 7).repeat(SLOWDOWN_FACTOR, axis=1).reshape(new_T, 7)
-
-                    # Find idx that minimizes dist(self.goal_object_pose_trajectory[idx], self.T_W_O_lifted)
-                    self.T_W_O_trajectory = np.array([pos_quat_xyzw_to_T(pos=self.goal_object_pose_trajectory[idx, :3], quat_xyzw=self.goal_object_pose_trajectory[idx, 3:]) for idx in range(new_T)])
-                    distances = dist_Ts(
-                        T1s=self.T_W_O_trajectory,
-                        T2s=self.T_W_O_lifted[None].repeat(new_T, axis=0),
-                    )
-                    self.goal_idx = np.argmin(distances)
-                    print(colored(f"Distances: {distances.tolist()}", "yellow"))
-                    print(colored(f"Goal idx starting at: {self.goal_idx}", "yellow"))
-                    breakpoint()
-
-                    self.T_W_Ps_using_lifted_object_pose = np.array([T_W_O @ self.T_O_P_lifted for T_W_O in self.T_W_O_trajectory])
-
-                    from human_demo.visualize_demo import filter_poses
-                    self.T_W_Ps_using_lifted_object_pose = filter_poses(self.T_W_Ps_using_lifted_object_pose)
-
-                    # self.T_W_Ps_using_lifted_object_pose = np.array([self.T_W_O_lifted @ self.T_O_P_lifted for T_W_O in self.T_W_O_trajectory])
-                    q_arm = q[:7].copy()
-                    self.q_arm_targets_using_lifted_object_pose = [q_arm.copy()]
-                    from tqdm import tqdm
-                    for i in tqdm(range(self.goal_idx, new_T), desc="Computing arm targets using lifted object pose"):
-                        from human_demo.visualize_demo import compute_new_q_arm
-                        T_W_P_using_lifted_object_pose = self.T_W_Ps_using_lifted_object_pose[i]
-                        T_R_W = np.linalg.inv(T_W_R)
-                        T_R_P_using_lifted_object_pose = T_R_W @ T_W_P_using_lifted_object_pose
-                        q_arm = compute_new_q_arm(
-                            arm_pk_chain=self.arm_pk_chain,
-                            target_wrist_pose=T_R_P_using_lifted_object_pose,
-                            q_arm=q_arm,
-                        )
-                        self.q_arm_targets_using_lifted_object_pose.append(q_arm.copy())
-                    self.q_arm_targets_using_lifted_object_pose = np.array(self.q_arm_targets_using_lifted_object_pose)
-                    NUM_QS = self.q_arm_targets_using_lifted_object_pose.shape[0]
-                    assert self.q_arm_targets_using_lifted_object_pose.shape == (NUM_QS, 7), f"self.q_arm_targets_using_lifted_object_pose.shape: {self.q_arm_targets_using_lifted_object_pose.shape}, expected: (NUM_QS, 7)"
-                    self.q_idx = 0
-
-                    # # Visualize
-                    # import viser
-                    # from viser.extras import ViserUrdf
-                    # SERVER = viser.ViserServer()
-                    # AXES_LENGTH = 0.0
-                    # AXES_RADIUS = 0.0
-
-                    # # Load table
-                    # TABLE_URDF_PATH = get_repo_root_dir() / "assets/urdf/table_narrow.urdf"
-                    # assert TABLE_URDF_PATH.exists(), f"TABLE_URDF_PATH not found: {TABLE_URDF_PATH}"
-
-                    # table_frame = SERVER.scene.add_frame(
-                    #     "/table", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS, position=(0, 0, 0.38), wxyz=(1, 0, 0, 0),
-                    # )
-                    # table_viser = ViserUrdf(SERVER, TABLE_URDF_PATH, root_node_name="/table")
-
-                    # # Load robot
-                    # KUKA_SHARPA_URDF_PATH = get_repo_root_dir() / "assets/urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted_restricted.urdf"
-                    # assert KUKA_SHARPA_URDF_PATH.exists(), (
-                    #     f"KUKA_SHARPA_URDF_PATH not found: {KUKA_SHARPA_URDF_PATH}"
-                    # )
-                    # kuka_sharpa_frame = SERVER.scene.add_frame(
-                    #     "/robot/state", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS, position=(0, 0.8, 0), wxyz=(1, 0, 0, 0),
-                    # )
-                    # kuka_sharpa_viser = ViserUrdf(
-                    #     SERVER, KUKA_SHARPA_URDF_PATH, root_node_name="/robot/state"
-                    # )
-                    # HOME_JOINT_POS_IIWA = np.array([-1.571, 1.571 - np.deg2rad(10), -0.000, 1.376 + np.deg2rad(10), -0.000, 1.485, 1.308])
-                    # HOME_JOINT_POS_SHARPA = np.zeros(22)
-                    # HOME_JOINT_POS = np.concatenate([HOME_JOINT_POS_IIWA, HOME_JOINT_POS_SHARPA])
-                    # kuka_sharpa_viser.update_cfg(HOME_JOINT_POS)
-
-                    # SHARPA_URDF_PATH = get_repo_root_dir() / "assets/urdf/left_sharpa_ha4/left_sharpa_ha4_v2_1_adjusted_restricted.urdf"
-                    # assert SHARPA_URDF_PATH.exists(), (
-                    #     f"SHARPA_URDF_PATH not found: {SHARPA_URDF_PATH}"
-                    # )
-                    # sharpa_frame = SERVER.scene.add_frame(
-                    #     "/sharpa", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS, position=(100, 0, 0), wxyz=(1, 0, 0, 0),
-                    # )
-                    # sharpa_viser = ViserUrdf(SERVER, SHARPA_URDF_PATH, root_node_name="/sharpa")
-                    # sharpa_viser.update_cfg(HOME_JOINT_POS_SHARPA)
-                    # breakpoint()
-                    # while True:
-                    #     for i in range(NUM_QS):
-                    #         start_time = time.time()
-                    #         q_arm_target = self.q_arm_targets_using_lifted_object_pose[i]
-                    #         q_target = np.concatenate([q_arm_target, self.q_hand_lifted_target])
-                    #         assert q_target.shape == (29,), f"q_target.shape: {q_target.shape}, expected: (29,)"
-                    #         kuka_sharpa_viser.update_cfg(q_target)
-                    #         sharpa_viser.update_cfg(q_target[7:])
-                    #         T_W_P_using_lifted_object_pose = self.T_W_Ps_using_lifted_object_pose[self.goal_idx + i]
-                    #         sharpa_frame.position = T_W_P_using_lifted_object_pose[:3, 3]
-                    #         sharpa_frame.wxyz = xyzw_to_wxyz(R.from_matrix(T_W_P_using_lifted_object_pose[:3, :3]).as_quat())
-                    #         end_time = time.time()
-                    #         loop_dt = end_time - start_time
-                    #         sleep_dt = 1/60 - loop_dt
-                    #         if sleep_dt > 0:
-                    #             time.sleep(sleep_dt)
-                    #         else:
-                    #             warn(f"Loop too slow! Desired FPS = 60, Actual FPS = {1/loop_dt:.1f}")
-                    #     breakpoint()
-
-                    # Publisher
                     self.goal_object_pose_pub = rospy.Publisher("/robot_frame/goal_object_pose", Pose, queue_size=1)
 
+                # When the object is lifted, use the relative object pose logic to compute the joint pos targets
                 if self.object_lifted:
-                    print(colored(f"Object lifted, using relative object pose", "yellow"))
-                    self.q_idx += 1
-                    print(colored(f"q_idx: {self.q_idx}", "yellow"))
-                    if self.q_idx >= NUM_QS:
-                        warn(colored(f"Goal idx is out of bounds, setting to last target", "red"))
-                        self.q_idx = NUM_QS - 1
-                    new_q_arm_target = self.q_arm_targets_using_lifted_object_pose[self.q_idx]
-                    new_q_target = np.concatenate([new_q_arm_target, self.q_hand_lifted_target])
-                    assert new_q_target.shape == (29,), f"new_q_target.shape: {new_q_target.shape}, expected: (29,)"
-                    joint_pos_targets = new_q_target[None]
+                    # Update the joint pos targets
+                    if not hasattr(self, "trajectory_idx"):
+                        self.trajectory_idx = 0
+                    joint_pos_targets = self.q_targets_using_lifted_object_pose[self.trajectory_idx][None]
 
                     # Publish the goal object pose
-                    goal_idx = self.goal_idx + self.q_idx
-                    # assert goal_idx < self.goal_object_pose_trajectory.shape[0], f"goal_idx: {goal_idx}, expected: < {self.goal_object_pose_trajectory.shape[0]}"
-                    if goal_idx >= self.goal_object_pose_trajectory.shape[0]:
-                        warn(colored(f"Goal idx is out of bounds, setting to last target", "red"))
-                        goal_idx = self.goal_object_pose_trajectory.shape[0] - 1
-                    current_goal_object_pose_xyzw = self.goal_object_pose_trajectory[goal_idx]
+                    current_T_W_G = self.T_W_O_trajectory[self.trajectory_idx]
+                    current_T_R_G = np.linalg.inv(T_W_R) @ current_T_W_G
+                    current_goal_object_pose_xyzw = T_to_pose(current_T_R_G)
                     goal_object_pose_msg = Pose()
                     goal_object_pose_msg.position.x = current_goal_object_pose_xyzw[0]
-                    goal_object_pose_msg.position.y = current_goal_object_pose_xyzw[1] - 0.8
+                    goal_object_pose_msg.position.y = current_goal_object_pose_xyzw[1]
                     goal_object_pose_msg.position.z = current_goal_object_pose_xyzw[2]
                     goal_object_pose_msg.orientation.x = current_goal_object_pose_xyzw[3]
                     goal_object_pose_msg.orientation.y = current_goal_object_pose_xyzw[4]
@@ -737,15 +799,20 @@ class RLPolicyNode:
                     goal_object_pose_msg.orientation.w = current_goal_object_pose_xyzw[6]
                     self.goal_object_pose_pub.publish(goal_object_pose_msg)
 
-            # Publish the targets
+                    # Update the trajectory index
+                    self.trajectory_idx += 1
+                    if self.trajectory_idx >= self.q_targets_using_lifted_object_pose.shape[0]:
+                        self.trajectory_idx = self.q_targets_using_lifted_object_pose.shape[0] - 1
+                        info(f"Reached end of q_targets_using_lifted_object_pose, setting to last target {self.trajectory_idx}")
+
             # Sanity check that the joint pos targets are not too far from the current joint positions
             q_arm_diff_deg = np.rad2deg(np.abs(joint_pos_targets[0, :7] - q[:7]))
-            print(colored(f"q_arm_diff_deg.max(): {q_arm_diff_deg.max()}", "yellow"))
             MAX_Q_ARM_DIFF_DEG = 10
-            # MAX_Q_ARM_DIFF_DEG = 100  #HACK
             if q_arm_diff_deg.max() > MAX_Q_ARM_DIFF_DEG:
-                print(colored(f"Joint pos targets are too far from current joint positions, q_arm_diff: {q_arm_diff_deg} (max: {MAX_Q_ARM_DIFF_DEG})", "red"))
+                error(f"Joint pos targets are too far from current joint positions, q_arm_diff: {q_arm_diff_deg} (max: {MAX_Q_ARM_DIFF_DEG})")
                 breakpoint()
+
+            # Publish the targets
             self.publish_targets(joint_pos_targets)
             self.prev_targets = joint_pos_targets[0]
 
