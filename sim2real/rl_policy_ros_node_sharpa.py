@@ -1039,7 +1039,7 @@ if __name__ == "__main__":
             # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-47-13_finetuned_o0t0_arm0.05.npz"),
             # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-48-08_finetuned_o1t0_arm0.05.npz"),
             # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-48-47_finetuned_o1t1_arm0.05.npz"),
-            use_relative_object_pose_once_lifted=True,
+            use_relative_object_pose_once_lifted=False,
         )
         rl_policy_node.run()
     except rospy.ROSInterruptException:
