@@ -594,3 +594,135 @@ def solve_waypoint_trajopt(
         .solve(initial_vals=jaxls.VarValues.make((traj_vars.with_value(init_traj),)))
     )
     return onp.array(solution[traj_vars])
+
+from functools import partial
+
+# We use 'static_argnames' to tell JAX: 
+# "If 'waypoint_indices' or 'timesteps' change, RE-COMPILE. Otherwise, use the CACHE."
+@jax.jit(static_argnames=["timesteps", "dt", "waypoint_indices"])
+def _solve_fixed_structure_kernel(
+    robot: pk.Robot,
+    robot_coll: pk.collision.RobotCollision,
+    world_coll: Sequence[pk.collision.CollGeom],
+    target_link_index: int,
+    start_cfg: jax.Array,
+    init_traj: jax.Array,
+    
+    # Dynamic Data (Can change every frame without recompiling)
+    waypoint_pos_array: jax.Array, # Shape (M, 3)
+    waypoint_rot_array: jax.Array, # Shape (M, 4)
+    
+    # Static Structure (Must stay constant to avoid recompiling)
+    waypoint_indices: tuple[int, ...], # Tuple of M integers
+    timesteps: int,
+    dt: float,
+) -> jax.Array:
+    
+    traj_vars = robot.joint_var_cls(jnp.arange(timesteps))
+    
+    robot_b = jax.tree.map(lambda x: x[None], robot)
+    robot_coll_b = jax.tree.map(lambda x: x[None], robot_coll)
+    factors: list[jaxls.Cost] = []
+
+    # 1. Start Config
+    factors.append(
+        jaxls.Cost(
+            lambda vals, var: ((vals[var] - start_cfg) * 1000.0).flatten(),
+            (robot.joint_var_cls(0),),
+            name="start_cfg_constraint",
+        )
+    )
+
+    # 2. Sparse Waypoints (Efficient Loop)
+    # Since waypoint_indices is a static tuple, JAX unrolls this loop at compile time.
+    # It creates exactly M cost nodes in the graph.
+    for i, t in enumerate(waypoint_indices):
+        factors.append(
+            pk.costs.pose_cost(
+                robot,
+                robot.joint_var_cls(t),
+                jaxlie.SE3.from_rotation_and_translation(
+                    jaxlie.SO3(waypoint_rot_array[i]), waypoint_pos_array[i]
+                ),
+                jnp.array(target_link_index),
+                jnp.array([50.0] * 3), 
+                jnp.array([10.0] * 3),
+            )
+        )
+
+    # 3. Collision & Smoothness (Standard)
+    # ... (Same collision logic as before) ...
+    def compute_world_coll_residual(vals, r, rc, wc, prev, curr):
+        coll = rc.get_swept_capsules(r, vals[prev], vals[curr])
+        dist = pk.collision.collide(coll.reshape((-1, 1)), wc.reshape((1, -1)))
+        colldist = pk.collision.colldist_from_sdf(dist, 0.1)
+        return (colldist * 50.0).flatten()
+
+    for world_coll_obj in world_coll:
+        factors.append(
+            jaxls.Cost(
+                compute_world_coll_residual,
+                (
+                    robot_b, robot_coll_b, jax.tree.map(lambda x: x[None], world_coll_obj),
+                    robot.joint_var_cls(jnp.arange(0, timesteps - 1)),
+                    robot.joint_var_cls(jnp.arange(1, timesteps)),
+                ),
+                name="World Collision",
+            )
+        )
+
+    factors.extend([
+        pk.costs.smoothness_cost(
+            robot.joint_var_cls(jnp.arange(1, timesteps)),
+            robot.joint_var_cls(jnp.arange(0, timesteps - 1)),
+            jnp.array([2.0])[None], 
+        ),
+        pk.costs.limit_cost(
+            robot_b, traj_vars, jnp.array([100.0])[None],
+        ),
+    ])
+
+    solution = (
+        jaxls.LeastSquaresProblem(factors, [traj_vars])
+        .analyze()
+        .solve(initial_vals=jaxls.VarValues.make((traj_vars.with_value(init_traj),)))
+    )
+    return solution[traj_vars]
+
+
+# The User-Friendly Wrapper
+def solve_fixed_structure_trajopt(
+    robot: pk.Robot,
+    robot_coll: pk.collision.RobotCollision,
+    world_coll: Sequence[pk.collision.CollGeom],
+    target_link_name: str,
+    start_cfg: ArrayLike,
+    waypoints: Dict[int, Tuple[ArrayLike, ArrayLike]],
+    init_traj: ArrayLike,
+    timesteps: int,
+    dt: float,
+) -> onp.ndarray:
+    
+    target_link_index = robot.links.names.index(target_link_name)
+    
+    # 1. Sort dict to ensure consistent order (crucial for mapping arrays to indices)
+    sorted_items = sorted(waypoints.items())
+    
+    # 2. Split into Structure (Indices) and Data (Pos/Rot)
+    indices = tuple(t for t, _ in sorted_items)
+    pos_list = [val[0] for _, val in sorted_items]
+    rot_list = [val[1] for _, val in sorted_items]
+    
+    # 3. Call the JIT Kernel
+    # If 'indices' is the same as the last call, JAX uses the cached graph!
+    traj = _solve_fixed_structure_kernel(
+        robot, robot_coll, world_coll, target_link_index,
+        jnp.array(start_cfg),
+        jnp.array(init_traj),
+        jnp.array(pos_list),   # Dynamic
+        jnp.array(rot_list),   # Dynamic
+        indices,               # Static (Graph Structure)
+        timesteps,
+        dt
+    )
+    return onp.array(traj)
