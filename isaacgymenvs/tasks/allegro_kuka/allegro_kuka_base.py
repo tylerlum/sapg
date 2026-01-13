@@ -1154,6 +1154,7 @@ class AllegroKukaBase(VecTask):
         table_indices = []
         object_scales = []
         object_keypoint_offsets = []
+        object_keypoint_offsets_fixed_size = []
 
         # Sanity checks
         body_names = self.gym.get_asset_rigid_body_names(allegro_kuka_asset)
@@ -1295,8 +1296,18 @@ class AllegroKukaBase(VecTask):
                 for coord_idx in range(3):
                     keypoint[coord_idx] *= object_scale[coord_idx] * self.object_base_size * self.keypoint_scale / 2
                 object_offsets.append(keypoint)
-
             object_keypoint_offsets.append(object_offsets)
+
+            # We make a version of keypoint offsets that are a fixed size for all objects
+            object_scale_fixed_size = self.cfg["env"]["fixedSize"]
+            assert len(object_scale_fixed_size) == 3, f"object_scale_fixed_size must be a 3-element list, got {len(object_scale_fixed_size)}"
+            object_offsets_fixed_size = []
+            for keypoint in self.keypoints_offsets:
+                keypoint_fixed_size = copy(keypoint)
+                for coord_idx in range(3):
+                    keypoint_fixed_size[coord_idx] *= object_scale_fixed_size[coord_idx] * self.object_base_size * self.keypoint_scale / 2
+                object_offsets_fixed_size.append(keypoint_fixed_size)
+            object_keypoint_offsets_fixed_size.append(object_offsets_fixed_size)
 
             # table object
             table_handle = self.gym.create_actor(env_ptr, table_asset, table_pose, "table_object", i, 0, 0)
@@ -1385,15 +1396,7 @@ class AllegroKukaBase(VecTask):
 
         self.object_scales = to_torch(object_scales, dtype=torch.float, device=self.device)
         self.object_keypoint_offsets = to_torch(object_keypoint_offsets, dtype=torch.float, device=self.device)
-
-        # We make a version of keypoint offsets that are a fixed size for all objects
-        # TODO: hardcode this
-        self.object_keypoint_offsets_fixed_size = self.object_keypoint_offsets.clone()
-        mean_keypoint_offset = self.object_keypoint_offsets.mean(dim=0)
-        assert mean_keypoint_offset.shape == (3,), f"mean_keypoint_offset.shape: {mean_keypoint_offset.shape}, expected: (3,)"
-        self.object_keypoint_offsets_fixed_size[:, :] = mean_keypoint_offset[None]
-        print(f"mean_keypoint_offset: {mean_keypoint_offset}")
-        breakpoint()
+        self.object_keypoint_offsets_fixed_size = to_torch(object_keypoint_offsets_fixed_size, dtype=torch.float, device=self.device)
 
         self.joint_names = self.gym.get_actor_joint_names(env_ptr, allegro_actor)
         props = self.gym.get_actor_dof_properties(env_ptr, allegro_actor)

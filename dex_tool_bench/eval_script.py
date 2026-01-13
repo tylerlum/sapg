@@ -297,11 +297,12 @@ def main():
     # trajectory_name = "vertical_swing_2"
     # trajectory_name = "horizontal_swing_human"
 
-    # object_type = "spatula"
-    # object_name = "black_spatula"
+    object_type = "spatula"
+    object_name = "black_spatula"
     # object_name = "small_spatula"
     # object_name = "large_spatula"
     # trajectory_name = "flip_from_left"
+    trajectory_name = "pick_and_place_human"
 
     # object_type = "eraser"
     # object_name = "whiteboard_eraser"
@@ -332,9 +333,9 @@ def main():
     # trajectory_name = "draw_circle_human"
     # trajectory_name = "draw_circle_human_hardinit"
 
-    object_type = "knife"
-    object_name = "kitchen_knife"
-    trajectory_name = "knife_on_cutting_board"
+    # object_type = "knife"
+    # object_name = "kitchen_knife"
+    # trajectory_name = "knife_on_cutting_board"
 
     # object_type = "spatula"
     # object_name = "black_spatula"
@@ -357,8 +358,8 @@ def main():
     # SELECTED_TABLE_URDF = TABLE_NAIL_URDF
     # SELECTED_TABLE_URDF = TABLE_WHITEBOARD_URDF
     # SELECTED_TABLE_URDF = TABLE_SCREWDRIVER_HOLE_URDF
-    SELECTED_TABLE_URDF = TABLE_CUTTINGBOARD_URDF
-    # SELECTED_TABLE_URDF = TABLE_BOWL_PLATE_URDF
+    # SELECTED_TABLE_URDF = TABLE_CUTTINGBOARD_URDF
+    SELECTED_TABLE_URDF = TABLE_BOWL_PLATE_URDF
 
     # Load trajectory
     trajectory_path = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
