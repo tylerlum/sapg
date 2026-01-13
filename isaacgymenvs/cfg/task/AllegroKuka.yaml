@@ -156,6 +156,8 @@ env:
   fixedSizeKeypointReward: False
   fixedSize: [0.141, 0.03025, 0.0271]
 
+  startArmHigher: False  # Set to False typically for training, but for evaluation, we typically start the arm higher
+
   # some pose_reaching_env specific settings
   use_green_robot: True
   sanity_check_controls: False
