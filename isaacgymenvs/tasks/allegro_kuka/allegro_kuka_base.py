@@ -2620,6 +2620,11 @@ class AllegroKukaBase(VecTask):
                 * self.force_scale
             )
 
+            if self.cfg["env"]["forceOnlyWhenLifted"]:
+                # self.rb_forces is (N, R, 3), assuming there are R rigid bodies per env
+                # self.lifted_object is (N,), True if the object is lifted
+                self.rb_forces[:, self.object_rb_handles, :] *= self.lifted_object.unsqueeze(1).unsqueeze(2)
+
             self.gym.apply_rigid_body_force_tensors(
                 self.sim, gymtorch.unwrap_tensor(self.rb_forces), None, gymapi.ENV_SPACE
             )

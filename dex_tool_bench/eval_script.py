@@ -446,6 +446,7 @@ def main():
             "task.env.asset.table": str(SELECTED_TABLE_URDF),
             "task.env.tableResetZ": TABLE_Z,
             "task.env.fixedSizeKeypointReward": True,
+            "task.env.forceOnlyWhenLifted": True,
         },
     )
 
