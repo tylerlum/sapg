@@ -170,6 +170,8 @@ env:
   targetVolumeRegionScale: 1.0 # scale the target volume region by this factor
   deltaGoalDistance: 0.1 # distance to the goal in meters
   deltaRotationDegrees: 90.0 # rotation of the goal in degrees
+  targetVolumeMins: null  # Either null/None or a 3-element list of [x_min, y_min, z_min]
+  targetVolumeMaxs: null  # Either null/None or a 3-element list of [x_max, y_max, z_max]
 
   # Delays and noise
   useObsDelay: False

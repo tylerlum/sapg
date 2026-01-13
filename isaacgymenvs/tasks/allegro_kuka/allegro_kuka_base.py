@@ -291,6 +291,17 @@ class AllegroKukaBase(VecTask):
         # volume to sample target position from
         target_volume_origin = np.array([0, 0.05, 0.8], dtype=np.float32)
         target_volume_extent = np.array([[-0.4, 0.4], [-0.05, 0.3], [-0.12, 0.25]], dtype=np.float32)
+        if self.cfg["env"]["targetVolumeMins"] is not None and self.cfg["env"]["targetVolumeMaxs"] is not None:
+            assert len(self.cfg["env"]["targetVolumeMins"]) == len(self.cfg["env"]["targetVolumeMaxs"]) == 3, "targetVolumeMins and targetVolumeMaxs must be 3-element lists"
+            mins = np.array(self.cfg["env"]["targetVolumeMins"], dtype=np.float32)
+            maxs = np.array(self.cfg["env"]["targetVolumeMaxs"], dtype=np.float32)
+            new_target_volume_origin = (mins + maxs) / 2
+            new_target_volume_range = maxs - mins
+            new_target_volume_extent = np.stack([-new_target_volume_range/2, new_target_volume_range/2], axis=1)
+            assert target_volume_origin.shape == new_target_volume_origin.shape == (3,), f"target_volume_origin.shape: {target_volume_origin.shape}, new_target_volume_origin.shape: {new_target_volume_origin.shape}"
+            assert target_volume_extent.shape == new_target_volume_extent.shape == (3, 2), f"target_volume_extent.shape: {target_volume_extent.shape}, new_target_volume_extent.shape: {new_target_volume_extent.shape}"
+            target_volume_origin = new_target_volume_origin
+            target_volume_extent = new_target_volume_extent
 
         self.target_volume_origin = torch.from_numpy(target_volume_origin).to(self.device).float()
         self.target_volume_extent = torch.from_numpy(target_volume_extent).to(self.device).float()

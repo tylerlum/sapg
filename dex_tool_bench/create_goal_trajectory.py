@@ -56,6 +56,16 @@ class GoalTrajectoryCreator:
         )
         ViserUrdf(self.server, object_urdf, root_node_name="/object_control")
 
+        robot_urdf = get_repo_root_dir() / "assets/urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted_restricted.urdf"
+        self.robot_control = self.server.scene.add_transform_controls(
+            "/robot_control", position=(0.0, 0.8, 0), wxyz=(1, 0, 0, 0), scale=0.15,
+        )
+        HOME_JOINT_POS_IIWA = np.array([-1.571, 1.571 - np.deg2rad(10), -0.000, 1.376 + np.deg2rad(10), -0.000, 1.485, 1.308])
+        HOME_JOINT_POS_SHARPA = np.zeros(22)
+        HOME_JOINT_POS = np.concatenate([HOME_JOINT_POS_IIWA, HOME_JOINT_POS_SHARPA])
+        robot_viser = ViserUrdf(self.server, robot_urdf, root_node_name="/robot_control")
+        robot_viser.update_cfg(HOME_JOINT_POS)
+
         self.server.gui.add_markdown(f"**Object:** {self.object_name}")
         self.server.gui.add_markdown("*Goal min Z >= 0.63 (table 0.38 + offset 0.25)*")
         self.current_pose_text = self.server.gui.add_markdown("**Current:** --")
