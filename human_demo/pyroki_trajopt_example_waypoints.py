@@ -49,7 +49,7 @@ def main():
     world_coll = [ground_coll, wall_coll]
 
     # --- Define Problem ---
-    timesteps, dt = 25, 0.5
+    timesteps, dt = 250, 0.05
     total_time = timesteps * dt
     print(f"Creating a trajectory with {timesteps} waypoints, each {dt} seconds apart, for a total time of {total_time} seconds")
     down_wxyz = np.array([0, 1, 0, 0]) 
@@ -60,9 +60,9 @@ def main():
 
     # --- WAYPOINT API ---
     waypoints = {
-        2: (early_pos, down_wxyz),
-        12: (mid_pos, down_wxyz),
-        24: (end_pos, down_wxyz)
+        20: (early_pos, down_wxyz),
+        125: (mid_pos, down_wxyz),
+        249: (end_pos, down_wxyz)
     }
 
     print("Solving trajectory with waypoints...")
