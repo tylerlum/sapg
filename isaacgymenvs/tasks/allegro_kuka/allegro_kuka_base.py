@@ -1305,7 +1305,7 @@ class AllegroKukaBase(VecTask):
             for keypoint in self.keypoints_offsets:
                 keypoint_fixed_size = copy(keypoint)
                 for coord_idx in range(3):
-                    keypoint_fixed_size[coord_idx] *= object_scale_fixed_size[coord_idx] * self.object_base_size * self.keypoint_scale / 2
+                    keypoint_fixed_size[coord_idx] *= object_scale_fixed_size[coord_idx] * self.keypoint_scale / 2  # Don't multiply by object_base_size here since it's already metric scale
                 object_offsets_fixed_size.append(keypoint_fixed_size)
             object_keypoint_offsets_fixed_size.append(object_offsets_fixed_size)
 

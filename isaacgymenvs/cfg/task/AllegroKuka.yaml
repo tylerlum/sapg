@@ -153,7 +153,7 @@ env:
 
   obsList: ["joint_pos", "joint_vel", "prev_action_targets", "palm_pos", "palm_rot", "palm_vel", "object_rot", "object_vel", "fingertip_pos_rel_palm", "keypoints_rel_palm", "keypoints_rel_goal", "object_scales", "closest_keypoint_max_dist", "closest_fingertip_dist", "lifted_object", "progress", "successes", "reward"]
   fixedSizeKeypointReward: False
-  fixedSize: [0.141,  0.03025, 0.0271]
+  fixedSize: [0.141, 0.03025, 0.0271]
 
   # some pose_reaching_env specific settings
   use_green_robot: True

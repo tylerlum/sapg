@@ -74,12 +74,20 @@ class ViserServer:
         # Keypoint spheres (red for object, green for goal)
         self.obj_keypoint_spheres = []
         self.goal_keypoint_spheres = []
+        self.obj_keypoint_spheres_fixed_size = []
+        self.goal_keypoint_spheres_fixed_size = []
         for i in range(self.num_keypoints):
             self.obj_keypoint_spheres.append(
                 self.server.scene.add_icosphere(f"/obj_keypoint_{i}", radius=0.01, color=(255, 0, 0))
             )
             self.goal_keypoint_spheres.append(
                 self.server.scene.add_icosphere(f"/goal_keypoint_{i}", radius=0.01, color=(0, 255, 0))
+            )
+            self.obj_keypoint_spheres_fixed_size.append(
+                self.server.scene.add_icosphere(f"/obj_keypoint_{i}_fixed_size", radius=0.01, color=(255, 0, 0), opacity=0.6)
+            )
+            self.goal_keypoint_spheres_fixed_size.append(
+                self.server.scene.add_icosphere(f"/goal_keypoint_{i}_fixed_size", radius=0.01, color=(0, 255, 0), opacity=0.6)
             )
 
         # GUI elements
@@ -94,12 +102,20 @@ class ViserServer:
         # Controls
         self.keypoint_toggle = self.server.gui.add_checkbox("Show Keypoints", initial_value=True)
         self.keypoint_toggle.on_update(lambda _: self._toggle_keypoints())
+        self.keypoint_toggle_fixed_size = self.server.gui.add_checkbox("Show Keypoints Fixed Size", initial_value=False)
+        self.keypoint_toggle_fixed_size.on_update(lambda _: self._toggle_keypoints_fixed_size())
 
     def _toggle_keypoints(self):
         """Toggle visibility of keypoint spheres."""
         self.show_keypoints = self.keypoint_toggle.value
         for sphere in self.obj_keypoint_spheres + self.goal_keypoint_spheres:
             sphere.visible = self.show_keypoints
+
+    def _toggle_keypoints_fixed_size(self):
+        """Toggle visibility of keypoint spheres fixed size."""
+        self.show_keypoints_fixed_size = self.keypoint_toggle_fixed_size.value
+        for sphere in self.obj_keypoint_spheres_fixed_size + self.goal_keypoint_spheres_fixed_size:
+            sphere.visible = self.show_keypoints_fixed_size
 
     def _toggle_pause(self):
         """Toggle pause state."""
@@ -112,7 +128,7 @@ class ViserServer:
         self.pause_button = self.server.gui.add_button("Pause")
         self.pause_button.on_click(lambda _: self._toggle_pause())
 
-    def update(self, joint_pos, object_pose, goal_pose, obj_keypoints=None, goal_keypoints=None):
+    def update(self, joint_pos, object_pose, goal_pose, obj_keypoints=None, goal_keypoints=None, obj_keypoints_fixed_size=None, goal_keypoints_fixed_size=None):
         """Update visualization with current state."""
         self.robot.update_cfg(joint_pos)
         self.object_frame.position = object_pose[:3]
@@ -126,6 +142,12 @@ class ViserServer:
         if goal_keypoints is not None:
             for i, sphere in enumerate(self.goal_keypoint_spheres):
                 sphere.position = tuple(goal_keypoints[i])
+        if obj_keypoints_fixed_size is not None:
+            for i, sphere in enumerate(self.obj_keypoint_spheres_fixed_size):
+                sphere.position = tuple(obj_keypoints_fixed_size[i])
+        if goal_keypoints_fixed_size is not None:
+            for i, sphere in enumerate(self.goal_keypoint_spheres_fixed_size):
+                sphere.position = tuple(goal_keypoints_fixed_size[i])
 
     def update_progress(self, current: int, total: int, timestep: int, control_hz: float = 60.0):
         """Update progress display."""
@@ -204,6 +226,8 @@ class EvalRunner:
             self.env.goal_pose[0].cpu().numpy(),
             self.env.obj_keypoint_pos[0].cpu().numpy(),
             self.env.goal_keypoint_pos[0].cpu().numpy(),
+            self.env.obj_keypoint_pos_fixed_size[0].cpu().numpy(),
+            self.env.goal_keypoint_pos_fixed_size[0].cpu().numpy(),
         )
 
     def _sim_step(self, timestep: int) -> bool:
@@ -297,12 +321,12 @@ def main():
     # trajectory_name = "vertical_swing_2"
     # trajectory_name = "horizontal_swing_human"
 
-    object_type = "spatula"
-    object_name = "black_spatula"
+    # object_type = "spatula"
+    # object_name = "black_spatula"
     # object_name = "small_spatula"
     # object_name = "large_spatula"
     # trajectory_name = "flip_from_left"
-    trajectory_name = "pick_and_place_human"
+    # trajectory_name = "pick_and_place_human"
 
     # object_type = "eraser"
     # object_name = "whiteboard_eraser"
@@ -326,11 +350,11 @@ def main():
     # trajectory_name = "top_down_screwing_human"
     # trajectory_name = "top_down_screwing_human_easyinit"
 
-    # object_type = "marker"
-    # object_name = "040_large_marker"
+    object_type = "marker"
+    object_name = "040_large_marker"
     # trajectory_name = "write_circle_whiteboard"
     # trajectory_name = "write_circle_whiteboard_adjusted"
-    # trajectory_name = "draw_circle_human"
+    trajectory_name = "draw_circle_human"
     # trajectory_name = "draw_circle_human_hardinit"
 
     # object_type = "knife"
@@ -354,12 +378,12 @@ def main():
     TABLE_CUTTINGBOARD_URDF = "urdf/table_narrow_cuttingboard.urdf"
     TABLE_BOWL_PLATE_URDF = "urdf/table_narrow_bowl_plate.urdf"
 
-    # SELECTED_TABLE_URDF = TABLE_URDF
+    SELECTED_TABLE_URDF = TABLE_URDF
     # SELECTED_TABLE_URDF = TABLE_NAIL_URDF
     # SELECTED_TABLE_URDF = TABLE_WHITEBOARD_URDF
     # SELECTED_TABLE_URDF = TABLE_SCREWDRIVER_HOLE_URDF
     # SELECTED_TABLE_URDF = TABLE_CUTTINGBOARD_URDF
-    SELECTED_TABLE_URDF = TABLE_BOWL_PLATE_URDF
+    # SELECTED_TABLE_URDF = TABLE_BOWL_PLATE_URDF
 
     # Load trajectory
     trajectory_path = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
@@ -413,14 +437,15 @@ def main():
             # "task.env.armMovingAverage": 0.05,
             "task.env.armMovingAverage": 0.1,
             # "task.env.evalSuccessTolerance": 0.0075,
-            "task.env.evalSuccessTolerance": 0.01,
-            # "task.env.evalSuccessTolerance": 0.02,
+            # "task.env.evalSuccessTolerance": 0.01,
+            "task.env.evalSuccessTolerance": 0.02,
             # "task.env.evalSuccessTolerance": 0.025,
             # "task.env.evalSuccessTolerance": 0.03,
             # "task.env.successSteps": 3,
             "task.env.successSteps": 1,
             "task.env.asset.table": str(SELECTED_TABLE_URDF),
             "task.env.tableResetZ": TABLE_Z,
+            "task.env.fixedSizeKeypointReward": True,
         },
     )
 
