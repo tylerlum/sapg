@@ -578,6 +578,24 @@ ERASER_NAME_TO_OBJECT = {
         scale=rescale_by_factor((0.09, 0.032, 0.01), factor=25),
         need_vhacd=True,
     ),
+    "expo_eraser": Object(
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/dex_tool_bench/eraser/expo_eraser/expo_eraser.urdf"
+        ),
+        coacd_filepaths=None,
+        scale=rescale_by_factor((0.10, 0.028, 0.05), factor=25),
+        need_vhacd=True,
+    ),
+    "amazon_eraser": Object(
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/dex_tool_bench/eraser/amazon_eraser/amazon_eraser.urdf"
+        ),
+        coacd_filepaths=None,
+        scale=rescale_by_factor((0.10, 0.028, 0.05), factor=25),
+        need_vhacd=True,
+    ),
 }
 
 #overwrite NAME_TO_OBJECT with ERASER_NAME_TO_OBJECT even if they share keys
