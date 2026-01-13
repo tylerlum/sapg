@@ -9,6 +9,7 @@ from ._trajopt import (
     solve_trajopt as solve_trajopt,
     solve_trajopt_batched as solve_trajopt_batched,
     solve_waypoint_trajopt as solve_waypoint_trajopt,
+    solve_fixed_structure_trajopt as solve_fixed_structure_trajopt,
 )
 from ._solve_ik_with_multiple_targets import (
     solve_ik_with_multiple_targets as solve_ik_with_multiple_targets,
