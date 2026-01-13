@@ -627,9 +627,27 @@ SPATULA_NAME_TO_OBJECT = {
             / "assets/urdf/dex_tool_bench/spatula/black_spatula/spatula.urdf"
         ),
         coacd_filepaths=None,
-        scale=rescale_by_factor((0.22, 0.02, 0.015), factor=25),
+        scale=rescale_by_factor((0.2, 0.015, 0.0075), factor=25),
         # need_vhacd=True,
         need_vhacd=False,
+    ),
+    "wooden_spatula": Object(
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/dex_tool_bench/spatula/wooden_spatula/wooden_spatula.urdf"
+        ),
+        coacd_filepaths=None,
+        scale=rescale_by_factor((0.17, 0.02, 0.0065), factor=25),
+        need_vhacd=True,
+    ),
+    "spoon_spatula": Object(
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/dex_tool_bench/spatula/spoon_spatula/spoon_spatula.urdf"
+        ),
+        coacd_filepaths=None,
+        scale=rescale_by_factor((0.12, 0.02, 0.02), factor=25),
+        need_vhacd=True,
     ),
 }
 #overwrite NAME_TO_OBJECT with SPATULA_NAME_TO_OBJECT even if they share keys
