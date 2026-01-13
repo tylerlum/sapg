@@ -82,13 +82,11 @@ def main(robot_name: Literal["ur5", "panda", "sharpa"] = "sharpa"):
         np.array([0.0, 0.0, 0.0]), np.array([0.0, 0.0, 1.0])
     )
     
-    wall_height = 0.4
-    wall_width = 0.1
-    wall_length = 0.4
-    wall_center = np.array([0.5, 0.0, wall_height / 2])
+    wall_size = np.array([0.4, 0.1, 0.4])
+    wall_center = np.array([0.5, 0.0, wall_size[2] / 2])
     
     wall_coll = pk.collision.Box.from_extent(
-        extent=np.array([wall_length, wall_width, wall_height]),
+        extent=wall_size,
         position=wall_center,
     )
     world_coll = [ground_coll, wall_coll]
@@ -131,7 +129,7 @@ def main(robot_name: Literal["ur5", "panda", "sharpa"] = "sharpa"):
     server.scene.add_mesh_trimesh(
         "wall_box",
         trimesh.creation.box(
-            extents=(wall_length, wall_width, wall_height),
+            extents=wall_size,
             transform=trimesh.transformations.translation_matrix(wall_center),
         ),
     )
