@@ -67,16 +67,25 @@ def main():
     print(f"Creating a trajectory with {timesteps} waypoints, each {dt} seconds apart, for a total time of {total_time} seconds")
     palm_down_wxyz = np.array([0.5, 0.5, 0.5, -0.5])
     
-    early_pos = np.array([0.0, -0.8, 0.8]) # High Z to clear wall
-    mid_pos = np.array([0.4, -0.8, 0.8])  # One side
-    end_pos = np.array([-0.4, -0.8, 0.8])  # Other side
+    early_pos = np.array([0.0, -0.6, 0.8]) # High Z to clear wall
+    mid_pos = np.array([0.4, -0.6, 0.8])  # One side
+    end_pos = np.array([-0.4, -0.6, 0.8])  # Other side
 
     # --- WAYPOINT API ---
-    waypoints = {
-        60: (early_pos, palm_down_wxyz),
-        120: (mid_pos, palm_down_wxyz),
-        249: (end_pos, palm_down_wxyz)
-    }
+    HOLD_STEPS = 20
+    waypoints = {}
+    waypoints.update({
+        60 + i: (early_pos, palm_down_wxyz)
+        for i in range(HOLD_STEPS)
+    })
+    waypoints.update({
+        120 + i: (mid_pos, palm_down_wxyz)
+        for i in range(HOLD_STEPS)
+    })
+    waypoints.update({
+        180 + i: (end_pos, palm_down_wxyz)
+        for i in range(HOLD_STEPS)
+    })
 
     print("Solving trajectory with waypoints...")
     start_time = time.time()
