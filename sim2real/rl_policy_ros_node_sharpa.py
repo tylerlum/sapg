@@ -427,7 +427,15 @@ class RLPolicyNode:
         sharpa_msg.position = joint_pos_targets[7:].tolist()
         self.sharpa_joint_cmd_pub.publish(sharpa_msg)
 
-    def _initialize_relative_object_pose_logic(self, q: np.ndarray, q_target: np.ndarray, T_R_O_lifted: np.ndarray):
+    def _initialize_relative_object_pose_logic(
+        self,
+        q: np.ndarray,
+        q_target: np.ndarray,
+        T_R_O_lifted: np.ndarray,
+        object_type: str,
+        object_name: str,
+        trajectory_name: str,
+    ):
         assert_equals(q.shape, (29,))
         assert_equals(q_target.shape, (29,))
         assert_equals(T_R_O_lifted.shape, (4, 4))
@@ -471,9 +479,6 @@ class RLPolicyNode:
         # Assumes this is in world frame
         # Stop listening to the published one
         import json
-        object_type = "hammer"
-        object_name = "mallet"
-        trajectory_name = "horizontal_swing_human_closer"
         object_pose_trajectory_filepath = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
         assert object_pose_trajectory_filepath.exists(), f"object_pose_trajectory_filepath not found: {object_pose_trajectory_filepath}"
         with open(object_pose_trajectory_filepath, "r") as f:
@@ -807,7 +812,14 @@ class RLPolicyNode:
                 if just_lifted:
                     T_R_O_lifted = pose_msg_to_T(copy.deepcopy(self.object_pose_msg.pose))  # Object pose in robot frame
                     # T_R_O_lifted = pose_msg_to_T(copy.deepcopy(self.goal_object_pose_msg))  # Goal object pose in robot frame
-                    self._initialize_relative_object_pose_logic(q=q, q_target=joint_pos_targets[0], T_R_O_lifted=T_R_O_lifted)
+                    self._initialize_relative_object_pose_logic(
+                        q=q,
+                        q_target=joint_pos_targets[0],
+                        T_R_O_lifted=T_R_O_lifted,
+                        object_type="hammer",
+                        object_name="mallet",
+                        trajectory_name="horizontal_swing_human_closer",
+                    )
                     self._visualize_relative_object_pose_logic(
                         q_targets_using_lifted_object_pose=self.q_targets_using_lifted_object_pose,
                         T_W_Ps_using_lifted_object_pose=self.T_W_Ps_using_lifted_object_pose,
