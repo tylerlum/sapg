@@ -42,7 +42,7 @@ OBJECT_SIZE_DISTRIBUTIONS: List[ObjectSizeDistribution] = [
     # Handle: (x) Lengths are [15cm, 30cm]
     #         (y) Widths are [2cm, 4cm]
     #         (z) Height is [1.5cm, 3cm]
-    #         (yz radius) are [1.5cm, 3cm]
+    #         (yz diameter) are [1.5cm, 3cm]
     #         (shape) box or cylinder
     # Head:   (x) [2cm, 6cm]
     #         (y) [5cm, 12cm]
@@ -67,7 +67,7 @@ OBJECT_SIZE_DISTRIBUTIONS: List[ObjectSizeDistribution] = [
     # Handle: (x) Lengths are [7cm, 12cm]
     #         (y) Widths are [2.5cm, 4cm]
     #         (z) Height is [2.5cm, 4cm]
-    #         (yz radius) are [2.5cm, 4cm]
+    #         (yz diameter) are [2.5cm, 4cm]
     #         (shape) box or cylinder
     # Head:   (x) [7cm, 15cm]
     #         (y) [1cm, 1.5cm]
@@ -90,7 +90,7 @@ OBJECT_SIZE_DISTRIBUTIONS: List[ObjectSizeDistribution] = [
 
     # Marker
     # Handle: (x) Lengths are [7.5cm, 15cm]
-    #         (yz radius) are [1.5cm, 3cm]
+    #         (yz diameter) are [1.5cm, 3cm]
     #         (shape) cylinder
     # Head:   (x) [1cm, 3cm]
     #         (y) [0.5cm, 1cm]
@@ -108,7 +108,7 @@ OBJECT_SIZE_DISTRIBUTIONS: List[ObjectSizeDistribution] = [
     # Handle: (x) Lengths are [10cm, 20cm]
     #         (y) Widths are [1.25cm, 2.5cm]
     #         (z) Heights are [0.6cm, 2.5cm]
-    #         (yz radius) are [1.25cm, 2.5cm]
+    #         (yz diameter) are [1.25cm, 2.5cm]
     #         (shape) box or cylinder
     # Head:  (x) [5cm, 15cm]
     #        (y) [3cm, 7cm]
@@ -147,24 +147,42 @@ OBJECT_SIZE_DISTRIBUTIONS: List[ObjectSizeDistribution] = [
     # Handle: (x) Lengths are [5cm, 20cm]
     #         (y) Widths are [1cm, 4cm]
     #         (z) Heights are [1cm, 3cm]
-    #         (yz radius) are [1cm, 3cm]
+    #         (yz diameter) are [1cm, 3cm]
     #         (shape) box or cylinder
-    # Head:  (x) [5cm, 15cm]
-    #        (y) [5cm, 15cm]
-    #        (z) [3cm, 10cm]
-    #        (shape) box
+    # Head v1:  (x) [5cm, 12cm]
+    #           (y) [3cm, 5cm]
+    #           (z) [3cm, 8cm]
+    #           (shape) box
+    # Head v2:  (x) [5cm, 12cm]
+    #           (y) [5cm, 12cm]
+    #           (z) [2cm, 4cm]
+    #           (shape) box
     ObjectSizeDistribution(
         type="brush",
         handle_min_lengths=(0.05, 0.01, 0.01),  # Box
         handle_max_lengths=(0.2, 0.04, 0.03),
-        head_min_lengths=(0.05, 0.05, 0.03),
-        head_max_lengths=(0.15, 0.15, 0.1),
+        head_min_lengths=(0.05, 0.03, 0.03),  # v1
+        head_max_lengths=(0.12, 0.05, 0.08),  # v1
     ),
     ObjectSizeDistribution(
         type="brush",
         handle_min_lengths=(0.05, 0.01),  # Cylinder
         handle_max_lengths=(0.2, 0.03),
-        head_min_lengths=(0.05, 0.05, 0.03),
-        head_max_lengths=(0.15, 0.15, 0.1),
+        head_min_lengths=(0.05, 0.03, 0.03),  # v1
+        head_max_lengths=(0.12, 0.05, 0.08),  # v1
+    ),
+    ObjectSizeDistribution(
+        type="brush",
+        handle_min_lengths=(0.05, 0.01, 0.01),  # Box
+        handle_max_lengths=(0.2, 0.04, 0.03),
+        head_min_lengths=(0.05, 0.05, 0.02),  # v2
+        head_max_lengths=(0.12, 0.12, 0.04),  # v2
+    ),
+    ObjectSizeDistribution(
+        type="brush",
+        handle_min_lengths=(0.05, 0.01),  # Cylinder
+        handle_max_lengths=(0.2, 0.03),
+        head_min_lengths=(0.05, 0.05, 0.02),  # v2
+        head_max_lengths=(0.12, 0.12, 0.04),  # v2
     ),
 ]
