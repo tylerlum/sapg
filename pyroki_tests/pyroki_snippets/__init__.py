@@ -5,7 +5,10 @@ from ._solve_ik_with_collision import solve_ik_with_collision as solve_ik_with_c
 from ._solve_ik_with_manipulability import (
     solve_ik_with_manipulability as solve_ik_with_manipulability,
 )
-from ._trajopt import solve_trajopt as solve_trajopt
+from ._trajopt import (
+    solve_trajopt as solve_trajopt,
+    solve_waypoint_trajopt as solve_waypoint_trajopt,
+)
 from ._solve_ik_with_multiple_targets import (
     solve_ik_with_multiple_targets as solve_ik_with_multiple_targets,
 )
