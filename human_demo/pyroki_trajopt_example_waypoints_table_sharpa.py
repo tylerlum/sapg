@@ -126,7 +126,7 @@ def main():
     )
     server.scene.add_mesh_trimesh(
         "robot_coll",
-        robot_coll.coll.to_trimesh()
+        robot_coll.at_config(robot, start_cfg).to_trimesh()
     )
 
     for t, (pos, wxyz) in waypoints.items():
