@@ -6,12 +6,11 @@ from typing import List, Literal, Optional, Tuple, Union
 class ObjectSizeDistribution:
     type: Literal[
         "hammer",
-        "knife",
         "screwdriver",
         "marker",
         "spatula",
-        "whiteboard_eraser",
-        "phone",
+        "eraser",
+        "brush",
     ]
     handle_min_lengths: Union[Tuple[float, float, float], Tuple[float, float]]
     handle_max_lengths: Union[Tuple[float, float, float], Tuple[float, float]]
@@ -130,14 +129,14 @@ OBJECT_SIZE_DISTRIBUTIONS: List[ObjectSizeDistribution] = [
         head_max_lengths=(0.15, 0.07, 0.03),
     ),
 
-    # Whiteboard Eraser
+    # Eraser
     # Handle: (x) Lengths are [7cm, 15cm]
     #         (y) Widths are [2cm, 7cm]
     #         (z) Heights are [2cm, 7cm]
     #         (shape) box
     # Head:   None
     ObjectSizeDistribution(
-        type="whiteboard_eraser",
+        type="eraser",
         handle_min_lengths=(0.07, 0.02, 0.02),  # Box
         handle_max_lengths=(0.15, 0.07, 0.07),
         head_min_lengths=None,
