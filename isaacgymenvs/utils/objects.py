@@ -518,6 +518,24 @@ SCREWDRIVER_NAME_TO_OBJECT = {
         # need_vhacd=True,
         need_vhacd=False,
     ),
+    "red_screwdriver": Object(
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/dex_tool_bench/screwdriver/red_screwdriver/red_screwdriver.urdf"
+        ),
+        coacd_filepaths=None,
+        scale=rescale_by_factor((0.07, 0.035, 0.035), factor=25),
+        need_vhacd=True,
+    ),
+    "black_screwdriver": Object(
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/dex_tool_bench/screwdriver/black_screwdriver/black_screwdriver.urdf"
+        ),
+        coacd_filepaths=None,
+        scale=rescale_by_factor((0.08, 0.03, 0.03), factor=25),
+        need_vhacd=True,
+    ),
 }
 #overwrite NAME_TO_OBJECT with SCREWDRIVER_NAME_TO_OBJECT even if they share keys
 NAME_TO_OBJECT.update(SCREWDRIVER_NAME_TO_OBJECT)
@@ -550,6 +568,33 @@ ERASER_NAME_TO_OBJECT = {
         coacd_filepaths=None,
         scale=rescale_by_factor((0.12965531, 0.0337145 , 0.06038587), factor=25),
         need_vhacd=False,
+    ),
+    "anvil_eraser": Object(
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/dex_tool_bench/eraser/anvil_eraser/anvil_eraser.urdf"
+        ),
+        coacd_filepaths=None,
+        scale=rescale_by_factor((0.09, 0.032, 0.01), factor=25),
+        need_vhacd=True,
+    ),
+    "expo_eraser": Object(
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/dex_tool_bench/eraser/expo_eraser/expo_eraser.urdf"
+        ),
+        coacd_filepaths=None,
+        scale=rescale_by_factor((0.10, 0.028, 0.05), factor=25),
+        need_vhacd=True,
+    ),
+    "amazon_eraser": Object(
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/dex_tool_bench/eraser/amazon_eraser/amazon_eraser.urdf"
+        ),
+        coacd_filepaths=None,
+        scale=rescale_by_factor((0.10, 0.028, 0.05), factor=25),
+        need_vhacd=True,
     ),
 }
 
@@ -625,6 +670,24 @@ MARKER_NAME_TO_OBJECT = {
         scale=rescale_by_factor((0.09, 0.018, 0.018), factor=25),  # Re-measured in real
         need_vhacd=True,
     ),  
+    "sharpie_closed": Object(
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/dex_tool_bench/marker/sharpie_closed/sharpie_closed.urdf"
+        ),
+        coacd_filepaths=None,
+        scale=rescale_by_factor((0.085, 0.022, 0.022), factor=25),
+        need_vhacd=True,
+    ),
+    "staples_open": Object(
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/dex_tool_bench/marker/staples_open/staples_open.urdf"
+        ),
+        coacd_filepaths=None,
+        scale=rescale_by_factor((0.12, 0.018, 0.018), factor=25),
+        need_vhacd=True,
+    ),
 }
 #overwrite NAME_TO_OBJECT with MARKER_NAME_TO_OBJECT even if they share keys
 NAME_TO_OBJECT.update(MARKER_NAME_TO_OBJECT)
@@ -660,7 +723,7 @@ BRUSH_NAME_TO_OBJECT = {
             / "assets/urdf/dex_tool_bench/brush/red_brush/red_brush.urdf"
         ),
         coacd_filepaths=None,
-        scale=rescale_by_factor((0.15, 0.02, 0.015), factor=25),
+        scale=rescale_by_factor((0.12, 0.02, 0.015), factor=25),
         need_vhacd=False,
     ),
     "green_brush": Object(
@@ -671,6 +734,24 @@ BRUSH_NAME_TO_OBJECT = {
         coacd_filepaths=None,
         scale=rescale_by_factor((0.15, 0.02, 0.015), factor=25),
         need_vhacd=False,
+    ),
+    "anvil_brush": Object(
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/dex_tool_bench/brush/anvil_brush/anvil_brush.urdf"
+        ),
+        coacd_filepaths=None,
+        scale=rescale_by_factor((0.12, 0.035, 0.02), factor=25),
+        need_vhacd=True,
+    ),
+    "lab_brush": Object(
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/dex_tool_bench/brush/lab_brush/lab_brush.urdf"
+        ),
+        coacd_filepaths=None,
+        scale=rescale_by_factor((0.06, 0.022, 0.022), factor=25),
+        need_vhacd=True,
     ),
 }
 #overwrite NAME_TO_OBJECT with BRUSH_NAME_TO_OBJECT even if they share keys
