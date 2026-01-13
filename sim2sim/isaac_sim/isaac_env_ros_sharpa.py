@@ -1,4 +1,6 @@
 from isaacgymenvs.tasks.allegro_kuka.allegro_kuka_base import AllegroKukaBase  # isort:skip
+from isaacgymenvs.utils.utils import get_repo_root_dir
+import json
 import time
 from pathlib import Path
 from typing import Dict
@@ -243,13 +245,34 @@ def main():
     CONTROL_DT = 1.0 / 60.0
     SUBSTEPS = 2
     CONFIG_PATH = Path(
-        "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"
+        # "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"
+        "/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed/config.yaml"
     )
     assert Path(CONFIG_PATH).exists()
 
     # NOTE: cpu has different physics than training
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
     # DEVICE = "cpu"  # "cpu" faster for single env, but some bugs with cpu like force sensors not working
+
+    # Load trajectory
+    # This makes it easier to change object and trajectory
+    # object_type = "eraser"
+    # object_name = "whiteboard_eraser"
+    # trajectory_name = "wipe_left"
+
+    object_type = "hammer"
+    # object_name = "hammer_2"
+    object_name = "mallet"
+    # trajectory_name = "horizontal_swing_higher"
+    # trajectory_name = "horizontal_swing"
+    # trajectory_name = "horizontal_swing_human"
+    trajectory_name = "horizontal_swing_human_closer"
+
+    trajectory_path = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
+    assert trajectory_path.exists(), f"Trajectory file not found: {trajectory_path}"
+    with open(trajectory_path) as f:
+        traj_data = json.load(f)
+
     env = create_env(
         config_path=str(CONFIG_PATH),
         headless=True,
@@ -263,15 +286,22 @@ def main():
             "task.env.resetDofPosRandomIntervalArm": 0.0,
             "task.env.resetDofVelRandomInterval": 0.0,
             # "task.env.object_type": "blue_cuboid",
-            "task.env.object_type": "cuboidal_mallet",
+            # "task.env.object_type": "cuboidal_mallet",
+            # "task.env.object_type": "040_large_marker",
+            # "task.env.object_type": "whiteboard_eraser",
+            # "task.env.object_type": "iphone15pro",
+            "task.env.object_type": object_name,
             "task.env.forceNoReset": True,
             "task.env.randomizeObjectRotation": False,
-            # "task.env.objectStartPose": [0.,  0.,  0.58, 0.,  0.,  0.,  1.],  # x, y, z, qx, qy, qz, qw
-            "task.env.objectStartPose": [0.,  0.,  0.58, 0.,  0.,  1.,  0.],  # x, y, z, qx, qy, qz, qw
-            "task.env.goalObjectPose": [0.,  0.,  0.88, 0.,  0.,  0.,  1.],  # x, y, z, qx, qy, qz, qw
+            # "task.env.objectStartPose": [0.,  0.,  0.58, 0.7071068,  0.,  0.,  0.7071068],  # x, y, z, qx, qy, qz, qw (rotated 90 deg around x)
+            #  "task.env.objectStartPose": [0.,  0.,  0.58, 0.,  0.,  0.,  1.],  # x, y, z, qx, qy, qz, qw
+            # "task.env.objectStartPose": [0.,  0.,  0.58, 0.,  0.,  1.,  0.],  # x, y, z, qx, qy, qz, qw
+            "task.env.objectStartPose": traj_data["start_pose"],
+            "task.env.goalObjectPose": traj_data["goals"][0],
             "task.env.forceScale": 0.0,
             "task.sim.dt": CONTROL_DT,
             "task.sim.substeps": SUBSTEPS,
+            "task.env.tableResetZRange": 0.0,
         },
     )
 

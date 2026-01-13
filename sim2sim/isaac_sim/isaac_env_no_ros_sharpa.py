@@ -89,24 +89,28 @@ def main():
             # "task.env.object_type": "blue_cuboid_fake_hammer",
             # "task.env.object_type": "cuboidal_hammer",
             # "task.env.object_type": "mallet",
+            # "task.env.object_type": "scanned_hammer_2",
             # "task.env.object_type": "cuboidal_mallet",
-            "task.env.object_type": "tyler_handle_head",
+            # "task.env.object_type": "tyler_handle_head",
+            # "task.env.object_type": "040_large_marker",
+            # "task.env.object_type": "real_flat_screwdriver",
             # "task.env.object_type": "044_flat_screwdriver",
             # "task.env.object_type": "phone",
             # "task.env.object_type": "iphone15pro",
             # "task.env.object_type": "whiteboard_eraser",
+            # "task.env.object_type": "blue_cuboid_fake_iphone",
+            "task.env.object_type": "blue_cuboid_real_iphone",
             # "task.env.forceNoReset": True,
             "task.env.randomizeObjectRotation": False,
             # "task.env.objectStartPose": [0.,  0.,  0.58, 0.7071068,  0.,  0.,  0.7071068],  # x, y, z, qx, qy, qz, qw (rotated 90 deg around x)
-            # "task.env.objectStartPose": [0.,  0.,  0.58, 0.7071068,  0.,  0.,  -0.7071068],  # x, y, z, qx, qy, qz, qw (rotated -90 deg around x)
             # "task.env.objectStartPose": [0.,  0.,  0.58, 1,  0.,  0.,  0.],  # x, y, z, qx, qy, qz, qw (rotated -90 deg around x)
-            # "task.env.objectStartPose": [0.,  0.,  0.58, 0.,  0.,  0.,  1.],  # x, y, z, qx, qy, qz, qw
-            "task.env.objectStartPose": [0.,  0.,  0.58, 0.,  0.,  1.,  0.],  # x, y, z, qx, qy, qz, qw
+            "task.env.objectStartPose": [0.,  0.,  0.58, 0.,  0.,  0.,  1.],  # x, y, z, qx, qy, qz, qw
+            # "task.env.objectStartPose": [0.,  0.,  0.58, 0.,  0.,  1.,  0.],  # x, y, z, qx, qy, qz, qw
             # "task.env.goalObjectPose": [0.,  0.,  0.88, 0.,  0.,  0.,  1.],  # x, y, z, qx, qy, qz, qw
             "task.env.use_fixed_set_of_goal_states": True,
             "task.env.forceScale": 0.0,
             # "task.env.dofSpeedScale": 10.0,
-            "task.env.numEnvs": 100,
+            "task.env.numEnvs": 1,
             "task.env.envSpacing": 0.4,
             # "task.env.useObsDelay": True,
             # "task.env.obsDelayMax": 3,

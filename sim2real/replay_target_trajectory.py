@@ -147,7 +147,10 @@ def main():
         # Policy
         # "/home/tylerlum/github_repos/sapg/recorded_data/2025-11-06_17-07-45.npz"  # Fast
         # "/home/tylerlum/github_repos/sapg/recorded_data/2025-11-06_17-09-47.npz"  # Slow
-        "/home/tylerlum/github_repos/sapg/recorded_data/2025-11-06_17-09-47_None_550.npz"  # Slow sliced
+        # "/home/tylerlum/github_repos/sapg/recorded_data/2025-11-06_17-09-47_None_550.npz"  # Slow sliced
+
+        # Retargeted robot
+        "/home/tylerlum/github_repos/sapg/retargeted_robot/2026-01-11_14-26-18.npz"
     )
     assert file_path.exists(), f"File {file_path} does not exist"
     recorded_data = RecordedData.from_file(file_path)

@@ -162,7 +162,10 @@ def main():
         # "/home/tylerlum/github_repos/sapg/recorded_data/2025-11-06_17-09-47_None_550.npz"  # Slow sliced
 
         # Sharpa sin wave
-        "/home/tylerlum/github_repos/sapg/sharpa_sin_waves/sharpa_sin_wave_hand_10-0s_2-0s.npz"
+        # "/home/tylerlum/github_repos/sapg/sharpa_sin_waves/sharpa_sin_wave_hand_10-0s_2-0s.npz"
+
+        # Retargeted robot
+        "/home/tylerlum/github_repos/sapg/retargeted_robot/2026-01-11_14-26-18.npz"
     )
     assert file_path.exists(), f"File {file_path} does not exist"
     recorded_data = RecordedData.from_file(file_path)
@@ -225,8 +228,8 @@ def main():
             # move_time=0.2,
             # move_time=0.1,
             # move_time=1 / 20,
-            # move_time=1 / 30,
-            move_time=1 / 60,
+            move_time=1 / 30,
+            # move_time=1 / 60,
         )
     end_time = time.time()
     print(f"Time taken: {end_time - start_time:.2f} seconds")

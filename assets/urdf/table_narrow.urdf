@@ -2,6 +2,9 @@
 <robot name="box">
   <link name="box">
     <visual>
+      <material name="wood">
+        <color rgba="0.82 0.56 0.35 1.0"/>
+      </material>
       <origin xyz="0 0 0"/>
       <geometry>
         <box size="0.475 0.4 0.3"/>

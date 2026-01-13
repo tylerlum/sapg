@@ -63,6 +63,7 @@ from isaacgymenvs.utils.object_trajectories import (
     get_phone_trajectory,
 )
 from pytorch3d.transforms import quaternion_to_matrix, matrix_to_quaternion, axis_angle_to_matrix
+import json
 
 DATETIME_STR = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
@@ -180,7 +181,7 @@ class AllegroKukaBase(VecTask):
 
         self.asset_files_dict = {
             "block": "urdf/objects/cube_multicolor.urdf",  # 0.05m box
-            "table": "urdf/table_narrow.urdf",
+            "table": self.cfg["env"]["asset"]["table"],
             "bucket": "urdf/objects/bucket.urdf",
             "lightbulb": "lightbulb/A60_E27_SI.urdf",
             "socket": "E27SocketSimple.urdf",
@@ -330,6 +331,11 @@ class AllegroKukaBase(VecTask):
         if self.use_sharpa:
             desired_kuka_pos = torch.tensor([-1.571, 1.571, -0.000, 1.376, -0.000, 1.485, 1.308])  # same as above but 60 deg offset for the mount
 
+        START_HIGHER = self.cfg["env"]["startArmHigher"]
+        if START_HIGHER:
+            desired_kuka_pos[1] -= np.deg2rad(10)
+            desired_kuka_pos[3] += np.deg2rad(10)
+
         self.hand_arm_default_dof_pos[:7] = desired_kuka_pos
 
         self.arm_hand_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, : self.num_hand_arm_dofs]
@@ -392,11 +398,19 @@ class AllegroKukaBase(VecTask):
             (self.num_envs, self.num_keypoints, 3), dtype=torch.float, device=self.device
         )
 
+        self.obj_keypoint_pos_fixed_size = torch.zeros(
+            (self.num_envs, self.num_keypoints, 3), dtype=torch.float, device=self.device
+        )
+        self.goal_keypoint_pos_fixed_size = torch.zeros(
+            (self.num_envs, self.num_keypoints, 3), dtype=torch.float, device=self.device
+        )
+
         # how many steps we were within the goal tolerance
         self.near_goal_steps = torch.zeros(self.num_envs, dtype=torch.int, device=self.device)
 
         self.lifted_object = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
         self.closest_keypoint_max_dist = -torch.ones(self.num_envs, dtype=torch.float, device=self.device)
+        self.closest_keypoint_max_dist_fixed_size = -torch.ones(self.num_envs, dtype=torch.float, device=self.device)
         self.prev_total_episode_closest_keypoint_max_dist = torch.zeros(self.num_envs, dtype=torch.float, device=self.device)
         self.total_episode_closest_keypoint_max_dist = torch.zeros(self.num_envs, dtype=torch.float, device=self.device)
         self.prev_episode_closest_keypoint_max_dist = 1000*torch.ones(self.num_envs, dtype=torch.float, device=self.device)
@@ -665,30 +679,39 @@ class AllegroKukaBase(VecTask):
             HAMMER_TRAJECTORY_OBJECTS = set(
                 ["scanned_hammer_1", "scanned_hammer_2", "scanned_hammer_2_coacd", "scanned_hammer_2_coacd2", "YcbHammer", "cuboidal_hammer", "cylindrical_hammer", "cuboidal_hammer_2x", "cylindrical_hammer_2x",]
                 + ["all_hammers", "all_cuboidal_hammers", "all_cylindrical_hammers", "all_cuboidal_and_cylindrical_hammers", "mallet", "cuboidal_mallet"]
+                + ["blue_cuboid_real_hammer", "blue_cuboid_fake_hammer"]
                 + ["tyler_handle_head"]
+                + ["hammer_2"]
             )
-            CUBOID_OBJECTS = set(["cuboid", "blue_cuboid", "blue_cuboid_thick", "blue_cuboid_real_iphone", "blue_cuboid_fake_iphone", "blue_cuboid_real_hammer", "blue_cuboid_fake_hammer", "blue_cuboid_real_screwdriver"])
-            SCREWDRIVER_OBJECTS = set(["real_flat_screwdriver", "044_flat_screwdriver"])
+            CUBOID_OBJECTS = set(["cuboid", "blue_cuboid", "blue_cuboid_thick"])
+            SCREWDRIVER_OBJECTS = set(["real_flat_screwdriver", "044_flat_screwdriver", "blue_cuboid_real_screwdriver", "cuboidal_screwdriver", "cylindrical_screwdriver"])
+            ERASER_OBJECTS = set(["large_eraser", "small_eraser", "whiteboard_eraser"])
+            SPATULA_OBJECTS = set(["small_spatula", "large_spatula", "black_spatula"])
+            MARKER_OBJECTS = set(["040_large_marker", "thick_marker", "thin_marker"])
+            KNIFE_OBJECTS = set(["kitchen_knife", "blue_cuboid_real_knife", "blue_cuboid_fake_knife", "pairing_knife"])
             if object_type in HAMMER_TRAJECTORY_OBJECTS:
                 self.trajectory_states = get_hammer_trajectory(init_state, device=self.device)
             elif object_type in set(["hairbrush", "hairbrush_modified"]):
                 self.trajectory_states = get_hairbrush_trajectory(init_state, device=self.device)
             elif object_type in SCREWDRIVER_OBJECTS:
                 self.trajectory_states = get_screwdriver_trajectory(init_state, device=self.device)
-            elif object_type == "marker":
+            elif object_type in MARKER_OBJECTS:
                 self.trajectory_states = get_marker_trajectory(init_state, device=self.device)
-            elif object_type == "whiteboard_eraser":
+            elif object_type in SPATULA_OBJECTS:
+                self.trajectory_states = get_hammer_trajectory(init_state, device=self.device)
+            elif object_type in ERASER_OBJECTS:
                 self.trajectory_states = get_eraser_trajectory(init_state, device=self.device)
-            elif object_type in ["phone", "iphone15pro"]:
+            elif object_type in ["phone", "iphone15pro", "blue_cuboid_real_iphone", "blue_cuboid_fake_iphone",]:
                 self.trajectory_states = get_phone_trajectory(init_state, device=self.device)
             elif object_type in CUBOID_OBJECTS:
                 self.trajectory_states = get_cuboid_trajectory(init_state, device=self.device)
+            elif object_type in KNIFE_OBJECTS:
+                self.trajectory_states = get_hammer_trajectory(init_state, device=self.device)
             else:
                 raise ValueError(f"The following object_type does not have a fixed trajectory: {object_type}, cannot use USE_FIXED_SET_OF_GOAL_STATES with this object type")
 
             SAVE_TO_JSON = False
             if SAVE_TO_JSON:
-                import json
                 output_filepath = Path(f"{object_type}_trajectory.json")
                 print(f"Saving trajectory to {output_filepath}")
 
@@ -704,6 +727,12 @@ class AllegroKukaBase(VecTask):
 
             # Set max consecutive successes to the length of the trajectory so we don't run out of goal states
             self.max_consecutive_successes = len(self.trajectory_states)
+        
+            FIXED_GOAL_STATES = self.cfg["env"]["fixedGoalStates"]
+            if FIXED_GOAL_STATES is not None:
+                self.trajectory_states = torch.tensor(FIXED_GOAL_STATES, device=self.device)
+                # Set max consecutive successes to the length of the trajectory so we don't run out of goal states
+                self.max_consecutive_successes = len(self.trajectory_states)
 
         return object_asset_files, object_asset_scales, need_vhacds
 
@@ -718,7 +747,9 @@ class AllegroKukaBase(VecTask):
             object_asset_options.collapse_fixed_joints = True
 
             # This should speed up things and make physics better
+            # But self-collision may be an issue
             object_asset_options.replace_cylinder_with_capsule = True
+            # object_asset_options.replace_cylinder_with_capsule = False
 
             object_asset_dir = os.path.dirname(object_asset_file)
             object_asset_fname = os.path.basename(object_asset_file)
@@ -775,6 +806,7 @@ class AllegroKukaBase(VecTask):
             near_goal_steps=self.near_goal_steps,
             lifted_object=self.lifted_object,
             closest_keypoint_max_dist=self.closest_keypoint_max_dist,
+            closest_keypoint_max_dist_fixed_size=self.closest_keypoint_max_dist_fixed_size,
             closest_fingertip_dist=self.closest_fingertip_dist,
             furthest_hand_dist=self.furthest_hand_dist,
             prev_targets=self.prev_targets,
@@ -784,6 +816,8 @@ class AllegroKukaBase(VecTask):
             reset_goal_buf=self.reset_goal_buf,
             obj_keypoint_pos=self.obj_keypoint_pos,
             goal_keypoint_pos=self.goal_keypoint_pos,
+            obj_keypoint_pos_fixed_size=self.obj_keypoint_pos_fixed_size,
+            goal_keypoint_pos_fixed_size=self.goal_keypoint_pos_fixed_size,
             rewards_episode=self.rewards_episode,
             last_curriculum_update=self.last_curriculum_update,
             rb_forces=self.rb_forces,
@@ -901,165 +935,98 @@ class AllegroKukaBase(VecTask):
             print(f"Exception {exc} while removing older procedurally-generated urdf assets")
 
         # We are generating "handle_head" objects, which consist of a handle and a head
-        # The handle is either a cuboid or a cylinder
-        # For now, the head is the same type as the handle
+        # The handle and head are either a cuboid or a cylinder
         # The origin of the object is at the center of the handle
         # To have different densities, we would need to have 2 links each with a different density, but this breaks the current code
         # An alternative could be to manually compute the mass and inertia rather than using the density field alone
         # We implement this variable density approach now
 
-        # For the handle, we are currently making them 50% cuboids and 50% cylinders
         # The x-direction is along the handle
         # The head is at +x from the handle
         # There is no relative rotation between the handle and head
 
-        # We also will have some number of the objects with no head
-        NUM_HANDLE_CUBOIDS = 500
-        NUM_HANDLE_CYLINDERS = 500
-        NUM_HEAD_CUBOIDS = 500
-        NUM_HEAD_CYLINDERS = 500
-
+        NUM_OBJECTS_PER_TYPE = 100
         np.random.seed(42)
 
-        # #############################
-        # Handle
-        # #############################
         # 3D printed objects are about 300-400 kg/m^3
         HANDLE_MIN_DENSITY, HANDLE_MAX_DENSITY = self.cfg["env"]["handleDensityMin"], self.cfg["env"]["handleDensityMax"]
-        # HANDLE_MIN_DENSITY, HANDLE_MAX_DENSITY = 400, 400
 
-        # The length of a marker or whiteboard eraser is 0.12m
-        # The length of a screwdriver handle is 0.11-0.13m
-        # The length of the hammer handle is 0.25m
-        # The length of a phone is 0.15m
-        HANDLE_MIN_LEN_X, HANDLE_MAX_LEN_X = 0.1, 0.3  # Length
-
-        # The width of a marker is 0.02m
-        # The width of a whiteboard eraser is 0.05m
-        # The width of a screwdriver handle is 0.03-0.035m
-        # The width of the hammer handle is 0.03m
-        # The width of a phone is 0.075m
-        HANDLE_MIN_LEN_Y, HANDLE_MAX_LEN_Y = 0.02, 0.07  # Width
-
-        # The thickness of a marker is 0.02m
-        # The thickness of a whiteboard eraser is 0.03m
-        # The thickness of a screwdriver handle is 0.03-0.035m
-        # The thickness of the hammer handle is 0.02m
-        # The thickness of a phone is 0.01m
-        HANDLE_MIN_LEN_Z, HANDLE_MAX_LEN_Z = 0.02, 0.05  # Thickness
-
-        handle_cuboid_densities = np.random.uniform(HANDLE_MIN_DENSITY, HANDLE_MAX_DENSITY, size=NUM_HANDLE_CUBOIDS)
-        handle_cylinder_densities = np.random.uniform(HANDLE_MIN_DENSITY, HANDLE_MAX_DENSITY, size=NUM_HANDLE_CYLINDERS)
-
-        handle_cuboid_x_lengths = np.random.uniform(HANDLE_MIN_LEN_X, HANDLE_MAX_LEN_X, size=NUM_HANDLE_CUBOIDS)
-        handle_cuboid_y_lengths = np.random.uniform(HANDLE_MIN_LEN_Y, HANDLE_MAX_LEN_Y, size=NUM_HANDLE_CUBOIDS)
-        handle_cuboid_z_lengths = np.random.uniform(HANDLE_MIN_LEN_Z, HANDLE_MAX_LEN_Z, size=NUM_HANDLE_CUBOIDS)
-        handle_cuboid_scales = np.stack([handle_cuboid_x_lengths, handle_cuboid_y_lengths, handle_cuboid_z_lengths], axis=1).tolist()
-
-        handle_cylinder_heights = np.random.uniform(HANDLE_MIN_LEN_X, HANDLE_MAX_LEN_X, size=NUM_HANDLE_CYLINDERS)
-        handle_cylinder_diameters = np.random.uniform(HANDLE_MIN_LEN_Z, HANDLE_MAX_LEN_Z, size=NUM_HANDLE_CYLINDERS)
-        handle_cylinder_scales = np.stack([handle_cylinder_heights, handle_cylinder_diameters], axis=1).tolist()
-
-        # #############################
-        # Head
-        # #############################
         # Hammer head and mallet are 800-1500 kg/m^3
         HEAD_MIN_DENSITY, HEAD_MAX_DENSITY = self.cfg["env"]["headDensityMin"], self.cfg["env"]["headDensityMax"]
-        # HEAD_MIN_DENSITY, HEAD_MAX_DENSITY = 400, 400
-
-        # The length of a screwdriver head is 0.08-0.16m
-        # The length of a hammer head is 0.02m
-        # The length of a mallet head is 0.05m
-        HEAD_MIN_LEN_X, HEAD_MAX_LEN_X = 0.02, 0.16  # Length
-
-        # The width of a screwdriver head is 0.01m
-        # The width of a hammer head is 0.02m
-        # The width of a mallet head is 0.08m
-        HEAD_MIN_LEN_Y, HEAD_MAX_LEN_Y = 0.01, 0.08  # Width
-
-        # The thickness of a screwdriver head is 0.01m
-        # The thickness of a hammer head is 0.02m
-        # The thickness of mallet head is 0.045m
-        HEAD_MIN_LEN_Z, HEAD_MAX_LEN_Z = 0.01, 0.05  # Thickness
-
-        head_cuboid_densities = np.random.uniform(HEAD_MIN_DENSITY, HEAD_MAX_DENSITY, size=NUM_HEAD_CUBOIDS).tolist()
-        head_cylinder_densities = np.random.uniform(HEAD_MIN_DENSITY, HEAD_MAX_DENSITY, size=NUM_HEAD_CYLINDERS).tolist()
-
-        head_cuboid_x_lengths = np.random.uniform(HEAD_MIN_LEN_X, HEAD_MAX_LEN_X, size=NUM_HEAD_CUBOIDS)
-        head_cuboid_y_lengths = np.random.uniform(HEAD_MIN_LEN_Y, HEAD_MAX_LEN_Y, size=NUM_HEAD_CUBOIDS)
-        head_cuboid_z_lengths = np.random.uniform(HEAD_MIN_LEN_Z, HEAD_MAX_LEN_Z, size=NUM_HEAD_CUBOIDS)
-        head_cuboid_scales = np.stack([head_cuboid_x_lengths, head_cuboid_y_lengths, head_cuboid_z_lengths], axis=1).tolist()
-
-        head_cylinder_heights = np.random.uniform(HEAD_MIN_LEN_X, HEAD_MAX_LEN_X, size=NUM_HEAD_CYLINDERS)
-        head_cylinder_diameters = np.random.uniform(HEAD_MIN_LEN_Z, HEAD_MAX_LEN_Z, size=NUM_HEAD_CYLINDERS)
-        head_cylinder_scales = np.stack([head_cylinder_heights, head_cylinder_diameters], axis=1).tolist()
 
         from isaacgymenvs.tasks.allegro_kuka.generate_objects import (
-            # generate_handle_head_urdf_constant_density,
-            generate_cuboid_urdf_constant_density,
-            generate_cylinder_urdf_constant_density,
-            generate_handle_head_urdf_variable_density,
-            generate_handle_head_urdf_variable_density_2_links,
+            generate_handle_head_urdf,
         )
-        # Create cuboid handles with cuboid heads
-        cuboid_handle_cuboid_head_files = [
-            # generate_handle_head_urdf_variable_density(
-            generate_handle_head_urdf_variable_density_2_links(
-                filepath=Path(generated_assets_dir) / (f"{idx:03d}_handle_head_{handle_cuboid_scales[idx]}_{head_cuboid_scales[idx]}_{handle_cuboid_densities[idx]}_{head_cuboid_densities[idx]}".replace(".", "-") + ".urdf"),
-                handle_scale=handle_cuboid_scales[idx],
-                head_scale=head_cuboid_scales[idx],
-                handle_density=handle_cuboid_densities[idx],
-                head_density=head_cuboid_densities[idx],
+        from isaacgymenvs.tasks.allegro_kuka.object_size_distributions import OBJECT_SIZE_DISTRIBUTIONS
+        handle_head_types = set(self.cfg["env"]["handleHeadTypes"])
+        object_size_distributions = [obj for obj in OBJECT_SIZE_DISTRIBUTIONS if obj.type in handle_head_types]
+
+        files_list = []
+        scales_list = []
+        for object_size_distribution in object_size_distributions:
+            handle_head_type = object_size_distribution.type
+
+            # Sample densities
+            # Currently same for all objects
+            handle_densities = np.random.uniform(HANDLE_MIN_DENSITY, HANDLE_MAX_DENSITY, size=NUM_OBJECTS_PER_TYPE)
+            head_densities = np.random.uniform(HEAD_MIN_DENSITY, HEAD_MAX_DENSITY, size=NUM_OBJECTS_PER_TYPE)
+
+            # Sample scales
+            # Currently different for each object
+            min_handle_scales = np.array(object_size_distribution.handle_min_lengths)
+            max_handle_scales = np.array(object_size_distribution.handle_max_lengths)
+            min_head_scales = np.array(object_size_distribution.head_min_lengths) if object_size_distribution.head_min_lengths is not None else None
+            max_head_scales = np.array(object_size_distribution.head_max_lengths) if object_size_distribution.head_max_lengths is not None else None
+            handle_scales = np.random.uniform(min_handle_scales, max_handle_scales, size=(NUM_OBJECTS_PER_TYPE, len(min_handle_scales)))
+            head_scales = np.random.uniform(min_head_scales, max_head_scales, size=(NUM_OBJECTS_PER_TYPE, len(min_head_scales))) if min_head_scales is not None and max_head_scales is not None else None
+            assert handle_scales.shape in [(NUM_OBJECTS_PER_TYPE, 2), (NUM_OBJECTS_PER_TYPE, 3)], f"handle_scales shape: {handle_scales.shape}, expected ({NUM_OBJECTS_PER_TYPE}, 2) or ({NUM_OBJECTS_PER_TYPE}, 3)"
+
+            files_list.append([
+                generate_handle_head_urdf(
+                    filepath=Path(generated_assets_dir) / (f"{idx:03d}_{handle_head_type}_handle_head_{handle_scales[idx]}_{head_scales[idx] if head_scales is not None else 'None'}_{handle_densities[idx]}_{head_densities[idx] if head_densities[idx] is not None else 'None'}".replace(".", "-") + ".urdf"),
+                    handle_scale=handle_scales[idx],
+                    head_scale=head_scales[idx] if head_scales is not None else None,
+                    handle_density=handle_densities[idx],
+                    head_density=head_densities[idx] if head_scales is not None else None,
+                )
+                for idx in range(NUM_OBJECTS_PER_TYPE)
+            ]
             )
-            for idx in range(NUM_HEAD_CUBOIDS)
-        ]
-        cuboid_handle_no_head_files = [
-            generate_cuboid_urdf_constant_density(
-                filepath=Path(generated_assets_dir) / (f"{idx:03d}_handle_head_{handle_cuboid_scales[idx]}_{handle_cuboid_densities[idx]}".replace(".", "-") + ".urdf"),
-                scale=handle_cuboid_scales[idx],
-                density=handle_cuboid_densities[idx],
-            )
-            for idx in range(NUM_HEAD_CUBOIDS, NUM_HANDLE_CUBOIDS)
-        ]
-        cylinder_handle_cylinder_head_files = [
-            # generate_handle_head_urdf_variable_density(
-            generate_handle_head_urdf_variable_density_2_links(
-                filepath=Path(generated_assets_dir) / (f"{idx:03d}_handle_head_{handle_cylinder_scales[idx]}_{head_cylinder_scales[idx]}_{handle_cylinder_densities[idx]}_{head_cylinder_densities[idx]}".replace(".", "-") + ".urdf"),
-                handle_scale=handle_cylinder_scales[idx],
-                head_scale=head_cylinder_scales[idx],
-                handle_density=handle_cylinder_densities[idx],
-                head_density=head_cylinder_densities[idx],
-            )
-            for idx in range(NUM_HEAD_CYLINDERS)
-        ]
-        cylinder_handle_no_head_files = [
-            generate_cylinder_urdf_constant_density(
-                filepath=Path(generated_assets_dir) / (f"{idx:03d}_handle_head_{handle_cylinder_scales[idx]}_{handle_cylinder_densities[idx]}".replace(".", "-") + ".urdf"),
-                height=handle_cylinder_scales[idx][0],
-                diameter=handle_cylinder_scales[idx][1],
-                density=handle_cylinder_densities[idx],
-            )
-            for idx in range(NUM_HEAD_CYLINDERS, NUM_HANDLE_CYLINDERS)
-        ]
-        all_files = cuboid_handle_cuboid_head_files + cuboid_handle_no_head_files + cylinder_handle_cylinder_head_files + cylinder_handle_no_head_files
-        # NOTE: We distinguish between cuboid and cylinder by scales being either 3 or 2 elements
-        # However, scales here must be 3 elements, so we always make the third element the same as the second element for cylinders
-        all_scales = handle_cuboid_scales + [(x[0], x[1], x[1]) for x in handle_cylinder_scales]
-        assert len(all_files) == len(all_scales), f"Number of files: {len(all_files)}, number of scales: {len(all_scales)}"
+            scales_list.append(handle_scales)
+
+        all_files = [file for sublist in files_list for file in sublist]
+        all_scales = [scale for sublist in scales_list for scale in sublist]
+        def convert_scale_to_three_elements(scale):
+            # Object scales must have 3 elements
+            # Cylinders currently have 2 elements, so we make the third element the same as the second element
+            if len(scale) == 3:
+                return scale
+            elif len(scale) == 2:
+                return (scale[0], scale[1], scale[1])
+            else:
+                raise ValueError(f"Invalid scale: {scale}")
+        all_scales = [convert_scale_to_three_elements(scale) for scale in all_scales]
         need_vhacds = [False] * len(all_files)
 
         # Note, we need to make sure all_scales is rescaled by the base size
         all_scales = [(x / self.object_base_size, y / self.object_base_size, z / self.object_base_size) for (x, y, z) in all_scales]
 
         # Randomize order
-        indices = list(range(len(all_files)))
-        np.random.shuffle(indices)
-        all_files = [all_files[i] for i in indices]
-        all_scales = [all_scales[i] for i in indices]
-        need_vhacds = [need_vhacds[i] for i in indices]
-        # print(f"Indices: {indices}")
-        # print(f"All files: {all_files}")
-        # print(f"All scales: {all_scales}")
+        RANDOMIZE_ORDER = True
+        if RANDOMIZE_ORDER:
+            indices = list(range(len(all_files)))
+            np.random.shuffle(indices)
+            all_files = [all_files[i] for i in indices]
+            all_scales = [all_scales[i] for i in indices]
+            need_vhacds = [need_vhacds[i] for i in indices]
+
+        DEBUG_PRINT = False
+        if DEBUG_PRINT:
+            print(f"all_files[0]: {all_files[0]}")
+            print(f"all_scales[0]: {all_scales[0]}")
+            print(f"need_vhacds[0]: {need_vhacds[0]}")
+            # print(f"All files: {all_files}")
+            # print(f"All scales: {all_scales}")
 
         return all_files, all_scales, need_vhacds
 
@@ -1186,6 +1153,7 @@ class AllegroKukaBase(VecTask):
         table_indices = []
         object_scales = []
         object_keypoint_offsets = []
+        object_keypoint_offsets_fixed_size = []
 
         # Sanity checks
         body_names = self.gym.get_asset_rigid_body_names(allegro_kuka_asset)
@@ -1327,8 +1295,18 @@ class AllegroKukaBase(VecTask):
                 for coord_idx in range(3):
                     keypoint[coord_idx] *= object_scale[coord_idx] * self.object_base_size * self.keypoint_scale / 2
                 object_offsets.append(keypoint)
-
             object_keypoint_offsets.append(object_offsets)
+
+            # We make a version of keypoint offsets that are a fixed size for all objects
+            object_scale_fixed_size = self.cfg["env"]["fixedSize"]
+            assert len(object_scale_fixed_size) == 3, f"object_scale_fixed_size must be a 3-element list, got {len(object_scale_fixed_size)}"
+            object_offsets_fixed_size = []
+            for keypoint in self.keypoints_offsets:
+                keypoint_fixed_size = copy(keypoint)
+                for coord_idx in range(3):
+                    keypoint_fixed_size[coord_idx] *= object_scale_fixed_size[coord_idx] * self.keypoint_scale / 2  # Don't multiply by object_base_size here since it's already metric scale
+                object_offsets_fixed_size.append(keypoint_fixed_size)
+            object_keypoint_offsets_fixed_size.append(object_offsets_fixed_size)
 
             # table object
             table_handle = self.gym.create_actor(env_ptr, table_asset, table_pose, "table_object", i, 0, 0)
@@ -1364,19 +1342,20 @@ class AllegroKukaBase(VecTask):
             self.objects.append(object_handle)
 
         # Default false because this is slow
-        DEBUG_PRINT_OBJECT_MASS_AND_INERTIA = False
+        DEBUG_PRINT_OBJECT_MASS_AND_INERTIA_AND_COM = False
         # Get mass and inertia of object
-        if DEBUG_PRINT_OBJECT_MASS_AND_INERTIA:
-            original_masses, original_inertias = self._get_original_object_masses_and_inertias()
+        if DEBUG_PRINT_OBJECT_MASS_AND_INERTIA_AND_COM:
+            original_masses, original_inertias, original_coms = self._get_original_object_masses_and_inertias_and_coms()
             print(f"Original masses: {original_masses[0]}")
             print(f"Original inertias: {original_inertias[0]}")
+            print(f"Original coms: {original_coms[0]}")
             breakpoint()
 
         # Set mass and inertia of object
         MODIFY_OBJECT_MASS_AND_INERTIA = False
         if MODIFY_OBJECT_MASS_AND_INERTIA:
             # Get mass and inertia of object
-            original_masses, original_inertias = self._get_original_object_masses_and_inertias()
+            original_masses, original_inertias, original_coms = self._get_original_object_masses_and_inertias_and_coms()
             print(f"Original masses: {original_masses[0]}")
             print(f"Original inertias: {original_inertias[0]}")
 
@@ -1416,6 +1395,7 @@ class AllegroKukaBase(VecTask):
 
         self.object_scales = to_torch(object_scales, dtype=torch.float, device=self.device)
         self.object_keypoint_offsets = to_torch(object_keypoint_offsets, dtype=torch.float, device=self.device)
+        self.object_keypoint_offsets_fixed_size = to_torch(object_keypoint_offsets_fixed_size, dtype=torch.float, device=self.device)
 
         self.joint_names = self.gym.get_actor_joint_names(env_ptr, allegro_actor)
         props = self.gym.get_actor_dof_properties(env_ptr, allegro_actor)
@@ -1432,17 +1412,19 @@ class AllegroKukaBase(VecTask):
         except Exception:
             pass
 
-    def _get_original_object_masses_and_inertias(self) -> Tuple[List[float], List[Tuple[float, float, float]]]:
-        original_masses, original_inertias = [], []
+    def _get_original_object_masses_and_inertias_and_coms(self) -> Tuple[List[float], List[Tuple[float, float, float]], List[Tuple[float, float, float]]]:
+        original_masses, original_inertias, original_coms = [], [], []
         for env, object in zip(self.envs, self.objects):
             object_rb_props = self.gym.get_actor_rigid_body_properties(env, object)
             assert len(object_rb_props) == 1, f"Expected 1 rigid body, got {len(object_rb_props)}"
             object_rb_prop = object_rb_props[0]
             original_mass = object_rb_prop.mass
             original_inertia = (object_rb_prop.inertia.x.x, object_rb_prop.inertia.y.y, object_rb_prop.inertia.z.z)
+            original_com = (object_rb_prop.com.x, object_rb_prop.com.y, object_rb_prop.com.z)
             original_masses.append(original_mass)
             original_inertias.append(original_inertia)
-        return original_masses, original_inertias
+            original_coms.append(original_com)
+        return original_masses, original_inertias, original_coms
 
     def _set_actor_color(self, env, actor, color: Tuple[float, float, float]) -> None:
         for rigid_body_idx in range(self.gym.get_actor_rigid_body_count(env, actor)):
@@ -1509,21 +1491,25 @@ class AllegroKukaBase(VecTask):
         self.lifted_object = lifted_object
         return lifting_rew, lift_bonus_rew, lifted_object
 
-    def _keypoint_reward(self, lifted_object: Tensor) -> Tensor:
+    def _keypoint_reward(self, lifted_object: Tensor) -> Tuple[Tensor, Tensor]:
         # this is positive if we got closer, negative if we're further away
         max_keypoint_deltas = self.closest_keypoint_max_dist - self.keypoints_max_dist
+        max_keypoint_deltas_fixed_size = self.closest_keypoint_max_dist_fixed_size - self.keypoints_max_dist_fixed_size
 
         # update the values if we got closer to the target
         self.closest_keypoint_max_dist = torch.minimum(self.closest_keypoint_max_dist, self.keypoints_max_dist)
+        self.closest_keypoint_max_dist_fixed_size = torch.minimum(self.closest_keypoint_max_dist_fixed_size, self.keypoints_max_dist_fixed_size)
 
         # clip between zero and +inf to turn deltas into rewards
         max_keypoint_deltas = torch.clip(max_keypoint_deltas, 0, 100)
+        max_keypoint_deltas_fixed_size = torch.clip(max_keypoint_deltas_fixed_size, 0, 100)
 
         # administer reward only when we already lifted an object from the table
         # to prevent the situation where the agent just rolls it around the table
         keypoint_rew = max_keypoint_deltas * lifted_object
+        keypoint_rew_fixed_size = max_keypoint_deltas_fixed_size * lifted_object
 
-        return keypoint_rew
+        return keypoint_rew, keypoint_rew_fixed_size
 
     def _action_penalties(self) -> Tuple[Tensor, Tensor]:
         kuka_actions_penalty = (
@@ -1670,12 +1656,17 @@ class AllegroKukaBase(VecTask):
     def compute_kuka_reward(self) -> Tuple[Tensor, Tensor]:
         lifting_rew, lift_bonus_rew, lifted_object = self._lifting_reward()
         fingertip_delta_rew, hand_delta_penalty = self._distance_delta_rewards(lifted_object)
-        keypoint_rew = self._keypoint_reward(lifted_object)
+        keypoint_rew, keypoint_rew_fixed_size = self._keypoint_reward(lifted_object)
+        if self.cfg["env"]["fixedSizeKeypointReward"]:
+            keypoint_rew = keypoint_rew_fixed_size
 
         keypoint_success_tolerance = self.success_tolerance * self.keypoint_scale
 
         # noinspection PyTypeChecker
         near_goal: Tensor = self.keypoints_max_dist <= keypoint_success_tolerance
+        near_goal_fixed_size: Tensor = self.keypoints_max_dist_fixed_size <= keypoint_success_tolerance
+        if self.cfg["env"]["fixedSizeKeypointReward"]:
+            near_goal = near_goal_fixed_size
         self.near_goal_steps += near_goal
 
         is_success = self.near_goal_steps >= self.success_steps
@@ -1852,6 +1843,28 @@ class AllegroKukaBase(VecTask):
         self.object_pose = self.root_state_tensor[self.object_indices, 0:7]
         self.object_pos = self.root_state_tensor[self.object_indices, 0:3]
 
+        # Ultra hack: Move the perceived object position up by 0.1 meters
+        # from copy import deepcopy
+        # D = [0.00, 0.02, -0.02]
+        # D = [0.0, 0.0, 0.015]
+        # D = [0.0, 0.0, -0.015]
+        # D = [0.0, 0.01, 0.0]
+        # DX = D[0]
+        # DY = D[1]
+        # DZ = D[2]
+        # self.object_state = deepcopy(self.object_state)
+        # self.object_state[:, 0] += DX
+        # self.object_state[:, 1] += DY
+        # self.object_state[:, 2] += DZ
+        # self.object_pose = deepcopy(self.object_pose)
+        # self.object_pose[:, 0] += DX
+        # self.object_pose[:, 1] += DY
+        # self.object_pose[:, 2] += DZ
+        # self.object_pos = deepcopy(self.object_pos)
+        # self.object_pos[:, 0] += DX
+        # self.object_pos[:, 1] += DY
+        # self.object_pos[:, 2] += DZ
+
         self.object_rot = self.root_state_tensor[self.object_indices, 3:7]
         self.object_linvel = self.root_state_tensor[self.object_indices, 7:10]
         self.object_angvel = self.root_state_tensor[self.object_indices, 10:13]
@@ -1946,22 +1959,35 @@ class AllegroKukaBase(VecTask):
                 self.observed_object_rot, self.object_keypoint_offsets[:, i]
             )
 
+            self.obj_keypoint_pos_fixed_size[:, i] = self.object_pos + quat_rotate(
+                self.object_rot, self.object_keypoint_offsets_fixed_size[:, i]
+            )
+            self.goal_keypoint_pos_fixed_size[:, i] = self.goal_pos + quat_rotate(
+                self.goal_rot, self.object_keypoint_offsets_fixed_size[:, i]
+            )
+
         self.keypoints_rel_goal = self.obj_keypoint_pos - self.goal_keypoint_pos
         self.observed_keypoints_rel_goal = self.observed_obj_keypoint_pos - self.goal_keypoint_pos
+        self.keypoints_rel_goal_fixed_size = self.obj_keypoint_pos_fixed_size - self.goal_keypoint_pos_fixed_size
 
         palm_center_repeat = self.palm_center_pos.unsqueeze(1).repeat(1, self.num_keypoints, 1)
         self.keypoints_rel_palm = self.obj_keypoint_pos - palm_center_repeat
         self.observed_keypoints_rel_palm = self.observed_obj_keypoint_pos - palm_center_repeat
 
         self.keypoint_distances_l2 = torch.norm(self.keypoints_rel_goal, dim=-1)
+        self.keypoint_distances_l2_fixed_size = torch.norm(self.keypoints_rel_goal_fixed_size, dim=-1)
 
         # furthest keypoint from the goal
         self.keypoints_max_dist = self.keypoint_distances_l2.max(dim=-1).values
+        self.keypoints_max_dist_fixed_size = self.keypoint_distances_l2_fixed_size.max(dim=-1).values
 
         # this is the closest the keypoint had been to the target in the current episode (for the furthest keypoint of all)
         # make sure we initialize this value before using it for obs or rewards
         self.closest_keypoint_max_dist = torch.where(
             self.closest_keypoint_max_dist < 0.0, self.keypoints_max_dist, self.closest_keypoint_max_dist
+        )
+        self.closest_keypoint_max_dist_fixed_size = torch.where(
+            self.closest_keypoint_max_dist_fixed_size < 0.0, self.keypoints_max_dist_fixed_size, self.closest_keypoint_max_dist_fixed_size
         )
 
     def populate_obs_and_states_buffers(self) -> None:
@@ -2002,6 +2028,9 @@ class AllegroKukaBase(VecTask):
         obs_dict["object_vel"] = self.object_state[:, 7:13]
         # closest distance to the furthest keypoint, achieved so far in this episode
         obs_dict["closest_keypoint_max_dist"] = self.closest_keypoint_max_dist.unsqueeze(-1)
+        if self.cfg["env"]["fixedSizeKeypointReward"]:
+            obs_dict["closest_keypoint_max_dist_fixed_size"] = self.closest_keypoint_max_dist_fixed_size.unsqueeze(-1)
+
         # closest distance between a fingertip and an object achieved since last target reset
         # this should help the critic predict the anticipated fingertip reward
         obs_dict["closest_fingertip_dist"] = self.closest_fingertip_dist.unsqueeze(-1)
@@ -2198,6 +2227,7 @@ class AllegroKukaBase(VecTask):
             self.prev_total_episode_closest_keypoint_max_dist[env_ids] = self.total_episode_closest_keypoint_max_dist[env_ids]
             self.total_episode_closest_keypoint_max_dist[env_ids] += torch.where(self.closest_keypoint_max_dist[env_ids] > 0, self.closest_keypoint_max_dist[env_ids], torch.zeros_like(self.closest_keypoint_max_dist[env_ids]))
             self.closest_keypoint_max_dist[env_ids] = -1
+            self.closest_keypoint_max_dist_fixed_size[env_ids] = -1
 
     def reset_object_pose(self, env_ids: Tensor, reset_buf_idxs=None, tensor_reset=True):
         if len(env_ids) > 0 and reset_buf_idxs is None and tensor_reset:
@@ -2589,6 +2619,11 @@ class AllegroKukaBase(VecTask):
                 * self.force_scale
             )
 
+            if self.cfg["env"]["forceOnlyWhenLifted"]:
+                # self.rb_forces is (N, R, 3), assuming there are R rigid bodies per env
+                # self.lifted_object is (N,), True if the object is lifted
+                self.rb_forces[:, self.object_rb_handles, :] *= self.lifted_object.unsqueeze(1).unsqueeze(2)
+
             self.gym.apply_rigid_body_force_tensors(
                 self.sim, gymtorch.unwrap_tensor(self.rb_forces), None, gymapi.ENV_SPACE
             )
@@ -2902,6 +2937,7 @@ class AllegroKukaBase(VecTask):
             sphere_pose.r = gymapi.Quat(0, 0, 0, 1)
             sphere_geom = gymutil.WireframeSphereGeometry(0.01, 8, 8, sphere_pose, color=(1, 1, 0))
             sphere_geom_white = gymutil.WireframeSphereGeometry(0.02, 8, 8, sphere_pose, color=(1, 1, 1))
+            sphere_geom_black = gymutil.WireframeSphereGeometry(0.01, 8, 8, sphere_pose, color=(0, 0, 0))
 
             palm_center_pos_cpu = self.palm_center_pos.cpu().numpy()
             palm_rot_cpu = self._palm_rot.cpu().numpy()
@@ -2946,6 +2982,8 @@ class AllegroKukaBase(VecTask):
             for j in range(self.num_keypoints):
                 keypoint_pos_cpu = self.obj_keypoint_pos[:, j].cpu().numpy()
                 goal_keypoint_pos_cpu = self.goal_keypoint_pos[:, j].cpu().numpy()
+                keypoint_pos_fixed_size_cpu = self.obj_keypoint_pos_fixed_size[:, j].cpu().numpy()
+                goal_keypoint_pos_fixed_size_cpu = self.goal_keypoint_pos_fixed_size[:, j].cpu().numpy()
 
                 for i in range(self.num_envs):
                     keypoint_transform = gymapi.Transform()
@@ -2955,6 +2993,14 @@ class AllegroKukaBase(VecTask):
                     goal_keypoint_transform = gymapi.Transform()
                     goal_keypoint_transform.p = gymapi.Vec3(*goal_keypoint_pos_cpu[i])
                     gymutil.draw_lines(sphere_geom, self.gym, self.viewer, self.envs[i], goal_keypoint_transform)
+
+                    keypoint_transform_fixed_size = gymapi.Transform()
+                    keypoint_transform_fixed_size.p = gymapi.Vec3(*keypoint_pos_fixed_size_cpu[i])
+                    gymutil.draw_lines(sphere_geom_black, self.gym, self.viewer, self.envs[i], keypoint_transform_fixed_size)
+
+                    goal_keypoint_transform_fixed_size = gymapi.Transform()
+                    goal_keypoint_transform_fixed_size.p = gymapi.Vec3(*goal_keypoint_pos_fixed_size_cpu[i])
+                    gymutil.draw_lines(sphere_geom_black, self.gym, self.viewer, self.envs[i], goal_keypoint_transform_fixed_size)
 
             # Visualize object and goal pose
             for i in range(self.num_envs):

@@ -22,10 +22,25 @@ from isaacgymenvs.utils.observation_action_utils_sharpa import (
     Q_LOWER_LIMITS_restricted_np as Q_LOWER_LIMITS_np,
     Q_UPPER_LIMITS_restricted_np as Q_UPPER_LIMITS_np,
 )
+from isaacgymenvs.utils.objects import (
+    NAME_TO_OBJECT,
+)
 
 
 T_W_R = np.eye(4)
 T_W_R[:3, 3] = np.array([0.0, 0.8, 0.0])
+
+
+def xyzw_to_wxyz(xyzw: np.ndarray) -> np.ndarray:
+    x, y, z, w = xyzw
+    return np.array([w, x, y, z])
+
+def wxyz_to_xyzw(wxyz: np.ndarray) -> np.ndarray:
+    w, x, y, z = wxyz
+    return np.array([x, y, z, w])
+
+def error(message: str):
+    print(colored(message, "red"))
 
 def warn(message: str):
     print(colored(message, "yellow"))
@@ -84,11 +99,63 @@ def pose_msg_to_T(msg: Pose) -> np.ndarray:
     ).as_matrix()
     return T
 
+def pos_quat_xyzw_to_pose_msg(pos: np.ndarray, quat_xyzw: np.ndarray) -> Pose:
+    pose_msg = Pose()
+    pose_msg.position.x = pos[0]
+    pose_msg.position.y = pos[1]
+    pose_msg.position.z = pos[2]
+    pose_msg.orientation.x = quat_xyzw[0]
+    pose_msg.orientation.y = quat_xyzw[1]
+    pose_msg.orientation.z = quat_xyzw[2]
+    pose_msg.orientation.w = quat_xyzw[3]
+    return pose_msg
+
 
 def T_to_pos_quat_xyzw(T: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     pos = T[:3, 3]
     quat_xyzw = R.from_matrix(T[:3, :3]).as_quat()
     return pos, quat_xyzw
+
+def T_to_pose(T: np.ndarray) -> np.ndarray:
+    pos, quat_xyzw = T_to_pos_quat_xyzw(T)
+    pose = np.concatenate([pos, quat_xyzw])
+    return pose
+
+
+def pos_quat_xyzw_to_T(pos: np.ndarray, quat_xyzw: np.ndarray) -> np.ndarray:
+    T = np.eye(4)
+    T[:3, 3] = pos
+    T[:3, :3] = R.from_quat(quat_xyzw).as_matrix()
+    return T
+
+def pose_to_T(pose: np.ndarray) -> np.ndarray:
+    pos, quat_xyzw = pose[:3], pose[3:]
+    return pos_quat_xyzw_to_T(pos, quat_xyzw)
+
+
+def dist_Ts(T1s: np.ndarray, T2s: np.ndarray, rot_weight: float = 1.0) -> np.ndarray:
+    N = T1s.shape[0]
+    assert T1s.shape == (N, 4, 4), f"T1s.shape: {T1s.shape}, expected: (N, 4, 4)"
+    assert T2s.shape == (N, 4, 4), f"T2s.shape: {T2s.shape}, expected: (N, 4, 4)"
+
+    # 1. Translation Distance (L2 Norm)
+    # Norm along the last dimension of the translation vector
+    pos_err = np.linalg.norm(T1s[..., :3, 3] - T2s[..., :3, 3], axis=-1)
+
+    # 2. Rotation Distance (Geodesic / Angle of Rotation)
+    # We want trace(R1 @ R2.T). 
+    # Efficiently computed as element-wise dot product of the rotation blocks.
+    # sum(A_ij * B_ij) is equivalent to trace(A @ B.T)
+    # We sum over the last two dimensions (-1, -2) which are the 3x3 rows/cols.
+    R_prod_trace = np.sum(T1s[..., :3, :3] * T2s[..., :3, :3], axis=(-1, -2))
+    
+    # Clip trace to valid domain [-1, 3] to prevent NaN in arccos due to float error
+    R_prod_trace = np.clip(R_prod_trace, -1.0, 3.0)
+    
+    # theta = arccos((Trace - 1) / 2)
+    rot_err = np.arccos((R_prod_trace - 1.0) / 2.0)
+
+    return pos_err + (rot_weight * rot_err)
 
 
 class RLPolicyNode:
@@ -98,17 +165,21 @@ class RLPolicyNode:
         checkpoint_path: Path,
         hand_moving_average: float,
         arm_moving_average: float,
+        hand_dof_speed_scale: float,
         object_scales: np.ndarray,
         save_foldername: Optional[str] = None,
         overwrite_targets_filepath: Optional[Path] = None,
+        use_relative_object_pose_once_lifted: bool = False,
     ):
         self.config_path = config_path
         self.checkpoint_path = checkpoint_path
         self.hand_moving_average = hand_moving_average
         self.arm_moving_average = arm_moving_average
+        self.hand_dof_speed_scale = hand_dof_speed_scale
         self.object_scales = object_scales
         self.save_foldername = save_foldername
         self.overwrite_targets_filepath = overwrite_targets_filepath
+        self.use_relative_object_pose_once_lifted = use_relative_object_pose_once_lifted
 
         assert_equals(object_scales.shape, (3,))
 
@@ -367,6 +438,245 @@ class RLPolicyNode:
         sharpa_msg.position = joint_pos_targets[7:].tolist()
         self.sharpa_joint_cmd_pub.publish(sharpa_msg)
 
+    def _initialize_relative_object_pose_logic(
+        self,
+        q: np.ndarray,
+        q_target: np.ndarray,
+        T_R_O_lifted: np.ndarray,
+        object_type: str,
+        object_name: str,
+        trajectory_name: str,
+    ):
+        assert_equals(q.shape, (29,))
+        assert_equals(q_target.shape, (29,))
+        assert_equals(T_R_O_lifted.shape, (4, 4))
+
+        info("=" * 100)
+        info("Initializing relative object pose logic")
+        info("=" * 100)
+
+        # Load PK chain for fk and jacobian for ik
+        import pytorch_kinematics as pk
+        from isaacgymenvs.utils.utils import get_repo_root_dir
+        KUKA_SHARPA_URDF_PATH = get_repo_root_dir() / "assets/urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted_restricted.urdf"
+        assert KUKA_SHARPA_URDF_PATH.exists(), (
+            f"KUKA_SHARPA_URDF_PATH not found: {KUKA_SHARPA_URDF_PATH}"
+        )
+        with open(KUKA_SHARPA_URDF_PATH, "rb") as f:
+            urdf_str = f.read()
+        DEVICE = "cpu"
+        self.arm_pk_chain = pk.build_serial_chain_from_urdf(
+            urdf_str,
+            end_link_name="left_hand_C_MC",
+        ).to(device=DEVICE)
+
+        # Store the hand target when the object was lifted
+        # Will keep this hand target fixed moving forward
+        q_hand_lifted_target = q_target[7:].copy()  # Will keep this hand target fixed moving forward
+        assert q_hand_lifted_target.shape == (22,), f"q_hand_lifted_target.shape: {q_hand_lifted_target.shape}, expected: (22,)"
+
+        # We want to store T_O_P_lifted, which is the pose of the palm relative to the object at the time of lifting
+        # We want this constant over time moving forward
+        # Note that O here refers to the OBJECT not the GOAL OBJECT
+        # This is because we are initializing based on the object being lifted, not necessarily the goal object pose being reached
+        # Thus, we care about the palm relative to the object, not relative to the goal object
+        from human_demo.visualize_demo import compute_current_T_R_P
+        q_arm_lifted = q[:7].copy()
+        assert q_arm_lifted.shape == (7,), f"q_arm_lifted.shape: {q_arm_lifted.shape}, expected: (7,)"
+        T_R_P_lifted = compute_current_T_R_P(arm_pk_chain=self.arm_pk_chain, q_arm=q_arm_lifted)
+        T_O_P_lifted = np.linalg.inv(T_R_O_lifted) @ T_R_P_lifted
+
+        # Load goal object pose trajectory
+        # Assumes this is in world frame
+        # Stop listening to the published one
+        import json
+        object_pose_trajectory_filepath = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
+        assert object_pose_trajectory_filepath.exists(), f"object_pose_trajectory_filepath not found: {object_pose_trajectory_filepath}"
+        with open(object_pose_trajectory_filepath, "r") as f:
+            goal_pose_trajectory_full = np.array(json.load(f)["goals"])
+        old_T = len(goal_pose_trajectory_full)
+
+        # Upsample the goal object pose trajectory
+        SLOWDOWN_FACTOR = 4  # This runs at 60Hz, data is at 30Hz, prob run 2x slower too
+        assert goal_pose_trajectory_full.shape == (old_T, 7), f"goal_pose_trajectory_full.shape: {goal_pose_trajectory_full.shape}, expected: (old_T, 7)"
+        new_T = old_T * SLOWDOWN_FACTOR
+        goal_pose_trajectory_full_repeated = goal_pose_trajectory_full.reshape(old_T, 1, 7).repeat(SLOWDOWN_FACTOR, axis=1).reshape(new_T, 7)
+
+        # Remove the initial part of trajectory that is before the object was lifted
+        # Find idx that minimizes dist(goal_object_pose_trajectory[idx], T_W_O_lifted)
+        # TODO: Consider using T_W_G_lifted instead of T_W_O_lifted
+        T_W_O_lifted = T_W_R @ T_R_O_lifted
+        T_W_O_trajectory_full_repeated = np.array([pose_to_T(goal_pose_trajectory_full_repeated[idx]) for idx in range(new_T)])
+        distances = dist_Ts(
+            T1s=T_W_O_trajectory_full_repeated,
+            T2s=T_W_O_lifted[None].repeat(new_T, axis=0),
+        )
+        self.goal_idx = np.argmin(distances)
+        info(f"Distances: {distances.tolist()}")
+        info(f"Goal idx starting at: {self.goal_idx}")
+
+        # Store the trajectory after the object was lifted
+        self.T_W_O_trajectory = np.array([T_W_O_trajectory_full_repeated[i] for i in range(len(T_W_O_trajectory_full_repeated)) if i >= self.goal_idx])
+
+        # Compute the wrist pose trajectory for the trajectory after the object was lifted
+        self.T_W_Ps_using_lifted_object_pose = np.array([self.T_W_O_trajectory[i] @ T_O_P_lifted for i in range(len(self.T_W_O_trajectory))])
+
+        # Filter the poses
+        from human_demo.visualize_demo import filter_poses
+        self.T_W_Ps_using_lifted_object_pose = filter_poses(self.T_W_Ps_using_lifted_object_pose)
+
+        TRAJECTORY_LENGTH = self.T_W_Ps_using_lifted_object_pose.shape[0]
+        assert self.T_W_O_trajectory.shape == (TRAJECTORY_LENGTH, 4, 4), f"self.T_W_O_trajectory.shape: {self.T_W_O_trajectory.shape}, expected: (TRAJECTORY_LENGTH, 4, 4)"
+        assert self.T_W_Ps_using_lifted_object_pose.shape == (TRAJECTORY_LENGTH, 4, 4), f"self.T_W_Ps_using_lifted_object_pose.shape: {self.T_W_Ps_using_lifted_object_pose.shape}, expected: (TRAJECTORY_LENGTH, 4, 4)"
+
+        # IK for the arm targets, starting from the current arm joint positions
+        # This uses pseudoinverse IK which needs to be relative to some reference arm joint positions
+        # We start from the current arm joint positions and iteratively compute the next arm joint positions
+        q_arm = q[:7].copy()
+        q_arm_targets_using_lifted_object_pose = []
+        from tqdm import tqdm
+        for i in tqdm(range(TRAJECTORY_LENGTH), desc="Computing arm targets using lifted object pose"):
+            from human_demo.visualize_demo import compute_new_q_arm
+            T_W_P_using_lifted_object_pose = self.T_W_Ps_using_lifted_object_pose[i]
+            T_R_W = np.linalg.inv(T_W_R)
+            T_R_P_using_lifted_object_pose = T_R_W @ T_W_P_using_lifted_object_pose
+            q_arm = compute_new_q_arm(
+                arm_pk_chain=self.arm_pk_chain,
+                target_wrist_pose=T_R_P_using_lifted_object_pose,
+                q_arm=q_arm,
+            )
+            q_arm_targets_using_lifted_object_pose.append(q_arm.copy())
+        q_arm_targets_using_lifted_object_pose = np.array(q_arm_targets_using_lifted_object_pose)
+        assert q_arm_targets_using_lifted_object_pose.shape == (TRAJECTORY_LENGTH, 7), f"q_arm_targets_using_lifted_object_pose.shape: {q_arm_targets_using_lifted_object_pose.shape}, expected: (TRAJECTORY_LENGTH, 7)"
+
+        # Concatenate the arm targets and the hand target
+        self.q_targets_using_lifted_object_pose = np.concatenate([q_arm_targets_using_lifted_object_pose, q_hand_lifted_target[None].repeat(TRAJECTORY_LENGTH, axis=0)], axis=1)
+        assert self.q_targets_using_lifted_object_pose.shape == (TRAJECTORY_LENGTH, 29), f"self.q_targets_using_lifted_object_pose.shape: {self.q_targets_using_lifted_object_pose.shape}, expected: (TRAJECTORY_LENGTH, 29)"
+
+
+    def _visualize_relative_object_pose_logic(self, q_targets_using_lifted_object_pose: np.ndarray, T_W_Ps_using_lifted_object_pose: np.ndarray, T_W_O_trajectory: np.ndarray) -> None:
+        TRAJECTORY_LENGTH = q_targets_using_lifted_object_pose.shape[0]
+        assert q_targets_using_lifted_object_pose.shape == (TRAJECTORY_LENGTH, 29), f"q_targets_using_lifted_object_pose.shape: {q_targets_using_lifted_object_pose.shape}, expected: (TRAJECTORY_LENGTH, 29)"
+        assert T_W_Ps_using_lifted_object_pose.shape == (TRAJECTORY_LENGTH, 4, 4), f"T_W_Ps_using_lifted_object_pose.shape: {T_W_Ps_using_lifted_object_pose.shape}, expected: (TRAJECTORY_LENGTH, 4, 4)"
+        assert T_W_O_trajectory.shape == (TRAJECTORY_LENGTH, 4, 4), f"T_W_O_trajectory.shape: {T_W_O_trajectory.shape}, expected: (TRAJECTORY_LENGTH, 4, 4)"
+
+        import viser
+        from viser.extras import ViserUrdf
+        from isaacgymenvs.utils.utils import get_repo_root_dir
+
+        SERVER = viser.ViserServer()
+        AXES_LENGTH = 0.0
+        AXES_RADIUS = 0.0
+
+        # Load table
+        TABLE_URDF_PATH = get_repo_root_dir() / "assets/urdf/table_narrow.urdf"
+        assert TABLE_URDF_PATH.exists(), f"TABLE_URDF_PATH not found: {TABLE_URDF_PATH}"
+
+        table_frame = SERVER.scene.add_frame(
+            "/table", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS, position=(0, 0, 0.38), wxyz=(1, 0, 0, 0),
+        )
+        table_viser = ViserUrdf(SERVER, TABLE_URDF_PATH, root_node_name="/table")
+
+        # Load robot
+        KUKA_SHARPA_URDF_PATH = get_repo_root_dir() / "assets/urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted_restricted.urdf"
+        assert KUKA_SHARPA_URDF_PATH.exists(), (
+            f"KUKA_SHARPA_URDF_PATH not found: {KUKA_SHARPA_URDF_PATH}"
+        )
+        kuka_sharpa_frame = SERVER.scene.add_frame(
+            "/robot/state", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS, position=(0, 0.8, 0), wxyz=(1, 0, 0, 0),
+        )
+        kuka_sharpa_viser = ViserUrdf(
+            SERVER, KUKA_SHARPA_URDF_PATH, root_node_name="/robot/state"
+        )
+        HOME_JOINT_POS_IIWA = np.array([-1.571, 1.571 - np.deg2rad(10), -0.000, 1.376 + np.deg2rad(10), -0.000, 1.485, 1.308])
+        HOME_JOINT_POS_SHARPA = np.zeros(22)
+        HOME_JOINT_POS = np.concatenate([HOME_JOINT_POS_IIWA, HOME_JOINT_POS_SHARPA])
+        kuka_sharpa_viser.update_cfg(HOME_JOINT_POS)
+
+        # Load floating hand
+        SHARPA_URDF_PATH = get_repo_root_dir() / "assets/urdf/left_sharpa_ha4/left_sharpa_ha4_v2_1_adjusted_restricted.urdf"
+        assert SHARPA_URDF_PATH.exists(), (
+            f"SHARPA_URDF_PATH not found: {SHARPA_URDF_PATH}"
+        )
+        sharpa_frame = SERVER.scene.add_frame(
+            "/sharpa", show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS, position=(100, 0, 0), wxyz=(1, 0, 0, 0),
+        )
+        sharpa_viser = ViserUrdf(SERVER, SHARPA_URDF_PATH, root_node_name="/sharpa")
+        sharpa_viser.update_cfg(HOME_JOINT_POS_SHARPA)
+
+        # Load object
+        from isaacgymenvs.utils.objects import NAME_TO_OBJECT
+        while True:
+            # Ask user for object name
+            available_objects = list(NAME_TO_OBJECT.keys())
+            info(f"Available objects: {', '.join(available_objects)}")
+            user_input = input(colored("Enter object name (or 'q' for default 'mallet'): ", "cyan"))
+
+            if user_input.lower() == 'q':
+                object_name = "mallet"
+                info(f"Using default object: {object_name}")
+                break
+            elif user_input in NAME_TO_OBJECT:
+                object_name = user_input
+                info(f"Using object: {object_name}")
+                break
+            else:
+                warn(f"Object '{user_input}' not found in NAME_TO_OBJECT. Please try again.")
+        OBJECT_URDF_PATH = NAME_TO_OBJECT[object_name].filepath
+        object_frame_viser = SERVER.scene.add_frame(
+            "/object",
+            position=(100, 0, 0),
+            wxyz=(1, 0, 0, 0),
+            show_axes=True, axes_length=AXES_LENGTH, axes_radius=AXES_RADIUS,
+        )
+        object_viser = ViserUrdf(SERVER, OBJECT_URDF_PATH, root_node_name=object_frame_viser.name)
+
+        from tqdm import tqdm
+        while True:
+            for i in tqdm(range(TRAJECTORY_LENGTH), desc="Visualizing trajectory"):
+                start_time = time.time()
+
+                # Update joints
+                q_target = q_targets_using_lifted_object_pose[i]
+                assert q_target.shape == (29,), f"q_target.shape: {q_target.shape}, expected: (29,)"
+                kuka_sharpa_viser.update_cfg(q_target)
+                sharpa_viser.update_cfg(q_target[7:])
+
+                # Update floating hand position
+                T_W_P_using_lifted_object_pose = T_W_Ps_using_lifted_object_pose[i]
+                sharpa_frame.position = T_W_P_using_lifted_object_pose[:3, 3]
+                sharpa_frame.wxyz = xyzw_to_wxyz(R.from_matrix(T_W_P_using_lifted_object_pose[:3, :3]).as_quat())
+
+                # Update object position
+                object_frame_viser.position = T_W_O_trajectory[i][:3, 3]
+                object_frame_viser.wxyz = xyzw_to_wxyz(R.from_matrix(T_W_O_trajectory[i][:3, :3]).as_quat())
+
+                end_time = time.time()
+                loop_dt = end_time - start_time
+                sleep_dt = 1/60 - loop_dt
+                if sleep_dt > 0:
+                    time.sleep(sleep_dt)
+                else:
+                    warn(f"Loop too slow! Desired FPS = 60, Actual FPS = {1/loop_dt:.1f}")
+
+            # Ask user if they want to continue or revisualize
+            while True:
+                user_input = input(colored("Press 'r' to revisualize, or 'c' to continue, or 'b' to breakpoint: ", "cyan"))
+                if user_input.lower() == 'r':
+                    info("Restarting visualization loop")
+                    break
+                elif user_input.lower() == 'c':
+                    info("Continuing to use this trajectory")
+                    break
+                elif user_input.lower() == 'b':
+                    info("Breakpointing")
+                    breakpoint()
+                else:
+                    warn("Invalid input. Please enter 'r' or 'c'.")
+
+            if user_input.lower() == 'c':
+                break
+
     def _wait_and_warmup(self):
         assert not self._warmup_completed, "Warmup already completed"
 
@@ -411,13 +721,17 @@ class RLPolicyNode:
             # normalized_action = torch.zeros(1, self.num_actions, device=self.device)
             assert_equals(normalized_action.shape, (1, self.num_actions))
 
+            DUMMY_HAND_MOVING_AVERAGE = 0.1
+            DUMMY_ARM_MOVING_AVERAGE = 0.1
+            DUMMY_HAND_DOF_SPEED_SCALE = 2.5
+            DUMMY_DT = 1/60
             _ = compute_joint_pos_targets(
                 actions=normalized_action.cpu().numpy(),
                 prev_targets=self.prev_targets[None],
-                hand_moving_average=0.1,
-                arm_moving_average=0.1,
-                hand_dof_speed_scale=2.5,
-                dt=1/60,
+                hand_moving_average=DUMMY_HAND_MOVING_AVERAGE,
+                arm_moving_average=DUMMY_ARM_MOVING_AVERAGE,
+                hand_dof_speed_scale=DUMMY_HAND_DOF_SPEED_SCALE,
+                dt=DUMMY_DT,
             )
 
             # We do not actually use the joint pos targets computed by the policy, we use the actual joint states so it doesn't move
@@ -457,10 +771,7 @@ class RLPolicyNode:
             # t3 is the time that the robot receives the targets (not captured here)
 
             # Create observation from the latest messages
-            t1 = rospy.Time.now()
-            t00 = time.time()
-            obs, q, t0 = self.create_observation()
-            t01 = time.time()
+            obs, q, _ = self.create_observation()
             assert obs is not None and q is not None, f"obs: {obs}, q: {q}"
 
             assert_equals(obs.shape, (1, self.num_observations))
@@ -470,20 +781,17 @@ class RLPolicyNode:
                 obs=obs,
                 deterministic_actions=True,
             )
-            t02 = time.time()
             assert_equals(normalized_action.shape, (1, self.num_actions))
 
-            HAND_DOF_SPEED_SCALE = 2.5
             DT = 1 / 60
             joint_pos_targets = compute_joint_pos_targets(
                 actions=normalized_action.cpu().numpy(),
                 prev_targets=self.prev_targets[None],
                 hand_moving_average=self.hand_moving_average,
                 arm_moving_average=self.arm_moving_average,
-                hand_dof_speed_scale=HAND_DOF_SPEED_SCALE,
+                hand_dof_speed_scale=self.hand_dof_speed_scale,
                 dt=DT,
             )
-            t03 = time.time()
             assert_equals(joint_pos_targets.shape, (1, self.num_actions))
 
             # Clamp
@@ -492,7 +800,6 @@ class RLPolicyNode:
                 Q_LOWER_LIMITS_np,
                 Q_UPPER_LIMITS_np,
             )
-            t04 = time.time()
 
             if self.overwrite_targets_filepath is not None:
                 if self.current_step >= self.q_targets_from_file.shape[0]:
@@ -501,41 +808,72 @@ class RLPolicyNode:
                 assert self.current_step < self.q_targets_from_file.shape[0], f"current_step: {self.current_step}, expected: < {self.q_targets_from_file.shape[0]}"
                 joint_pos_targets = self.q_targets_from_file[self.current_step][None]
                 self.current_step += 1
-            t05 = time.time()
+
+            if self.use_relative_object_pose_once_lifted:
+                if not hasattr(self, "object_lifted"):
+                    self.object_lifted = False
+
+                # Check if the object has been lifted
+                LIFTED_Z = 0.65
+                prev_object_lifted = self.object_lifted
+                self.object_lifted = prev_object_lifted or (self.object_pose_msg.pose.position.z >= LIFTED_Z)
+                just_lifted = self.object_lifted and not prev_object_lifted
+
+                # When just lifted, initialize the relative object pose logic and visualize it
+                if just_lifted:
+                    T_R_O_lifted = pose_msg_to_T(copy.deepcopy(self.object_pose_msg.pose))  # Object pose in robot frame
+                    # T_R_O_lifted = pose_msg_to_T(copy.deepcopy(self.goal_object_pose_msg))  # Goal object pose in robot frame
+                    self._initialize_relative_object_pose_logic(
+                        q=q,
+                        q_target=joint_pos_targets[0],
+                        T_R_O_lifted=T_R_O_lifted,
+                        object_type="hammer",
+                        object_name="mallet",
+                        trajectory_name="horizontal_swing_human_closer",
+                    )
+                    self._visualize_relative_object_pose_logic(
+                        q_targets_using_lifted_object_pose=self.q_targets_using_lifted_object_pose,
+                        T_W_Ps_using_lifted_object_pose=self.T_W_Ps_using_lifted_object_pose,
+                        T_W_O_trajectory=self.T_W_O_trajectory,
+                    )
+
+                    self.goal_object_pose_pub = rospy.Publisher("/robot_frame/goal_object_pose", Pose, queue_size=1)
+
+                # When the object is lifted, use the relative object pose logic to compute the joint pos targets
+                if self.object_lifted:
+                    # Update the joint pos targets
+                    if not hasattr(self, "trajectory_idx"):
+                        self.trajectory_idx = 0
+                    joint_pos_targets = self.q_targets_using_lifted_object_pose[self.trajectory_idx][None]
+
+                    # Publish the goal object pose
+                    current_T_W_G = self.T_W_O_trajectory[self.trajectory_idx]
+                    current_T_R_G = np.linalg.inv(T_W_R) @ current_T_W_G
+                    current_goal_object_pos, current_goal_object_quat_xyzw = T_to_pos_quat_xyzw(current_T_R_G)
+                    goal_object_pose_msg = pos_quat_xyzw_to_pose_msg(pos=current_goal_object_pos, quat_xyzw=current_goal_object_quat_xyzw)
+                    self.goal_object_pose_pub.publish(goal_object_pose_msg)
+
+                    # Update the trajectory index
+                    self.trajectory_idx += 1
+                    if self.trajectory_idx >= self.q_targets_using_lifted_object_pose.shape[0]:
+                        self.trajectory_idx = self.q_targets_using_lifted_object_pose.shape[0] - 1
+                        info(f"Reached end of q_targets_using_lifted_object_pose, setting to last target {self.trajectory_idx}")
+
+            # Sanity check that the joint pos targets are not too far from the current joint positions
+            q_arm_diff_deg = np.rad2deg(np.abs(joint_pos_targets[0, :7] - q[:7]))
+            MAX_Q_ARM_DIFF_DEG = 10
+            if q_arm_diff_deg.max() > MAX_Q_ARM_DIFF_DEG:
+                error(f"Joint pos targets are too far from current joint positions, q_arm_diff: {q_arm_diff_deg} (max: {MAX_Q_ARM_DIFF_DEG})")
+                breakpoint()
 
             # Publish the targets
-            t1_5 = rospy.Time.now()
-            dt01_ms = (t1 - t0).to_sec() * 1000
-            dt11_5_ms = (t1_5 - t1).to_sec() * 1000
-            t06 = time.time()
             self.publish_targets(joint_pos_targets)
-            t07 = time.time()
             self.prev_targets = joint_pos_targets[0]
-            t08 = time.time()
-            t2 = rospy.Time.now()
-            dt1_5_2_ms = (t2 - t1_5).to_sec() * 1000
 
             # End of loop timekeeping
             end_loop_no_sleep_time = time.time()
             loop_no_sleep_dt = end_loop_no_sleep_time - start_loop_no_sleep_time
             loop_no_sleep_dts.append(loop_no_sleep_dt)
-
-            # Print timing information
-            PRINT_TIMING = False
-            if PRINT_TIMING:
-                print(f"dt01_ms: {dt01_ms:.1f}, dt11_5_ms: {dt11_5_ms:.1f}, dt1_5_2_ms: {dt1_5_2_ms:.1f} ms, loop_no_sleep_dt: {loop_no_sleep_dt * 1000:.1f} ms")
-
-                total_dt = t08 - t00
-                print(f"total_dt: {total_dt:.6f} s")
-                print(f"t01 - t00: {(t01 - t00) * 1000:.1f} ms, {((t01 - t00)) / total_dt * 100:.1f}%")
-                print(f"t02 - t01: {(t02 - t01) * 1000:.1f} ms, {((t02 - t01)) / total_dt * 100:.1f}%")
-                print(f"t03 - t02: {(t03 - t02) * 1000:.1f} ms, {((t03 - t02)) / total_dt * 100:.1f}%")
-                print(f"t04 - t03: {(t04 - t03) * 1000:.1f} ms, {((t04 - t03)) / total_dt * 100:.1f}%")
-                print(f"t05 - t04: {(t05 - t04) * 1000:.1f} ms, {((t05 - t04)) / total_dt * 100:.1f}%")
-                print(f"t06 - t05: {(t06 - t05) * 1000:.1f} ms, {((t06 - t05)) / total_dt * 100:.1f}%")
-                print(f"t07 - t06: {(t07 - t06) * 1000:.1f} ms, {((t07 - t06)) / total_dt * 100:.1f}%")
-                print(f"t08 - t07: {(t08 - t07) * 1000:.1f} ms, {((t08 - t07)) / total_dt * 100:.1f}%")
-                print("=" * 100)
 
             sleep_dt = self.control_dt - loop_no_sleep_dt
             if sleep_dt > 0:
@@ -660,29 +998,64 @@ class RLPolicyNode:
 if __name__ == "__main__":
     try:
         rl_policy_node = RLPolicyNode(
-            config_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"),
+            # Old
+            # config_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"),
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/cleanInputs.pth"),
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/noisyInputs.pth"),
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/cleanInputsFinetuned.pth"),
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o1t0.pth"),
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o1t1.pth"),
-            checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o0t0.pth"),
+            # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o0t0.pth"),
+
+            # New on tools
+            config_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed/config.yaml"),
+            checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed/model.pth"),
+
+            # Continue finetuning on cuboids
+            # config_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/o0t0_fullSpeed/config.yaml"),
+            # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/o0t0_fullSpeed/model.pth"),
+
             hand_moving_average=0.1,
-            arm_moving_average=0.05,
-            # arm_moving_average=0.1,
             # arm_moving_average=0.05,
-            # object_scales=np.array([0.24, 0.03, 0.02]) * 25,
-            object_scales=np.array([0.25, 0.03, 0.02]) * 25,
-            # arm_moving_average=0.04,
-            # arm_moving_average=0.05,
-            # arm_moving_average=0.01,
+            # arm_moving_average=0.03,
+            # arm_moving_average=0.075,
+            arm_moving_average=0.1,
+            # hand_dof_speed_scale=2.5,
+            hand_dof_speed_scale=1.5,
+
+            # object_scales=np.array([0.24, 0.03, 0.02]) * 25,  # Mallet
+            # object_scales=np.array([0.25, 0.03, 0.02]) * 25,  # scanned hammer 2
+            # object_scales=np.array([0.1, 0.03, 0.02]) * 25,  # real flat screwdriver
+            # object_scales=np.array([0.121277, 0.019341, 0.021183]) * 25,  # 040 large marker
+            # object_scales=np.array([0.121277, 0.015, 0.015]) * 25,  # 040 large marker (smaller)
+            # object_scales=np.array([0.12965531, 0.0337145 , 0.06038587]) * 25,  # whiteboard eraser
+            # object_scales=np.array([0.15954332, 0.0777093 , 0.01231273]) * 25,  # iphone15pro
+            # object_scales=np.array(NAME_TO_OBJECT["whiteboard_eraser"].scale),
+            # object_scales=np.array(NAME_TO_OBJECT["040_large_marker"].scale),
+            # object_scales=np.array(NAME_TO_OBJECT["040_large_marker"].scale) * 0.8,
+            # object_scales=np.array(NAME_TO_OBJECT["040_large_marker"].scale) * 0.9,
+            # object_scales=np.array(NAME_TO_OBJECT["mallet"].scale),
+            # object_scales=np.array(NAME_TO_OBJECT["hammer_2"].scale),
+            # object_scales=np.array(NAME_TO_OBJECT["hammer_2"].scale) * 0.75,
+            # object_scales=np.array(NAME_TO_OBJECT["mallet"].scale) * 0.75,
+            object_scales=np.array(NAME_TO_OBJECT["mallet"].scale),
+            # object_scales=np.array(NAME_TO_OBJECT["mallet"].scale) * 0.9,
+            # object_scales=np.array(NAME_TO_OBJECT["black_spatula"].scale) * 0.9,
+            # object_scales=np.array(NAME_TO_OBJECT["black_spatula"].scale),
+            # object_scales=np.array(NAME_TO_OBJECT["black_spatula"].scale) * 0.8,
+            # object_scales=np.array(NAME_TO_OBJECT["real_flat_screwdriver"].scale) * 0.8,
+            # object_scales=np.array(NAME_TO_OBJECT["real_flat_screwdriver"].scale),
+            # object_scales=np.array([0.25, 0.02, 0.015]) * 25,  # scanned hammer 2
+            # object_scales=np.array([0.25, 0.03, 0.02]) * 25,  # scanned hammer 2
+            # object_scales=np.array(NAME_TO_OBJECT["red_brush"].scale),
             # save_foldername=None,
-            save_foldername="2025-12-16_real_world",
+            save_foldername="2026-01-11_real_testing",
             # overwrite_targets_filepath=None,
             # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-44-54_noisyInputs_arm0.05.npz"),
             # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-47-13_finetuned_o0t0_arm0.05.npz"),
             # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-48-08_finetuned_o1t0_arm0.05.npz"),
             # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-48-47_finetuned_o1t1_arm0.05.npz"),
+            use_relative_object_pose_once_lifted=False,
         )
         rl_policy_node.run()
     except rospy.ROSInterruptException:

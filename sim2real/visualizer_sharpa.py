@@ -60,6 +60,7 @@ CYAN_RGB = (0, 255, 255)
 MAGENTA_RGB = (255, 0, 255)
 WHITE_RGB = (255, 255, 255)
 BLACK_RGB = (0, 0, 0)
+BLACK_RGBA = (0, 0, 0, 1.0)
 BLACK_RGBA_TRANSLUCENT = (0, 0, 0, 0.5)
 GREEN_RGBA = (0, 255, 0, 0.5)
 
@@ -264,6 +265,7 @@ class ViserVisualizationNode:
                 table_urdf_path,
                 root_node_name="/table",
                 mesh_color_override=BLACK_RGBA_TRANSLUCENT,
+                # mesh_color_override=BLACK_RGBA,
             )
 
             TRANSPARENT_TABLE = False
@@ -285,15 +287,22 @@ class ViserVisualizationNode:
         if object_name is None:
             # DEFAULT_OBJECT_NAME = "blue_cuboid"
             # DEFAULT_OBJECT_NAME = "cuboidal_mallet"
-            # DEFAULT_OBJECT_NAME = "mallet"
+            DEFAULT_OBJECT_NAME = "mallet"
             # DEFAULT_OBJECT_NAME = "cuboidal_hammer"
-            DEFAULT_OBJECT_NAME = "scanned_hammer_2"
+            # DEFAULT_OBJECT_NAME = "scanned_hammer_2"
+            # DEFAULT_OBJECT_NAME = "real_flat_screwdriver"
+            # DEFAULT_OBJECT_NAME = "040_large_marker"
+            # DEFAULT_OBJECT_NAME = "whiteboard_eraser"
+            # DEFAULT_OBJECT_NAME = "iphone15pro"
             # DEFAULT_OBJECT_NAME = "blue_cuboid_fake_hammer"
             # DEFAULT_OBJECT_NAME = "blue_cuboid_real_hammer"
             # DEFAULT_OBJECT_NAME = "blue_cuboid_real_iphone"
             # DEFAULT_OBJECT_NAME = "mallet"
-            # DEFAULT_OBJECT_NAME = "scanned_hammer_2"
+            # DEFAULT_OBJECT_NAME = "red_brush"
+            # DEFAULT_OBJECT_NAME = "green_brush"
+            # DEFAULT_OBJECT_NAME = "hammer_2"
             # DEFAULT_OBJECT_NAME = "hairbrush"
+            # DEFAULT_OBJECT_NAME = "black_spatula"
             warn(f"Using default object name: {DEFAULT_OBJECT_NAME}")
             object_name = DEFAULT_OBJECT_NAME
 

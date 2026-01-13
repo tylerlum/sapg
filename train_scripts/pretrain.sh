@@ -1,12 +1,12 @@
 #!/bin/bash
 
-speed=2.5
-robotFriction=1.0
+speed=1.5
+robotFriction=0.5
 tableResetZRange=0.025
 resetWhenDropped=True
 
-CUSTOM_EXPERIMENT_NAME="DENSITY_VARIATION"
-WANDB_GROUP="newPretrainingRuns"
+CUSTOM_EXPERIMENT_NAME="FINETUNE_5x_SLOW_SPEED_NO_ACTION_DELAY"
+WANDB_GROUP="FINETUNE_5x"
 
 WANDB_ENTITY="kk837"
 WANDB_PROJECT="customPretraining"
@@ -15,6 +15,8 @@ OBJECT_TYPE="tyler_handle_head"
 DATETIME=$(date +"%Y-%m-%d_%H-%M-%S")
 EXPERIMENT_NAME="${CUSTOM_EXPERIMENT_NAME}_$DATETIME"
 HYDRA_RUN_DIR=./train_dir/${WANDB_PROJECT}/${WANDB_GROUP}/${EXPERIMENT_NAME}
+
+CHECKPOINT=/share/portal/kk837/sapg/train_dir/customPretraining/FINETUNE_4x/FINETUNE_4x_SLOWSPEED_NO_ACTION_DELAY_2026-01-03_01-33-08/runs/00_FINETUNE_4x_SLOWSPEED_NO_ACTION_DELAY_2026-01-03_01-33-08/last/model.pth
 
 python -m isaacgymenvs.train \
 task/env=reorientation \
@@ -53,7 +55,7 @@ task.env.obsList=["joint_pos","joint_vel","prev_action_targets","palm_pos","palm
 task.env.use_fixed_set_of_goal_states=False \
 task.env.controlFrequencyInv=1 \
 task.env.useObsDelay=True \
-task.env.useActionDelay=True \
+task.env.useActionDelay=False \
 task.env.useObjectStateDelayNoise=True \
 task.env.jointVelocityObsNoiseStd=0.01 \
 task.env.successSteps=10 \
@@ -62,7 +64,18 @@ task.env.dofSpeedScale=${speed} \
 task.env.robotFriction=${robotFriction} \
 task.env.tableResetZRange=${tableResetZRange} \
 task.env.resetWhenDropped=${resetWhenDropped} \
+task.env.armMovingAverage=0.1 \
+train.params.config.max_frames=100_000_000_000_000 \
+checkpoint=${CHECKPOINT} \
+# task.env.successTolerance=0.04 \
+# task.env.handMovingAverage=0.1 \
 # task.env.handleDensityMin=400 \
 # task.env.handleDensityMax=400 \
 # task.env.headDensityMin=400 \
 # task.env.headDensityMax=400 \
+# checkpoint=/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o0t0.pth \
+# checkpoint=/share/portal/kk837/sapg/train_dir/FINAL_ASYMMETRIC_RUNS/NEW_GAINS/NOISY_INPUTS_2.5_Speed_controlFreqInv_1_successSteps_10_delta_2025-12-09_19-50-51/runs/00_NOISY_INPUTS_2.5_Speed_controlFreqInv_1_successSteps_10_delta_2025-12-09_19-50-51/last/model.pth \
+# task.env.observationType=asymmetric \
+# task=AllegroKukaLSTM \
+# task.task.randomization_params.actor_params.object.scale.range=[0.999,1.001] \
+# task.task.randomization_params.actor_params.allegro.scale.range=[0.999,1.001] \

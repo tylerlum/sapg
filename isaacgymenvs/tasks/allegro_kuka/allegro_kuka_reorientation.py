@@ -70,7 +70,9 @@ class AllegroKukaReorientation(AllegroKukaBase):
         object_asset_options.collapse_fixed_joints = True
 
         # This should speed up things and make physics better
+        # But self-collision may be an issue
         object_asset_options.replace_cylinder_with_capsule = True
+        # object_asset_options.replace_cylinder_with_capsule = False
 
         self.goal_assets = []
         for object_asset_file in self.object_asset_files:
@@ -209,9 +211,9 @@ class AllegroKukaReorientation(AllegroKukaBase):
             self.tolerance_curriculum_increment,
         )
 
-        HACK_OVERWRITE_SUCCESS_TOLERANCE = False
-        if HACK_OVERWRITE_SUCCESS_TOLERANCE:
-            self.success_tolerance = 0.03
+        eval_success_tolerance = self.cfg["env"].get("evalSuccessTolerance", None)
+        if eval_success_tolerance is not None:
+            self.success_tolerance = eval_success_tolerance
 
     def _true_objective(self) -> Tensor:
         true_objective = tolerance_successes_objective(

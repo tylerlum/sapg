@@ -89,7 +89,7 @@ def update_frames(viser_urdf: ViserUrdf, link_name_to_frame: Dict[str, FrameHand
 
 def main(
     urdf_path: Path = (
-        get_repo_root_dir() / "assets/urdf/kuka_allegro_description/iiwa14_real.urdf"
+        get_repo_root_dir() / "assets/urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted_restricted.urdf"
     ),
     load_meshes: bool = True,
     load_collision_meshes: bool = True,
@@ -183,6 +183,7 @@ def main(
 
     # Sleep forever.
     while True:
+        breakpoint()
         time.sleep(10.0)
 
 

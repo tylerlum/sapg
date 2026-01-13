@@ -29,20 +29,8 @@ pip install \
   pyvirtualdisplay sentry-sdk setproctitle shortuuid smmap tensorboardx termcolor transforms3d \
   trimesh urdfpy wandb warp-lang
 
-# pytorch3d
-pip install pytorch3d
-
-# Imageio for saving video
-pip install "imageio[ffmpeg]"
-
-# Viser
-pip install viser
-
-# Pytorch kinematics
-pip install pytorch_kinematics
-
-# Mujoco
-pip install mujoco
+# More dependencies
+pip install pytorch3d "imageio[ffmpeg]" yourdfpy viser pytorch_kinematics mujoco
 
 # Download the Isaac Gym Preview 4 release from https://developer.nvidia.com/isaac-gym
 cd isaacgym/python

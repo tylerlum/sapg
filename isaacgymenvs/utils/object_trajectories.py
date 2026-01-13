@@ -30,26 +30,26 @@ def get_hammer_trajectory(object_init_state, device="cuda"):
 
     # first state is pick up state
     pick_up_state = object_init_state.copy()
-    pick_up_state[3:7] = R.from_euler("z", 180, degrees=True).as_quat()
+    pick_up_state[3:7] = R.from_euler("x", 0, degrees=True).as_quat()
     pick_up_state[2] += 0.2
 
     # next state rotates -90 degrees around x axis wrt last state
     rotate_90_state = pick_up_state.copy()
     rotate_90_state[3:7] = (
-        R.from_quat(pick_up_state[3:7]) * R.from_euler("x", -90, degrees=True)
+        R.from_quat(pick_up_state[3:7]) * R.from_euler("x", 90, degrees=True)
     ).as_quat()
 
     trajectory_states = [pick_up_state, rotate_90_state]
     # next state rotates 20 degrees around z axis wrt last state
     swing_up_state = rotate_90_state.copy()
     swing_up_state[3:7] = (
-        R.from_quat(rotate_90_state[3:7]) * R.from_euler("z", -10, degrees=True)
+        R.from_quat(rotate_90_state[3:7]) * R.from_euler("z", 20, degrees=True)
     ).as_quat()
 
     # next state rotates -40 degrees around x axis and swings hammer down wrt last state
     swing_down_state = swing_up_state.copy()
     swing_down_state[3:7] = (
-        R.from_quat(swing_up_state[3:7]) * R.from_euler("z", 30, degrees=True)
+        R.from_quat(swing_up_state[3:7]) * R.from_euler("z", -30, degrees=True)
     ).as_quat()
     swing_down_state[2] -= 0.15
 
@@ -260,7 +260,7 @@ def get_eraser_trajectory(object_init_state, device="cuda"):
     # first state is pick up state
     pick_up_state = object_init_state.copy()
     pick_up_state[3:7] = R.from_euler("y", 0, degrees=True).as_quat()
-    pick_up_state[2] += 0.2
+    pick_up_state[2] += 0.15
 
     # next state rotates 90 degrees around z axis wrt last state
     rotate_90_state = pick_up_state.copy()
@@ -270,7 +270,7 @@ def get_eraser_trajectory(object_init_state, device="cuda"):
 
     # next state goes right
     go_right_state = rotate_90_state.copy()
-    go_right_state[0] += 0.2
+    go_right_state[0] += 0.1
 
     # trajectory_states = [pick_up_state, rotate_90_state, go_right_state]
     trajectory_states = [pick_up_state, go_right_state]
@@ -278,7 +278,7 @@ def get_eraser_trajectory(object_init_state, device="cuda"):
     num_strokes = 4
     # define go up state and go down state
     go_up_state = go_right_state.copy()
-    go_up_state[2] += 0.15
+    go_up_state[2] += 0.1
     go_down_state = go_up_state.copy()
     go_down_state[2] -= 0.1
 
@@ -321,7 +321,7 @@ def get_phone_trajectory(object_init_state, device="cuda"):
     reduce_y_again_again_state[1] += 0.05
 
     trajectory_states = [
-        # pick_up_state,
+        pick_up_state,
         rotate_90_again_state,
         reduce_y_state,
         reduce_y_again_state,
