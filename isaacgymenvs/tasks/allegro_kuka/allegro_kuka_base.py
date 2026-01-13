@@ -399,11 +399,19 @@ class AllegroKukaBase(VecTask):
             (self.num_envs, self.num_keypoints, 3), dtype=torch.float, device=self.device
         )
 
+        self.obj_keypoint_pos_fixed_size = torch.zeros(
+            (self.num_envs, self.num_keypoints, 3), dtype=torch.float, device=self.device
+        )
+        self.goal_keypoint_pos_fixed_size = torch.zeros(
+            (self.num_envs, self.num_keypoints, 3), dtype=torch.float, device=self.device
+        )
+
         # how many steps we were within the goal tolerance
         self.near_goal_steps = torch.zeros(self.num_envs, dtype=torch.int, device=self.device)
 
         self.lifted_object = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
         self.closest_keypoint_max_dist = -torch.ones(self.num_envs, dtype=torch.float, device=self.device)
+        self.closest_keypoint_max_dist_fixed_size = -torch.ones(self.num_envs, dtype=torch.float, device=self.device)
         self.prev_total_episode_closest_keypoint_max_dist = torch.zeros(self.num_envs, dtype=torch.float, device=self.device)
         self.total_episode_closest_keypoint_max_dist = torch.zeros(self.num_envs, dtype=torch.float, device=self.device)
         self.prev_episode_closest_keypoint_max_dist = 1000*torch.ones(self.num_envs, dtype=torch.float, device=self.device)
@@ -799,6 +807,7 @@ class AllegroKukaBase(VecTask):
             near_goal_steps=self.near_goal_steps,
             lifted_object=self.lifted_object,
             closest_keypoint_max_dist=self.closest_keypoint_max_dist,
+            closest_keypoint_max_dist_fixed_size=self.closest_keypoint_max_dist_fixed_size,
             closest_fingertip_dist=self.closest_fingertip_dist,
             furthest_hand_dist=self.furthest_hand_dist,
             prev_targets=self.prev_targets,
@@ -808,6 +817,8 @@ class AllegroKukaBase(VecTask):
             reset_goal_buf=self.reset_goal_buf,
             obj_keypoint_pos=self.obj_keypoint_pos,
             goal_keypoint_pos=self.goal_keypoint_pos,
+            obj_keypoint_pos_fixed_size=self.obj_keypoint_pos_fixed_size,
+            goal_keypoint_pos_fixed_size=self.goal_keypoint_pos_fixed_size,
             rewards_episode=self.rewards_episode,
             last_curriculum_update=self.last_curriculum_update,
             rb_forces=self.rb_forces,
@@ -1375,6 +1386,15 @@ class AllegroKukaBase(VecTask):
         self.object_scales = to_torch(object_scales, dtype=torch.float, device=self.device)
         self.object_keypoint_offsets = to_torch(object_keypoint_offsets, dtype=torch.float, device=self.device)
 
+        # We make a version of keypoint offsets that are a fixed size for all objects
+        # TODO: hardcode this
+        self.object_keypoint_offsets_fixed_size = self.object_keypoint_offsets.clone()
+        mean_keypoint_offset = self.object_keypoint_offsets.mean(dim=0)
+        assert mean_keypoint_offset.shape == (3,), f"mean_keypoint_offset.shape: {mean_keypoint_offset.shape}, expected: (3,)"
+        self.object_keypoint_offsets_fixed_size[:, :] = mean_keypoint_offset[None]
+        print(f"mean_keypoint_offset: {mean_keypoint_offset}")
+        breakpoint()
+
         self.joint_names = self.gym.get_actor_joint_names(env_ptr, allegro_actor)
         props = self.gym.get_actor_dof_properties(env_ptr, allegro_actor)
         self.joint_lower_limits = props["lower"]
@@ -1469,21 +1489,25 @@ class AllegroKukaBase(VecTask):
         self.lifted_object = lifted_object
         return lifting_rew, lift_bonus_rew, lifted_object
 
-    def _keypoint_reward(self, lifted_object: Tensor) -> Tensor:
+    def _keypoint_reward(self, lifted_object: Tensor) -> Tuple[Tensor, Tensor]:
         # this is positive if we got closer, negative if we're further away
         max_keypoint_deltas = self.closest_keypoint_max_dist - self.keypoints_max_dist
+        max_keypoint_deltas_fixed_size = self.closest_keypoint_max_dist_fixed_size - self.keypoints_max_dist_fixed_size
 
         # update the values if we got closer to the target
         self.closest_keypoint_max_dist = torch.minimum(self.closest_keypoint_max_dist, self.keypoints_max_dist)
+        self.closest_keypoint_max_dist_fixed_size = torch.minimum(self.closest_keypoint_max_dist_fixed_size, self.keypoints_max_dist_fixed_size)
 
         # clip between zero and +inf to turn deltas into rewards
         max_keypoint_deltas = torch.clip(max_keypoint_deltas, 0, 100)
+        max_keypoint_deltas_fixed_size = torch.clip(max_keypoint_deltas_fixed_size, 0, 100)
 
         # administer reward only when we already lifted an object from the table
         # to prevent the situation where the agent just rolls it around the table
         keypoint_rew = max_keypoint_deltas * lifted_object
+        keypoint_rew_fixed_size = max_keypoint_deltas_fixed_size * lifted_object
 
-        return keypoint_rew
+        return keypoint_rew, keypoint_rew_fixed_size
 
     def _action_penalties(self) -> Tuple[Tensor, Tensor]:
         kuka_actions_penalty = (
@@ -1630,12 +1654,17 @@ class AllegroKukaBase(VecTask):
     def compute_kuka_reward(self) -> Tuple[Tensor, Tensor]:
         lifting_rew, lift_bonus_rew, lifted_object = self._lifting_reward()
         fingertip_delta_rew, hand_delta_penalty = self._distance_delta_rewards(lifted_object)
-        keypoint_rew = self._keypoint_reward(lifted_object)
+        keypoint_rew, keypoint_rew_fixed_size = self._keypoint_reward(lifted_object)
+        if self.cfg["env"]["fixedSizeKeypointReward"]:
+            keypoint_rew = keypoint_rew_fixed_size
 
         keypoint_success_tolerance = self.success_tolerance * self.keypoint_scale
 
         # noinspection PyTypeChecker
         near_goal: Tensor = self.keypoints_max_dist <= keypoint_success_tolerance
+        near_goal_fixed_size: Tensor = self.keypoints_max_dist_fixed_size <= keypoint_success_tolerance
+        if self.cfg["env"]["fixedSizeKeypointReward"]:
+            near_goal = near_goal_fixed_size
         self.near_goal_steps += near_goal
 
         is_success = self.near_goal_steps >= self.success_steps
@@ -1928,22 +1957,35 @@ class AllegroKukaBase(VecTask):
                 self.observed_object_rot, self.object_keypoint_offsets[:, i]
             )
 
+            self.obj_keypoint_pos_fixed_size[:, i] = self.object_pos + quat_rotate(
+                self.object_rot, self.object_keypoint_offsets_fixed_size[:, i]
+            )
+            self.goal_keypoint_pos_fixed_size[:, i] = self.goal_pos + quat_rotate(
+                self.goal_rot, self.object_keypoint_offsets_fixed_size[:, i]
+            )
+
         self.keypoints_rel_goal = self.obj_keypoint_pos - self.goal_keypoint_pos
         self.observed_keypoints_rel_goal = self.observed_obj_keypoint_pos - self.goal_keypoint_pos
+        self.keypoints_rel_goal_fixed_size = self.obj_keypoint_pos_fixed_size - self.goal_keypoint_pos_fixed_size
 
         palm_center_repeat = self.palm_center_pos.unsqueeze(1).repeat(1, self.num_keypoints, 1)
         self.keypoints_rel_palm = self.obj_keypoint_pos - palm_center_repeat
         self.observed_keypoints_rel_palm = self.observed_obj_keypoint_pos - palm_center_repeat
 
         self.keypoint_distances_l2 = torch.norm(self.keypoints_rel_goal, dim=-1)
+        self.keypoint_distances_l2_fixed_size = torch.norm(self.keypoints_rel_goal_fixed_size, dim=-1)
 
         # furthest keypoint from the goal
         self.keypoints_max_dist = self.keypoint_distances_l2.max(dim=-1).values
+        self.keypoints_max_dist_fixed_size = self.keypoint_distances_l2_fixed_size.max(dim=-1).values
 
         # this is the closest the keypoint had been to the target in the current episode (for the furthest keypoint of all)
         # make sure we initialize this value before using it for obs or rewards
         self.closest_keypoint_max_dist = torch.where(
             self.closest_keypoint_max_dist < 0.0, self.keypoints_max_dist, self.closest_keypoint_max_dist
+        )
+        self.closest_keypoint_max_dist_fixed_size = torch.where(
+            self.closest_keypoint_max_dist_fixed_size < 0.0, self.keypoints_max_dist_fixed_size, self.closest_keypoint_max_dist_fixed_size
         )
 
     def populate_obs_and_states_buffers(self) -> None:
@@ -1984,6 +2026,9 @@ class AllegroKukaBase(VecTask):
         obs_dict["object_vel"] = self.object_state[:, 7:13]
         # closest distance to the furthest keypoint, achieved so far in this episode
         obs_dict["closest_keypoint_max_dist"] = self.closest_keypoint_max_dist.unsqueeze(-1)
+        if self.cfg["env"]["fixedSizeKeypointReward"]:
+            obs_dict["closest_keypoint_max_dist_fixed_size"] = self.closest_keypoint_max_dist_fixed_size.unsqueeze(-1)
+
         # closest distance between a fingertip and an object achieved since last target reset
         # this should help the critic predict the anticipated fingertip reward
         obs_dict["closest_fingertip_dist"] = self.closest_fingertip_dist.unsqueeze(-1)
@@ -2180,6 +2225,7 @@ class AllegroKukaBase(VecTask):
             self.prev_total_episode_closest_keypoint_max_dist[env_ids] = self.total_episode_closest_keypoint_max_dist[env_ids]
             self.total_episode_closest_keypoint_max_dist[env_ids] += torch.where(self.closest_keypoint_max_dist[env_ids] > 0, self.closest_keypoint_max_dist[env_ids], torch.zeros_like(self.closest_keypoint_max_dist[env_ids]))
             self.closest_keypoint_max_dist[env_ids] = -1
+            self.closest_keypoint_max_dist_fixed_size[env_ids] = -1
 
     def reset_object_pose(self, env_ids: Tensor, reset_buf_idxs=None, tensor_reset=True):
         if len(env_ids) > 0 and reset_buf_idxs is None and tensor_reset:
@@ -2884,6 +2930,7 @@ class AllegroKukaBase(VecTask):
             sphere_pose.r = gymapi.Quat(0, 0, 0, 1)
             sphere_geom = gymutil.WireframeSphereGeometry(0.01, 8, 8, sphere_pose, color=(1, 1, 0))
             sphere_geom_white = gymutil.WireframeSphereGeometry(0.02, 8, 8, sphere_pose, color=(1, 1, 1))
+            sphere_geom_black = gymutil.WireframeSphereGeometry(0.01, 8, 8, sphere_pose, color=(0, 0, 0))
 
             palm_center_pos_cpu = self.palm_center_pos.cpu().numpy()
             palm_rot_cpu = self._palm_rot.cpu().numpy()
@@ -2928,6 +2975,8 @@ class AllegroKukaBase(VecTask):
             for j in range(self.num_keypoints):
                 keypoint_pos_cpu = self.obj_keypoint_pos[:, j].cpu().numpy()
                 goal_keypoint_pos_cpu = self.goal_keypoint_pos[:, j].cpu().numpy()
+                keypoint_pos_fixed_size_cpu = self.obj_keypoint_pos_fixed_size[:, j].cpu().numpy()
+                goal_keypoint_pos_fixed_size_cpu = self.goal_keypoint_pos_fixed_size[:, j].cpu().numpy()
 
                 for i in range(self.num_envs):
                     keypoint_transform = gymapi.Transform()
@@ -2937,6 +2986,14 @@ class AllegroKukaBase(VecTask):
                     goal_keypoint_transform = gymapi.Transform()
                     goal_keypoint_transform.p = gymapi.Vec3(*goal_keypoint_pos_cpu[i])
                     gymutil.draw_lines(sphere_geom, self.gym, self.viewer, self.envs[i], goal_keypoint_transform)
+
+                    keypoint_transform_fixed_size = gymapi.Transform()
+                    keypoint_transform_fixed_size.p = gymapi.Vec3(*keypoint_pos_fixed_size_cpu[i])
+                    gymutil.draw_lines(sphere_geom_black, self.gym, self.viewer, self.envs[i], keypoint_transform_fixed_size)
+
+                    goal_keypoint_transform_fixed_size = gymapi.Transform()
+                    goal_keypoint_transform_fixed_size.p = gymapi.Vec3(*goal_keypoint_pos_fixed_size_cpu[i])
+                    gymutil.draw_lines(sphere_geom_black, self.gym, self.viewer, self.envs[i], goal_keypoint_transform_fixed_size)
 
             # Visualize object and goal pose
             for i in range(self.num_envs):
