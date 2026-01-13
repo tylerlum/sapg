@@ -99,6 +99,17 @@ def pose_msg_to_T(msg: Pose) -> np.ndarray:
     ).as_matrix()
     return T
 
+def pos_quat_xyzw_to_pose_msg(pos: np.ndarray, quat_xyzw: np.ndarray) -> Pose:
+    pose_msg = Pose()
+    pose_msg.position.x = pos[0]
+    pose_msg.position.y = pos[1]
+    pose_msg.position.z = pos[2]
+    pose_msg.orientation.x = quat_xyzw[0]
+    pose_msg.orientation.y = quat_xyzw[1]
+    pose_msg.orientation.z = quat_xyzw[2]
+    pose_msg.orientation.w = quat_xyzw[3]
+    return pose_msg
+
 
 def T_to_pos_quat_xyzw(T: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     pos = T[:3, 3]
@@ -838,15 +849,8 @@ class RLPolicyNode:
                     # Publish the goal object pose
                     current_T_W_G = self.T_W_O_trajectory[self.trajectory_idx]
                     current_T_R_G = np.linalg.inv(T_W_R) @ current_T_W_G
-                    current_goal_object_pose_xyzw = T_to_pose(current_T_R_G)
-                    goal_object_pose_msg = Pose()
-                    goal_object_pose_msg.position.x = current_goal_object_pose_xyzw[0]
-                    goal_object_pose_msg.position.y = current_goal_object_pose_xyzw[1]
-                    goal_object_pose_msg.position.z = current_goal_object_pose_xyzw[2]
-                    goal_object_pose_msg.orientation.x = current_goal_object_pose_xyzw[3]
-                    goal_object_pose_msg.orientation.y = current_goal_object_pose_xyzw[4]
-                    goal_object_pose_msg.orientation.z = current_goal_object_pose_xyzw[5]
-                    goal_object_pose_msg.orientation.w = current_goal_object_pose_xyzw[6]
+                    current_goal_object_pos, current_goal_object_quat_xyzw = T_to_pos_quat_xyzw(current_T_R_G)
+                    goal_object_pose_msg = pos_quat_xyzw_to_pose_msg(pos=current_goal_object_pos, quat_xyzw=current_goal_object_quat_xyzw)
                     self.goal_object_pose_pub.publish(goal_object_pose_msg)
 
                     # Update the trajectory index
