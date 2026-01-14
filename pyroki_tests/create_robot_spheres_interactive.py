@@ -296,12 +296,19 @@ def main(
 
     # Attach frames to every link
     link_name_to_frame = {}
+    AXES_LENGTH = 0.05
+    AXES_RADIUS = 0.002
+    HIDE_AXES = True
+    if HIDE_AXES:
+        AXES_LENGTH = 0.00001
+        AXES_RADIUS = 0.00001
+
     for link_name in viser_urdf._urdf.link_map.keys():
         link_name_to_frame[link_name] = server.scene.add_frame(
             f"/robot/{link_name}",
             show_axes=True,
-            axes_length=0.05,
-            axes_radius=0.002,
+            axes_length=AXES_LENGTH,
+            axes_radius=AXES_RADIUS,
         )
 
     with server.gui.add_folder("Joint Control"):
