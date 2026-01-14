@@ -700,6 +700,7 @@ class AllegroKukaBase(VecTask):
             SPATULA_OBJECTS = set(["small_spatula", "large_spatula", "black_spatula"])
             MARKER_OBJECTS = set(["040_large_marker", "thick_marker", "thin_marker"])
             KNIFE_OBJECTS = set(["kitchen_knife", "blue_cuboid_real_knife", "blue_cuboid_fake_knife", "pairing_knife"])
+            BRUSH_OBJECTS = set(["green_brush", "red_brush", "anvil_brush", "lab_brush"])
             if object_type in HAMMER_TRAJECTORY_OBJECTS:
                 self.trajectory_states = get_hammer_trajectory(init_state, device=self.device)
             elif object_type in set(["hairbrush", "hairbrush_modified"]):
@@ -717,6 +718,8 @@ class AllegroKukaBase(VecTask):
             elif object_type in CUBOID_OBJECTS:
                 self.trajectory_states = get_cuboid_trajectory(init_state, device=self.device)
             elif object_type in KNIFE_OBJECTS:
+                self.trajectory_states = get_hammer_trajectory(init_state, device=self.device)
+            elif object_type in BRUSH_OBJECTS:
                 self.trajectory_states = get_hammer_trajectory(init_state, device=self.device)
             else:
                 raise ValueError(f"The following object_type does not have a fixed trajectory: {object_type}, cannot use USE_FIXED_SET_OF_GOAL_STATES with this object type")
