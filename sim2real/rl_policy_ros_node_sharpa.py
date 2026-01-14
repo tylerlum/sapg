@@ -172,6 +172,7 @@ class RLPolicyNode:
         overwrite_targets_filepath: Optional[Path] = None,
         use_relative_object_pose_once_lifted: bool = False,
         object_name: Optional[str] = None,
+        automatically_detect_object_lifted: bool = False,
     ):
         self.config_path = config_path
         self.checkpoint_path = checkpoint_path
@@ -183,6 +184,7 @@ class RLPolicyNode:
         self.overwrite_targets_filepath = overwrite_targets_filepath
         self.use_relative_object_pose_once_lifted = use_relative_object_pose_once_lifted
         self.object_name = object_name
+        self.automatically_detect_object_lifted = automatically_detect_object_lifted
 
         assert_equals(object_scales.shape, (3,))
 
@@ -939,10 +941,11 @@ class RLPolicyNode:
 
             if self.use_relative_object_pose_once_lifted:
                 # Lifted object threshold
-                LIFTED_Z = 0.6
-                object_z = self.object_pose_msg.pose.position.z
-                if object_z >= LIFTED_Z:
-                    self.object_lifted = True
+                if self.automatically_detect_object_lifted:
+                    LIFTED_Z = 0.6
+                    object_z = self.object_pose_msg.pose.position.z
+                    if object_z >= LIFTED_Z:
+                        self.object_lifted = True
 
                 # When just lifted, initialize the relative object pose logic and visualize it
                 if self.object_lifted and not self.initialized_relative_object_pose_logic:
@@ -1180,6 +1183,7 @@ if __name__ == "__main__":
             # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-48-47_finetuned_o1t1_arm0.05.npz"),
             use_relative_object_pose_once_lifted=True,
             object_name=OBJECT_NAME,
+            automatically_detect_object_lifted=False,
         )
         rl_policy_node.run()
     except rospy.ROSInterruptException:
