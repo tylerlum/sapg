@@ -116,7 +116,7 @@ def main():
 
         # Must apply scale before applying transform so that the transform is not scaled
         # Must do deepcopy so that the original mesh is not modified
-        output_sphere = deepcopy(sphere).apply_scale(SPHERE_SCALE).apply_transform(T)
+        output_sphere = deepcopy(sphere).apply_scale(LATEST_SPHERE_SCALE).apply_transform(T)
 
         from datetime import datetime
         output_sphere_path = Path(__file__).parent / f"output_sphere_{datetime.now().strftime('%Y%m%d_%H%M%S')}.obj"
@@ -156,7 +156,7 @@ def main():
         print(
             f"sphere_frame.position: {sphere_frame.position}, sphere_frame.wxyz: {sphere_frame.wxyz}"
         )
-        time.sleep(1.0)
+        time.sleep(0.2)
         # breakpoint()
 
 
