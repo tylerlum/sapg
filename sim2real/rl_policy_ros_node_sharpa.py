@@ -394,6 +394,13 @@ class RLPolicyNode:
         assert_equals(joint_pos_targets.shape, (1, self.num_actions))
         joint_pos_targets = joint_pos_targets[0]
 
+        # Clamp joint position to joint limits with buffer
+        # Hardware has 5 deg buffer, so we add 7.5 deg buffer here to avoid getting overshoots that hits limit
+        BUFFER = np.deg2rad(7.5)
+        lower_limits = self.arm_pk_chain.low.cpu().numpy() - BUFFER
+        upper_limits = self.arm_pk_chain.high.cpu().numpy() + BUFFER
+        joint_pos_targets = np.clip(joint_pos_targets, lower_limits, upper_limits)
+
         iiwa_msg = JointState()
         iiwa_msg.header.stamp = rospy.Time.now()
         iiwa_msg.header.frame_id = ""
