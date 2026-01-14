@@ -1086,11 +1086,19 @@ def main():
             q_hands.append(new_q_hand)
 
         # Run trajopt for the whole trajectory
+        DOWNSAMPLE_FACTOR = 10
         retargeted_qs = solve_trajopt(
-            T_R_Ps=T_R_Ps,
+            T_R_Ps=T_R_Ps[::DOWNSAMPLE_FACTOR],
             q_start=HOME_JOINT_POS,
             dt=args.dt,
         )
+        retargeted_qs = interpolate_traj(retargeted_qs, n_steps=DOWNSAMPLE_FACTOR)
+        if retargeted_qs.shape[0] < N_TIMESTEPS:
+            extra = N_TIMESTEPS - retargeted_qs.shape[0]
+            retargeted_qs = np.concatenate([retargeted_qs, retargeted_qs[-1][None].repeat(extra, axis=0)], axis=0)
+        elif retargeted_qs.shape[0] > N_TIMESTEPS:
+            extra = retargeted_qs.shape[0] - N_TIMESTEPS
+            retargeted_qs = retargeted_qs[:-extra]
         assert retargeted_qs.shape == (N_TIMESTEPS, 29), f"retargeted_qs.shape: {retargeted_qs.shape}, expected: (N_TIMESTEPS, 29)"
 
         # Update hand joints positions
@@ -1120,11 +1128,19 @@ def main():
         q_hand_using_lifted_pose = q_hands[idx_lifted]
 
         # Run trajopt for the trajectory after the object was lifted
+        DOWNSAMPLE_FACTOR = 10
         retargeted_qs_using_lifted_pose = solve_trajopt(
-            T_R_Ps=T_R_Ps_using_lifted_object_pose[idx_lifted:],
+            T_R_Ps=T_R_Ps_using_lifted_object_pose[idx_lifted:][::DOWNSAMPLE_FACTOR],
             q_start=retargeted_q_lifted,
             dt=args.dt,
         )
+        retargeted_qs_using_lifted_pose = interpolate_traj(retargeted_qs_using_lifted_pose, n_steps=DOWNSAMPLE_FACTOR)
+        if retargeted_qs_using_lifted_pose.shape[0] < N_TIMESTEPS - idx_lifted:
+            extra = N_TIMESTEPS - idx_lifted - retargeted_qs_using_lifted_pose.shape[0]
+            retargeted_qs_using_lifted_pose = np.concatenate([retargeted_qs_using_lifted_pose, retargeted_qs_using_lifted_pose[-1][None].repeat(extra, axis=0)], axis=0)
+        elif retargeted_qs_using_lifted_pose.shape[0] > N_TIMESTEPS - idx_lifted:
+            extra = retargeted_qs_using_lifted_pose.shape[0] - (N_TIMESTEPS - idx_lifted)
+            retargeted_qs_using_lifted_pose = retargeted_qs_using_lifted_pose[:-extra]
 
         # Connect it with the original trajectory before lifted
         # And fix hand joints positions after lifted

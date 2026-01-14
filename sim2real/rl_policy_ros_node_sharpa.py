@@ -937,6 +937,11 @@ class RLPolicyNode:
                 self.current_step += 1
 
             if self.use_relative_object_pose_once_lifted:
+                # Lifted object threshold
+                LIFTED_Z = 0.6
+                object_z = self.object_pose_msg.pose.position.z
+                if object_z >= LIFTED_Z:
+                    self.object_lifted = True
 
                 # When just lifted, initialize the relative object pose logic and visualize it
                 if self.object_lifted and not self.initialized_relative_object_pose_logic:
