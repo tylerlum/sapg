@@ -295,7 +295,6 @@ class RLPolicyNode:
         info("Received signal to save relative object pose once lifted")
         self.object_lifted = True
         info(f"Object lifted: {self.object_lifted}")
-        breakpoint()
 
     def object_pose_callback(self, msg: PoseStamped):
         self.object_pose_msg = msg
@@ -466,9 +465,6 @@ class RLPolicyNode:
         q: np.ndarray,
         q_target: np.ndarray,
         T_R_O_lifted: np.ndarray,
-        object_type: str,
-        object_name: str,
-        trajectory_name: str,
     ):
         assert_equals(q.shape, (29,))
         assert_equals(q_target.shape, (29,))
@@ -513,6 +509,41 @@ class RLPolicyNode:
         # Assumes this is in world frame
         # Stop listening to the published one
         import json
+
+        # object_type = "hammer"
+        # object_name = "mallet"
+        # object_name = "hammer_2"
+        # trajectory_name = "vertical_swing"
+        # trajectory_name = "horizontal_swing"
+        # trajectory_name = "horizontal_swing_higher"
+        # trajectory_name = "horizontal_swing_human"
+        # trajectory_name = "horizontal_swing_human_closer"
+
+        # object_type = "spatula"
+        # object_name = "black_spatula"
+        # trajectory_name = "pick_and_place_human"
+        # trajectory_name = "pick_and_place_human_hardinit"
+
+        # object_type = "screwdriver"
+        # object_name = "real_flat_screwdriver"
+        # trajectory_name = "top_down_screwing_human_easyinit"
+        # trajectory_name = "top_down_screwing_human"
+
+        object_type = "eraser"
+        object_name = "whiteboard_eraser"
+        trajectory_name = "wipe_left_human"
+        # trajectory_name = "wipe_left_human_2"
+
+        # object_type = "marker"
+        # object_name = "040_large_marker"
+        # trajectory_name = "draw_circle_human"
+        # trajectory_name = "draw_circle_human_hardinit"
+
+        # object_type = "brush"
+        # object_name = "green_brush"
+        # trajectory_name = "simple"
+        # trajectory_name = "complex"
+
         object_pose_trajectory_filepath = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
         assert object_pose_trajectory_filepath.exists(), f"object_pose_trajectory_filepath not found: {object_pose_trajectory_filepath}"
         with open(object_pose_trajectory_filepath, "r") as f:
@@ -928,13 +959,6 @@ class RLPolicyNode:
                         q=q,
                         q_target=joint_pos_targets[0],
                         T_R_O_lifted=T_R_O_lifted,
-                        # object_type="hammer",
-                        # object_name="mallet",
-                        # trajectory_name="horizontal_swing_human_closer",
-                        object_type="spatula",
-                        object_name="black_spatula",
-                        # trajectory_name="pick_and_place_human",
-                        trajectory_name="pick_and_place_human_hardinit",
                     )
                     self._visualize_relative_object_pose_logic(
                         q_targets_using_lifted_object_pose=self.q_targets_using_lifted_object_pose,
@@ -1135,7 +1159,7 @@ if __name__ == "__main__":
             # object_scales=np.array([0.121277, 0.015, 0.015]) * 25,  # 040 large marker (smaller)
             # object_scales=np.array([0.12965531, 0.0337145 , 0.06038587]) * 25,  # whiteboard eraser
             # object_scales=np.array([0.15954332, 0.0777093 , 0.01231273]) * 25,  # iphone15pro
-            # object_scales=np.array(NAME_TO_OBJECT["whiteboard_eraser"].scale),
+            object_scales=np.array(NAME_TO_OBJECT["whiteboard_eraser"].scale),
             # object_scales=np.array(NAME_TO_OBJECT["040_large_marker"].scale),
             # object_scales=np.array(NAME_TO_OBJECT["040_large_marker"].scale) * 0.8,
             # object_scales=np.array(NAME_TO_OBJECT["040_large_marker"].scale) * 0.9,
@@ -1146,7 +1170,7 @@ if __name__ == "__main__":
             # object_scales=np.array(NAME_TO_OBJECT["mallet"].scale),
             # object_scales=np.array(NAME_TO_OBJECT["mallet"].scale) * 0.9,
             # object_scales=np.array(NAME_TO_OBJECT["black_spatula"].scale) * 0.9,
-            object_scales=np.array(NAME_TO_OBJECT["black_spatula"].scale),
+            # object_scales=np.array(NAME_TO_OBJECT["black_spatula"].scale),
             # object_scales=np.array(NAME_TO_OBJECT["black_spatula"].scale) * 0.8,
             # object_scales=np.array(NAME_TO_OBJECT["real_flat_screwdriver"].scale) * 0.8,
             # object_scales=np.array(NAME_TO_OBJECT["real_flat_screwdriver"].scale),

@@ -202,19 +202,19 @@ def main():
     # trajectory_name = "horizontal_swing_human"
     # trajectory_name = "horizontal_swing_human_closer"
 
-    object_type = "spatula"
-    object_name = "black_spatula"
+    # object_type = "spatula"
+    # object_name = "black_spatula"
     # trajectory_name = "pick_and_place_human"
-    trajectory_name = "pick_and_place_human_hardinit"
+    # trajectory_name = "pick_and_place_human_hardinit"
 
     # object_type = "screwdriver"
     # object_name = "real_flat_screwdriver"
     # trajectory_name = "top_down_screwing_human_easyinit"
     # trajectory_name = "top_down_screwing_human"
 
-    # object_type = "eraser"
-    # object_name = "whiteboard_eraser"
-    # trajectory_name = "wipe_left_human"
+    object_type = "eraser"
+    object_name = "whiteboard_eraser"
+    trajectory_name = "wipe_left_human"
     # trajectory_name = "wipe_left_human_2"
 
     # object_type = "marker"
