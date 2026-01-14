@@ -33,7 +33,8 @@ def main():
 
     @server.on_client_connect
     def _(client):
-        client.camera.position = (1.0, 1.0, 1.0)
+        DIST = 0.5
+        client.camera.position = (DIST, DIST, DIST)
         client.camera.look_at = (0.0, 0.0, 0.0)
 
     # Create ground
@@ -139,9 +140,22 @@ def main():
         print("Added output sphere to scene")
 
     @scale_slider.on_update
-    def _(_):
+    def scale_slider_on_update(_):
         nonlocal SPHERE_SCALE
         SPHERE_SCALE = scale_slider.value
+
+        # Throttle updates to avoid overwhelming the CPU
+        # 0.1s = 10 updates per second (usually smooth enough for eyes, easy on the CPU)
+        if not hasattr(scale_slider_on_update, "last_update_time"):
+            scale_slider_on_update.last_update_time = 0
+
+        UPDATE_INTERVAL_SEC = 1.0
+        print(f"time_since_last_update: {time.time() - scale_slider_on_update.last_update_time}")
+        if time.time() - scale_slider_on_update.last_update_time < UPDATE_INTERVAL_SEC:
+            print("not updating scale")
+            return
+        print("updating scale")
+        scale_slider_on_update.last_update_time = time.time()
 
         # After some experimentation, this is the only way I could update the scale
         # Modifying mesh_vis.vertices directly didn't work because of the equality check not working for vectorized np arrays
