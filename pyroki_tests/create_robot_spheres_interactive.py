@@ -284,6 +284,12 @@ def main(
     
     server = viser.ViserServer()
 
+    @server.on_client_connect
+    def _(client):
+        DIST = 0.5
+        client.camera.position = (DIST, DIST, DIST)
+        client.camera.look_at = (0.0, 0.0, 0.0)
+
     assert urdf_path.exists(), f"URDF path {urdf_path} does not exist"
     viser_urdf = ViserUrdf(
         server,
@@ -315,6 +321,12 @@ def main(
         (slider_handles, initial_config) = create_robot_control_sliders(
             server, viser_urdf, link_name_to_frame
         )
+
+    # Override initial config with home joint positions
+    HOME_JOINT_POS_IIWA = np.array([-1.571, 1.571 - np.deg2rad(10), -0.000, 1.376 + np.deg2rad(10), -0.000, 1.485, 1.308])
+    HOME_JOINT_POS_SHARPA = np.zeros(22)
+    HOME_JOINT_POS = np.concatenate([HOME_JOINT_POS_IIWA, HOME_JOINT_POS_SHARPA])
+    initial_config = HOME_JOINT_POS
 
     viser_urdf.update_cfg(np.array(initial_config))
     update_frames(viser_urdf, link_name_to_frame)
