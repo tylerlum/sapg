@@ -170,6 +170,7 @@ class RLPolicyNode:
         save_foldername: Optional[str] = None,
         overwrite_targets_filepath: Optional[Path] = None,
         use_relative_object_pose_once_lifted: bool = False,
+        object_name: Optional[str] = None,
     ):
         self.config_path = config_path
         self.checkpoint_path = checkpoint_path
@@ -180,6 +181,7 @@ class RLPolicyNode:
         self.save_foldername = save_foldername
         self.overwrite_targets_filepath = overwrite_targets_filepath
         self.use_relative_object_pose_once_lifted = use_relative_object_pose_once_lifted
+        self.object_name = object_name
 
         assert_equals(object_scales.shape, (3,))
 
@@ -544,6 +546,7 @@ class RLPolicyNode:
         # trajectory_name = "simple"
         # trajectory_name = "complex"
 
+        assert self.object_name == object_name, f"self.object_name: {self.object_name}, object_name: {object_name}"
         object_pose_trajectory_filepath = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
         assert object_pose_trajectory_filepath.exists(), f"object_pose_trajectory_filepath not found: {object_pose_trajectory_filepath}"
         with open(object_pose_trajectory_filepath, "r") as f:
@@ -746,23 +749,7 @@ class RLPolicyNode:
 
         # Load object
         from isaacgymenvs.utils.objects import NAME_TO_OBJECT
-        while True:
-            # Ask user for object name
-            available_objects = list(NAME_TO_OBJECT.keys())
-            info(f"Available objects: {', '.join(available_objects)}")
-            user_input = input(colored("Enter object name (or 'q' for default 'mallet'): ", "cyan"))
-
-            if user_input.lower() == 'q':
-                object_name = "mallet"
-                info(f"Using default object: {object_name}")
-                break
-            elif user_input in NAME_TO_OBJECT:
-                object_name = user_input
-                info(f"Using object: {object_name}")
-                break
-            else:
-                warn(f"Object '{user_input}' not found in NAME_TO_OBJECT. Please try again.")
-        OBJECT_URDF_PATH = NAME_TO_OBJECT[object_name].filepath
+        OBJECT_URDF_PATH = NAME_TO_OBJECT[self.object_name].filepath
         object_frame_viser = SERVER.scene.add_frame(
             "/object",
             position=(100, 0, 0),
@@ -773,6 +760,24 @@ class RLPolicyNode:
 
         from tqdm import tqdm
         while True:
+            # Ask user if they want to continue or visualize again
+            while True:
+                user_input = input(colored("Press 'v' to visualize, or 'c' to continue, or 'b' to breakpoint: ", "cyan"))
+                if user_input.lower() == 'v':
+                    info("Visualizing trajectory")
+                    break
+                elif user_input.lower() == 'c':
+                    info("Continuing to use this trajectory")
+                    break
+                elif user_input.lower() == 'b':
+                    info("Breakpointing")
+                    breakpoint()
+                else:
+                    warn("Invalid input. Please enter 'v' or 'c'.")
+
+            if user_input.lower() == 'c':
+                break
+
             for i in tqdm(range(TRAJECTORY_LENGTH), desc="Visualizing trajectory"):
                 start_time = time.time()
 
@@ -798,24 +803,6 @@ class RLPolicyNode:
                     time.sleep(sleep_dt)
                 else:
                     warn(f"Loop too slow! Desired FPS = 60, Actual FPS = {1/loop_dt:.1f}")
-
-            # Ask user if they want to continue or revisualize
-            while True:
-                user_input = input(colored("Press 'r' to revisualize, or 'c' to continue, or 'b' to breakpoint: ", "cyan"))
-                if user_input.lower() == 'r':
-                    info("Restarting visualization loop")
-                    break
-                elif user_input.lower() == 'c':
-                    info("Continuing to use this trajectory")
-                    break
-                elif user_input.lower() == 'b':
-                    info("Breakpointing")
-                    breakpoint()
-                else:
-                    warn("Invalid input. Please enter 'r' or 'c'.")
-
-            if user_input.lower() == 'c':
-                break
 
     def _wait_and_warmup(self):
         assert not self._warmup_completed, "Warmup already completed"
@@ -1126,6 +1113,7 @@ class RLPolicyNode:
 
 if __name__ == "__main__":
     try:
+        OBJECT_NAME = "whiteboard_eraser"
         rl_policy_node = RLPolicyNode(
             # Old
             # config_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"),
@@ -1159,7 +1147,7 @@ if __name__ == "__main__":
             # object_scales=np.array([0.121277, 0.015, 0.015]) * 25,  # 040 large marker (smaller)
             # object_scales=np.array([0.12965531, 0.0337145 , 0.06038587]) * 25,  # whiteboard eraser
             # object_scales=np.array([0.15954332, 0.0777093 , 0.01231273]) * 25,  # iphone15pro
-            object_scales=np.array(NAME_TO_OBJECT["whiteboard_eraser"].scale),
+            # object_scales=np.array(NAME_TO_OBJECT["whiteboard_eraser"].scale),
             # object_scales=np.array(NAME_TO_OBJECT["040_large_marker"].scale),
             # object_scales=np.array(NAME_TO_OBJECT["040_large_marker"].scale) * 0.8,
             # object_scales=np.array(NAME_TO_OBJECT["040_large_marker"].scale) * 0.9,
@@ -1177,6 +1165,7 @@ if __name__ == "__main__":
             # object_scales=np.array([0.25, 0.02, 0.015]) * 25,  # scanned hammer 2
             # object_scales=np.array([0.25, 0.03, 0.02]) * 25,  # scanned hammer 2
             # object_scales=np.array(NAME_TO_OBJECT["red_brush"].scale),
+            object_scales=np.array(NAME_TO_OBJECT[OBJECT_NAME].scale),
             # save_foldername=None,
             save_foldername="2026-01-13_sim_testing",
             # overwrite_targets_filepath=None,
@@ -1185,6 +1174,7 @@ if __name__ == "__main__":
             # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-48-08_finetuned_o1t0_arm0.05.npz"),
             # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-48-47_finetuned_o1t1_arm0.05.npz"),
             use_relative_object_pose_once_lifted=True,
+            object_name=OBJECT_NAME,
         )
         rl_policy_node.run()
     except rospy.ROSInterruptException:
