@@ -203,7 +203,6 @@ class SphereEditor:
 
     def _start_editing_sphere(self, link_name: str):
         """Spawn a gizmo sphere on the specified link."""
-        breakpoint()
         self._cleanup_active_gizmo()
         
         self.active_link_name = link_name
