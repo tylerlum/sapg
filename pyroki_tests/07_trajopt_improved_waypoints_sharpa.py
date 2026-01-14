@@ -106,18 +106,23 @@ def main(robot_name: Literal["ur5", "panda", "sharpa"] = "sharpa"):
     # Define Waypoints
     # 1. Start is implicitly t=0 (enforced by start_cfg)
     # 2. Midpoint (High over the table)
+
     mid_pos = np.array([0.0, -0.6, 0.8])
-    # 3. End (Other side)
-    end_pos = np.array([0.5, -0.6, 0.8])
+    right_pos = np.array([-0.5, -0.6, 0.8])
+    left_pos = np.array([0.5, -0.6, 0.8])
 
     waypoints = {}
     waypoints.update({
-        25 + i: (mid_pos, down_wxyz)
-        for i in range(10)
+        5 + i: (mid_pos, down_wxyz)
+        for i in range(5)
     })
     waypoints.update({
-        49 - i: (end_pos, down_wxyz)
-        for i in range(10)
+        25 + i: (right_pos, down_wxyz)
+        for i in range(5)
+    })
+    waypoints.update({
+        49 - i: (left_pos, down_wxyz)
+        for i in range(5)
     })
 
     # Visualize problem setup
