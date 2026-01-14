@@ -173,13 +173,18 @@ def main(robot_name: Literal["ur5", "panda", "sharpa"] = "sharpa"):
     # })
     with open("T_R_Ps.json", "r") as f:
         T_R_Ps = np.array(json.load(f))
+    with open("q_hands.json", "r") as f:
+        q_hands = np.array(json.load(f))
     N_TIMESTEPS = T_R_Ps.shape[0]
     assert T_R_Ps.shape == (N_TIMESTEPS, 4, 4), f"T_R_Ps.shape: {T_R_Ps.shape}, expected: ({N_TIMESTEPS}, 4, 4)"
+    assert q_hands.shape == (N_TIMESTEPS, 22), f"q_hands.shape: {q_hands.shape}, expected: ({N_TIMESTEPS}, 22)"
     DOWNSAMPLE = True
     if DOWNSAMPLE:
         T_R_Ps = T_R_Ps[::10]
+        q_hands = q_hands[::10]
         N_TIMESTEPS = T_R_Ps.shape[0]
         assert T_R_Ps.shape == (N_TIMESTEPS, 4, 4), f"T_R_Ps.shape: {T_R_Ps.shape}, expected: ({N_TIMESTEPS}, 4, 4)"
+        assert q_hands.shape == (N_TIMESTEPS, 22), f"q_hands.shape: {q_hands.shape}, expected: ({N_TIMESTEPS}, 22)"
 
     positions = T_R_Ps[:, :3, 3]
     quat_xyzws = R.from_matrix(T_R_Ps[:, :3, :3]).as_quat()
@@ -242,9 +247,16 @@ def main(robot_name: Literal["ur5", "panda", "sharpa"] = "sharpa"):
     )
 
     traj = np.array(traj)
+    assert len(traj) == timesteps, f"len(traj): {len(traj)}, expected: {timesteps}"
     print(f"Solved in {time.time() - start_time:.4f}s")
 
+    # Repeat q_hand for BUFFER timesteps to match traj length
+    first_q_hand = q_hands[0].copy()
+    q_hands = np.concatenate([first_q_hand[None].repeat(BUFFER, axis=0), q_hands])
+    print(f"traj.shape: {traj.shape}, q_hands.shape: {q_hands.shape}")
+    assert len(traj) == len(q_hands), f"len(traj): {len(traj)}, len(q_hands): {len(q_hands)}"
     traj = interpolate_traj(traj=traj, n_steps=10)
+    q_hands = interpolate_traj(traj=q_hands, n_steps=10)
 
     # Visualize trajectory
     slider = server.gui.add_slider(
@@ -257,7 +269,8 @@ def main(robot_name: Literal["ur5", "panda", "sharpa"] = "sharpa"):
         if playing.value:
             slider.value = (slider.value + 1) % len(traj)
 
-        cfg = traj[slider.value]
+        cfg = traj[slider.value].copy()
+        cfg[7:] = q_hands[slider.value].copy()
         urdf_vis.update_cfg(cfg)
 
         # Update collision ghost occasionally to see fit
@@ -270,7 +283,8 @@ def main(robot_name: Literal["ur5", "panda", "sharpa"] = "sharpa"):
 
         end_time = time.time()
         loop_dt = end_time - start_time
-        sleep_dt = dt - loop_dt
+        # sleep_dt = dt - loop_dt
+        sleep_dt = 0
         if sleep_dt > 0:
             time.sleep(sleep_dt)
         else:
