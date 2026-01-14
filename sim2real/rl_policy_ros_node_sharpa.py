@@ -282,6 +282,21 @@ class RLPolicyNode:
             assert D == 29, f"D: {D}, expected: 29"
             self.current_step = 0
 
+        if self.use_relative_object_pose_once_lifted:
+            # ##############################################################################
+            # Signal handling to save relative object pose once lifted
+            # ##############################################################################
+            import signal
+            signal.signal(signal.SIGUSR1, self._save_relative_object_pose_once_lifted)
+            self.object_lifted = False
+            self.initialized_relative_object_pose_logic = False
+
+    def _save_relative_object_pose_once_lifted(self, signum, frame):
+        info("Received signal to save relative object pose once lifted")
+        self.object_lifted = True
+        info(f"Object lifted: {self.object_lifted}")
+        breakpoint()
+
     def object_pose_callback(self, msg: PoseStamped):
         self.object_pose_msg = msg
 
@@ -904,19 +919,11 @@ class RLPolicyNode:
                 self.current_step += 1
 
             if self.use_relative_object_pose_once_lifted:
-                if not hasattr(self, "object_lifted"):
-                    self.object_lifted = False
-
-                # Check if the object has been lifted
-                LIFTED_Z = 0.65
-                prev_object_lifted = self.object_lifted
-                self.object_lifted = prev_object_lifted or (self.object_pose_msg.pose.position.z >= LIFTED_Z)
-                just_lifted = self.object_lifted and not prev_object_lifted
 
                 # When just lifted, initialize the relative object pose logic and visualize it
-                if just_lifted:
+                if self.object_lifted and not self.initialized_relative_object_pose_logic:
+                    self.initialized_relative_object_pose_logic = True
                     T_R_O_lifted = pose_msg_to_T(copy.deepcopy(self.object_pose_msg.pose))  # Object pose in robot frame
-                    # T_R_O_lifted = pose_msg_to_T(copy.deepcopy(self.goal_object_pose_msg))  # Goal object pose in robot frame
                     self._initialize_relative_object_pose_logic(
                         q=q,
                         q_target=joint_pos_targets[0],
