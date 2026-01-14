@@ -1028,8 +1028,8 @@ def main():
         # pb.connect(pb.GUI)
         hand_pb = pb.loadURDF(str(SHARPA_URDF_PATH))
 
-    HACK_SAVE_TO_FILE = True
-    if HACK_SAVE_TO_FILE:
+    PRECOMPUTE = True
+    if PRECOMPUTE:
         # Compute hand IKs and save them
         q_hands = []
         for i, (T_R_P, hand_keypoint_to_xyz) in tqdm(enumerate(zip(T_R_Ps, hand_keypoint_to_xyzs)), total=N_TIMESTEPS, desc="Computing hand IKs"):
