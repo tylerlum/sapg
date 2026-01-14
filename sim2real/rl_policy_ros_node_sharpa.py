@@ -565,6 +565,12 @@ class RLPolicyNode:
         from isaacgymenvs.utils.utils import get_repo_root_dir
 
         SERVER = viser.ViserServer()
+        @SERVER.on_client_connect
+        def _(client):
+            client.camera.position = (0.0, -1.0, 1.03)
+            client.camera.look_at = (0.0, 0.0, 0.53)
+            # client.camera.wxyz = (w, x, y, z)
+
         AXES_LENGTH = 0.0
         AXES_RADIUS = 0.0
 
@@ -603,6 +609,27 @@ class RLPolicyNode:
         )
         sharpa_viser = ViserUrdf(SERVER, SHARPA_URDF_PATH, root_node_name="/sharpa")
         sharpa_viser.update_cfg(HOME_JOINT_POS_SHARPA)
+
+        # Plot the joint targets and limits
+        joint_names = kuka_sharpa_viser._urdf.actuated_joint_names
+        J_arm = 7
+        joint_limit_mins = [kuka_sharpa_viser._urdf.actuated_joints[i].limit.lower for i in range(J_arm)]
+        joint_limit_maxs = [kuka_sharpa_viser._urdf.actuated_joints[i].limit.upper for i in range(J_arm)]
+
+        import matplotlib.pyplot as plt
+        nrows = int(np.ceil(np.sqrt(J_arm)))
+        ncols = int(np.ceil(J_arm / nrows))
+        fig, axes = plt.subplots(nrows, ncols)
+        axes = axes.flatten()
+        for i in range(J_arm):
+            axes[i].plot(q_targets_using_lifted_object_pose[:, i], label="Target")
+            axes[i].plot([joint_limit_mins[i]] * TRAJECTORY_LENGTH, label="Limit min")
+            axes[i].plot([joint_limit_maxs[i]] * TRAJECTORY_LENGTH, label="Limit max")
+            axes[i].legend()
+            axes[i].set_title(joint_names[i])
+        plt.tight_layout()
+        plt.show()
+        breakpoint()
 
         # Load object
         from isaacgymenvs.utils.objects import NAME_TO_OBJECT
@@ -1049,13 +1076,13 @@ if __name__ == "__main__":
             # object_scales=np.array([0.25, 0.03, 0.02]) * 25,  # scanned hammer 2
             # object_scales=np.array(NAME_TO_OBJECT["red_brush"].scale),
             # save_foldername=None,
-            save_foldername="2026-01-11_real_testing",
+            save_foldername="2026-01-13_sim_testing",
             # overwrite_targets_filepath=None,
             # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-44-54_noisyInputs_arm0.05.npz"),
             # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-47-13_finetuned_o0t0_arm0.05.npz"),
             # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-48-08_finetuned_o1t0_arm0.05.npz"),
             # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-48-47_finetuned_o1t1_arm0.05.npz"),
-            use_relative_object_pose_once_lifted=False,
+            use_relative_object_pose_once_lifted=True,
         )
         rl_policy_node.run()
     except rospy.ROSInterruptException:
