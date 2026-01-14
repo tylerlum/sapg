@@ -390,7 +390,7 @@ def solve_waypoint_trajopt(
     timesteps: int,
     dt: float,
 ) -> onp.ndarray:
-    
+
     target_link_index = robot.links.names.index(target_link_name)
     start_cfg = jnp.array(start_cfg)
 
@@ -414,17 +414,17 @@ def solve_waypoint_trajopt(
         anchors[t] = solved_cfg
         current_bias = solved_cfg
 
+    # Include end of trajectory in interpolation points if not explicitly set
+    if sorted_steps[-1] < timesteps - 1:
+        anchors[timesteps - 1] = anchors[sorted_steps[-1]]
+        sorted_steps.append(timesteps - 1)
+
     # Linear Interpolation between anchors
     init_traj_segments = []
     prev_t = 0
-    # Include end of trajectory in interpolation points if not explicitly set
-    all_stops = sorted_steps
-    if sorted_steps[-1] < timesteps - 1:
-        all_stops.append(timesteps - 1)
 
-    for t in all_stops:
-        # If t is a waypoint, use its solved cfg. If it's the end padding, use the last known cfg.
-        target_cfg = anchors[t] if t in anchors else anchors[sorted_steps[-1]]
+    for t in sorted_steps:
+        target_cfg = anchors[t]
         
         duration = t - prev_t
         if duration > 0:

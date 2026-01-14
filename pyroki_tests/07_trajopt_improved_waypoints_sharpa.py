@@ -94,21 +94,21 @@ def main(robot_name: Literal["ur5", "panda", "sharpa"] = "sharpa"):
         np.array([0.0, 0.0, 0.0]), np.array([0.0, 0.0, 1.0])
     )
 
-    wall_size = np.array([0.4, 0.1, 0.4])
-    wall_center = np.array([0.5, 0.0, wall_size[2] / 2])
+    table_size = np.array([0.475, 0.4, 0.3])
+    table_center = np.array([0.0, -0.8, 0.38])
 
-    wall_coll = pk.collision.Box.from_extent(
-        extent=wall_size,
-        position=wall_center,
+    table_coll = pk.collision.Box.from_extent(
+        extent=table_size,
+        position=table_center,
     )
-    world_coll = [ground_coll, wall_coll]
+    world_coll = [ground_coll, table_coll]
 
     # Define Waypoints
     # 1. Start is implicitly t=0 (enforced by start_cfg)
-    # 2. Midpoint (High over the wall)
-    mid_pos = np.array([0.5, 0.0, 0.6])
+    # 2. Midpoint (High over the table)
+    mid_pos = np.array([0.0, -0.6, 0.8])
     # 3. End (Other side)
-    end_pos = np.array([0.5, 0.4, 0.2])
+    end_pos = np.array([0.5, -0.6, 0.8])
 
     waypoints = {
         25: (mid_pos, down_wxyz),
@@ -129,12 +129,12 @@ def main(robot_name: Literal["ur5", "panda", "sharpa"] = "sharpa"):
         robot_coll.at_config(robot, start_cfg).to_trimesh(),
     )
 
-    # Draw Wall
+    # Draw Table
     server.scene.add_mesh_trimesh(
-        "wall_box",
+        "table_box",
         trimesh.creation.box(
-            extents=wall_size,
-            transform=trimesh.transformations.translation_matrix(wall_center),
+            extents=table_size,
+            transform=trimesh.transformations.translation_matrix(table_center),
         ),
     )
 
