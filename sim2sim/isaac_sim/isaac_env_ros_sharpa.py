@@ -256,17 +256,40 @@ def main():
 
     # Load trajectory
     # This makes it easier to change object and trajectory
+
+    # object_type = "hammer"
+    # object_name = "mallet"
+    # object_name = "hammer_2"
+    # trajectory_name = "vertical_swing"
+    # trajectory_name = "horizontal_swing"
+    # trajectory_name = "horizontal_swing_higher"
+    # trajectory_name = "horizontal_swing_human"
+    # trajectory_name = "horizontal_swing_human_closer"
+
+    object_type = "spatula"
+    object_name = "black_spatula"
+    # trajectory_name = "pick_and_place_human"
+    trajectory_name = "pick_and_place_human_hardinit"
+
+    # object_type = "screwdriver"
+    # object_name = "real_flat_screwdriver"
+    # trajectory_name = "top_down_screwing_human_easyinit"
+    # trajectory_name = "top_down_screwing_human"
+
     # object_type = "eraser"
     # object_name = "whiteboard_eraser"
-    # trajectory_name = "wipe_left"
+    # trajectory_name = "wipe_left_human"
+    # trajectory_name = "wipe_left_human_2"
 
-    object_type = "hammer"
-    # object_name = "hammer_2"
-    object_name = "mallet"
-    # trajectory_name = "horizontal_swing_higher"
-    # trajectory_name = "horizontal_swing"
-    # trajectory_name = "horizontal_swing_human"
-    trajectory_name = "horizontal_swing_human_closer"
+    # object_type = "marker"
+    # object_name = "040_large_marker"
+    # trajectory_name = "draw_circle_human"
+    # trajectory_name = "draw_circle_human_hardinit"
+
+    # object_type = "brush"
+    # object_name = "green_brush"
+    # trajectory_name = "simple"
+    # trajectory_name = "complex"
 
     trajectory_path = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
     assert trajectory_path.exists(), f"Trajectory file not found: {trajectory_path}"

@@ -193,19 +193,19 @@ def main():
     # Load trajectory
     # This makes it easier to change object and trajectory
 
-    object_type = "hammer"
-    object_name = "mallet"
+    # object_type = "hammer"
+    # object_name = "mallet"
     # object_name = "hammer_2"
     # trajectory_name = "vertical_swing"
     # trajectory_name = "horizontal_swing"
     # trajectory_name = "horizontal_swing_higher"
     # trajectory_name = "horizontal_swing_human"
-    trajectory_name = "horizontal_swing_human_closer"
+    # trajectory_name = "horizontal_swing_human_closer"
 
-    # object_type = "spatula"
-    # object_name = "black_spatula"
+    object_type = "spatula"
+    object_name = "black_spatula"
     # trajectory_name = "pick_and_place_human"
-    # trajectory_name = "pick_and_place_human_hardinit"
+    trajectory_name = "pick_and_place_human_hardinit"
 
     # object_type = "screwdriver"
     # object_name = "real_flat_screwdriver"

@@ -287,7 +287,7 @@ class ViserVisualizationNode:
         if object_name is None:
             # DEFAULT_OBJECT_NAME = "blue_cuboid"
             # DEFAULT_OBJECT_NAME = "cuboidal_mallet"
-            DEFAULT_OBJECT_NAME = "mallet"
+            # DEFAULT_OBJECT_NAME = "mallet"
             # DEFAULT_OBJECT_NAME = "cuboidal_hammer"
             # DEFAULT_OBJECT_NAME = "scanned_hammer_2"
             # DEFAULT_OBJECT_NAME = "real_flat_screwdriver"
@@ -302,7 +302,7 @@ class ViserVisualizationNode:
             # DEFAULT_OBJECT_NAME = "green_brush"
             # DEFAULT_OBJECT_NAME = "hammer_2"
             # DEFAULT_OBJECT_NAME = "hairbrush"
-            # DEFAULT_OBJECT_NAME = "black_spatula"
+            DEFAULT_OBJECT_NAME = "black_spatula"
             warn(f"Using default object name: {DEFAULT_OBJECT_NAME}")
             object_name = DEFAULT_OBJECT_NAME
 
