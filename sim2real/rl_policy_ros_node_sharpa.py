@@ -539,16 +539,16 @@ class RLPolicyNode:
         # trajectory_name = "wipe_left_human"
         # trajectory_name = "wipe_left_human_2"
 
-        # object_type = "marker"
-        # object_name = "040_large_marker"
+        object_type = "marker"
+        object_name = "040_large_marker"
         # trajectory_name = "draw_circle_human"
-        # trajectory_name = "draw_circle_human_hardinit"
+        trajectory_name = "draw_circle_human_hardinit"
 
-        object_type = "brush"
+        # object_type = "brush"
         # object_name = "green_brush"
-        object_name = "red_brush"
+        # object_name = "red_brush"
         # trajectory_name = "simple"
-        trajectory_name = "complex"
+        # trajectory_name = "complex"
 
         assert self.object_name == object_name, f"self.object_name: {self.object_name}, object_name: {object_name}"
         object_pose_trajectory_filepath = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
@@ -1122,7 +1122,7 @@ class RLPolicyNode:
 
 if __name__ == "__main__":
     try:
-        OBJECT_NAME = "red_brush"
+        OBJECT_NAME = "040_large_marker"
         rl_policy_node = RLPolicyNode(
             # Old
             # config_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"),
@@ -1182,7 +1182,7 @@ if __name__ == "__main__":
             # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-47-13_finetuned_o0t0_arm0.05.npz"),
             # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-48-08_finetuned_o1t0_arm0.05.npz"),
             # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-48-47_finetuned_o1t1_arm0.05.npz"),
-            use_relative_object_pose_once_lifted=False,
+            use_relative_object_pose_once_lifted=True,
             object_name=OBJECT_NAME,
             automatically_detect_object_lifted=False,
         )

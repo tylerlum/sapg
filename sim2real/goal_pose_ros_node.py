@@ -217,16 +217,16 @@ def main():
     # trajectory_name = "wipe_left_human"
     # trajectory_name = "wipe_left_human_2"
 
-    # object_type = "marker"
-    # object_name = "040_large_marker"
+    object_type = "marker"
+    object_name = "040_large_marker"
     # trajectory_name = "draw_circle_human"
-    # trajectory_name = "draw_circle_human_hardinit"
+    trajectory_name = "draw_circle_human_hardinit"
 
-    object_type = "brush"
+    # object_type = "brush"
     # object_name = "green_brush"
-    object_name = "red_brush"
+    # object_name = "red_brush"
     # trajectory_name = "simple"
-    trajectory_name = "complex"
+    # trajectory_name = "complex"
 
     trajectory_path = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
     assert trajectory_path.exists(), f"Trajectory file not found: {trajectory_path}"
@@ -269,9 +269,9 @@ def main():
             object_scales=np.array([0.141, 0.03025, 0.0271]) * 25,  # fixed size
             # object_scales=np.array([0.12965531, 0.0337145 , 0.06038587]) * 25,  # whiteboard eraser
             # object_scales=np.array([0.15954332, 0.0777093 , 0.01231273]) * 25,  # iphone15pro
-            success_threshold=0.0,
+            # success_threshold=0.0,
             # success_threshold=0.01,
-            # success_threshold=0.02,
+            success_threshold=0.02,
             # success_threshold=0.05,
             success_steps=1,
         )
