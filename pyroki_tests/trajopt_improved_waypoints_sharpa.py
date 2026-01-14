@@ -260,8 +260,8 @@ def main(robot_name: Literal["ur5", "panda", "sharpa"] = "sharpa"):
     q_hands = np.concatenate([first_q_hand[None].repeat(BUFFER, axis=0), q_hands])
     print(f"traj.shape: {traj.shape}, q_hands.shape: {q_hands.shape}")
     assert len(traj) == len(q_hands), f"len(traj): {len(traj)}, len(q_hands): {len(q_hands)}"
-    # traj = interpolate_traj(traj=traj, n_steps=10)
-    # q_hands = interpolate_traj(traj=q_hands, n_steps=10)
+    traj = interpolate_traj(traj=traj, n_steps=10)
+    q_hands = interpolate_traj(traj=q_hands, n_steps=10)
 
     # Visualize trajectory
     slider = server.gui.add_slider(
