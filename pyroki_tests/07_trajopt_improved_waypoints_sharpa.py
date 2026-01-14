@@ -8,24 +8,33 @@ import time
 from pathlib import Path
 from typing import Literal
 
+# Enable caching for faster re-runs
+import jax
 import numpy as np
 import pyroki as pk
+import pyroki_snippets as pks
 import trimesh
 import tyro
 import viser
-from viser.extras import ViserUrdf
 from robot_descriptions.loaders.yourdfpy import load_robot_description
+from viser.extras import ViserUrdf
 
-import pyroki_snippets as pks
-
-# Enable caching for faster re-runs
-import jax
 jax.config.update("jax_compilation_cache_dir", "/tmp/jax_cache")
 
-def main(robot_name: Literal["ur5", "panda", "sharpa"] = "sharpa"):
 
+def main(robot_name: Literal["ur5", "panda", "sharpa"] = "sharpa"):
     # Load robot
-    HOME_JOINT_POS_IIWA = np.array([-1.571, 1.571 - np.deg2rad(10), -0.000, 1.376 + np.deg2rad(10), -0.000, 1.485, 1.308])
+    HOME_JOINT_POS_IIWA = np.array(
+        [
+            -1.571,
+            1.571 - np.deg2rad(10),
+            -0.000,
+            1.376 + np.deg2rad(10),
+            -0.000,
+            1.485,
+            1.308,
+        ]
+    )
     HOME_JOINT_POS_SHARPA = np.zeros(22)
     HOME_JOINT_POS = np.concatenate([HOME_JOINT_POS_IIWA, HOME_JOINT_POS_SHARPA])
 
@@ -34,7 +43,7 @@ def main(robot_name: Literal["ur5", "panda", "sharpa"] = "sharpa"):
         down_wxyz = np.array([0.707, 0, 0.707, 0])
         target_link_name = "ee_link"
         sphere_json_path = Path(__file__).parent / "assets" / "ur5_spheres.json"
-        
+
         default_cfg = np.zeros(6)
         default_cfg[1] = -1.308
         robot = pk.Robot.from_urdf(urdf, default_joint_cfg=default_cfg)
@@ -48,8 +57,11 @@ def main(robot_name: Literal["ur5", "panda", "sharpa"] = "sharpa"):
 
     elif robot_name == "sharpa":
         import yourdfpy
+
         # Sharpa
-        urdf = yourdfpy.URDF.load("assets/urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted_restricted.urdf")
+        urdf = yourdfpy.URDF.load(
+            "assets/urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted_restricted.urdf"
+        )
         target_link_name = "left_hand_C_MC"
         down_wxyz = np.array([0.5, 0.5, 0.5, -0.5])
         sphere_json_path = Path(__file__).parent / "assets" / "sharpa_spheres.json"
@@ -67,24 +79,24 @@ def main(robot_name: Literal["ur5", "panda", "sharpa"] = "sharpa"):
 
     # Problem Setup
     timesteps, dt = 50, 0.05
-    
+
     # Implicit start config based on current robot state (usually 0 unless set)
     # We will use the robot's default config as the "seed" for the start pose IK
     # but to pass a specific start_cfg to the solver, we can run a quick IK first
     # or just use zeros if compatible. Let's use zeros for Panda.
     start_cfg = HOME_JOINT_POS
-    assert len(start_cfg) == robot.joints.num_actuated_joints, (
-        f"start_cfg.shape: {start_cfg.shape}, expected: ({robot.joints.num_actuated_joints},)"
-    )
+    assert (
+        len(start_cfg) == robot.joints.num_actuated_joints
+    ), f"start_cfg.shape: {start_cfg.shape}, expected: ({robot.joints.num_actuated_joints},)"
 
     # Define Obstacles
     ground_coll = pk.collision.HalfSpace.from_point_and_normal(
         np.array([0.0, 0.0, 0.0]), np.array([0.0, 0.0, 1.0])
     )
-    
+
     wall_size = np.array([0.4, 0.1, 0.4])
     wall_center = np.array([0.5, 0.0, wall_size[2] / 2])
-    
+
     wall_coll = pk.collision.Box.from_extent(
         extent=wall_size,
         position=wall_center,
@@ -94,7 +106,7 @@ def main(robot_name: Literal["ur5", "panda", "sharpa"] = "sharpa"):
     # Define Waypoints
     # 1. Start is implicitly t=0 (enforced by start_cfg)
     # 2. Midpoint (High over the wall)
-    mid_pos = np.array([0.5, 0.0, 0.6]) 
+    mid_pos = np.array([0.5, 0.0, 0.6])
     # 3. End (Other side)
     end_pos = np.array([0.5, 0.4, 0.2])
 
@@ -116,7 +128,7 @@ def main(robot_name: Literal["ur5", "panda", "sharpa"] = "sharpa"):
         "robot_coll_ghost",
         robot_coll.at_config(robot, start_cfg).to_trimesh(),
     )
-    
+
     # Draw Wall
     server.scene.add_mesh_trimesh(
         "wall_box",
@@ -125,7 +137,7 @@ def main(robot_name: Literal["ur5", "panda", "sharpa"] = "sharpa"):
             transform=trimesh.transformations.translation_matrix(wall_center),
         ),
     )
-    
+
     # Draw Waypoints
     for t, (pos, wxyz) in waypoints.items():
         server.scene.add_frame(
@@ -150,7 +162,7 @@ def main(robot_name: Literal["ur5", "panda", "sharpa"] = "sharpa"):
         timesteps,
         dt,
     )
-    
+
     traj = np.array(traj)
     print(f"Solved in {time.time() - start_time:.4f}s")
 
@@ -159,22 +171,22 @@ def main(robot_name: Literal["ur5", "panda", "sharpa"] = "sharpa"):
         "Timestep", min=0, max=timesteps - 1, step=1, initial_value=0
     )
     playing = server.gui.add_checkbox("Playing", initial_value=True)
-    
+
     while True:
         if playing.value:
             slider.value = (slider.value + 1) % timesteps
 
         cfg = traj[slider.value]
         urdf_vis.update_cfg(cfg)
-        
+
         # Update collision ghost occasionally to see fit
         # (Updating every frame might be slow for complex meshes)
         if slider.value % 5 == 0:
-             server.scene.add_mesh_trimesh(
+            server.scene.add_mesh_trimesh(
                 "robot_coll_ghost",
                 robot_coll.at_config(robot, cfg).to_trimesh(),
             )
-            
+
         time.sleep(1.0 / 10.0)
 
 
