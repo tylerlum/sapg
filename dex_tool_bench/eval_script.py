@@ -350,11 +350,11 @@ def main():
     # trajectory_name = "top_down_screwing_human"
     # trajectory_name = "top_down_screwing_human_easyinit"
 
-    object_type = "marker"
-    object_name = "040_large_marker"
+    # object_type = "marker"
+    # object_name = "040_large_marker"
     # trajectory_name = "write_circle_whiteboard"
     # trajectory_name = "write_circle_whiteboard_adjusted"
-    trajectory_name = "draw_circle_human"
+    # trajectory_name = "draw_circle_human"
     # trajectory_name = "draw_circle_human_hardinit"
 
     # object_type = "knife"
@@ -368,6 +368,12 @@ def main():
     # trajectory_name = "pick_and_place_hardinit2"
     # trajectory_name = "pick_and_place_human"
     # trajectory_name = "pick_and_place_human_hardinit"
+
+    object_type = "brush"
+    # object_name = "green_brush"
+    object_name = "red_brush"
+    # trajectory_name = "simple"
+    trajectory_name = "complex"
 
     output_dir = None  # Set to Path("videos") to enable recording
 

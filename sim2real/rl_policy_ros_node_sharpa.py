@@ -534,20 +534,21 @@ class RLPolicyNode:
         # trajectory_name = "top_down_screwing_human_easyinit"
         # trajectory_name = "top_down_screwing_human"
 
-        object_type = "eraser"
-        object_name = "whiteboard_eraser"
+        # object_type = "eraser"
+        # object_name = "whiteboard_eraser"
         # trajectory_name = "wipe_left_human"
-        trajectory_name = "wipe_left_human_2"
+        # trajectory_name = "wipe_left_human_2"
 
         # object_type = "marker"
         # object_name = "040_large_marker"
         # trajectory_name = "draw_circle_human"
         # trajectory_name = "draw_circle_human_hardinit"
 
-        # object_type = "brush"
+        object_type = "brush"
         # object_name = "green_brush"
+        object_name = "red_brush"
         # trajectory_name = "simple"
-        # trajectory_name = "complex"
+        trajectory_name = "complex"
 
         assert self.object_name == object_name, f"self.object_name: {self.object_name}, object_name: {object_name}"
         object_pose_trajectory_filepath = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
@@ -1121,7 +1122,7 @@ class RLPolicyNode:
 
 if __name__ == "__main__":
     try:
-        OBJECT_NAME = "whiteboard_eraser"
+        OBJECT_NAME = "red_brush"
         rl_policy_node = RLPolicyNode(
             # Old
             # config_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"),
