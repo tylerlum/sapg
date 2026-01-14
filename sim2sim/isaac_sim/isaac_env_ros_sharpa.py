@@ -325,6 +325,7 @@ def main():
             "task.sim.dt": CONTROL_DT,
             "task.sim.substeps": SUBSTEPS,
             "task.env.tableResetZRange": 0.0,
+            "task.env.startArmHigher": True,
         },
     )
 
