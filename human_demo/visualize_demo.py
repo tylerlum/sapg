@@ -933,17 +933,6 @@ def main():
     hand_frames = hand_frames[:N_TIMESTEPS]
     hand_visers = hand_visers[:N_TIMESTEPS]
 
-    if args.retarget_robot_using_object_relative_pose:
-        idx_lifted = None
-        LIFTED_Z = 0.6
-        for i, T_W_O in enumerate(T_W_Os):
-            z = T_W_O[:3, 3][2]
-            if z >= LIFTED_Z:
-                idx_lifted = i
-                break
-        assert idx_lifted is not None, f"No object pose with z >= {LIFTED_Z} found"
-        print(colored(f"First object pose with z >= {LIFTED_Z} is at index {idx_lifted}", "green"))
-
     if args.retarget_robot:
         with open(KUKA_SHARPA_URDF_PATH, "rb") as f:
             urdf_str = f.read()
@@ -960,6 +949,17 @@ def main():
         pb.connect(pb.DIRECT)
         # pb.connect(pb.GUI)
         hand_pb = pb.loadURDF(str(SHARPA_URDF_PATH))
+
+    if args.retarget_robot_using_object_relative_pose:
+        idx_lifted = None
+        LIFTED_Z = 0.6
+        for i, T_W_O in enumerate(T_W_Os):
+            z = T_W_O[:3, 3][2]
+            if z >= LIFTED_Z:
+                idx_lifted = i
+                break
+        assert idx_lifted is not None, f"No object pose with z >= {LIFTED_Z} found"
+        print(colored(f"First object pose with z >= {LIFTED_Z} is at index {idx_lifted}", "green"))
 
     HACK_SAVE_TO_FILE = False
     if HACK_SAVE_TO_FILE:

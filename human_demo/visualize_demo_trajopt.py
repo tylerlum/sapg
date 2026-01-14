@@ -1057,17 +1057,6 @@ def main():
     hand_frames = hand_frames[:N_TIMESTEPS]
     hand_visers = hand_visers[:N_TIMESTEPS]
 
-    if args.retarget_robot_using_object_relative_pose:
-        idx_lifted = None
-        LIFTED_Z = 0.6
-        for i, T_W_O in enumerate(T_W_Os):
-            z = T_W_O[:3, 3][2]
-            if z >= LIFTED_Z:
-                idx_lifted = i
-                break
-        assert idx_lifted is not None, f"No object pose with z >= {LIFTED_Z} found"
-        print(colored(f"First object pose with z >= {LIFTED_Z} is at index {idx_lifted}", "green"))
-
     if args.retarget_robot:
         with open(KUKA_SHARPA_URDF_PATH, "rb") as f:
             urdf_str = f.read()
@@ -1085,8 +1074,6 @@ def main():
         # pb.connect(pb.GUI)
         hand_pb = pb.loadURDF(str(SHARPA_URDF_PATH))
 
-    PRECOMPUTE = True
-    if PRECOMPUTE:
         # Compute hand IKs and save them
         q_hands = []
         for i, (T_R_P, hand_keypoint_to_xyz) in tqdm(enumerate(zip(T_R_Ps, hand_keypoint_to_xyzs)), total=N_TIMESTEPS, desc="Computing hand IKs"):
@@ -1105,6 +1092,20 @@ def main():
             dt=args.dt,
         )
         assert retargeted_qs.shape == (N_TIMESTEPS, 29), f"retargeted_qs.shape: {retargeted_qs.shape}, expected: (N_TIMESTEPS, 29)"
+
+        # Update hand joints positions
+        retargeted_qs[:, 7:] = q_hands
+
+    if args.retarget_robot_using_object_relative_pose:
+        idx_lifted = None
+        LIFTED_Z = 0.6
+        for i, T_W_O in enumerate(T_W_Os):
+            z = T_W_O[:3, 3][2]
+            if z >= LIFTED_Z:
+                idx_lifted = i
+                break
+        assert idx_lifted is not None, f"No object pose with z >= {LIFTED_Z} found"
+        print(colored(f"First object pose with z >= {LIFTED_Z} is at index {idx_lifted}", "green"))
 
         # Compute T_R_Ps using lifted object pose
         T_R_P_lifted = T_R_Ps[idx_lifted]
