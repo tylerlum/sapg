@@ -110,10 +110,15 @@ def main(robot_name: Literal["ur5", "panda", "sharpa"] = "sharpa"):
     # 3. End (Other side)
     end_pos = np.array([0.5, -0.6, 0.8])
 
-    waypoints = {
-        25: (mid_pos, down_wxyz),
-        49: (end_pos, down_wxyz),
-    }
+    waypoints = {}
+    waypoints.update({
+        25 + i: (mid_pos, down_wxyz)
+        for i in range(10)
+    })
+    waypoints.update({
+        49 - i: (end_pos, down_wxyz)
+        for i in range(10)
+    })
 
     # Visualize problem setup
     server = viser.ViserServer()
