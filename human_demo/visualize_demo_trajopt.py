@@ -437,7 +437,7 @@ def compute_new_q_arm(arm_pk_chain: pk.SerialChain, target_wrist_pose: np.ndarra
     BUFFER = np.deg2rad(7.5)
     lower_limits = arm_pk_chain.low.cpu().numpy() + BUFFER
     upper_limits = arm_pk_chain.high.cpu().numpy() - BUFFER
-    new_q_arm[0] = np.clip(new_q_arm[0], lower_limits, upper_limits)
+    new_q_arm = np.clip(new_q_arm, lower_limits[None], upper_limits[None])
 
     return new_q_arm.cpu().numpy()[0]
 
@@ -836,19 +836,19 @@ def solve_trajopt(T_R_Ps: np.ndarray, q_start: np.ndarray, dt: float, waypoint_b
     world_coll = [ground_coll, table_coll]
 
     # Create waypoints
-    BUFFER = waypoint_buffer
+    WAYPOINT_BUFFER = waypoint_buffer
     waypoints = {}
     for i in range(N_TIMESTEPS):
         pos = T_R_Ps[i, :3, 3]
         quat_xyzw = R.from_matrix(T_R_Ps[i, :3, :3]).as_quat()
         quat_wxyz = xyzw_to_wxyz(quat_xyzw)
-        waypoints[BUFFER + i] = (pos, quat_wxyz)
+        waypoints[WAYPOINT_BUFFER + i] = (pos, quat_wxyz)
 
     # Solve trajectory
     print("Solving trajectory with waypoints...")
     start_time = time.time()
 
-    N_TIMESTEPS_WITH_BUFFER = N_TIMESTEPS + BUFFER
+    N_TIMESTEPS_WITH_BUFFER = N_TIMESTEPS + WAYPOINT_BUFFER
     print(f"Solving trajectory with {N_TIMESTEPS_WITH_BUFFER} waypoints, each {dt} seconds apart, for a total time of {N_TIMESTEPS_WITH_BUFFER * dt} seconds")
     traj = pks.solve_waypoint_trajopt(
         robot,
@@ -864,6 +864,13 @@ def solve_trajopt(T_R_Ps: np.ndarray, q_start: np.ndarray, dt: float, waypoint_b
     traj = np.array(traj)
     assert len(traj) == N_TIMESTEPS_WITH_BUFFER, f"len(traj): {len(traj)}, expected: {N_TIMESTEPS_WITH_BUFFER}"
     print(f"Solved in {time.time() - start_time:.4f}s")
+
+    # Clamp joint position to joint limits with buffer
+    BUFFER = np.deg2rad(7.5)
+    J_arm = 7
+    arm_lower_limits = np.array(robot.joints.lower_limits[:J_arm]) + BUFFER
+    arm_upper_limits = np.array(robot.joints.upper_limits[:J_arm]) - BUFFER
+    traj[:, :J_arm] = np.clip(traj[:, :J_arm], arm_lower_limits[None], arm_upper_limits[None])
 
     return traj
 

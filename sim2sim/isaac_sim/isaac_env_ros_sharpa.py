@@ -278,8 +278,8 @@ def main():
 
     object_type = "eraser"
     object_name = "whiteboard_eraser"
-    trajectory_name = "wipe_left_human"
-    # trajectory_name = "wipe_left_human_2"
+    # trajectory_name = "wipe_left_human"
+    trajectory_name = "wipe_left_human_2"
 
     # object_type = "marker"
     # object_name = "040_large_marker"
