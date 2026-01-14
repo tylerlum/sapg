@@ -49,7 +49,7 @@ def main():
     )
 
     # Load sphere
-    sphere = trimesh.creation.icosphere(radius=0.1, subdivisions=10)
+    sphere = trimesh.creation.icosphere(radius=0.1, subdivisions=2)
     sphere_vis = server.scene.add_mesh_simple(
         name="/sphere_frame/sphere",
         vertices=sphere.vertices,
@@ -156,8 +156,7 @@ def main():
         print(
             f"sphere_frame.position: {sphere_frame.position}, sphere_frame.wxyz: {sphere_frame.wxyz}"
         )
-        time.sleep(0.2)
-        # breakpoint()
+        time.sleep(0.01)
 
 
 
