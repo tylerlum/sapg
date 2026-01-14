@@ -5,6 +5,7 @@ import copy
 import time
 from pathlib import Path
 from typing import Literal, Optional, Tuple
+import datetime
 
 import numpy as np
 import rospy
@@ -1032,7 +1033,6 @@ class RLPolicyNode:
     def _signal_handler(self, signum, frame):
         assert self.save_foldername is not None, "save_foldername must be set to save to file"
 
-        import datetime
         if self._is_in_progress_saving_to_file:
             warn("Already in progress of saving to file, skipping")
             return
@@ -1044,7 +1044,7 @@ class RLPolicyNode:
             info(f"Received signal {signum}, saving to file")
             datetime_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-            filename = f"{datetime_str}_{self.checkpoint_path.stem}_arm{self.arm_moving_average}"
+            filename = f"{datetime_str}_{self.checkpoint_path.stem}_arm{self.arm_moving_average}_{self.object_name}"
             if self.overwrite_targets_filepath is not None:
                 filename = f"{datetime_str}_replay_{self.overwrite_targets_filepath.stem}"
             output_path = Path("recorded_robot_inputs") / self.save_foldername /f"{filename}.npz"
@@ -1172,7 +1172,7 @@ if __name__ == "__main__":
             # object_scales=np.array(NAME_TO_OBJECT["red_brush"].scale),
             object_scales=np.array(NAME_TO_OBJECT[OBJECT_NAME].scale),
             # save_foldername=None,
-            save_foldername="2026-01-13_sim_testing",
+            save_foldername=f"{datetime.datetime.now().strftime('%Y-%m-%d')}_testing",
             # overwrite_targets_filepath=None,
             # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-44-54_noisyInputs_arm0.05.npz"),
             # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-47-13_finetuned_o0t0_arm0.05.npz"),
