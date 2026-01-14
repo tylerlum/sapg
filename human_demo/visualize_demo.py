@@ -879,6 +879,40 @@ def main():
         # pb.connect(pb.GUI)
         hand_pb = pb.loadURDF(str(SHARPA_URDF_PATH))
 
+    HACK_SAVE_TO_FILE = False
+    if HACK_SAVE_TO_FILE:
+        # HACK: Save T_R_Ps to json
+        with open("T_R_Ps.json", "w") as f:
+            json.dump(T_R_Ps.tolist(), f, indent=4)
+
+        # Compute hand IKs and save them
+        q_hands = []
+        for i, (T_R_P, hand_keypoint_to_xyz) in tqdm(enumerate(zip(T_R_Ps, hand_keypoint_to_xyzs)), total=N_TIMESTEPS, desc="Computing hand IKs"):
+            T_W_P = T_W_R @ T_R_P
+            new_q_hand = solve_fingertip_ik(
+                hand_pb=hand_pb,
+                hand_keypoint_to_xyz=hand_keypoint_to_xyz,
+                target_wrist_pose=T_W_P,
+            )
+            q_hands.append(new_q_hand)
+        with open("q_hands.json", "w") as f:
+            json.dump(np.array(q_hands).tolist(), f, indent=4)
+
+        # Compute T_R_Ps using lifted object pose
+        T_R_P_lifted = T_R_Ps[idx_lifted]
+        T_W_P_lifted = T_W_R @ T_R_P_lifted
+        T_W_O_lifted = T_W_Os[idx_lifted]
+        T_O_P_lifted = np.linalg.inv(T_W_O_lifted) @ T_W_P_lifted
+
+        T_W_Ps_using_lifted_object_pose = np.array([T_W_O @ T_O_P_lifted for T_W_O in T_W_Os])
+        T_R_W = np.linalg.inv(T_W_R)
+        T_R_Ps_using_lifted_object_pose = np.array([T_R_W @ T_W_P for T_W_P in T_W_Ps_using_lifted_object_pose])
+        q_hand_using_lifted_pose = q_hands[idx_lifted]
+        with open("q_hand_using_lifted_pose.json", "w") as f:
+            json.dump(q_hand_using_lifted_pose.tolist(), f, indent=4)
+        with open("T_R_Ps_using_lifted_pose.json", "w") as f:
+            json.dump(T_R_Ps_using_lifted_object_pose.tolist(), f, indent=4)
+
     # Visualization loop
     while True:
         # Reset robot to home position
@@ -904,40 +938,6 @@ def main():
 
             new_q = np.concatenate([new_q_arm, new_q_hand])
             kuka_sharpa_viser.update_cfg(new_q)
-
-        HACK_SAVE_TO_FILE = False
-        if HACK_SAVE_TO_FILE:
-            # HACK: Save T_R_Ps to json
-            with open("T_R_Ps.json", "w") as f:
-                json.dump(T_R_Ps.tolist(), f, indent=4)
-
-            # Compute hand IKs and save them
-            q_hands = []
-            for i, (T_R_P, hand_keypoint_to_xyz) in tqdm(enumerate(zip(T_R_Ps, hand_keypoint_to_xyzs)), total=N_TIMESTEPS, desc="Computing hand IKs"):
-                T_W_P = T_W_R @ T_R_P
-                new_q_hand = solve_fingertip_ik(
-                    hand_pb=hand_pb,
-                    hand_keypoint_to_xyz=hand_keypoint_to_xyz,
-                    target_wrist_pose=T_W_P,
-                )
-                q_hands.append(new_q_hand)
-            with open("q_hands.json", "w") as f:
-                json.dump(np.array(q_hands).tolist(), f, indent=4)
-
-            # Compute T_R_Ps using lifted object pose
-            T_R_P_lifted = T_R_Ps[idx_lifted]
-            T_W_P_lifted = T_W_R @ T_R_P_lifted
-            T_W_O_lifted = T_W_Os[idx_lifted]
-            T_O_P_lifted = np.linalg.inv(T_W_O_lifted) @ T_W_P_lifted
-
-            T_W_Ps_using_lifted_object_pose = np.array([T_W_O @ T_O_P_lifted for T_W_O in T_W_Os])
-            T_R_W = np.linalg.inv(T_W_R)
-            T_R_Ps_using_lifted_object_pose = np.array([T_R_W @ T_W_P for T_W_P in T_W_Ps_using_lifted_object_pose])
-            q_hand_using_lifted_pose = q_hands[idx_lifted]
-            with open("q_hand_using_lifted_pose.json", "w") as f:
-                json.dump(q_hand_using_lifted_pose.tolist(), f, indent=4)
-            with open("T_R_Ps_using_lifted_pose.json", "w") as f:
-                json.dump(T_R_Ps_using_lifted_object_pose.tolist(), f, indent=4)
 
         for i, (T_W_O, T_R_P, hand_keypoint_to_xyz) in tqdm(
             enumerate(zip(T_W_Os, T_R_Ps, hand_keypoint_to_xyzs)),
