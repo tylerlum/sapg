@@ -392,7 +392,7 @@ BRUSH_NAME_TO_OBJECT = {
         ),
         coacd_filepaths=None,
         scale=rescale_by_factor((0.12, 0.02, 0.015), factor=25),
-        need_vhacd=False,
+        need_vhacd=True,
     ),
     "green_brush": Object(
         filepath=(
@@ -401,7 +401,7 @@ BRUSH_NAME_TO_OBJECT = {
         ),
         coacd_filepaths=None,
         scale=rescale_by_factor((0.15, 0.02, 0.015), factor=25),
-        need_vhacd=False,
+        need_vhacd=True,
     ),
     "anvil_brush": Object(
         filepath=(
