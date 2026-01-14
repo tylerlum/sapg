@@ -24,6 +24,7 @@ jax.config.update("jax_compilation_cache_dir", "/tmp/jax_cache")
 
 def main(robot_name: Literal["ur5", "panda", "sharpa"] = "sharpa"):
 
+    # Load robot
     HOME_JOINT_POS_IIWA = np.array([-1.571, 1.571 - np.deg2rad(10), -0.000, 1.376 + np.deg2rad(10), -0.000, 1.485, 1.308])
     HOME_JOINT_POS_SHARPA = np.zeros(22)
     HOME_JOINT_POS = np.concatenate([HOME_JOINT_POS_IIWA, HOME_JOINT_POS_SHARPA])
@@ -76,7 +77,6 @@ def main(robot_name: Literal["ur5", "panda", "sharpa"] = "sharpa"):
         f"start_cfg.shape: {start_cfg.shape}, expected: ({robot.joints.num_actuated_joints},)"
     )
 
-
     # Define Obstacles
     ground_coll = pk.collision.HalfSpace.from_point_and_normal(
         np.array([0.0, 0.0, 0.0]), np.array([0.0, 0.0, 1.0])
@@ -103,27 +103,19 @@ def main(robot_name: Literal["ur5", "panda", "sharpa"] = "sharpa"):
         49: (end_pos, down_wxyz),
     }
 
-    print("Solving trajectory with waypoints...")
-    start_time = time.time()
-
-    traj = pks.solve_waypoint_trajopt(
-        robot,
-        robot_coll,
-        world_coll,
-        target_link_name,
-        start_cfg,
-        waypoints,
-        timesteps,
-        dt,
-    )
-    
-    traj = np.array(traj)
-    print(f"Solved in {time.time() - start_time:.4f}s")
-
-    # Visualize
+    # Visualize problem setup
     server = viser.ViserServer()
-    urdf_vis = ViserUrdf(server, urdf)
     server.scene.add_grid("/grid", width=2, height=2, cell_size=0.1)
+
+    # Draw robot
+    urdf_vis = ViserUrdf(server, urdf)
+    urdf_vis.update_cfg(start_cfg)
+
+    # Draw robot collision model ghost
+    server.scene.add_mesh_trimesh(
+        "robot_coll_ghost",
+        robot_coll.at_config(robot, start_cfg).to_trimesh(),
+    )
     
     # Draw Wall
     server.scene.add_mesh_trimesh(
@@ -144,17 +136,30 @@ def main(robot_name: Literal["ur5", "panda", "sharpa"] = "sharpa"):
             axes_radius=0.01,
         )
 
+    # Solve trajectory
+    print("Solving trajectory with waypoints...")
+    start_time = time.time()
+
+    traj = pks.solve_waypoint_trajopt(
+        robot,
+        robot_coll,
+        world_coll,
+        target_link_name,
+        start_cfg,
+        waypoints,
+        timesteps,
+        dt,
+    )
+    
+    traj = np.array(traj)
+    print(f"Solved in {time.time() - start_time:.4f}s")
+
+    # Visualize trajectory
     slider = server.gui.add_slider(
         "Timestep", min=0, max=timesteps - 1, step=1, initial_value=0
     )
     playing = server.gui.add_checkbox("Playing", initial_value=True)
     
-    # Draw robot collision model ghost
-    server.scene.add_mesh_trimesh(
-        "robot_coll_ghost",
-        robot_coll.at_config(robot, traj[0]).to_trimesh(),
-    )
-
     while True:
         if playing.value:
             slider.value = (slider.value + 1) % timesteps
