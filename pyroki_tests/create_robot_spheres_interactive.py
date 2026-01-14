@@ -205,6 +205,7 @@ class SphereEditor:
 
     def _start_editing_sphere(self, link_name: str):
         """Spawn a gizmo sphere on the specified link."""
+        breakpoint()
         self._cleanup_active_gizmo()
         
         self.active_link_name = link_name
@@ -320,7 +321,12 @@ def main(
             initial_data = json.load(f)
         print(f"Loaded existing spheres from {spheres_json_path}")
 
-    editor = SphereEditor(server, viser_urdf, link_name_to_frame, initial_data)
+    editor = SphereEditor(
+        server=server,
+        viser_urdf=viser_urdf,
+        link_frames=link_name_to_frame,
+        initial_data=initial_data,
+    )
 
     server.scene.add_grid("/grid", width=2, height=2)
 
