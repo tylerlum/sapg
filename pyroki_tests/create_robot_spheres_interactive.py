@@ -103,6 +103,7 @@ class SphereEditor:
         # State for the currently editing sphere
         self.active_gizmo: Optional[TransformControlsHandle] = None
         self.active_sphere_mesh: Optional[SceneNodeHandle] = None
+        self.gizmo_base_vertices: Optional[np.ndarray] = None # For scaling
         self.active_link_name: Optional[str] = None
         
         # GUI Handles
@@ -134,17 +135,21 @@ class SphereEditor:
 
     def _visualize_saved_sphere(self, link_name: str, center: List[float], radius: float):
         """Draws a static green sphere attached to the link frame."""
-        # FIX: Use path string concatenation instead of parent object
+        # FIX: Use path naming for hierarchy (no parent= arg)
         frame_path = self.link_frames[link_name].name
         name = f"{frame_path}/saved_sphere_{time.time_ns()}"
         
-        sphere = trimesh.creation.icosphere(radius=1.0, subdivisions=2)
-        self.server.scene.add_mesh_trimesh(
+        # Generate sphere with correct radius
+        print(f"Visualizing sphere for {link_name} at {center} with radius {radius}")
+        sphere = trimesh.creation.icosphere(radius=radius, subdivisions=2)
+        
+        self.server.scene.add_mesh_simple(
             name=name,
             vertices=sphere.vertices,
             faces=sphere.faces,
             position=np.array(center),
             color=(0.0, 1.0, 0.0), # Green
+            opacity=0.8,
         )
 
     def _create_gui(self):
@@ -168,13 +173,17 @@ class SphereEditor:
         with self.server.gui.add_folder("Active Edit", visible=True):
             self.save_btn = self.server.gui.add_button("STORE SPHERE", visible=False, color="green")
             self.cancel_btn = self.server.gui.add_button("CANCEL", visible=False, color="red")
-            self.radius_slider = self.server.gui.add_slider("Radius", 0.005, 0.3, 0.001, 0.05, visible=False)
+            self.radius_slider = self.server.gui.add_slider("Radius", min=0.005, max=0.3, step=0.001, initial_value=0.05, visible=False)
 
             @self.radius_slider.on_update
             def _(_):
-                if self.active_sphere_mesh:
+                # FIX: Update vertices directly to handle scaling
+                if self.active_sphere_mesh and self.gizmo_base_vertices is not None:
                     scale = self.radius_slider.value
-                    self.active_sphere_mesh.scale = (scale, scale, scale)
+                    # Compute new vertices based on base unit sphere
+                    new_vertices = self.gizmo_base_vertices * scale
+                    # Use _queue_update as per reference script
+                    self.active_sphere_mesh._queue_update("vertices", new_vertices)
 
             @self.save_btn.on_click
             def _(_):
@@ -200,7 +209,7 @@ class SphereEditor:
         
         self.active_link_name = link_name
         
-        # FIX: Use path string concatenation for parenting
+        # FIX: Path hierarchy
         frame_path = self.link_frames[link_name].name
         gizmo_name = f"{frame_path}/gizmo_{link_name}"
         
@@ -213,8 +222,11 @@ class SphereEditor:
             scale=0.15,
         )
         
-        # 2. Attach visual sphere to the gizmo
-        sphere = trimesh.creation.icosphere(radius=1.0, subdivisions=2)
+        # 2. Attach visual sphere to the gizmo (Radius = 1.0 for easy scaling)
+        sphere = trimesh.creation.icosphere(radius=0.1, subdivisions=10)
+        # Store base vertices for scaling calculations
+        self.gizmo_base_vertices = sphere.vertices.copy()
+        
         self.active_sphere_mesh = self.server.scene.add_mesh_simple(
             name=f"{gizmo_name}/visual",
             vertices=sphere.vertices,
@@ -227,7 +239,7 @@ class SphereEditor:
         self.save_btn.visible = True
         self.cancel_btn.visible = True
         self.radius_slider.visible = True
-        self.radius_slider.value = 0.05
+        self.radius_slider.value = 0.05 # Triggers update
 
     def _save_active_sphere(self):
         """Commit the active sphere to data and make it static."""
@@ -255,6 +267,7 @@ class SphereEditor:
         if self.active_sphere_mesh:
             self.active_sphere_mesh.remove()
             self.active_sphere_mesh = None
+            self.gizmo_base_vertices = None
 
         self.active_link_name = None
         self.save_btn.visible = False
@@ -266,7 +279,7 @@ def main(
     urdf_path: Path = (
         get_repo_root_dir() / "assets/urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted_restricted.urdf"
     ),
-    spheres_json_path: Optional[Path] = None,
+    spheres_json_path: Optional[Path] = Path(__file__).parent / "assets" / "sharpa_spheres.json",
     load_meshes: bool = True,
     load_collision_meshes: bool = False, 
 ) -> None:
