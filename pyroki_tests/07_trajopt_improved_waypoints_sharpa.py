@@ -109,7 +109,9 @@ def main(robot_name: Literal["ur5", "panda", "sharpa"] = "sharpa"):
 
     mid_pos = np.array([0.0, -0.6, 0.8])
     right_pos = np.array([-0.5, -0.6, 0.8])
+    right_low_pos = np.array([-0.5, -0.6, 0.4])
     left_pos = np.array([0.5, -0.6, 0.8])
+    left_low_pos = np.array([0.5, -0.6, 0.4])
 
     waypoints = {}
     waypoints.update({
@@ -121,7 +123,7 @@ def main(robot_name: Literal["ur5", "panda", "sharpa"] = "sharpa"):
         for i in range(5)
     })
     waypoints.update({
-        49 - i: (left_pos, down_wxyz)
+        49 - i: (left_low_pos, down_wxyz)
         for i in range(5)
     })
 
