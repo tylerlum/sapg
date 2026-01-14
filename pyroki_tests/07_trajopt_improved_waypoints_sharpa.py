@@ -29,6 +29,47 @@ def xyzw_to_wxyz(xyzw: np.ndarray) -> np.ndarray:
 def wxyz_to_xyzw(wxyz: np.ndarray) -> np.ndarray:
     return wxyz[..., [1, 2, 3, 0]]
 
+
+def interpolate_traj(traj: np.ndarray, n_steps: int) -> np.ndarray:
+    from scipy.interpolate import interp1d
+    """
+    Upsamples a trajectory by a factor of n_steps using linear interpolation.
+
+    Args:
+        traj: Numpy array of shape (T, J) where T is time steps and J is joint dims.
+        n_steps: The scaling factor for interpolation (e.g., 10 means 10x more points).
+
+    Returns:
+        new_traj: Interpolated trajectory of shape (T * n_steps, J).
+    """
+    # 1. Get dimensions
+    T = traj.shape[0]
+    J = traj.shape[1]
+    
+    # Input assertion
+    assert traj.shape == (T, J), f"Input shape mismatch. Expected ({T}, {J}), got {traj.shape}"
+
+    # 2. Create the time indices for the original trajectory
+    # We assume the original trajectory is spaced evenly from 0 to T-1
+    old_time = np.arange(T)
+
+    # 3. Create the time indices for the new trajectory
+    # We want T * n_steps points, spanning the exact same timeframe (0 to T-1)
+    new_T = T * n_steps
+    new_time = np.linspace(0, T - 1, new_T)
+
+    # 4. Interpolate
+    # interp1d creates a function we can call with our new timestamps
+    # axis=0 ensures we interpolate along the time axis, independent of J
+    interpolator = interp1d(old_time, traj, kind='linear', axis=0)
+    new_traj = interpolator(new_time)
+
+    # Output assertion (Corrected to check Time dimension, not Joint dimension)
+    assert new_traj.shape == (new_T, J), \
+        f"Output shape mismatch. Expected ({new_T}, {J}), got {new_traj.shape}"
+
+    return new_traj
+
 def main(robot_name: Literal["ur5", "panda", "sharpa"] = "sharpa"):
     # Load robot
     HOME_JOINT_POS_IIWA = np.array(
@@ -203,16 +244,18 @@ def main(robot_name: Literal["ur5", "panda", "sharpa"] = "sharpa"):
     traj = np.array(traj)
     print(f"Solved in {time.time() - start_time:.4f}s")
 
+    traj = interpolate_traj(traj=traj, n_steps=10)
+
     # Visualize trajectory
     slider = server.gui.add_slider(
-        "Timestep", min=0, max=timesteps - 1, step=1, initial_value=0
+        "Timestep", min=0, max=len(traj) - 1, step=1, initial_value=0
     )
     playing = server.gui.add_checkbox("Playing", initial_value=True)
 
     while True:
         start_time = time.time()
         if playing.value:
-            slider.value = (slider.value + 1) % timesteps
+            slider.value = (slider.value + 1) % len(traj)
 
         cfg = traj[slider.value]
         urdf_vis.update_cfg(cfg)
