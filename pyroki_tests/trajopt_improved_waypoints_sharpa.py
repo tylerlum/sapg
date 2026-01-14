@@ -13,7 +13,8 @@ from typing import Literal
 import jax
 import numpy as np
 import pyroki as pk
-import pyroki_snippets as pks
+# import pyroki_snippets as pks
+from pyroki_tests import pyroki_snippets as pks
 import trimesh
 import tyro
 import viser
