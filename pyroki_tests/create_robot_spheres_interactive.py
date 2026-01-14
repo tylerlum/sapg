@@ -149,7 +149,7 @@ class SphereEditor:
             faces=sphere.faces,
             position=np.array(center),
             color=(0.0, 1.0, 0.0), # Green
-            opacity=0.8,
+            opacity=1.0,
         )
 
     def _create_gui(self):
@@ -230,7 +230,7 @@ class SphereEditor:
             vertices=sphere.vertices,
             faces=sphere.faces,
             color=(0.0, 0.5, 1.0), # Blue
-            opacity=0.5,
+            opacity=1.0,
         )
 
         # 3. Show Edit Controls
@@ -297,7 +297,7 @@ def main(
         load_meshes=load_meshes,
         load_collision_meshes=load_collision_meshes,
         root_node_name="/robot",
-        mesh_color_override=(0.0, 0.0, 1.0, 0.5),  # Make robot blue and translucent
+        mesh_color_override=(0.0, 0.0, 1.0, 0.2),  # Make robot blue and translucent
     )
 
     # Attach frames to every link
