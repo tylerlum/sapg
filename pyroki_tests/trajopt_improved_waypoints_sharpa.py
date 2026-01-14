@@ -121,10 +121,14 @@ def main(robot_name: Literal["ur5", "panda", "sharpa"] = "sharpa"):
     # Load collision spheres
     with open(sphere_json_path, "r") as f:
         sphere_decomposition = json.load(f)
-    robot_coll = pk.collision.RobotCollision.from_sphere_decomposition(
-        sphere_decomposition=sphere_decomposition,
-        urdf=urdf,
-    )
+    USE_SPHERE_DECOMPOSITION = True
+    if USE_SPHERE_DECOMPOSITION:
+        robot_coll = pk.collision.RobotCollision.from_sphere_decomposition(
+            sphere_decomposition=sphere_decomposition,
+            urdf=urdf,
+        )
+    else:
+        robot_coll = pk.collision.RobotCollision.from_urdf(urdf)
 
     # Problem Setup
     timesteps, dt = 50, 0.05
