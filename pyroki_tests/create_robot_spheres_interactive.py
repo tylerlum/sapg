@@ -224,7 +224,7 @@ class SphereEditor:
         )
         
         # 2. Attach visual sphere to the gizmo (Radius = 1.0 for easy scaling)
-        sphere = trimesh.creation.icosphere(radius=0.1, subdivisions=10)
+        sphere = trimesh.creation.icosphere(radius=0.1, subdivisions=2)
         # Store base vertices for scaling calculations
         self.gizmo_base_vertices = sphere.vertices.copy()
         
@@ -240,7 +240,7 @@ class SphereEditor:
         self.save_btn.visible = True
         self.cancel_btn.visible = True
         self.radius_slider.visible = True
-        self.radius_slider.value = 0.05 # Triggers update
+        # self.radius_slider.value = 0.05 # Triggers update
 
     def _save_active_sphere(self):
         """Commit the active sphere to data and make it static."""
