@@ -1041,13 +1041,13 @@ def main():
             )
             q_hands.append(new_q_hand)
 
-        # Run trajopt
+        # Run trajopt for the whole trajectory
         retargeted_qs = solve_trajopt(
             T_R_Ps=T_R_Ps,
             q_start=HOME_JOINT_POS,
             dt=args.dt,
-        )
-        breakpoint()
+        )[10:]
+        assert retargeted_qs.shape == (N_TIMESTEPS, 29), f"retargeted_qs.shape: {retargeted_qs.shape}, expected: (N_TIMESTEPS, 29)"
 
         # Compute T_R_Ps using lifted object pose
         T_R_P_lifted = T_R_Ps[idx_lifted]
@@ -1058,15 +1058,21 @@ def main():
         T_W_Ps_using_lifted_object_pose = np.array([T_W_O @ T_O_P_lifted for T_W_O in T_W_Os])
         T_R_W = np.linalg.inv(T_W_R)
         T_R_Ps_using_lifted_object_pose = np.array([T_R_W @ T_W_P for T_W_P in T_W_Ps_using_lifted_object_pose])
+        retargeted_q_lifted = retargeted_qs[idx_lifted]
         q_hand_using_lifted_pose = q_hands[idx_lifted]
-        with open("q_hand_using_lifted_pose.json", "w") as f:
-            json.dump(q_hand_using_lifted_pose.tolist(), f, indent=4)
-        with open("T_R_Ps_using_lifted_pose.json", "w") as f:
-            json.dump(T_R_Ps_using_lifted_object_pose.tolist(), f, indent=4)
 
+        # Run trajopt for the trajectory after the object was lifted
+        retargeted_qs_using_lifted_pose = solve_trajopt(
+            T_R_Ps=T_R_Ps_using_lifted_object_pose[idx_lifted:],
+            q_start=retargeted_q_lifted,
+            dt=args.dt,
+        )[10:]
 
-
-
+        # Connect it with the original trajectory before lifted
+        # And fix hand joints positions after lifted
+        retargeted_qs_using_lifted_pose = np.concatenate([retargeted_qs_using_lifted_pose[:, :7], q_hand_using_lifted_pose[None].repeat(len(retargeted_qs_using_lifted_pose), axis=0)], axis=1)
+        retargeted_qs_using_lifted_pose = np.concatenate([retargeted_qs[:idx_lifted], retargeted_qs_using_lifted_pose], axis=0)
+        assert retargeted_qs_using_lifted_pose.shape == (N_TIMESTEPS, 29), f"retargeted_qs_using_lifted_pose.shape: {retargeted_qs_using_lifted_pose.shape}, expected: (N_TIMESTEPS, 29)"
 
     # Visualization loop
     while True:
@@ -1133,68 +1139,25 @@ def main():
             # Retarget robot
             if args.retarget_robot:
                 if args.retarget_robot_using_object_relative_pose and i >= idx_lifted:
-                    q = np.array(kuka_sharpa_viser._urdf.cfg)
-                    q_arm = q[:7]
-                    q_hand = q[7:]
-
-                    if i == idx_lifted:
-                        q_arm_lifted = q_arm.copy()
-                        q_hand_lifted = q_hand.copy()
-
-                        T_R_P_lifted = compute_current_T_R_P(arm_pk_chain=arm_pk_chain, q_arm=q_arm_lifted)
-                        T_W_P_lifted = T_W_R @ T_R_P_lifted
-                        T_W_O_lifted = T_W_Os[idx_lifted]
-                        T_O_P_lifted = np.linalg.inv(T_W_O_lifted) @ T_W_P_lifted
-
-                        T_W_Ps_using_lifted_object_pose = np.array([T_W_O @ T_O_P_lifted for T_W_O in T_W_Os])
-
-                    # Use relative object pose now
-                    T_W_P_using_lifted_object_pose = T_W_Ps_using_lifted_object_pose[i]
-                    T_R_W = np.linalg.inv(T_W_R)
-                    T_R_P_using_lifted_object_pose = T_R_W @ T_W_P_using_lifted_object_pose
-                    new_q_arm = compute_new_q_arm(
-                        arm_pk_chain=arm_pk_chain,
-                        target_wrist_pose=T_R_P_using_lifted_object_pose,
-                        q_arm=q_arm,
-                    )
-
                     # Move floating hand to wrist pose
+                    T_W_P_using_lifted_object_pose = T_W_Ps_using_lifted_object_pose[i]
                     sharpa_frame.position = T_W_P_using_lifted_object_pose[:3, 3]
                     sharpa_frame.wxyz = xyzw_to_wxyz(R.from_matrix(T_W_P_using_lifted_object_pose[:3, :3]).as_quat())
 
-                    new_q_hand = q_hand_lifted.copy()
-
-                    new_q = np.concatenate([new_q_arm, new_q_hand])
+                    new_q = retargeted_qs_using_lifted_pose[i].copy()
+                    new_q_hand = new_q[7:]
                     kuka_sharpa_viser.update_cfg(new_q)
                     sharpa_viser.update_cfg(new_q_hand)
                 else:
-                    q = np.array(kuka_sharpa_viser._urdf.cfg)
-                    q_arm = q[:7]
-
-                    # Arm IK
-                    new_q_arm = compute_new_q_arm(
-                        arm_pk_chain=arm_pk_chain,
-                        target_wrist_pose=T_R_P,
-                        q_arm=q_arm,
-                    )
-
                     # Move floating hand to wrist pose
                     T_W_P = T_W_R @ T_R_P
                     sharpa_frame.position = T_W_P[:3, 3]
                     sharpa_frame.wxyz = xyzw_to_wxyz(R.from_matrix(T_W_P[:3, :3]).as_quat())
 
-                    # Hand IK
-                    q_hand = q[7:]
-                    new_q_hand = solve_fingertip_ik(
-                        hand_pb=hand_pb,
-                        hand_keypoint_to_xyz=hand_keypoint_to_xyz,
-                        target_wrist_pose=T_W_P,
-                    )
-
-                    new_q = np.concatenate([new_q_arm, new_q_hand])
+                    new_q = retargeted_qs[i].copy()
+                    new_q_hand = new_q[7:]
                     kuka_sharpa_viser.update_cfg(new_q)
                     sharpa_viser.update_cfg(new_q_hand)
-                kuka_sharpa_viser.update_cfg(np.concatenate([retargeted_qs[10+i, :7], kuka_sharpa_viser._urdf.cfg[7:]]))
 
                 if args.save_retargeted_robot_to_file:
                     # Create lists to store values
