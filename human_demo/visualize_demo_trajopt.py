@@ -432,6 +432,13 @@ def compute_new_q_arm(arm_pk_chain: pk.SerialChain, target_wrist_pose: np.ndarra
         1,
         NUM_ARM_JOINTS,
     ), f"new_q_arm.shape: {new_q_arm.shape}"
+
+    # Clamp joint position to joint limits with buffer
+    BUFFER = np.deg2rad(7.5)
+    lower_limits = arm_pk_chain.low.cpu().numpy() + BUFFER
+    upper_limits = arm_pk_chain.high.cpu().numpy() - BUFFER
+    new_q_arm[0] = np.clip(new_q_arm[0], lower_limits, upper_limits)
+
     return new_q_arm.cpu().numpy()[0]
 
 def set_robot_state(robot, q: np.ndarray) -> None:
