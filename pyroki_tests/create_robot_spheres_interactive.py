@@ -293,6 +293,7 @@ def main(
         load_meshes=load_meshes,
         load_collision_meshes=load_collision_meshes,
         root_node_name="/robot",
+        mesh_color_override=(0.0, 0.0, 1.0, 0.5),  # Make robot blue and translucent
     )
 
     # Attach frames to every link
