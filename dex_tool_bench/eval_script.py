@@ -21,8 +21,8 @@ from isaacgymenvs.utils.utils import get_repo_root_dir
 from sim2real.rl_player import RlPlayer
 from sim2sim.isaac_sim.isaac_env import create_env
 
-# TABLE_Z = 0.38
-TABLE_Z = 0.37
+TABLE_Z = 0.38
+# TABLE_Z = 0.37
 
 
 def quat_xyzw_to_wxyz(q):
