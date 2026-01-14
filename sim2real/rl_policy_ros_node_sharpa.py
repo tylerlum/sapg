@@ -397,8 +397,9 @@ class RLPolicyNode:
         # Clamp joint position to joint limits with buffer
         # Hardware has 5 deg buffer, so we add 7.5 deg buffer here to avoid getting overshoots that hits limit
         BUFFER = np.deg2rad(7.5)
-        lower_limits = self.arm_pk_chain.low.cpu().numpy() - BUFFER
-        upper_limits = self.arm_pk_chain.high.cpu().numpy() + BUFFER
+        J = len(self.urdf_object.actuated_joints)
+        lower_limits = np.array([self.urdf_object.actuated_joints[i].limit.lower for i in range(J)]) + BUFFER
+        upper_limits = np.array([self.urdf_object.actuated_joints[i].limit.upper for i in range(J)]) - BUFFER
         joint_pos_targets = np.clip(joint_pos_targets, lower_limits, upper_limits)
 
         iiwa_msg = JointState()
