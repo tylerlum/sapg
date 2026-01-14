@@ -1,4 +1,6 @@
 from isaacgymenvs.tasks.allegro_kuka.allegro_kuka_base import AllegroKukaBase  # isort:skip
+from isaacgymenvs.utils.utils import get_repo_root_dir
+import json
 import time
 from pathlib import Path
 from typing import Tuple
@@ -119,7 +121,8 @@ class IsaacEnvNoRosJointPosTargets:
 def main():
     CONTROL_DT = 1.0 / 60.0
     CONFIG_PATH = Path(
-        "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"
+        # "/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"
+        "/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed/config.yaml"
     )
     assert Path(CONFIG_PATH).exists()
     CHECKPOINT_PATH = Path(
@@ -128,10 +131,54 @@ def main():
         # "/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/cleanInputs.pth"
         # "/juno/u/kedia/sapg/train_dir/checkpoints/cleanInputsFinetuned.pth",
         # "/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o1t0.pth",
-        "/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o1t1.pth",
+        # "/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o1t1.pth",
         # "/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o0t0.pth",
+        "/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed/model.pth"
     )
     assert CHECKPOINT_PATH.exists()
+
+    # Load trajectory
+    # This makes it easier to change object and trajectory
+
+    # object_type = "hammer"
+    # object_name = "mallet"
+    # object_name = "hammer_2"
+    # trajectory_name = "vertical_swing"
+    # trajectory_name = "horizontal_swing"
+    # trajectory_name = "horizontal_swing_higher"
+    # trajectory_name = "horizontal_swing_human"
+    # trajectory_name = "horizontal_swing_human_closer"
+
+    # object_type = "spatula"
+    # object_name = "black_spatula"
+    # trajectory_name = "pick_and_place_human"
+    # trajectory_name = "pick_and_place_human_hardinit"
+
+    # object_type = "screwdriver"
+    # object_name = "real_flat_screwdriver"
+    # trajectory_name = "top_down_screwing_human_easyinit"
+    # trajectory_name = "top_down_screwing_human"
+
+    # object_type = "eraser"
+    # object_name = "whiteboard_eraser"
+    # trajectory_name = "wipe_left_human"
+    # trajectory_name = "wipe_left_human_2"
+
+    # object_type = "marker"
+    # object_name = "040_large_marker"
+    # trajectory_name = "draw_circle_human"
+    # trajectory_name = "draw_circle_human_hardinit"
+
+    object_type = "brush"
+    # object_name = "green_brush"
+    object_name = "red_brush"
+    # trajectory_name = "simple"
+    trajectory_name = "complex"
+
+    trajectory_path = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
+    assert trajectory_path.exists(), f"Trajectory file not found: {trajectory_path}"
+    with open(trajectory_path) as f:
+        traj_data = json.load(f)
 
     # NOTE: cpu has different physics than training
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -149,18 +196,22 @@ def main():
             "task.env.resetDofPosRandomIntervalArm": 0.0,
             "task.env.resetDofVelRandomInterval": 0.0,
             # "task.env.object_type": "blue_cuboid",
-            "task.env.object_type": "tyler_handle_head",
+            # "task.env.object_type": "tyler_handle_head",
             # "task.env.object_type": "blue_cuboid_fake_hammer",
+            "task.env.object_type": object_name,
             # "task.env.forceNoReset": True,
             "task.env.randomizeObjectRotation": False,
             # "task.env.objectStartPose": [0.,  0.,  0.58, 0.,  0.,  0.,  1.],  # x, y, z, qx, qy, qz, qw
-            "task.env.objectStartPose": [0.,  0.,  0.58, 0.,  0.,  1.,  0.],  # x, y, z, qx, qy, qz, qw
+            # "task.env.objectStartPose": [0.,  0.,  0.58, 0.,  0.,  1.,  0.],  # x, y, z, qx, qy, qz, qw
             # "task.env.goalObjectPose": [0.,  0.,  0.88, 0.,  0.,  0.,  1.],  # x, y, z, qx, qy, qz, qw
             # "task.env.use_fixed_set_of_goal_states": True,
-            "task.env.use_fixed_set_of_goal_states": False,
+            # "task.env.use_fixed_set_of_goal_states": False,
+            "task.env.objectStartPose": traj_data["start_pose"],
+            "task.env.use_fixed_set_of_goal_states": True,
+            "task.env.fixedGoalStates": traj_data["goals"],
             "task.env.forceScale": 0.0,
-            "task.env.numEnvs": 100,
-            # "task.env.numEnvs": 1,
+            # "task.env.numEnvs": 100,
+            "task.env.numEnvs": 1,
             "task.env.envSpacing": 0.4,
             "task.env.tableResetZRange": 0.0,
             "task.env.capture_video": False,
@@ -173,6 +224,7 @@ def main():
             "task.env.successSteps": 1,
             "task.env.fixedSizeKeypointReward": True,
             "task.env.forceOnlyWhenLifted": True,
+            "task.env.startArmHigher": True,
         },
     )
 
