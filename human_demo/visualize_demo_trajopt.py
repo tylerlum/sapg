@@ -868,6 +868,49 @@ def solve_trajopt(T_R_Ps: np.ndarray, q_start: np.ndarray, dt: float) -> np.ndar
     return traj
 
 
+def interpolate_traj(traj: np.ndarray, n_steps: int) -> np.ndarray:
+    from scipy.interpolate import interp1d
+    """
+    Upsamples a trajectory by a factor of n_steps using linear interpolation.
+
+    Args:
+        traj: Numpy array of shape (T, J) where T is time steps and J is joint dims.
+        n_steps: The scaling factor for interpolation (e.g., 10 means 10x more points).
+
+    Returns:
+        new_traj: Interpolated trajectory of shape (T * n_steps, J).
+    """
+    # 1. Get dimensions
+    T = traj.shape[0]
+    J = traj.shape[1]
+    
+    # Input assertion
+    assert traj.shape == (T, J), f"Input shape mismatch. Expected ({T}, {J}), got {traj.shape}"
+
+    # 2. Create the time indices for the original trajectory
+    # We assume the original trajectory is spaced evenly from 0 to T-1
+    old_time = np.arange(T)
+
+    # 3. Create the time indices for the new trajectory
+    # We want T * n_steps points, spanning the exact same timeframe (0 to T-1)
+    new_T = T * n_steps
+    new_time = np.linspace(0, T - 1, new_T)
+
+    # 4. Interpolate
+    # interp1d creates a function we can call with our new timestamps
+    # axis=0 ensures we interpolate along the time axis, independent of J
+    interpolator = interp1d(old_time, traj, kind='linear', axis=0)
+    new_traj = interpolator(new_time)
+
+    # Output assertion (Corrected to check Time dimension, not Joint dimension)
+    assert new_traj.shape == (new_T, J), \
+        f"Output shape mismatch. Expected ({new_T}, {J}), got {new_traj.shape}"
+
+    return new_traj
+
+
+
+
 def main():
     args = tyro.cli(Args)
     print("=" * 80)

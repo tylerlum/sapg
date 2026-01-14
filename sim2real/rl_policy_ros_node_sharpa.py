@@ -540,27 +540,48 @@ class RLPolicyNode:
         # IK for the arm targets, starting from the current arm joint positions
         # This uses pseudoinverse IK which needs to be relative to some reference arm joint positions
         # We start from the current arm joint positions and iteratively compute the next arm joint positions
-        q_arm = q[:7].copy()
-        q_arm_targets_using_lifted_object_pose = []
-        from tqdm import tqdm
-        for i in tqdm(range(TRAJECTORY_LENGTH), desc="Computing arm targets using lifted object pose"):
+        from typing import Literal
+        MODE: Literal["IK", "TRAJOPT"] = "TRAJOPT"
+        if MODE == "IK":
             from human_demo.visualize_demo import compute_new_q_arm
-            T_W_P_using_lifted_object_pose = self.T_W_Ps_using_lifted_object_pose[i]
+            q_arm = q[:7].copy()
+            q_arm_targets_using_lifted_object_pose = []
+            from tqdm import tqdm
+            for i in tqdm(range(TRAJECTORY_LENGTH), desc="Computing arm targets using lifted object pose"):
+                T_W_P_using_lifted_object_pose = self.T_W_Ps_using_lifted_object_pose[i]
+                T_R_W = np.linalg.inv(T_W_R)
+                T_R_P_using_lifted_object_pose = T_R_W @ T_W_P_using_lifted_object_pose
+                q_arm = compute_new_q_arm(
+                    arm_pk_chain=self.arm_pk_chain,
+                    target_wrist_pose=T_R_P_using_lifted_object_pose,
+                    q_arm=q_arm,
+                )
+                q_arm_targets_using_lifted_object_pose.append(q_arm.copy())
+            q_arm_targets_using_lifted_object_pose = np.array(q_arm_targets_using_lifted_object_pose)
+            assert q_arm_targets_using_lifted_object_pose.shape == (TRAJECTORY_LENGTH, 7), f"q_arm_targets_using_lifted_object_pose.shape: {q_arm_targets_using_lifted_object_pose.shape}, expected: (TRAJECTORY_LENGTH, 7)"
+        elif MODE == "TRAJOPT":
+            from human_demo.visualize_demo_trajopt import solve_trajopt, interpolate_traj
             T_R_W = np.linalg.inv(T_W_R)
-            T_R_P_using_lifted_object_pose = T_R_W @ T_W_P_using_lifted_object_pose
-            q_arm = compute_new_q_arm(
-                arm_pk_chain=self.arm_pk_chain,
-                target_wrist_pose=T_R_P_using_lifted_object_pose,
-                q_arm=q_arm,
-            )
-            q_arm_targets_using_lifted_object_pose.append(q_arm.copy())
-        q_arm_targets_using_lifted_object_pose = np.array(q_arm_targets_using_lifted_object_pose)
-        assert q_arm_targets_using_lifted_object_pose.shape == (TRAJECTORY_LENGTH, 7), f"q_arm_targets_using_lifted_object_pose.shape: {q_arm_targets_using_lifted_object_pose.shape}, expected: (TRAJECTORY_LENGTH, 7)"
+            T_R_Ps_using_lifted_object_pose = np.array([T_R_W @ T_W_P for T_W_P in self.T_W_Ps_using_lifted_object_pose])
+            DOWNSAMPLE_FACTOR = 10
+            retargeted_qs = solve_trajopt(
+                T_R_Ps=T_R_Ps_using_lifted_object_pose[::DOWNSAMPLE_FACTOR],
+                q_start=q.copy(),
+                dt=1/30,
+            )[10:]
+            print(f"TRAJECTORY_LENGTH: {TRAJECTORY_LENGTH}, retargeted_qs.shape: {retargeted_qs.shape}")
+            breakpoint()
+            q_arm_targets_using_lifted_object_pose = interpolate_traj(retargeted_qs[:, :7], n_steps=DOWNSAMPLE_FACTOR)
+            if q_arm_targets_using_lifted_object_pose.shape[0] != TRAJECTORY_LENGTH:
+                extra = TRAJECTORY_LENGTH - q_arm_targets_using_lifted_object_pose.shape[0]
+                q_arm_targets_using_lifted_object_pose = np.concatenate([q_arm_targets_using_lifted_object_pose, q_arm_targets_using_lifted_object_pose[-1][None].repeat(extra, axis=0)], axis=0)
+            assert q_arm_targets_using_lifted_object_pose.shape == (TRAJECTORY_LENGTH, 7), f"q_arm_targets_using_lifted_object_pose.shape: {q_arm_targets_using_lifted_object_pose.shape}, expected: ({TRAJECTORY_LENGTH}, 7)"
+        else:
+            raise ValueError(f"Invalid MODE: {MODE}")
 
         # Concatenate the arm targets and the hand target
         self.q_targets_using_lifted_object_pose = np.concatenate([q_arm_targets_using_lifted_object_pose, q_hand_lifted_target[None].repeat(TRAJECTORY_LENGTH, axis=0)], axis=1)
         assert self.q_targets_using_lifted_object_pose.shape == (TRAJECTORY_LENGTH, 29), f"self.q_targets_using_lifted_object_pose.shape: {self.q_targets_using_lifted_object_pose.shape}, expected: (TRAJECTORY_LENGTH, 29)"
-
 
     def _visualize_relative_object_pose_logic(self, q_targets_using_lifted_object_pose: np.ndarray, T_W_Ps_using_lifted_object_pose: np.ndarray, T_W_O_trajectory: np.ndarray) -> None:
         TRAJECTORY_LENGTH = q_targets_using_lifted_object_pose.shape[0]
