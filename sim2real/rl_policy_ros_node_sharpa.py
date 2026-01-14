@@ -637,7 +637,6 @@ class RLPolicyNode:
             axes[i].set_title(joint_names[i])
         plt.tight_layout()
         plt.show()
-        breakpoint()
 
         # Load object
         from isaacgymenvs.utils.objects import NAME_TO_OBJECT
