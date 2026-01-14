@@ -240,6 +240,18 @@ def control_ik(
     j_eef: torch.Tensor, dpose: torch.Tensor, damping: float = 0.1,
     pos_only: bool = False,
 ) -> torch.Tensor:
+    # -------------------------------------------------------------------------
+    # Damped Least Squares IK (task-space)
+    #
+    # Unweighted formulation:
+    #
+    #   Solve:
+    #       min_{dq}  || J dq - e ||^2 + λ ||dq||^2
+    #
+    #   Closed-form solution:
+    #       dq = Jᵀ ( J Jᵀ + λ I )⁻¹ e
+    # -------------------------------------------------------------------------
+
     if pos_only:
         j_eef = j_eef[:, 0:3]
         dpose = dpose[:, 0:3]
@@ -269,6 +281,64 @@ def control_ik(
         ),
     ).squeeze(dim=-1)
     assert u.shape == (NUM_ENVS, NUM_JOINTS), f"u.shape: {u.shape}"
+
+    return u
+
+def control_ik_weighted(
+    j_eef: torch.Tensor,
+    dpose: torch.Tensor,
+    damping: float = 0.1,
+    pos_only: bool = False,
+    w_pos: float = 1.0,
+    w_rot: float = 0.1,   # <--- smaller => care less about rotation
+) -> torch.Tensor:
+    # Example: 0.02 position error is 2cm, 0.2 radians is 11 degrees
+    # Should rescale so that rotation is cared about less
+
+    # -------------------------------------------------------------------------
+    # Damped Least Squares IK (task-space)
+    #
+    # Weighted formulation (to prioritize position over orientation):
+    #
+    #   Let W = diag([w₁, ..., w₆]) be task-space weights
+    #
+    #   Solve:
+    #       min_{dq}  || W (J dq - e) ||^2 + λ ||dq||^2
+    #
+    #   Equivalent to defining:
+    #       J_w = W J
+    #       e_w = W e
+    #
+    #   Then:
+    #       dq = J_wᵀ ( J_w J_wᵀ + λ I )⁻¹ e_w
+    #
+    #   (implemented below by scaling the rows of J and components of e)
+    # -------------------------------------------------------------------------
+    if pos_only:
+        j_eef = j_eef[:, 0:3]
+        dpose = dpose[:, 0:3]
+        w = torch.tensor([w_pos, w_pos, w_pos], device=j_eef.device, dtype=j_eef.dtype)
+    else:
+        w = torch.tensor([w_pos, w_pos, w_pos, w_rot, w_rot, w_rot],
+                         device=j_eef.device, dtype=j_eef.dtype)
+
+    # Apply task-space weights (row scaling)
+    W = w[None, :, None]                 # (B, ee, 1)
+    j_w = j_eef * W                      # scale rows of J
+    e_w = dpose * w[None, :]             # scale components of error
+
+    B, EE, NJ = j_w.shape
+    j_w_T = j_w.transpose(1, 2)
+
+    lmbda = torch.eye(EE, device=j_w.device, dtype=j_w.dtype) * (damping ** 2)
+
+    u = torch.bmm(
+        j_w_T,
+        torch.bmm(
+            torch.inverse(torch.bmm(j_w, j_w_T) + lmbda[None]),
+            e_w.unsqueeze(-1),
+        ),
+    ).squeeze(-1)
 
     return u
 
@@ -344,7 +414,12 @@ def compute_new_q_arm(arm_pk_chain: pk.SerialChain, target_wrist_pose: np.ndarra
     ), f"jacobian.shape: {jacobian.shape}"
 
     # Compute delta arm joint position
-    delta_q_arm = control_ik(
+    # delta_q_arm = control_ik(
+    #     j_eef=jacobian,
+    #     dpose=wrist_error,
+    #     pos_only=False,
+    # )
+    delta_q_arm = control_ik_weighted(
         j_eef=jacobian,
         dpose=wrist_error,
         pos_only=False,
