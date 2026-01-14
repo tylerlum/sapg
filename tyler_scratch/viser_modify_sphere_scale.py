@@ -64,13 +64,14 @@ def main():
     # #########################################################
     with server.gui.add_folder("Scale Slider"):
         # Sphere scale state
-        SPHERE_SCALE = 1.0
+        CURRENT_SPHERE_SCALE = 1.0
+        LATEST_SPHERE_SCALE = CURRENT_SPHERE_SCALE
         scale_slider = server.gui.add_slider(
             label="Scale",
             min=0.01,
             max=10.0,
             step=0.01,
-            initial_value=1.0,
+            initial_value=CURRENT_SPHERE_SCALE,
         )
 
     with server.gui.add_folder("Visibility"):
@@ -140,29 +141,18 @@ def main():
         print("Added output sphere to scene")
 
     @scale_slider.on_update
-    def scale_slider_on_update(_):
-        nonlocal SPHERE_SCALE
-        SPHERE_SCALE = scale_slider.value
+    def _(_):
+        nonlocal LATEST_SPHERE_SCALE
+        LATEST_SPHERE_SCALE = scale_slider.value
 
-        # Throttle updates to avoid overwhelming the CPU
-        # 0.1s = 10 updates per second (usually smooth enough for eyes, easy on the CPU)
-        if not hasattr(scale_slider_on_update, "last_update_time"):
-            scale_slider_on_update.last_update_time = 0
-
-        UPDATE_INTERVAL_SEC = 1.0
-        print(f"time_since_last_update: {time.time() - scale_slider_on_update.last_update_time}")
-        if time.time() - scale_slider_on_update.last_update_time < UPDATE_INTERVAL_SEC:
-            print("not updating scale")
-            return
-        print("updating scale")
-        scale_slider_on_update.last_update_time = time.time()
-
-        # After some experimentation, this is the only way I could update the scale
-        # Modifying mesh_vis.vertices directly didn't work because of the equality check not working for vectorized np arrays
-        # Also, running this does not modify mesh_vis.vertices, so this works (calls to _queue_update don't stack on each other)
-        sphere_vis._queue_update("vertices", sphere_vis.vertices * SPHERE_SCALE)
+        # Update scale value, but don't update the sphere mesh or else it may happen too often
 
     while True:
+        if LATEST_SPHERE_SCALE != CURRENT_SPHERE_SCALE:
+            print(f"Updating sphere scale from {CURRENT_SPHERE_SCALE} to {LATEST_SPHERE_SCALE}")
+            CURRENT_SPHERE_SCALE = LATEST_SPHERE_SCALE
+            sphere_vis._queue_update("vertices", sphere_vis.vertices * CURRENT_SPHERE_SCALE)
+
         print(
             f"sphere_frame.position: {sphere_frame.position}, sphere_frame.wxyz: {sphere_frame.wxyz}"
         )
