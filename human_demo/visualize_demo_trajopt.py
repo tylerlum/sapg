@@ -795,7 +795,7 @@ def save_to_file(file_path: Path, q_array: np.ndarray, object_pose_array: np.nda
     recorded_data.to_file(file_path)
 
 
-def solve_trajopt(T_R_Ps: np.ndarray, q_start: np.ndarray, dt: float) -> np.ndarray:
+def solve_trajopt(T_R_Ps: np.ndarray, q_start: np.ndarray, dt: float, waypoint_buffer: int = 0) -> np.ndarray:
     from pyroki_tests import pyroki_snippets as pks
     from pyroki_tests.trajopt_improved_waypoints_sharpa import xyzw_to_wxyz
     import pyroki as pk
@@ -836,7 +836,7 @@ def solve_trajopt(T_R_Ps: np.ndarray, q_start: np.ndarray, dt: float) -> np.ndar
     world_coll = [ground_coll, table_coll]
 
     # Create waypoints
-    BUFFER = 10
+    BUFFER = waypoint_buffer
     waypoints = {}
     for i in range(N_TIMESTEPS):
         pos = T_R_Ps[i, :3, 3]
@@ -1096,7 +1096,7 @@ def main():
             T_R_Ps=T_R_Ps,
             q_start=HOME_JOINT_POS,
             dt=args.dt,
-        )[10:]
+        )
         assert retargeted_qs.shape == (N_TIMESTEPS, 29), f"retargeted_qs.shape: {retargeted_qs.shape}, expected: (N_TIMESTEPS, 29)"
 
         # Compute T_R_Ps using lifted object pose
@@ -1116,7 +1116,7 @@ def main():
             T_R_Ps=T_R_Ps_using_lifted_object_pose[idx_lifted:],
             q_start=retargeted_q_lifted,
             dt=args.dt,
-        )[10:]
+        )
 
         # Connect it with the original trajectory before lifted
         # And fix hand joints positions after lifted

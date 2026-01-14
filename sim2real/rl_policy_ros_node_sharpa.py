@@ -541,7 +541,7 @@ class RLPolicyNode:
         # This uses pseudoinverse IK which needs to be relative to some reference arm joint positions
         # We start from the current arm joint positions and iteratively compute the next arm joint positions
         from typing import Literal
-        MODE: Literal["IK", "TRAJOPT"] = "TRAJOPT"
+        MODE: Literal["IK", "TRAJOPT", "SAVE_AND_LOAD_FROM_FILE"] = "SAVE_AND_LOAD_FROM_FILE"
         if MODE == "IK":
             from human_demo.visualize_demo import compute_new_q_arm
             q_arm = q[:7].copy()
@@ -568,13 +568,35 @@ class RLPolicyNode:
                 T_R_Ps=T_R_Ps_using_lifted_object_pose[::DOWNSAMPLE_FACTOR],
                 q_start=q.copy(),
                 dt=1/30,
-            )[10:]
+            )
             print(f"TRAJECTORY_LENGTH: {TRAJECTORY_LENGTH}, retargeted_qs.shape: {retargeted_qs.shape}")
-            breakpoint()
             q_arm_targets_using_lifted_object_pose = interpolate_traj(retargeted_qs[:, :7], n_steps=DOWNSAMPLE_FACTOR)
-            if q_arm_targets_using_lifted_object_pose.shape[0] != TRAJECTORY_LENGTH:
+            print(f"After interpolation, q_arm_targets_using_lifted_object_pose.shape: {q_arm_targets_using_lifted_object_pose.shape}")
+            breakpoint()
+            if q_arm_targets_using_lifted_object_pose.shape[0] < TRAJECTORY_LENGTH:
                 extra = TRAJECTORY_LENGTH - q_arm_targets_using_lifted_object_pose.shape[0]
                 q_arm_targets_using_lifted_object_pose = np.concatenate([q_arm_targets_using_lifted_object_pose, q_arm_targets_using_lifted_object_pose[-1][None].repeat(extra, axis=0)], axis=0)
+            elif q_arm_targets_using_lifted_object_pose.shape[0] > TRAJECTORY_LENGTH:
+                extra = q_arm_targets_using_lifted_object_pose.shape[0] - TRAJECTORY_LENGTH
+                q_arm_targets_using_lifted_object_pose = q_arm_targets_using_lifted_object_pose[:-extra]
+            assert q_arm_targets_using_lifted_object_pose.shape == (TRAJECTORY_LENGTH, 7), f"q_arm_targets_using_lifted_object_pose.shape: {q_arm_targets_using_lifted_object_pose.shape}, expected: ({TRAJECTORY_LENGTH}, 7)"
+        elif MODE == "SAVE_AND_LOAD_FROM_FILE":
+            T_R_W = np.linalg.inv(T_W_R)
+            T_R_Ps_using_lifted_object_pose = np.array([T_R_W @ T_W_P for T_W_P in self.T_W_Ps_using_lifted_object_pose])
+            # Output T_R_Ps_using_lifted_object_pose and q to json
+            with open("trajopt_inputs.json", "w") as f:
+                json.dump({
+                    "T_R_Ps_using_lifted_object_pose": T_R_Ps_using_lifted_object_pose.tolist(),
+                    "q": q.tolist(),
+                }, f, indent=4)
+            print(f"Saved trajopt inputs to trajopt_inputs.json")
+            print(f"python human_demo/run_trajopt.py")
+            print(f"Run trajopt and save the outputs to trajopt_outputs.json")
+            breakpoint()
+            with open("trajopt_outputs.json", "r") as f:
+                retargeted_qs = np.array(json.load(f)["retargeted_qs"])
+            q_arm_targets_using_lifted_object_pose = retargeted_qs[:, :7]
+            print(f"TRAJECTORY_LENGTH: {TRAJECTORY_LENGTH}, retargeted_qs.shape: {retargeted_qs.shape}")
             assert q_arm_targets_using_lifted_object_pose.shape == (TRAJECTORY_LENGTH, 7), f"q_arm_targets_using_lifted_object_pose.shape: {q_arm_targets_using_lifted_object_pose.shape}, expected: ({TRAJECTORY_LENGTH}, 7)"
         else:
             raise ValueError(f"Invalid MODE: {MODE}")
@@ -656,6 +678,23 @@ class RLPolicyNode:
             axes[i].plot([joint_limit_maxs[i]] * TRAJECTORY_LENGTH, label="Limit max")
             axes[i].legend()
             axes[i].set_title(joint_names[i])
+        plt.suptitle("Position")
+        plt.tight_layout()
+        plt.show()
+
+        joint_limit_velocity_maxs = [kuka_sharpa_viser._urdf.actuated_joints[i].limit.velocity for i in range(J_arm)]
+        joint_limit_velocity_mins = [-joint_limit_velocity_maxs[i] for i in range(J_arm)]
+
+        fig, axes = plt.subplots(nrows, ncols)
+        axes = axes.flatten()
+        qd_targets_using_lifted_object_pose = np.diff(q_targets_using_lifted_object_pose, axis=0) / self.control_dt
+        for i in range(J_arm):
+            axes[i].plot(qd_targets_using_lifted_object_pose[:, i], label="Velocity")
+            axes[i].plot([joint_limit_velocity_mins[i]] * (TRAJECTORY_LENGTH - 1), label="Limit min")
+            axes[i].plot([joint_limit_velocity_maxs[i]] * (TRAJECTORY_LENGTH - 1), label="Limit max")
+            axes[i].legend()
+            axes[i].set_title(joint_names[i])
+        plt.suptitle("Velocity")
         plt.tight_layout()
         plt.show()
 
