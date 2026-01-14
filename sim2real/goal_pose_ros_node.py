@@ -207,20 +207,21 @@ def main():
     # trajectory_name = "pick_and_place_human"
     # trajectory_name = "pick_and_place_human_hardinit"
 
-    # object_type = "screwdriver"
-    # object_name = "real_flat_screwdriver"
+    object_type = "screwdriver"
+    object_name = "real_flat_screwdriver"
     # trajectory_name = "top_down_screwing_human_easyinit"
     # trajectory_name = "top_down_screwing_human"
+    trajectory_name = "top_down_screwing_closer"
 
     # object_type = "eraser"
     # object_name = "whiteboard_eraser"
     # trajectory_name = "wipe_left_human"
     # trajectory_name = "wipe_left_human_2"
 
-    object_type = "marker"
-    object_name = "040_large_marker"
+    # object_type = "marker"
+    # object_name = "040_large_marker"
     # trajectory_name = "draw_circle_human"
-    trajectory_name = "draw_circle_human_hardinit"
+    # trajectory_name = "draw_circle_human_hardinit"
 
     # object_type = "brush"
     # object_name = "green_brush"

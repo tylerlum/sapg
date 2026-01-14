@@ -529,20 +529,21 @@ class RLPolicyNode:
         # trajectory_name = "pick_and_place_human"
         # trajectory_name = "pick_and_place_human_hardinit"
 
-        # object_type = "screwdriver"
-        # object_name = "real_flat_screwdriver"
+        object_type = "screwdriver"
+        object_name = "real_flat_screwdriver"
         # trajectory_name = "top_down_screwing_human_easyinit"
         # trajectory_name = "top_down_screwing_human"
+        trajectory_name = "top_down_screwing_closer"
 
         # object_type = "eraser"
         # object_name = "whiteboard_eraser"
         # trajectory_name = "wipe_left_human"
         # trajectory_name = "wipe_left_human_2"
 
-        object_type = "marker"
-        object_name = "040_large_marker"
+        # object_type = "marker"
+        # object_name = "040_large_marker"
         # trajectory_name = "draw_circle_human"
-        trajectory_name = "draw_circle_human_hardinit"
+        # trajectory_name = "draw_circle_human_hardinit"
 
         # object_type = "brush"
         # object_name = "green_brush"
@@ -1122,20 +1123,20 @@ class RLPolicyNode:
 
 if __name__ == "__main__":
     try:
-        OBJECT_NAME = "040_large_marker"
+        OBJECT_NAME = "real_flat_screwdriver"
         rl_policy_node = RLPolicyNode(
             # Old
-            # config_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"),
+            config_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"),
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/cleanInputs.pth"),
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/noisyInputs.pth"),
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/cleanInputsFinetuned.pth"),
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o1t0.pth"),
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o1t1.pth"),
-            # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o0t0.pth"),
+            checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o0t0.pth"),
 
             # New on tools
-            config_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed/config.yaml"),
-            checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed/model.pth"),
+            # config_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed/config.yaml"),
+            # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed/model.pth"),
 
             # Continue finetuning on cuboids
             # config_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/o0t0_fullSpeed/config.yaml"),
