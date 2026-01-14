@@ -3,6 +3,7 @@
 Demonstrates avoiding a Box obstacle while hitting specific waypoints.
 """
 
+from scipy.spatial.transform import Rotation as R
 import json
 import time
 from pathlib import Path
@@ -21,6 +22,12 @@ from viser.extras import ViserUrdf
 
 jax.config.update("jax_compilation_cache_dir", "/tmp/jax_cache")
 
+
+def xyzw_to_wxyz(xyzw: np.ndarray) -> np.ndarray:
+    return xyzw[..., [3, 0, 1, 2]]
+
+def wxyz_to_xyzw(wxyz: np.ndarray) -> np.ndarray:
+    return wxyz[..., [1, 2, 3, 0]]
 
 def main(robot_name: Literal["ur5", "panda", "sharpa"] = "sharpa"):
     # Load robot
@@ -104,28 +111,45 @@ def main(robot_name: Literal["ur5", "panda", "sharpa"] = "sharpa"):
     world_coll = [ground_coll, table_coll]
 
     # Define Waypoints
-    # 1. Start is implicitly t=0 (enforced by start_cfg)
-    # 2. Midpoint (High over the table)
+    # mid_pos = np.array([0.0, -0.6, 0.8])
+    # right_pos = np.array([-0.5, -0.6, 0.8])
+    # right_low_pos = np.array([-0.5, -0.6, 0.4])
+    # left_pos = np.array([0.5, -0.6, 0.8])
+    # left_low_pos = np.array([0.5, -0.6, 0.4])
 
-    mid_pos = np.array([0.0, -0.6, 0.8])
-    right_pos = np.array([-0.5, -0.6, 0.8])
-    right_low_pos = np.array([-0.5, -0.6, 0.4])
-    left_pos = np.array([0.5, -0.6, 0.8])
-    left_low_pos = np.array([0.5, -0.6, 0.4])
+    # waypoints = {}
+    # waypoints.update({
+    #     5 + i: (mid_pos, down_wxyz)
+    #     for i in range(5)
+    # })
+    # waypoints.update({
+    #     25 + i: (right_pos, down_wxyz)
+    #     for i in range(5)
+    # })
+    # waypoints.update({
+    #     49 - i: (left_low_pos, down_wxyz)
+    #     for i in range(5)
+    # })
+    with open("T_R_Ps.json", "r") as f:
+        T_R_Ps = np.array(json.load(f))
+    N_TIMESTEPS = T_R_Ps.shape[0]
+    assert T_R_Ps.shape == (N_TIMESTEPS, 4, 4), f"T_R_Ps.shape: {T_R_Ps.shape}, expected: ({N_TIMESTEPS}, 4, 4)"
+    DOWNSAMPLE = True
+    if DOWNSAMPLE:
+        T_R_Ps = T_R_Ps[::10]
+        N_TIMESTEPS = T_R_Ps.shape[0]
+        assert T_R_Ps.shape == (N_TIMESTEPS, 4, 4), f"T_R_Ps.shape: {T_R_Ps.shape}, expected: ({N_TIMESTEPS}, 4, 4)"
 
-    waypoints = {}
-    waypoints.update({
-        5 + i: (mid_pos, down_wxyz)
-        for i in range(5)
-    })
-    waypoints.update({
-        25 + i: (right_pos, down_wxyz)
-        for i in range(5)
-    })
-    waypoints.update({
-        49 - i: (left_low_pos, down_wxyz)
-        for i in range(5)
-    })
+    positions = T_R_Ps[:, :3, 3]
+    quat_xyzws = R.from_matrix(T_R_Ps[:, :3, :3]).as_quat()
+    quat_wxyzs = xyzw_to_wxyz(quat_xyzws)
+    BUFFER = 10
+    timesteps = N_TIMESTEPS + BUFFER
+
+    waypoints = {
+        BUFFER + i: (positions[i], quat_wxyzs[i])
+        for i in range(N_TIMESTEPS)
+    }
 
     # Visualize problem setup
     server = viser.ViserServer()
@@ -153,7 +177,7 @@ def main(robot_name: Literal["ur5", "panda", "sharpa"] = "sharpa"):
     # Draw Waypoints
     for t, (pos, wxyz) in waypoints.items():
         server.scene.add_frame(
-            f"/waypoint_t{t}",
+            f"/waypoints/t{t}",
             position=pos,
             wxyz=wxyz,
             axes_length=0.1,
@@ -164,6 +188,7 @@ def main(robot_name: Literal["ur5", "panda", "sharpa"] = "sharpa"):
     print("Solving trajectory with waypoints...")
     start_time = time.time()
 
+    print(f"Solving trajectory with {timesteps} waypoints, each {dt} seconds apart, for a total time of {timesteps * dt} seconds")
     traj = pks.solve_waypoint_trajopt(
         robot,
         robot_coll,
@@ -185,6 +210,7 @@ def main(robot_name: Literal["ur5", "panda", "sharpa"] = "sharpa"):
     playing = server.gui.add_checkbox("Playing", initial_value=True)
 
     while True:
+        start_time = time.time()
         if playing.value:
             slider.value = (slider.value + 1) % timesteps
 
@@ -199,7 +225,13 @@ def main(robot_name: Literal["ur5", "panda", "sharpa"] = "sharpa"):
                 robot_coll.at_config(robot, cfg).to_trimesh(),
             )
 
-        time.sleep(1.0 / 10.0)
+        end_time = time.time()
+        loop_dt = end_time - start_time
+        sleep_dt = dt - loop_dt
+        if sleep_dt > 0:
+            time.sleep(sleep_dt)
+        else:
+            print(f"Loop too slow! Desired FPS = 10, Actual FPS = {1/loop_dt:.1f}")
 
 
 if __name__ == "__main__":
