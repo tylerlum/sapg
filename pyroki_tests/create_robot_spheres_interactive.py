@@ -180,10 +180,8 @@ class SphereEditor:
                 # FIX: Update vertices directly to handle scaling
                 if self.active_sphere_mesh and self.gizmo_base_vertices is not None:
                     scale = self.radius_slider.value
-                    # Compute new vertices based on base unit sphere
-                    new_vertices = self.gizmo_base_vertices * scale
                     # Use _queue_update as per reference script
-                    self.active_sphere_mesh._queue_update("vertices", new_vertices)
+                    self.active_sphere_mesh._queue_update("vertices", self.active_sphere_mesh.vertices * scale)
 
             @self.save_btn.on_click
             def _(_):
@@ -224,7 +222,7 @@ class SphereEditor:
         )
         
         # 2. Attach visual sphere to the gizmo (Radius = 1.0 for easy scaling)
-        sphere = trimesh.creation.icosphere(radius=0.1, subdivisions=2)
+        sphere = trimesh.creation.icosphere(radius=1.0, subdivisions=2)
         # Store base vertices for scaling calculations
         self.gizmo_base_vertices = sphere.vertices.copy()
         
@@ -240,7 +238,7 @@ class SphereEditor:
         self.save_btn.visible = True
         self.cancel_btn.visible = True
         self.radius_slider.visible = True
-        # self.radius_slider.value = 0.05 # Triggers update
+        self.radius_slider.value = 0.05 # Triggers update
 
     def _save_active_sphere(self):
         """Commit the active sphere to data and make it static."""
