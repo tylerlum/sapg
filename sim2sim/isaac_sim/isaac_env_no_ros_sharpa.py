@@ -105,8 +105,8 @@ def main():
     # trajectory_name = "draw_circle_human_hardinit"
 
     object_type = "brush"
-    # object_name = "green_brush"
-    object_name = "red_brush"
+    object_name = "green_brush"
+    # object_name = "red_brush"
     # trajectory_name = "simple"
     trajectory_name = "complex"
 
