@@ -458,10 +458,10 @@ def main():
             "task.env.torqueScale": 0.0,
             "task.env.linVelImpulseScale": 0.0,
             "task.env.angVelImpulseScale": 0.0,
-            # "task.env.forceScale": 2.0,
-            # "task.env.torqueScale": 2.0,
-            # "task.env.linVelImpulseScale": 1.0,
-            # "task.env.angVelImpulseScale": 1.0,
+            # "task.env.forceScale": 2.0,  # Default
+            # "task.env.torqueScale": 0.2,  # 10x smaller than forceScale because objects are ~0.1m
+            # "task.env.linVelImpulseScale": 0.2,  # 20cm/s
+            # "task.env.angVelImpulseScale": 2.0,  # 2rad/s = 114.6 deg/s
 
             "task.env.forceOnlyWhenLifted": True,
             "task.env.torqueOnlyWhenLifted": True,
