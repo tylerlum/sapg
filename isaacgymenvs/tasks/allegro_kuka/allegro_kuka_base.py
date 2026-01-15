@@ -2777,8 +2777,8 @@ class AllegroKukaBase(VecTask):
         self.set_dof_state_tensor_indexed()
         self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(self.cur_targets))
 
+        # Random forces
         if self.force_scale > 0.0 or self.torque_scale > 0.0:
-
             if self.force_scale > 0.0:
                 self.rb_forces *= torch.pow(self.force_decay, self.dt / self.force_decay_interval)
 
@@ -2815,8 +2815,8 @@ class AllegroKukaBase(VecTask):
                 self.sim, gymtorch.unwrap_tensor(self.rb_forces), gymtorch.unwrap_tensor(self.rb_torques), gymapi.ENV_SPACE
             )
 
+        # Random velocity impulses
         if self.lin_vel_impulse_scale > 0.0 or self.ang_vel_impulse_scale > 0.0:
-
             if self.lin_vel_impulse_scale > 0.0:
                 lin_vel_impulse_env_ids = (torch.rand(self.num_envs, device=self.device) < self.random_lin_vel_impulse_prob).nonzero(as_tuple=False).squeeze(-1)
                 random_lin_vel_impulses = torch.randn(self.num_envs, 3, device=self.device) * self.lin_vel_impulse_scale
@@ -2834,6 +2834,7 @@ class AllegroKukaBase(VecTask):
             self.temp_root_states_buf[:, self.temp_buffer_index] = self.root_state_tensor.reshape(self.num_envs, -1, self.root_state_tensor.shape[1:]).cpu()
             self.temp_dof_states_buf[:, self.temp_buffer_index] = self.dof_state.reshape(self.num_envs, -1, self.dof_state.shape[1:]).cpu()
             self.temp_buffer_index += 1
+
         # apply torques
         if self.privileged_actions:
             torque_actions = torque_actions.unsqueeze(1)
@@ -2846,183 +2847,189 @@ class AllegroKukaBase(VecTask):
 
         USE_LIVE_PLOTTER = False
         if USE_LIVE_PLOTTER:
-            if not hasattr(self, "live_plotter"):
-                from live_plotter import FastLivePlotter
-
-                # Plot table force raw and smoothed
-                self.live_plotter = FastLivePlotter(
-                    n_plots=1,
-                    titles=["Table Force"],
-                    xlabels=["idx"],
-                    ylabels=["force"],
-                    # ylims=[(self.joint_lower_limits[0], self.joint_upper_limits[0])],
-                    legends=[["raw", "smoothed", "max smoothed"]],
-                )
-                self.table_force_raw_history = []
-                self.table_force_smoothed_history = []
-                self.max_table_sensor_force_norm_smoothed_history = []
-
-                # Plot joint pos and target
-                # self.live_plotter = FastLivePlotter(
-                #     n_plots=len(self.joint_names),
-                #     titles=self.joint_names,
-                #     xlabels=["idx"] * len(self.joint_names),
-                #     ylabels=["joint pos"] * len(self.joint_names),
-                #     ylims=[(self.joint_lower_limits[i], self.joint_upper_limits[i]) for i in range(len(self.joint_names))],
-                #     legends=[["pos", "target"]] * len(self.joint_names),
-                # )
-                # self.joint_pos_history = []
-                # self.joint_target_history = []
-
-            # Plot table force raw and smoothed
-            ENV_IDX = 0
-            if self.with_table_force_sensor:
-                table_force = self.table_sensor_forces_raw[ENV_IDX, :3].norm(dim=-1).item()
-                table_force_smoothed = self.table_sensor_forces_smoothed[ENV_IDX, :3].norm(dim=-1).item()
-                max_table_sensor_force_norm_smoothed = self.max_table_sensor_force_norm_smoothed[ENV_IDX].item()
-                self.table_force_raw_history.append(table_force)
-                self.table_force_smoothed_history.append(table_force_smoothed)
-                self.max_table_sensor_force_norm_smoothed_history.append(max_table_sensor_force_norm_smoothed)
-                # Should be (N, 2)
-                self.live_plotter.plot(
-                    y_data_list=[
-                        np.stack([
-                            np.array(self.table_force_raw_history),
-                            np.array(self.table_force_smoothed_history),
-                            np.array(self.max_table_sensor_force_norm_smoothed_history),
-                        ], axis=-1),
-                    ]
-                )
-
-            # Plot joint pos and target
-            # ENV_IDX = 0
-            # joint_pos = self.arm_hand_dof_pos[ENV_IDX].cpu().numpy().copy()
-            # joint_target = self.cur_targets[ENV_IDX].cpu().numpy().copy()
-            # assert joint_pos.shape == joint_target.shape == (len(self.joint_names),), f"{joint_pos.shape} != {joint_target.shape} != {len(self.joint_names)}"
-            # self.joint_pos_history.append(joint_pos)
-            # self.joint_target_history.append(joint_target)
-            # joint_pos_history = np.stack(self.joint_pos_history, axis=0)
-            # joint_target_history = np.stack(self.joint_target_history, axis=0)
-            # joint_pos_and_target_history = np.stack([joint_pos_history, joint_target_history], axis=-1)
-            # assert joint_pos_and_target_history.shape == (len(self.joint_pos_history), len(self.joint_names), 2), f"{joint_pos_and_target_history.shape} != ({len(self.joint_pos_history)}, {len(self.joint_names)}, 2)"
-            # # Should be (N, 2)
-            # self.live_plotter.plot(
-            #     y_data_list=[
-            #         joint_pos_and_target_history[:, i, :] for i in range(len(self.joint_names))
-            #     ]
-            # )
+            self._use_live_plotter()
 
         RECORD_DATA = self.cfg["env"]["record_data"]
         if RECORD_DATA:
-            from recorded_data_scripts.recorded_data import RecordedData
-            N_TIMESTEPS = self.cfg["env"]["record_data_num_steps"]
+            self._record_data()
 
-            # Get data from sim
-            robot_root_state = self.root_state_tensor[self.allegro_hand_indices, :13].cpu().numpy()
-            object_root_state = self.root_state_tensor[self.object_indices, :13].cpu().numpy()
-            robot_joint_position = self.arm_hand_dof_pos.cpu().numpy()
-            table_root_state = self.root_state_tensor[self.table_indices, :13].cpu().numpy()
+    def _use_live_plotter(self):
+        if not hasattr(self, "live_plotter"):
+            from live_plotter import FastLivePlotter
+
+            # Plot table force raw and smoothed
+            self.live_plotter = FastLivePlotter(
+                n_plots=1,
+                titles=["Table Force"],
+                xlabels=["idx"],
+                ylabels=["force"],
+                # ylims=[(self.joint_lower_limits[0], self.joint_upper_limits[0])],
+                legends=[["raw", "smoothed", "max smoothed"]],
+            )
+            self.table_force_raw_history = []
+            self.table_force_smoothed_history = []
+            self.max_table_sensor_force_norm_smoothed_history = []
+
+            # Plot joint pos and target
+            # self.live_plotter = FastLivePlotter(
+            #     n_plots=len(self.joint_names),
+            #     titles=self.joint_names,
+            #     xlabels=["idx"] * len(self.joint_names),
+            #     ylabels=["joint pos"] * len(self.joint_names),
+            #     ylims=[(self.joint_lower_limits[i], self.joint_upper_limits[i]) for i in range(len(self.joint_names))],
+            #     legends=[["pos", "target"]] * len(self.joint_names),
+            # )
+            # self.joint_pos_history = []
+            # self.joint_target_history = []
+
+        # Plot table force raw and smoothed
+        ENV_IDX = 0
+        if self.with_table_force_sensor:
+            table_force = self.table_sensor_forces_raw[ENV_IDX, :3].norm(dim=-1).item()
+            table_force_smoothed = self.table_sensor_forces_smoothed[ENV_IDX, :3].norm(dim=-1).item()
+            max_table_sensor_force_norm_smoothed = self.max_table_sensor_force_norm_smoothed[ENV_IDX].item()
+            self.table_force_raw_history.append(table_force)
+            self.table_force_smoothed_history.append(table_force_smoothed)
+            self.max_table_sensor_force_norm_smoothed_history.append(max_table_sensor_force_norm_smoothed)
+            # Should be (N, 2)
+            self.live_plotter.plot(
+                y_data_list=[
+                    np.stack([
+                        np.array(self.table_force_raw_history),
+                        np.array(self.table_force_smoothed_history),
+                        np.array(self.max_table_sensor_force_norm_smoothed_history),
+                    ], axis=-1),
+                ]
+            )
+
+        # Plot joint pos and target
+        # ENV_IDX = 0
+        # joint_pos = self.arm_hand_dof_pos[ENV_IDX].cpu().numpy().copy()
+        # joint_target = self.cur_targets[ENV_IDX].cpu().numpy().copy()
+        # assert joint_pos.shape == joint_target.shape == (len(self.joint_names),), f"{joint_pos.shape} != {joint_target.shape} != {len(self.joint_names)}"
+        # self.joint_pos_history.append(joint_pos)
+        # self.joint_target_history.append(joint_target)
+        # joint_pos_history = np.stack(self.joint_pos_history, axis=0)
+        # joint_target_history = np.stack(self.joint_target_history, axis=0)
+        # joint_pos_and_target_history = np.stack([joint_pos_history, joint_target_history], axis=-1)
+        # assert joint_pos_and_target_history.shape == (len(self.joint_pos_history), len(self.joint_names), 2), f"{joint_pos_and_target_history.shape} != ({len(self.joint_pos_history)}, {len(self.joint_names)}, 2)"
+        # # Should be (N, 2)
+        # self.live_plotter.plot(
+        #     y_data_list=[
+        #         joint_pos_and_target_history[:, i, :] for i in range(len(self.joint_names))
+        #     ]
+        # )
+
+    def _record_data(self):
+        from recorded_data_scripts.recorded_data import RecordedData
+        N_TIMESTEPS = self.cfg["env"]["record_data_num_steps"]
+
+        # Get data from sim
+        robot_root_state = self.root_state_tensor[self.allegro_hand_indices, :13].cpu().numpy()
+        object_root_state = self.root_state_tensor[self.object_indices, :13].cpu().numpy()
+        robot_joint_position = self.arm_hand_dof_pos.cpu().numpy()
+        table_root_state = self.root_state_tensor[self.table_indices, :13].cpu().numpy()
+        if hasattr(self, "goal_object_indices"):
+            goal_root_state = self.root_state_tensor[self.goal_object_indices, :13].cpu().numpy()
+        robot_joint_velocity = self.arm_hand_dof_vel.cpu().numpy()
+        robot_joint_pos_target = self.cur_targets[:, :self.num_hand_arm_dofs].cpu().numpy()
+        observations = self.obs_buf.cpu().numpy()
+        actions = self.actions.cpu().numpy()
+
+        # Initialize arrays if not already initialized
+        if not hasattr(self, "robot_root_states_array"):
+            self.robot_root_states_array = []
+            self.object_root_states_array = []
+            self.robot_joint_positions_array = []
+            self.robot_joint_names = self.joint_names
+
+            self.table_root_states_array = []
             if hasattr(self, "goal_object_indices"):
-                goal_root_state = self.root_state_tensor[self.goal_object_indices, :13].cpu().numpy()
-            robot_joint_velocity = self.arm_hand_dof_vel.cpu().numpy()
-            robot_joint_pos_target = self.cur_targets[:, :self.num_hand_arm_dofs].cpu().numpy()
-            observations = self.obs_buf.cpu().numpy()
-            actions = self.actions.cpu().numpy()
+                self.goal_root_states_array = []
+            self.robot_joint_velocities_array = []
+            self.robot_joint_pos_targets_array = []
 
-            # Initialize arrays if not already initialized
-            if not hasattr(self, "robot_root_states_array"):
-                self.robot_root_states_array = []
-                self.object_root_states_array = []
-                self.robot_joint_positions_array = []
-                self.robot_joint_names = self.joint_names
+            self.observations_array = []
+            self.actions_array = []
 
-                self.table_root_states_array = []
-                if hasattr(self, "goal_object_indices"):
-                    self.goal_root_states_array = []
-                self.robot_joint_velocities_array = []
-                self.robot_joint_pos_targets_array = []
+        # Append data to arrays
+        self.robot_root_states_array.append(robot_root_state)
+        self.object_root_states_array.append(object_root_state)
+        self.robot_joint_positions_array.append(robot_joint_position)
+        self.table_root_states_array.append(table_root_state)
+        if hasattr(self, "goal_object_indices"):
+            self.goal_root_states_array.append(goal_root_state)
+        self.robot_joint_velocities_array.append(robot_joint_velocity)
+        self.robot_joint_pos_targets_array.append(robot_joint_pos_target)
+        self.observations_array.append(observations)
+        self.actions_array.append(actions)
+        print(f"Recorded {len(self.robot_root_states_array)} / {N_TIMESTEPS} steps")
 
-                self.observations_array = []
-                self.actions_array = []
+        # Save data to file
+        if len(self.robot_root_states_array) >= N_TIMESTEPS:
+            datetime_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            this_dir = Path(__file__).parent
+            root_dir = this_dir.parent.parent.parent
+            recorded_data_path = root_dir / "recorded_data" / f"{datetime_str}.npz"
+            recorded_data_path.parent.mkdir(parents=True, exist_ok=True)
 
-            # Append data to arrays
-            self.robot_root_states_array.append(robot_root_state)
-            self.object_root_states_array.append(object_root_state)
-            self.robot_joint_positions_array.append(robot_joint_position)
-            self.table_root_states_array.append(table_root_state)
+            self.robot_root_states_array = np.stack(self.robot_root_states_array, axis=0)
+            self.object_root_states_array = np.stack(self.object_root_states_array, axis=0)
+            self.robot_joint_positions_array = np.stack(self.robot_joint_positions_array, axis=0)
+            self.table_root_states_array = np.stack(self.table_root_states_array, axis=0)
             if hasattr(self, "goal_object_indices"):
-                self.goal_root_states_array.append(goal_root_state)
-            self.robot_joint_velocities_array.append(robot_joint_velocity)
-            self.robot_joint_pos_targets_array.append(robot_joint_pos_target)
-            self.observations_array.append(observations)
-            self.actions_array.append(actions)
-            print(f"Recorded {len(self.robot_root_states_array)} / {N_TIMESTEPS} steps")
+                self.goal_root_states_array = np.stack(self.goal_root_states_array, axis=0)
+            self.robot_joint_velocities_array = np.stack(self.robot_joint_velocities_array, axis=0)
+            self.robot_joint_pos_targets_array = np.stack(self.robot_joint_pos_targets_array, axis=0)
+            self.observations_array = np.stack(self.observations_array, axis=0)
+            self.actions_array = np.stack(self.actions_array, axis=0)
 
-            # Save data to file
-            if len(self.robot_root_states_array) >= N_TIMESTEPS:
-                datetime_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-                this_dir = Path(__file__).parent
-                root_dir = this_dir.parent.parent.parent
-                recorded_data_path = root_dir / "recorded_data" / f"{datetime_str}.npz"
-                recorded_data_path.parent.mkdir(parents=True, exist_ok=True)
+            assert self.robot_root_states_array.shape == (N_TIMESTEPS, self.num_envs, 13), f"{self.robot_root_states_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, 13)"
+            assert self.object_root_states_array.shape == (N_TIMESTEPS, self.num_envs, 13), f"{self.object_root_states_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, 13)"
+            assert self.robot_joint_positions_array.shape == (N_TIMESTEPS, self.num_envs, len(self.robot_joint_names)), f"{self.robot_joint_positions_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, {len(self.robot_joint_names)})"
+            assert self.table_root_states_array.shape == (N_TIMESTEPS, self.num_envs, 13), f"{self.table_root_states_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, 13)"
+            if hasattr(self, "goal_object_indices"):
+                assert self.goal_root_states_array.shape == (N_TIMESTEPS, self.num_envs, 13), f"{self.goal_root_states_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, 13)"
+            assert self.robot_joint_velocities_array.shape == (N_TIMESTEPS, self.num_envs, len(self.robot_joint_names)), f"{self.robot_joint_velocities_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, {len(self.robot_joint_names)})"
+            assert self.robot_joint_pos_targets_array.shape == (N_TIMESTEPS, self.num_envs, len(self.robot_joint_names)), f"{self.robot_joint_pos_targets_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, {len(self.robot_joint_names)})"
+            assert self.observations_array.shape == (N_TIMESTEPS, self.num_envs, self.obs_buf.shape[1]), f"{self.observations_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, {self.obs_buf.shape[1]})"
+            assert self.actions_array.shape == (N_TIMESTEPS, self.num_envs, self.actions.shape[1]), f"{self.actions_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, {self.actions.shape[1]})"
 
-                self.robot_root_states_array = np.stack(self.robot_root_states_array, axis=0)
-                self.object_root_states_array = np.stack(self.object_root_states_array, axis=0)
-                self.robot_joint_positions_array = np.stack(self.robot_joint_positions_array, axis=0)
-                self.table_root_states_array = np.stack(self.table_root_states_array, axis=0)
-                if hasattr(self, "goal_object_indices"):
-                    self.goal_root_states_array = np.stack(self.goal_root_states_array, axis=0)
-                self.robot_joint_velocities_array = np.stack(self.robot_joint_velocities_array, axis=0)
-                self.robot_joint_pos_targets_array = np.stack(self.robot_joint_pos_targets_array, axis=0)
-                self.observations_array = np.stack(self.observations_array, axis=0)
-                self.actions_array = np.stack(self.actions_array, axis=0)
+            time_array = np.arange(N_TIMESTEPS) * self.dt
 
-                assert self.robot_root_states_array.shape == (N_TIMESTEPS, self.num_envs, 13), f"{self.robot_root_states_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, 13)"
-                assert self.object_root_states_array.shape == (N_TIMESTEPS, self.num_envs, 13), f"{self.object_root_states_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, 13)"
-                assert self.robot_joint_positions_array.shape == (N_TIMESTEPS, self.num_envs, len(self.robot_joint_names)), f"{self.robot_joint_positions_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, {len(self.robot_joint_names)})"
-                assert self.table_root_states_array.shape == (N_TIMESTEPS, self.num_envs, 13), f"{self.table_root_states_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, 13)"
-                if hasattr(self, "goal_object_indices"):
-                    assert self.goal_root_states_array.shape == (N_TIMESTEPS, self.num_envs, 13), f"{self.goal_root_states_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, 13)"
-                assert self.robot_joint_velocities_array.shape == (N_TIMESTEPS, self.num_envs, len(self.robot_joint_names)), f"{self.robot_joint_velocities_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, {len(self.robot_joint_names)})"
-                assert self.robot_joint_pos_targets_array.shape == (N_TIMESTEPS, self.num_envs, len(self.robot_joint_names)), f"{self.robot_joint_pos_targets_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, {len(self.robot_joint_names)})"
-                assert self.observations_array.shape == (N_TIMESTEPS, self.num_envs, self.obs_buf.shape[1]), f"{self.observations_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, {self.obs_buf.shape[1]})"
-                assert self.actions_array.shape == (N_TIMESTEPS, self.num_envs, self.actions.shape[1]), f"{self.actions_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, {self.actions.shape[1]})"
+            ENV_IDX = 0
+            recorded_data = RecordedData(
+                robot_root_states_array=self.robot_root_states_array[:, ENV_IDX],
+                object_root_states_array=self.object_root_states_array[:, ENV_IDX],
+                robot_joint_positions_array=self.robot_joint_positions_array[:, ENV_IDX],
+                time_array=time_array,
+                robot_joint_names=self.robot_joint_names,
+                table_root_states_array=self.table_root_states_array[:, ENV_IDX],
+                goal_root_states_array=self.goal_root_states_array[:, ENV_IDX] if hasattr(self, "goal_object_indices") else None,
+                robot_joint_velocities_array=self.robot_joint_velocities_array[:, ENV_IDX],
+                robot_joint_pos_targets_array=self.robot_joint_pos_targets_array[:, ENV_IDX],
+                observations_array=self.observations_array[:, ENV_IDX],
+                actions_array=self.actions_array[:, ENV_IDX],
+                object_name=self.cfg["env"]["object_type"],
+            )
+            recorded_data.to_file(recorded_data_path)
+            print(f"Saved recorded data to {recorded_data_path}")
+            breakpoint()
 
-                time_array = np.arange(N_TIMESTEPS) * self.dt
+            # Reset arrays
+            self.robot_root_states_array = []
+            self.object_root_states_array = []
+            self.robot_joint_positions_array = []
+            self.robot_joint_names = self.joint_names
 
-                ENV_IDX = 0
-                recorded_data = RecordedData(
-                    robot_root_states_array=self.robot_root_states_array[:, ENV_IDX],
-                    object_root_states_array=self.object_root_states_array[:, ENV_IDX],
-                    robot_joint_positions_array=self.robot_joint_positions_array[:, ENV_IDX],
-                    time_array=time_array,
-                    robot_joint_names=self.robot_joint_names,
-                    table_root_states_array=self.table_root_states_array[:, ENV_IDX],
-                    goal_root_states_array=self.goal_root_states_array[:, ENV_IDX] if hasattr(self, "goal_object_indices") else None,
-                    robot_joint_velocities_array=self.robot_joint_velocities_array[:, ENV_IDX],
-                    robot_joint_pos_targets_array=self.robot_joint_pos_targets_array[:, ENV_IDX],
-                    observations_array=self.observations_array[:, ENV_IDX],
-                    actions_array=self.actions_array[:, ENV_IDX],
-                    object_name=self.cfg["env"]["object_type"],
-                )
-                recorded_data.to_file(recorded_data_path)
-                print(f"Saved recorded data to {recorded_data_path}")
-                breakpoint()
+            self.table_root_states_array = []
+            if hasattr(self, "goal_object_indices"):
+                self.goal_root_states_array = []
+            self.robot_joint_velocities_array = []
+            self.robot_joint_pos_targets_array = []
 
-                # Reset arrays
-                self.robot_root_states_array = []
-                self.object_root_states_array = []
-                self.robot_joint_positions_array = []
-                self.robot_joint_names = self.joint_names
-
-                self.table_root_states_array = []
-                if hasattr(self, "goal_object_indices"):
-                    self.goal_root_states_array = []
-                self.robot_joint_velocities_array = []
-                self.robot_joint_pos_targets_array = []
-
-                self.observations_array = []
-                self.actions_array = []
+            self.observations_array = []
+            self.actions_array = []
 
     @property
     def use_sharpa(self) -> bool:
