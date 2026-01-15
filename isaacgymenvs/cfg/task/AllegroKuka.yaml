@@ -55,7 +55,7 @@ env:
   forceDecayInterval: 0.08
   forceOnlyWhenLifted: False
 
-  torqueScale: 2.0
+  torqueScale: 0.0
   torqueProbRange: [0.001, 0.1]
   torqueDecay: 0.99
   torqueDecayInterval: 0.08
