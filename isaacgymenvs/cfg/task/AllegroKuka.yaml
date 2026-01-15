@@ -55,6 +55,12 @@ env:
   forceDecayInterval: 0.08
   forceOnlyWhenLifted: False
 
+  torqueScale: 2.0
+  torqueProbRange: [0.001, 0.1]
+  torqueDecay: 0.99
+  torqueDecayInterval: 0.08
+  torqueOnlyWhenLifted: False
+
   liftingRewScale: 20.0
   liftingBonus: 300.0
   liftingBonusThreshold: 0.15  # when the object is lifted this distance (in meters) above the table, the agent gets the lifting bonus

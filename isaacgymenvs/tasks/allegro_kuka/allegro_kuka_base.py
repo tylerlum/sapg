@@ -143,6 +143,13 @@ class AllegroKukaBase(VecTask):
         self.force_prob_range = self.cfg["env"].get("forceProbRange", [0.001, 0.1])
         self.force_decay = self.cfg["env"].get("forceDecay", 0.99)
         self.force_decay_interval = self.cfg["env"].get("forceDecayInterval", 0.08)
+        self.force_only_when_lifted = self.cfg["env"].get("forceOnlyWhenLifted", False)
+
+        self.torque_scale = self.cfg["env"].get("torqueScale", 0.0)
+        self.torque_prob_range = self.cfg["env"].get("torqueProbRange", [0.001, 0.1])
+        self.torque_decay = self.cfg["env"].get("torqueDecay", 0.99)
+        self.torque_decay_interval = self.cfg["env"].get("torqueDecayInterval", 0.08)
+        self.torque_only_when_lifted = self.cfg["env"].get("torqueOnlyWhenLifted", False)
 
         self.use_relative_control = self.cfg["env"]["useRelativeControl"]
 
@@ -395,8 +402,16 @@ class AllegroKukaBase(VecTask):
             * torch.rand(self.num_envs, device=self.device)
             + torch.log(self.force_prob_range[1])
         )
-
         self.rb_forces = torch.zeros((self.num_envs, self.num_bodies, 3), dtype=torch.float, device=self.device)
+
+        self.torque_decay = to_torch(self.torque_decay, dtype=torch.float, device=self.device)
+        self.torque_prob_range = to_torch(self.torque_prob_range, dtype=torch.float, device=self.device)
+        self.random_torque_prob = torch.exp(
+            (torch.log(self.torque_prob_range[0]) - torch.log(self.torque_prob_range[1]))
+            * torch.rand(self.num_envs, device=self.device)
+            + torch.log(self.torque_prob_range[1])
+        )
+        self.rb_torques = torch.zeros((self.num_envs, self.num_bodies, 3), dtype=torch.float, device=self.device)
         self.action_torques = torch.zeros((self.num_envs, self.num_bodies, 3), dtype=torch.float, device=self.device)
 
         self.obj_keypoint_pos = torch.zeros(
@@ -533,34 +548,39 @@ class AllegroKukaBase(VecTask):
                 function=self._toggle_debug_viz_callback,
             ),
             KeyboardShortcut(
-                name="force_x_plus",
+                name="force_or_torque_x_plus",
                 key=gymapi.KEY_RIGHT,
-                function=self._force_x_plus_callback,
+                function=self._force_or_torque_x_plus_callback,
             ),
             KeyboardShortcut(
-                name="force_x_minus",
+                name="force_or_torque_x_minus",
                 key=gymapi.KEY_LEFT,
-                function=self._force_x_minus_callback,
+                function=self._force_or_torque_x_minus_callback,
             ),
             KeyboardShortcut(
-                name="force_y_plus",
+                name="force_or_torque_y_plus",
                 key=gymapi.KEY_UP,
-                function=self._force_y_plus_callback,
+                function=self._force_or_torque_y_plus_callback,
             ),
             KeyboardShortcut(
-                name="force_y_minus",
+                name="force_or_torque_y_minus",
                 key=gymapi.KEY_DOWN,
-                function=self._force_y_minus_callback,
+                function=self._force_or_torque_y_minus_callback,
             ),
             KeyboardShortcut(
-                name="force_z_plus",
+                name="force_or_torque_z_plus",
                 key=gymapi.KEY_PAGE_UP,
-                function=self._force_z_plus_callback,
+                function=self._force_or_torque_z_plus_callback,
             ),
             KeyboardShortcut(
-                name="force_z_minus",
+                name="force_or_torque_z_minus",
                 key=gymapi.KEY_PAGE_DOWN,
-                function=self._force_z_minus_callback,
+                function=self._force_or_torque_z_minus_callback,
+            ),
+            KeyboardShortcut(
+                name="toggle_force_or_torque",
+                key=gymapi.KEY_F,
+                function=self._toggle_force_or_torque_callback,
             ),
         ]
         self.name_to_keyboard_shortcut_dict = {
@@ -568,6 +588,7 @@ class AllegroKukaBase(VecTask):
             for keyboard_shortcut in keyboard_shortcuts
         }
         self._DO_NOT_MOVE = False
+        self.force_or_torque_mode = "force"
 
     def _breakpoint_callback(self) -> None:
         print("Breakpoint")
@@ -591,29 +612,78 @@ class AllegroKukaBase(VecTask):
         if not self.debug_viz:
             self.gym.clear_lines(self.viewer)
 
-    def _force_x_plus_callback(self) -> None:
-        print("Force x plus...")
-        self.rb_forces[:, self.object_rb_handles, 0] += self.force_scale * self.object_rb_masses
+    def _force_or_torque_x_plus_callback(self) -> None:
+        if self.force_or_torque_mode == "force":
+            print("Force x plus...")
+            self.rb_forces[:, self.object_rb_handles, 0] += self.force_scale * self.object_rb_masses
+        elif self.force_or_torque_mode == "torque":
+            print("Torque x plus...")
+            self.rb_torques[:, self.object_rb_handles, 0] += self.torque_scale * self.object_rb_masses
+        else:
+            raise ValueError(f"Invalid force or torque mode: {self.force_or_torque_mode}")
 
-    def _force_x_minus_callback(self) -> None:
-        print("Force x minus...")
+    def _force_or_torque_x_minus_callback(self) -> None:
+        if self.force_or_torque_mode == "force":
+            print("Force x minus...")
+            self.rb_forces[:, self.object_rb_handles, 0] -= self.force_scale * self.object_rb_masses
+        elif self.force_or_torque_mode == "torque":
+            print("Torque x minus...")
+            self.rb_torques[:, self.object_rb_handles, 0] -= self.torque_scale * self.object_rb_masses
+        else:
+            raise ValueError(f"Invalid force or torque mode: {self.force_or_torque_mode}")
         self.rb_forces[:, self.object_rb_handles, 0] -= self.force_scale * self.object_rb_masses
 
-    def _force_y_plus_callback(self) -> None:
-        print("Force y plus...")
+    def _force_or_torque_y_plus_callback(self) -> None:
+        if self.force_or_torque_mode == "force":
+            print("Force y plus...")
+            self.rb_forces[:, self.object_rb_handles, 1] += self.force_scale * self.object_rb_masses
+        elif self.force_or_torque_mode == "torque":
+            print("Torque y plus...")
+            self.rb_torques[:, self.object_rb_handles, 1] += self.torque_scale * self.object_rb_masses
+        else:
+            raise ValueError(f"Invalid force or torque mode: {self.force_or_torque_mode}")
         self.rb_forces[:, self.object_rb_handles, 1] += self.force_scale * self.object_rb_masses
 
-    def _force_y_minus_callback(self) -> None:
-        print("Force y minus...")
-        self.rb_forces[:, self.object_rb_handles, 1] -= self.force_scale * self.object_rb_masses
+    def _force_or_torque_y_minus_callback(self) -> None:
+        if self.force_or_torque_mode == "force":
+            print("Force y minus...")
+            self.rb_forces[:, self.object_rb_handles, 1] -= self.force_scale * self.object_rb_masses
+        elif self.force_or_torque_mode == "torque":
+            print("Torque y minus...")
+            self.rb_torques[:, self.object_rb_handles, 1] -= self.torque_scale * self.object_rb_masses
+        else:
+            raise ValueError(f"Invalid force or torque mode: {self.force_or_torque_mode}")
 
-    def _force_z_plus_callback(self) -> None:
-        print("Force z plus...")
-        self.rb_forces[:, self.object_rb_handles, 2] += self.force_scale * self.object_rb_masses
+    def _force_or_torque_z_plus_callback(self) -> None:
+        if self.force_or_torque_mode == "force":
+            print("Force z plus...")
+            self.rb_forces[:, self.object_rb_handles, 2] += self.force_scale * self.object_rb_masses
+        elif self.force_or_torque_mode == "torque":
+            print("Torque z plus...")
+            self.rb_torques[:, self.object_rb_handles, 2] += self.torque_scale * self.object_rb_masses
+        else:
+            raise ValueError(f"Invalid force or torque mode: {self.force_or_torque_mode}")
 
-    def _force_z_minus_callback(self) -> None:
-        print("Force z minus...")
+    def _force_or_torque_z_minus_callback(self) -> None:
+        if self.force_or_torque_mode == "force":
+            print("Force z minus...")
+            self.rb_forces[:, self.object_rb_handles, 2] -= self.force_scale * self.object_rb_masses
+        elif self.force_or_torque_mode == "torque":
+            print("Torque z minus...")
+            self.rb_torques[:, self.object_rb_handles, 2] -= self.torque_scale * self.object_rb_masses
+        else:
+            raise ValueError(f"Invalid force or torque mode: {self.force_or_torque_mode}")
         self.rb_forces[:, self.object_rb_handles, 2] -= self.force_scale * self.object_rb_masses
+
+    def _toggle_force_or_torque_callback(self) -> None:
+        print("Toggling force or torque...")
+        if self.force_or_torque_mode == "force":
+            self.force_or_torque_mode = "torque"
+        elif self.force_or_torque_mode == "torque":
+            self.force_or_torque_mode = "force"
+        else:
+            raise ValueError(f"Invalid force or torque mode: {self.force_or_torque_mode}")
+        print(f"Force or torque mode is now {self.force_or_torque_mode}")
 
     ##### KEYBOARD END #####
 
@@ -889,7 +959,9 @@ class AllegroKukaBase(VecTask):
             rewards_episode=self.rewards_episode,
             last_curriculum_update=self.last_curriculum_update,
             rb_forces=self.rb_forces,
+            rb_torques=self.rb_torques,
             random_force_prob=self.random_force_prob,
+            random_torque_prob=self.random_torque_prob,
             goal_states=self.goal_states,
             goal_init_state=self.goal_init_state,
             object_init_state=self.object_init_state,
@@ -2423,6 +2495,7 @@ class AllegroKukaBase(VecTask):
         # reset rigid body forces
         if tensor_reset:
             self.rb_forces[env_ids, :, :] = 0.0
+            self.rb_torques[env_ids, :, :] = 0.0
 
         # reset object
         self.reset_object_pose(env_ids, reset_buf_idxs, tensor_reset=tensor_reset)
@@ -2438,6 +2511,11 @@ class AllegroKukaBase(VecTask):
                 (torch.log(self.force_prob_range[0]) - torch.log(self.force_prob_range[1]))
                 * torch.rand(len(env_ids), device=self.device)
                 + torch.log(self.force_prob_range[1])
+            )
+            self.random_torque_prob[env_ids] = torch.exp(
+                (torch.log(self.torque_prob_range[0]) - torch.log(self.torque_prob_range[1]))
+                * torch.rand(len(env_ids), device=self.device)
+                + torch.log(self.torque_prob_range[1])
             )
 
         # reset allegro hand
@@ -2665,24 +2743,42 @@ class AllegroKukaBase(VecTask):
         self.set_dof_state_tensor_indexed()
         self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(self.cur_targets))
 
-        if self.force_scale > 0.0:
-            self.rb_forces *= torch.pow(self.force_decay, self.dt / self.force_decay_interval)
+        if self.force_scale > 0.0 or self.torque_scale > 0.0:
 
-            # apply new forces
-            force_indices = (torch.rand(self.num_envs, device=self.device) < self.random_force_prob).nonzero()
-            self.rb_forces[force_indices, self.object_rb_handles, :] = (
-                torch.randn(self.rb_forces[force_indices, self.object_rb_handles, :].shape, device=self.device)
-                * self.object_rb_masses
-                * self.force_scale
-            )
+            if self.force_scale > 0.0:
+                self.rb_forces *= torch.pow(self.force_decay, self.dt / self.force_decay_interval)
 
-            if self.cfg["env"]["forceOnlyWhenLifted"]:
-                # self.rb_forces is (N, R, 3), assuming there are R rigid bodies per env
-                # self.lifted_object is (N,), True if the object is lifted
-                self.rb_forces[:, self.object_rb_handles, :] *= self.lifted_object.unsqueeze(1).unsqueeze(2)
+                # apply new forces
+                force_indices = (torch.rand(self.num_envs, device=self.device) < self.random_force_prob).nonzero()
+                self.rb_forces[force_indices, self.object_rb_handles, :] = (
+                    torch.randn(self.rb_forces[force_indices, self.object_rb_handles, :].shape, device=self.device)
+                    * self.object_rb_masses
+                    * self.force_scale
+                )
+
+                if self.force_only_when_lifted:
+                    # self.rb_forces is (N, R, 3), assuming there are R rigid bodies per env
+                    # self.lifted_object is (N,), True if the object is lifted
+                    self.rb_forces[:, self.object_rb_handles, :] *= self.lifted_object.unsqueeze(1).unsqueeze(2)
+
+            if self.torque_scale > 0.0:
+                self.rb_torques *= torch.pow(self.torque_decay, self.dt / self.torque_decay_interval)
+
+                # apply new torques
+                torque_indices = (torch.rand(self.num_envs, device=self.device) < self.random_torque_prob).nonzero()
+                self.rb_torques[torque_indices, self.object_rb_handles, :] = (
+                    torch.randn(self.rb_torques[torque_indices, self.object_rb_handles, :].shape, device=self.device)
+                    * self.object_rb_masses  # in theory should do inertia, but harder to do this, so just use mass for now
+                    * self.torque_scale
+                )
+
+                if self.torque_only_when_lifted:
+                    # self.rb_torques is (N, R, 3), assuming there are R rigid bodies per env
+                    # self.lifted_object is (N,), True if the object is lifted
+                    self.rb_torques[:, self.object_rb_handles, :] *= self.lifted_object.unsqueeze(1).unsqueeze(2)
 
             self.gym.apply_rigid_body_force_tensors(
-                self.sim, gymtorch.unwrap_tensor(self.rb_forces), None, gymapi.ENV_SPACE
+                self.sim, gymtorch.unwrap_tensor(self.rb_forces), gymtorch.unwrap_tensor(self.rb_torques), gymapi.ENV_SPACE
             )
         
         if self.good_reset_boundary > 0:
@@ -3038,6 +3134,27 @@ class AllegroKukaBase(VecTask):
                     start_pos=start_pos,
                     end_pos=end_pos,
                     color=PURPLE,
+                )
+
+            for i in range(self.num_envs):
+                rb_torques_cpu = self.rb_torques[i, self.object_rb_handles, :].cpu().numpy().squeeze(axis=0)
+                assert rb_torques_cpu.shape == (3,), f"rb_torques_cpu.shape: {rb_torques_cpu.shape}"
+                object_pos_cpu = self.object_pos[i].cpu().numpy()
+                assert object_pos_cpu.shape == (3,), f"object_pos_cpu.shape: {object_pos_cpu.shape}"
+                start_pos = gymapi.Vec3(*object_pos_cpu)
+                MAX_TORQUE_NORM = self.torque_scale * 0.1  # Often mass is about 0.1 kg
+                MAX_VECTOR_LENGTH = 0.3
+                torque_norm = np.linalg.norm(rb_torques_cpu)
+                if torque_norm > MAX_TORQUE_NORM:
+                    rb_torques_cpu = rb_torques_cpu / torque_norm * MAX_TORQUE_NORM
+                vector = rb_torques_cpu * MAX_VECTOR_LENGTH / MAX_TORQUE_NORM
+                end_pos = start_pos + gymapi.Vec3(*vector)
+                CYAN = (0, 1, 1)
+                self._draw_debug_line_of_spheres(
+                    env=self.envs[i],
+                    start_pos=start_pos,
+                    end_pos=end_pos,
+                    color=CYAN,
                 )
 
             for j in range(self.num_keypoints):
