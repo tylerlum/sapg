@@ -492,6 +492,7 @@ class AllegroKukaBase(VecTask):
             "raw_object_ang_vel_penalty",
             "object_lin_vel_penalty",
             "object_ang_vel_penalty",
+            "total_reward",
         ]
 
         self.rewards_episode = {
@@ -2010,6 +2011,7 @@ class AllegroKukaBase(VecTask):
             (bonus_rew, "bonus_rew"),
             (object_lin_vel_penalty, "object_lin_vel_penalty"),
             (object_ang_vel_penalty, "object_ang_vel_penalty"),
+            (reward, "total_reward"),
         ]
 
         episode_cumulative = dict()
@@ -3017,13 +3019,14 @@ class AllegroKukaBase(VecTask):
 
             # Plot the object velocity penalty
             self.live_plotter = FastLivePlotter(
-                n_plots=4,
-                titles=["Linear Velocity Penalty", "Angular Velocity Penalty", "Cumulative Linear Velocity Penalty", "Cumulative Angular Velocity Penalty"],
+                n_plots=5,
+                titles=["Linear Velocity Penalty", "Angular Velocity Penalty", "Cumulative Linear Velocity Penalty", "Cumulative Angular Velocity Penalty", "Cumulative Total Reward"],
             )
             self.object_lin_vel_penalty_history = []
             self.object_ang_vel_penalty_history = []
             self.cumulative_object_lin_vel_penalty_history = []
             self.cumulative_object_ang_vel_penalty_history = []
+            self.cumulative_total_reward_history = []
 
         # # Plot table force raw and smoothed
         # ENV_IDX = 0
@@ -3089,11 +3092,13 @@ class AllegroKukaBase(VecTask):
             cumulative_object_ang_vel_penalty = rewards_episode["object_ang_vel_penalty"].cpu().numpy()[ENV_IDX].item()
             object_lin_vel_penalty = episode_cumulative["object_lin_vel_penalty"].cpu().numpy()[ENV_IDX].item()
             object_ang_vel_penalty = episode_cumulative["object_ang_vel_penalty"].cpu().numpy()[ENV_IDX].item()
+            cumulative_total_reward = rewards_episode["total_reward"].cpu().numpy()[ENV_IDX].item()
 
             self.object_lin_vel_penalty_history.append(object_lin_vel_penalty)
             self.object_ang_vel_penalty_history.append(object_ang_vel_penalty)
             self.cumulative_object_lin_vel_penalty_history.append(cumulative_object_lin_vel_penalty)
             self.cumulative_object_ang_vel_penalty_history.append(cumulative_object_ang_vel_penalty)
+            self.cumulative_total_reward_history.append(cumulative_total_reward)
 
             self.live_plotter.plot(
                 y_data_list=[
@@ -3101,6 +3106,7 @@ class AllegroKukaBase(VecTask):
                     np.array(self.object_ang_vel_penalty_history),
                     np.array(self.cumulative_object_lin_vel_penalty_history),
                     np.array(self.cumulative_object_ang_vel_penalty_history),
+                    np.array(self.cumulative_total_reward_history),
                 ]
             )
         else:

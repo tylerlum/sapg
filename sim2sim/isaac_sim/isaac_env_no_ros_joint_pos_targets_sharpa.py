@@ -210,8 +210,7 @@ def main():
             "task.env.use_fixed_set_of_goal_states": True,
             "task.env.fixedGoalStates": traj_data["goals"],
             "task.env.forceScale": 0.0,
-            # "task.env.numEnvs": 100,
-            "task.env.numEnvs": 1,
+            "task.env.numEnvs": 1,  # The compute functions use CPU, so parallelizing to many envs will be very slow here
             "task.env.envSpacing": 0.4,
             "task.env.tableResetZRange": 0.0,
             "task.env.capture_video": False,
