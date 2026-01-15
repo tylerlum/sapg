@@ -962,12 +962,6 @@ class AllegroKukaBase(VecTask):
         NUM_OBJECTS_PER_TYPE = 100
         np.random.seed(42)
 
-        # 3D printed objects are about 300-400 kg/m^3
-        HANDLE_MIN_DENSITY, HANDLE_MAX_DENSITY = self.cfg["env"]["handleDensityMin"], self.cfg["env"]["handleDensityMax"]
-
-        # Hammer head and mallet are 800-1500 kg/m^3
-        HEAD_MIN_DENSITY, HEAD_MAX_DENSITY = self.cfg["env"]["headDensityMin"], self.cfg["env"]["headDensityMax"]
-
         from isaacgymenvs.tasks.allegro_kuka.generate_objects import (
             generate_handle_head_urdf,
         )
@@ -981,18 +975,13 @@ class AllegroKukaBase(VecTask):
             handle_head_type = object_size_distribution.type
 
             # Sample densities
-            # Currently same for all objects
-            handle_densities = np.random.uniform(HANDLE_MIN_DENSITY, HANDLE_MAX_DENSITY, size=NUM_OBJECTS_PER_TYPE)
-            head_densities = np.random.uniform(HEAD_MIN_DENSITY, HEAD_MAX_DENSITY, size=NUM_OBJECTS_PER_TYPE)
+            handle_densities = object_size_distribution.sample_handle_densities(NUM_OBJECTS_PER_TYPE)
+            head_densities = object_size_distribution.sample_head_densities(NUM_OBJECTS_PER_TYPE)
 
             # Sample scales
             # Currently different for each object
-            min_handle_scales = np.array(object_size_distribution.handle_min_lengths)
-            max_handle_scales = np.array(object_size_distribution.handle_max_lengths)
-            min_head_scales = np.array(object_size_distribution.head_min_lengths) if object_size_distribution.head_min_lengths is not None else None
-            max_head_scales = np.array(object_size_distribution.head_max_lengths) if object_size_distribution.head_max_lengths is not None else None
-            handle_scales = np.random.uniform(min_handle_scales, max_handle_scales, size=(NUM_OBJECTS_PER_TYPE, len(min_handle_scales)))
-            head_scales = np.random.uniform(min_head_scales, max_head_scales, size=(NUM_OBJECTS_PER_TYPE, len(min_head_scales))) if min_head_scales is not None and max_head_scales is not None else None
+            handle_scales = object_size_distribution.sample_handle_scales(NUM_OBJECTS_PER_TYPE)
+            head_scales = object_size_distribution.sample_head_scales(NUM_OBJECTS_PER_TYPE)
             assert handle_scales.shape in [(NUM_OBJECTS_PER_TYPE, 2), (NUM_OBJECTS_PER_TYPE, 3)], f"handle_scales shape: {handle_scales.shape}, expected ({NUM_OBJECTS_PER_TYPE}, 2) or ({NUM_OBJECTS_PER_TYPE}, 3)"
 
             files_list.append([
