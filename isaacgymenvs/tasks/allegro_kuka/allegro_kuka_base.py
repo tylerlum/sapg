@@ -2991,17 +2991,17 @@ class AllegroKukaBase(VecTask):
             from live_plotter import FastLivePlotter
 
             # Plot table force raw and smoothed
-            self.live_plotter = FastLivePlotter(
-                n_plots=1,
-                titles=["Table Force"],
-                xlabels=["idx"],
-                ylabels=["force"],
-                # ylims=[(self.joint_lower_limits[0], self.joint_upper_limits[0])],
-                legends=[["raw", "smoothed", "max smoothed"]],
-            )
-            self.table_force_raw_history = []
-            self.table_force_smoothed_history = []
-            self.max_table_sensor_force_norm_smoothed_history = []
+            # self.live_plotter = FastLivePlotter(
+            #     n_plots=1,
+            #     titles=["Table Force"],
+            #     xlabels=["idx"],
+            #     ylabels=["force"],
+            #     # ylims=[(self.joint_lower_limits[0], self.joint_upper_limits[0])],
+            #     legends=[["raw", "smoothed", "max smoothed"]],
+            # )
+            # self.table_force_raw_history = []
+            # self.table_force_smoothed_history = []
+            # self.max_table_sensor_force_norm_smoothed_history = []
 
             # Plot joint pos and target
             # self.live_plotter = FastLivePlotter(
@@ -3015,25 +3015,35 @@ class AllegroKukaBase(VecTask):
             # self.joint_pos_history = []
             # self.joint_target_history = []
 
-        # Plot table force raw and smoothed
-        ENV_IDX = 0
-        if self.with_table_force_sensor:
-            table_force = self.table_sensor_forces_raw[ENV_IDX, :3].norm(dim=-1).item()
-            table_force_smoothed = self.table_sensor_forces_smoothed[ENV_IDX, :3].norm(dim=-1).item()
-            max_table_sensor_force_norm_smoothed = self.max_table_sensor_force_norm_smoothed[ENV_IDX].item()
-            self.table_force_raw_history.append(table_force)
-            self.table_force_smoothed_history.append(table_force_smoothed)
-            self.max_table_sensor_force_norm_smoothed_history.append(max_table_sensor_force_norm_smoothed)
-            # Should be (N, 2)
-            self.live_plotter.plot(
-                y_data_list=[
-                    np.stack([
-                        np.array(self.table_force_raw_history),
-                        np.array(self.table_force_smoothed_history),
-                        np.array(self.max_table_sensor_force_norm_smoothed_history),
-                    ], axis=-1),
-                ]
+            # Plot the object velocity penalty
+            self.live_plotter = FastLivePlotter(
+                n_plots=4,
+                titles=["Linear Velocity Penalty", "Angular Velocity Penalty", "Cumulative Linear Velocity Penalty", "Cumulative Angular Velocity Penalty"],
             )
+            self.object_lin_vel_penalty_history = []
+            self.object_ang_vel_penalty_history = []
+            self.cumulative_object_lin_vel_penalty_history = []
+            self.cumulative_object_ang_vel_penalty_history = []
+
+        # # Plot table force raw and smoothed
+        # ENV_IDX = 0
+        # if self.with_table_force_sensor:
+        #     table_force = self.table_sensor_forces_raw[ENV_IDX, :3].norm(dim=-1).item()
+        #     table_force_smoothed = self.table_sensor_forces_smoothed[ENV_IDX, :3].norm(dim=-1).item()
+        #     max_table_sensor_force_norm_smoothed = self.max_table_sensor_force_norm_smoothed[ENV_IDX].item()
+        #     self.table_force_raw_history.append(table_force)
+        #     self.table_force_smoothed_history.append(table_force_smoothed)
+        #     self.max_table_sensor_force_norm_smoothed_history.append(max_table_sensor_force_norm_smoothed)
+        #     # Should be (N, 2)
+        #     self.live_plotter.plot(
+        #         y_data_list=[
+        #             np.stack([
+        #                 np.array(self.table_force_raw_history),
+        #                 np.array(self.table_force_smoothed_history),
+        #                 np.array(self.max_table_sensor_force_norm_smoothed_history),
+        #             ], axis=-1),
+        #         ]
+        #     )
 
         # Plot joint pos and target
         # ENV_IDX = 0
@@ -3052,6 +3062,49 @@ class AllegroKukaBase(VecTask):
         #         joint_pos_and_target_history[:, i, :] for i in range(len(self.joint_names))
         #     ]
         # )
+
+        # Plot object velocity penalty
+        ENV_IDX = 0
+        if "rewards_episode" in self.extras and "episode_cumulative" in self.extras:
+            # Note to self: these names probably got mixed up
+            # episode_cumulative should be rewards_episode and vice versa
+            #
+            # Should be:
+            # rewards_episode is the rewards for the current step
+            # episode_cumulative is the cumulative rewards over the current episode
+            #
+            # Right now:
+            # episode_cumulative is the rewards for the current step
+            # rewards_episode is the cumulative rewards over the current episode
+
+            rewards_episode = self.extras["rewards_episode"]
+            episode_cumulative =self.extras["episode_cumulative"]
+
+            # object_lin_vel_penalty = rewards_episode["object_lin_vel_penalty"].cpu().numpy()[ENV_IDX].item()
+            # object_ang_vel_penalty = rewards_episode["object_ang_vel_penalty"].cpu().numpy()[ENV_IDX].item()
+            # cumulative_object_lin_vel_penalty = episode_cumulative["object_lin_vel_penalty"].cpu().numpy()[ENV_IDX].item()
+            # cumulative_object_ang_vel_penalty = episode_cumulative["object_ang_vel_penalty"].cpu().numpy()[ENV_IDX].item()
+
+            cumulative_object_lin_vel_penalty = rewards_episode["object_lin_vel_penalty"].cpu().numpy()[ENV_IDX].item()
+            cumulative_object_ang_vel_penalty = rewards_episode["object_ang_vel_penalty"].cpu().numpy()[ENV_IDX].item()
+            object_lin_vel_penalty = episode_cumulative["object_lin_vel_penalty"].cpu().numpy()[ENV_IDX].item()
+            object_ang_vel_penalty = episode_cumulative["object_ang_vel_penalty"].cpu().numpy()[ENV_IDX].item()
+
+            self.object_lin_vel_penalty_history.append(object_lin_vel_penalty)
+            self.object_ang_vel_penalty_history.append(object_ang_vel_penalty)
+            self.cumulative_object_lin_vel_penalty_history.append(cumulative_object_lin_vel_penalty)
+            self.cumulative_object_ang_vel_penalty_history.append(cumulative_object_ang_vel_penalty)
+
+            self.live_plotter.plot(
+                y_data_list=[
+                    np.array(self.object_lin_vel_penalty_history),
+                    np.array(self.object_ang_vel_penalty_history),
+                    np.array(self.cumulative_object_lin_vel_penalty_history),
+                    np.array(self.cumulative_object_ang_vel_penalty_history),
+                ]
+            )
+        else:
+            print("No rewards_episode or episode_cumulative found in extras")
 
     def _record_data(self):
         from recorded_data_scripts.recorded_data import RecordedData
