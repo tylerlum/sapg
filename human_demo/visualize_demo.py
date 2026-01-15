@@ -1002,24 +1002,25 @@ def main():
         sharpa_viser.update_cfg(HOME_JOINT_POS_SHARPA)
 
         # Solve arm IK first time
-        N_IK_STEPS = 10
-        for i in range(N_IK_STEPS):
-            q = np.array(kuka_sharpa_viser._urdf.cfg)
-            q_arm = q[:7]
+        if args.retarget_robot:
+            N_IK_STEPS = 10
+            for i in range(N_IK_STEPS):
+                q = np.array(kuka_sharpa_viser._urdf.cfg)
+                q_arm = q[:7]
 
-            # Arm IK
-            T_R_P = T_R_Ps[0]
-            new_q_arm = compute_new_q_arm(
-                arm_pk_chain=arm_pk_chain,
-                target_wrist_pose=T_R_P,
-                q_arm=q_arm,
-            )
+                # Arm IK
+                T_R_P = T_R_Ps[0]
+                new_q_arm = compute_new_q_arm(
+                    arm_pk_chain=arm_pk_chain,
+                    target_wrist_pose=T_R_P,
+                    q_arm=q_arm,
+                )
 
-            q_hand = q[7:]
-            new_q_hand = q_hand
+                q_hand = q[7:]
+                new_q_hand = q_hand
 
-            new_q = np.concatenate([new_q_arm, new_q_hand])
-            kuka_sharpa_viser.update_cfg(new_q)
+                new_q = np.concatenate([new_q_arm, new_q_hand])
+                kuka_sharpa_viser.update_cfg(new_q)
 
         for i, (T_W_O, T_R_P, hand_keypoint_to_xyz) in tqdm(
             enumerate(zip(T_W_Os, T_R_Ps, hand_keypoint_to_xyzs)),
