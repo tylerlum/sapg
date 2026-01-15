@@ -405,36 +405,36 @@ class AllegroKukaBase(VecTask):
         # object apply random forces parameters
         self.force_decay = to_torch(self.force_decay, dtype=torch.float, device=self.device)
         self.force_prob_range = to_torch(self.force_prob_range, dtype=torch.float, device=self.device)
-        self.random_force_prob = torch.exp(
-            (torch.log(self.force_prob_range[0]) - torch.log(self.force_prob_range[1]))
-            * torch.rand(self.num_envs, device=self.device)
-            + torch.log(self.force_prob_range[1])
+        self.random_force_prob = self._sample_log_uniform(
+            min_value=self.force_prob_range[0],
+            max_value=self.force_prob_range[1],
+            num_samples=self.num_envs,
         )
         self.rb_forces = torch.zeros((self.num_envs, self.num_bodies, 3), dtype=torch.float, device=self.device)
 
         self.torque_decay = to_torch(self.torque_decay, dtype=torch.float, device=self.device)
         self.torque_prob_range = to_torch(self.torque_prob_range, dtype=torch.float, device=self.device)
-        self.random_torque_prob = torch.exp(
-            (torch.log(self.torque_prob_range[0]) - torch.log(self.torque_prob_range[1]))
-            * torch.rand(self.num_envs, device=self.device)
-            + torch.log(self.torque_prob_range[1])
+        self.random_torque_prob = self._sample_log_uniform(
+            min_value=self.torque_prob_range[0],
+            max_value=self.torque_prob_range[1],
+            num_samples=self.num_envs,
         )
         self.rb_torques = torch.zeros((self.num_envs, self.num_bodies, 3), dtype=torch.float, device=self.device)
         self.action_torques = torch.zeros((self.num_envs, self.num_bodies, 3), dtype=torch.float, device=self.device)
 
         # Random velocity impulses applied to the object
         self.lin_vel_impulse_prob_range = to_torch(self.lin_vel_impulse_prob_range, dtype=torch.float, device=self.device)
-        self.random_lin_vel_impulse_prob = torch.exp(
-            (torch.log(self.lin_vel_impulse_prob_range[0]) - torch.log(self.lin_vel_impulse_prob_range[1]))
-            * torch.rand(self.num_envs, device=self.device)
-            + torch.log(self.lin_vel_impulse_prob_range[1])
+        self.random_lin_vel_impulse_prob = self._sample_log_uniform(
+            min_value=self.lin_vel_impulse_prob_range[0],
+            max_value=self.lin_vel_impulse_prob_range[1],
+            num_samples=self.num_envs,
         )
 
         self.ang_vel_impulse_prob_range = to_torch(self.ang_vel_impulse_prob_range, dtype=torch.float, device=self.device)
-        self.random_ang_vel_impulse_prob = torch.exp(
-            (torch.log(self.ang_vel_impulse_prob_range[0]) - torch.log(self.ang_vel_impulse_prob_range[1]))
-            * torch.rand(self.num_envs, device=self.device)
-            + torch.log(self.ang_vel_impulse_prob_range[1])
+        self.random_ang_vel_impulse_prob = self._sample_log_uniform(
+            min_value=self.ang_vel_impulse_prob_range[0],
+            max_value=self.ang_vel_impulse_prob_range[1],
+            num_samples=self.num_envs,
         )
 
         self.obj_keypoint_pos = torch.zeros(
@@ -537,6 +537,27 @@ class AllegroKukaBase(VecTask):
         self._init_tyler_curriculum()
 
         self._init_obs_action_queue()
+
+    def _sample_log_uniform(self, min_value: float, max_value: float, num_samples: int) -> torch.Tensor:
+        """
+        Sample values log-uniformly between min_value and max_value.
+
+        Args:
+            min_value: Lower bound (must be > 0).
+            max_value: Upper bound (must be > 0).
+
+        Returns:
+            A tensor of shape (self.num_envs,) sampled log-uniformly.
+        """
+        assert min_value > 0, f"min_value must be > 0, got {min_value}"
+        assert max_value > 0, f"max_value must be > 0, got {max_value}"
+        assert min_value < max_value, f"min_value must be < max_value, got {min_value} < {max_value}"
+
+        return torch.exp(
+            torch.log(min_value)
+            + (torch.log(max_value) - torch.log(min_value))
+            * torch.rand(num_samples, device=self.device)
+        )
 
     ##### KEYBOARD START #####
     def _subscribe_to_keyboard_events(self) -> None:
@@ -2532,25 +2553,25 @@ class AllegroKukaBase(VecTask):
 
         # reset random force probabilities
         if tensor_reset:
-            self.random_force_prob[env_ids] = torch.exp(
-                (torch.log(self.force_prob_range[0]) - torch.log(self.force_prob_range[1]))
-                * torch.rand(len(env_ids), device=self.device)
-                + torch.log(self.force_prob_range[1])
+            self.random_force_prob[env_ids] = self._sample_log_uniform(
+                min_value=self.force_prob_range[0],
+                max_value=self.force_prob_range[1],
+                num_samples=len(env_ids),
             )
-            self.random_torque_prob[env_ids] = torch.exp(
-                (torch.log(self.torque_prob_range[0]) - torch.log(self.torque_prob_range[1]))
-                * torch.rand(len(env_ids), device=self.device)
-                + torch.log(self.torque_prob_range[1])
+            self.random_torque_prob[env_ids] = self._sample_log_uniform(
+                min_value=self.torque_prob_range[0],
+                max_value=self.torque_prob_range[1],
+                num_samples=len(env_ids),
             )
-            self.random_lin_vel_impulse_prob[env_ids] = torch.exp(
-                (torch.log(self.lin_vel_impulse_prob_range[0]) - torch.log(self.lin_vel_impulse_prob_range[1]))
-                * torch.rand(len(env_ids), device=self.device)
-                + torch.log(self.lin_vel_impulse_prob_range[1])
+            self.random_lin_vel_impulse_prob[env_ids] = self._sample_log_uniform(
+                min_value=self.lin_vel_impulse_prob_range[0],
+                max_value=self.lin_vel_impulse_prob_range[1],
+                num_samples=len(env_ids),
             )
-            self.random_ang_vel_impulse_prob[env_ids] = torch.exp(
-                (torch.log(self.ang_vel_impulse_prob_range[0]) - torch.log(self.ang_vel_impulse_prob_range[1]))
-                * torch.rand(len(env_ids), device=self.device)
-                + torch.log(self.ang_vel_impulse_prob_range[1])
+            self.random_ang_vel_impulse_prob[env_ids] = self._sample_log_uniform(
+                min_value=self.ang_vel_impulse_prob_range[0],
+                max_value=self.ang_vel_impulse_prob_range[1],
+                num_samples=len(env_ids),
             )
 
         # reset allegro hand
