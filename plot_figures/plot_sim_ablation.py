@@ -46,11 +46,13 @@ plt.rcParams.update({
 
 def plot_single_ablation():
     # Styles configuration
-    # Added 'zorder': Higher number means it sits ON TOP of other lines
+    # Ours = Blue
+    # No SAPG = Dark Grey (Charcoal)
+    # No Asymmetric Critic = Lighter Grey
     styles = {
         "Ours":                 {"color": "#1f77b4", "marker": "o", "zorder": 10}, 
-        "No SAPG":              {"color": "#ff7f0e", "marker": "s", "zorder": 5}, 
-        "No Asymmetric Critic": {"color": "#2ca02c", "marker": "^", "zorder": 4}  
+        "No SAPG":              {"color": "#555555", "marker": "s", "zorder": 5}, 
+        "No Asymmetric Critic": {"color": "#A9A9A9", "marker": "^", "zorder": 4}  
     }
 
     fig, ax = plt.subplots(figsize=(5, 3.5), constrained_layout=True)
@@ -66,7 +68,6 @@ def plot_single_ablation():
             style = styles[method]
             
             # Plot Line
-            # zorder ensures Ours stays on top even if we loop it first
             ax.plot(x, y, label=method, 
                     color=style["color"], marker=style["marker"], 
                     markevery=1, zorder=style["zorder"])
@@ -74,7 +75,7 @@ def plot_single_ablation():
             # Plot Shade
             ax.fill_between(x, y - std, y + std, 
                             color=style["color"], alpha=0.15, edgecolor='none', 
-                            zorder=style["zorder"]-1) # Shade sits just behind the line
+                            zorder=style["zorder"]-1) 
 
     # Formatting
     ax.set_ylim(0, 105)
@@ -89,7 +90,6 @@ def plot_single_ablation():
     ax.set_ylabel("Reward") 
 
     # Legend at Upper Left
-    # Since "Ours" is first in METHODS list, it will be first (top) in the box.
     ax.legend(loc='upper left', frameon=False)
 
     plt.show()
