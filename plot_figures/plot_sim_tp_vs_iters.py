@@ -5,13 +5,10 @@ import numpy as np
 # 1. CONFIGURATION & DATA ENTRY
 # ==========================================
 
-# The X-Axis values (e.g., Checkpoints at 0, 100k, 200k... 1M steps)
-# Ensure your data lists below match the length of this list (10 items).
+# The X-Axis values
 ENV_STEPS = [0, 1e5, 2e5, 3e5, 4e5, 5e5, 6e5, 7e5, 8e5, 9e5] 
 
 # PASTE YOUR REAL DATA HERE
-# Structure: "Category" -> "Method" -> "mean" (Y-value) and "std" (Error bar size)
-# If you don't have standard deviation, you can set 'std' to a list of zeros.
 RAW_DATA = {
     "Hammer": {
         "In-Distribution (Primitives)": {
@@ -79,7 +76,6 @@ RAW_DATA = {
 # 2. PLOTTING SCRIPT
 # ==========================================
 
-# Academic Style Settings
 plt.rcParams.update({
     'font.family': 'serif',
     'font.serif': ['Times New Roman', 'DejaVu Serif'],
@@ -103,10 +99,11 @@ def plot_research_strip():
     # Adjust layout to make room for bottom legend
     plt.subplots_adjust(bottom=0.25, wspace=0.15, left=0.05, right=0.98)
 
-    # Styling for the two specific lines
+    # --- COLOR UPDATE HERE ---
+    # Both are variants of Blue since they are both "Ours"
     styles = {
-        "In-Distribution (Primitives)": {"color": "#1f77b4", "marker": "o"}, # Blue Circle
-        "Real-World Scanned Objects":   {"color": "#d62728", "marker": "s"}  # Red Square
+        "In-Distribution (Primitives)": {"color": "#87CEEB", "marker": "o"},        # Light Blue
+        "Real-World Scanned Objects":   {"color": "#1f77b4",        "marker": "D"}  # Deep Blue (Diamond marker to distinguish)
     }
 
     # Iterate through the 6 categories
@@ -118,7 +115,6 @@ def plot_research_strip():
             
             for method_name, style in styles.items():
                 if method_name in cat_data:
-                    # Retrieve data
                     y_mean = np.array(cat_data[method_name]["mean"])
                     y_std = np.array(cat_data[method_name]["std"])
                     x = np.array(ENV_STEPS)
@@ -136,22 +132,18 @@ def plot_research_strip():
         ax.set_ylim(0, 105)
         ax.grid(True, linestyle='--')
         
-        # Clean look (remove top/right borders)
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
-        
-        # Scientific notation for X axis
         ax.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
 
-        # Y-label only on the first plot
         if i == 0:
             ax.set_ylabel("Task Progress (%)")
         else:
-            ax.set_yticklabels([]) # Hide numbers
+            ax.set_yticklabels([]) 
         
         ax.set_xlabel("Env Steps")
 
-    # Legend (grab handles from the last plotted axis)
+    # Legend
     handles, labels = axes[0].get_legend_handles_labels()
     fig.legend(handles, labels, loc='lower center', 
                bbox_to_anchor=(0.5, 0.05), 
