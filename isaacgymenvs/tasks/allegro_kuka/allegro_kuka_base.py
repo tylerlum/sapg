@@ -2681,7 +2681,6 @@ class AllegroKukaBase(VecTask):
         self.reset_target_pose(reset_goal_env_ids, None, is_first_goal=False)
         if len(reset_env_ids) > 0:
             self.reset_idx(reset_env_ids, None)
-        self.set_actor_root_state_tensor_indexed()
 
         if self.use_relative_control:
             # arm relative to current position
@@ -2829,6 +2828,7 @@ class AllegroKukaBase(VecTask):
                 random_ang_vel_impulses = torch.randn(self.num_envs, 3, device=self.device) * self.ang_vel_impulse_scale
                 self.root_state_tensor[self.object_indices[ang_vel_impulse_env_ids], 10:13] = random_ang_vel_impulses[ang_vel_impulse_env_ids, :]
                 self.deferred_set_actor_root_state_tensor_indexed([self.object_indices[ang_vel_impulse_env_ids]])
+        self.set_actor_root_state_tensor_indexed()
 
         if self.good_reset_boundary > 0:
             self.temp_root_states_buf[:, self.temp_buffer_index] = self.root_state_tensor.reshape(self.num_envs, -1, self.root_state_tensor.shape[1:]).cpu()
@@ -3175,7 +3175,7 @@ class AllegroKukaBase(VecTask):
                 force_norm = np.linalg.norm(rb_forces_cpu)
                 if force_norm > MAX_FORCE_NORM:
                     rb_forces_cpu = rb_forces_cpu / force_norm * MAX_FORCE_NORM
-                vector = rb_forces_cpu * MAX_VECTOR_LENGTH / MAX_FORCE_NORM
+                vector = rb_forces_cpu * MAX_VECTOR_LENGTH / (MAX_FORCE_NORM + 1e-6)
                 end_pos = start_pos + gymapi.Vec3(*vector)
                 PURPLE = (1, 0, 1)
                 self._draw_debug_line_of_spheres(
@@ -3196,7 +3196,7 @@ class AllegroKukaBase(VecTask):
                 torque_norm = np.linalg.norm(rb_torques_cpu)
                 if torque_norm > MAX_TORQUE_NORM:
                     rb_torques_cpu = rb_torques_cpu / torque_norm * MAX_TORQUE_NORM
-                vector = rb_torques_cpu * MAX_VECTOR_LENGTH / MAX_TORQUE_NORM
+                vector = rb_torques_cpu * MAX_VECTOR_LENGTH / (MAX_TORQUE_NORM + 1e-6)
                 end_pos = start_pos + gymapi.Vec3(*vector)
                 CYAN = (0, 1, 1)
                 self._draw_debug_line_of_spheres(
