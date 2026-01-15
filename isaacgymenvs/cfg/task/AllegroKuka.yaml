@@ -53,21 +53,20 @@ env:
   forceProbRange: [0.001, 0.1]
   forceDecay: 0.99
   forceDecayInterval: 0.08
-  forceOnlyWhenLifted: False
-
+  forceOnlyWhenLifted: True
   torqueScale: 0.0
   torqueProbRange: [0.001, 0.1]
   torqueDecay: 0.99
   torqueDecayInterval: 0.08
-  torqueOnlyWhenLifted: False
+  torqueOnlyWhenLifted: True
 
   # Random velocity impulses applied to the object
   linVelImpulseProbRange: [0.001, 0.1]
   linVelImpulseScale: 0.0
-  linVelImpulseOnlyWhenLifted: False
+  linVelImpulseOnlyWhenLifted: True
   angVelImpulseProbRange: [0.001, 0.1]
   angVelImpulseScale: 0.0
-  angVelImpulseOnlyWhenLifted: False
+  angVelImpulseOnlyWhenLifted: True
 
   liftingRewScale: 20.0
   liftingBonus: 300.0
