@@ -983,10 +983,10 @@ class AllegroKukaBase(VecTask):
             handle_scales = object_size_distribution.sample_handle_scales(NUM_OBJECTS_PER_TYPE)
             head_scales = object_size_distribution.sample_head_scales(NUM_OBJECTS_PER_TYPE)
             assert handle_scales.shape in [(NUM_OBJECTS_PER_TYPE, 2), (NUM_OBJECTS_PER_TYPE, 3)], f"handle_scales shape: {handle_scales.shape}, expected ({NUM_OBJECTS_PER_TYPE}, 2) or ({NUM_OBJECTS_PER_TYPE}, 3)"
-
+            # breakpoint()
             files_list.append([
                 generate_handle_head_urdf(
-                    filepath=Path(generated_assets_dir) / (f"{idx:03d}_{handle_head_type}_handle_head_{handle_scales[idx]}_{head_scales[idx] if head_scales is not None else 'None'}_{handle_densities[idx]}_{head_densities[idx] if head_densities[idx] is not None else 'None'}".replace(".", "-") + ".urdf"),
+                    filepath=Path(generated_assets_dir) / (f"{idx:03d}_{handle_head_type}_handle_head_{handle_scales[idx]}_{head_scales[idx] if head_scales is not None else 'None'}_{handle_densities[idx]}_{head_densities[idx] if head_densities is not None else 'None'}".replace(".", "-") + ".urdf"),
                     handle_scale=handle_scales[idx],
                     head_scale=head_scales[idx] if head_scales is not None else None,
                     handle_density=handle_densities[idx],
