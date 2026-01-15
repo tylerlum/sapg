@@ -5,6 +5,7 @@ import copy
 import time
 from pathlib import Path
 from typing import Literal, Optional, Tuple
+import datetime
 
 import numpy as np
 import rospy
@@ -170,6 +171,8 @@ class RLPolicyNode:
         save_foldername: Optional[str] = None,
         overwrite_targets_filepath: Optional[Path] = None,
         use_relative_object_pose_once_lifted: bool = False,
+        object_name: Optional[str] = None,
+        automatically_detect_object_lifted: bool = False,
     ):
         self.config_path = config_path
         self.checkpoint_path = checkpoint_path
@@ -180,6 +183,8 @@ class RLPolicyNode:
         self.save_foldername = save_foldername
         self.overwrite_targets_filepath = overwrite_targets_filepath
         self.use_relative_object_pose_once_lifted = use_relative_object_pose_once_lifted
+        self.object_name = object_name
+        self.automatically_detect_object_lifted = automatically_detect_object_lifted
 
         assert_equals(object_scales.shape, (3,))
 
@@ -281,6 +286,20 @@ class RLPolicyNode:
             print(f"T: {T}, D: {D}")
             assert D == 29, f"D: {D}, expected: 29"
             self.current_step = 0
+
+        if self.use_relative_object_pose_once_lifted:
+            # ##############################################################################
+            # Signal handling to save relative object pose once lifted
+            # ##############################################################################
+            import signal
+            signal.signal(signal.SIGUSR1, self._save_relative_object_pose_once_lifted)
+            self.object_lifted = False
+            self.initialized_relative_object_pose_logic = False
+
+    def _save_relative_object_pose_once_lifted(self, signum, frame):
+        info("Received signal to save relative object pose once lifted")
+        self.object_lifted = True
+        info(f"Object lifted: {self.object_lifted}")
 
     def object_pose_callback(self, msg: PoseStamped):
         self.object_pose_msg = msg
@@ -394,6 +413,14 @@ class RLPolicyNode:
         assert_equals(joint_pos_targets.shape, (1, self.num_actions))
         joint_pos_targets = joint_pos_targets[0]
 
+        # Clamp joint position to joint limits with buffer
+        # Hardware has 5 deg buffer, so we add 7.5 deg buffer here to avoid getting overshoots that hits limit
+        BUFFER = np.deg2rad(7.5)
+        J = len(self.urdf_object.actuated_joints)
+        lower_limits = np.array([self.urdf_object.actuated_joints[i].limit.lower for i in range(J)]) + BUFFER
+        upper_limits = np.array([self.urdf_object.actuated_joints[i].limit.upper for i in range(J)]) - BUFFER
+        joint_pos_targets = np.clip(joint_pos_targets, lower_limits, upper_limits)
+
         iiwa_msg = JointState()
         iiwa_msg.header.stamp = rospy.Time.now()
         iiwa_msg.header.frame_id = ""
@@ -443,9 +470,6 @@ class RLPolicyNode:
         q: np.ndarray,
         q_target: np.ndarray,
         T_R_O_lifted: np.ndarray,
-        object_type: str,
-        object_name: str,
-        trajectory_name: str,
     ):
         assert_equals(q.shape, (29,))
         assert_equals(q_target.shape, (29,))
@@ -490,6 +514,44 @@ class RLPolicyNode:
         # Assumes this is in world frame
         # Stop listening to the published one
         import json
+
+        # object_type = "hammer"
+        # object_name = "mallet"
+        # object_name = "hammer_2"
+        # trajectory_name = "vertical_swing"
+        # trajectory_name = "horizontal_swing"
+        # trajectory_name = "horizontal_swing_higher"
+        # trajectory_name = "horizontal_swing_human"
+        # trajectory_name = "horizontal_swing_human_closer"
+
+        # object_type = "spatula"
+        # object_name = "black_spatula"
+        # trajectory_name = "pick_and_place_human"
+        # trajectory_name = "pick_and_place_human_hardinit"
+
+        object_type = "screwdriver"
+        object_name = "real_flat_screwdriver"
+        # trajectory_name = "top_down_screwing_human_easyinit"
+        # trajectory_name = "top_down_screwing_human"
+        trajectory_name = "top_down_screwing_closer"
+
+        # object_type = "eraser"
+        # object_name = "whiteboard_eraser"
+        # trajectory_name = "wipe_left_human"
+        # trajectory_name = "wipe_left_human_2"
+
+        # object_type = "marker"
+        # object_name = "040_large_marker"
+        # trajectory_name = "draw_circle_human"
+        # trajectory_name = "draw_circle_human_hardinit"
+
+        # object_type = "brush"
+        # object_name = "green_brush"
+        # object_name = "red_brush"
+        # trajectory_name = "simple"
+        # trajectory_name = "complex"
+
+        assert self.object_name == object_name, f"self.object_name: {self.object_name}, object_name: {object_name}"
         object_pose_trajectory_filepath = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
         assert object_pose_trajectory_filepath.exists(), f"object_pose_trajectory_filepath not found: {object_pose_trajectory_filepath}"
         with open(object_pose_trajectory_filepath, "r") as f:
@@ -532,27 +594,70 @@ class RLPolicyNode:
         # IK for the arm targets, starting from the current arm joint positions
         # This uses pseudoinverse IK which needs to be relative to some reference arm joint positions
         # We start from the current arm joint positions and iteratively compute the next arm joint positions
-        q_arm = q[:7].copy()
-        q_arm_targets_using_lifted_object_pose = []
-        from tqdm import tqdm
-        for i in tqdm(range(TRAJECTORY_LENGTH), desc="Computing arm targets using lifted object pose"):
+        from typing import Literal
+        MODE: Literal["IK", "TRAJOPT", "SAVE_AND_LOAD_FROM_FILE"] = "SAVE_AND_LOAD_FROM_FILE"
+        if MODE == "IK":
             from human_demo.visualize_demo import compute_new_q_arm
-            T_W_P_using_lifted_object_pose = self.T_W_Ps_using_lifted_object_pose[i]
+            q_arm = q[:7].copy()
+            q_arm_targets_using_lifted_object_pose = []
+            from tqdm import tqdm
+            for i in tqdm(range(TRAJECTORY_LENGTH), desc="Computing arm targets using lifted object pose"):
+                T_W_P_using_lifted_object_pose = self.T_W_Ps_using_lifted_object_pose[i]
+                T_R_W = np.linalg.inv(T_W_R)
+                T_R_P_using_lifted_object_pose = T_R_W @ T_W_P_using_lifted_object_pose
+                q_arm = compute_new_q_arm(
+                    arm_pk_chain=self.arm_pk_chain,
+                    target_wrist_pose=T_R_P_using_lifted_object_pose,
+                    q_arm=q_arm,
+                )
+                q_arm_targets_using_lifted_object_pose.append(q_arm.copy())
+            q_arm_targets_using_lifted_object_pose = np.array(q_arm_targets_using_lifted_object_pose)
+            assert q_arm_targets_using_lifted_object_pose.shape == (TRAJECTORY_LENGTH, 7), f"q_arm_targets_using_lifted_object_pose.shape: {q_arm_targets_using_lifted_object_pose.shape}, expected: (TRAJECTORY_LENGTH, 7)"
+        elif MODE == "TRAJOPT":
+            from human_demo.visualize_demo_trajopt import solve_trajopt, interpolate_traj
             T_R_W = np.linalg.inv(T_W_R)
-            T_R_P_using_lifted_object_pose = T_R_W @ T_W_P_using_lifted_object_pose
-            q_arm = compute_new_q_arm(
-                arm_pk_chain=self.arm_pk_chain,
-                target_wrist_pose=T_R_P_using_lifted_object_pose,
-                q_arm=q_arm,
+            T_R_Ps_using_lifted_object_pose = np.array([T_R_W @ T_W_P for T_W_P in self.T_W_Ps_using_lifted_object_pose])
+            DOWNSAMPLE_FACTOR = 10
+            retargeted_qs = solve_trajopt(
+                T_R_Ps=T_R_Ps_using_lifted_object_pose[::DOWNSAMPLE_FACTOR],
+                q_start=q.copy(),
+                dt=1/30,
             )
-            q_arm_targets_using_lifted_object_pose.append(q_arm.copy())
-        q_arm_targets_using_lifted_object_pose = np.array(q_arm_targets_using_lifted_object_pose)
-        assert q_arm_targets_using_lifted_object_pose.shape == (TRAJECTORY_LENGTH, 7), f"q_arm_targets_using_lifted_object_pose.shape: {q_arm_targets_using_lifted_object_pose.shape}, expected: (TRAJECTORY_LENGTH, 7)"
+            print(f"TRAJECTORY_LENGTH: {TRAJECTORY_LENGTH}, retargeted_qs.shape: {retargeted_qs.shape}")
+            q_arm_targets_using_lifted_object_pose = interpolate_traj(retargeted_qs[:, :7], n_steps=DOWNSAMPLE_FACTOR)
+            print(f"After interpolation, q_arm_targets_using_lifted_object_pose.shape: {q_arm_targets_using_lifted_object_pose.shape}")
+            breakpoint()
+            if q_arm_targets_using_lifted_object_pose.shape[0] < TRAJECTORY_LENGTH:
+                extra = TRAJECTORY_LENGTH - q_arm_targets_using_lifted_object_pose.shape[0]
+                q_arm_targets_using_lifted_object_pose = np.concatenate([q_arm_targets_using_lifted_object_pose, q_arm_targets_using_lifted_object_pose[-1][None].repeat(extra, axis=0)], axis=0)
+            elif q_arm_targets_using_lifted_object_pose.shape[0] > TRAJECTORY_LENGTH:
+                extra = q_arm_targets_using_lifted_object_pose.shape[0] - TRAJECTORY_LENGTH
+                q_arm_targets_using_lifted_object_pose = q_arm_targets_using_lifted_object_pose[:-extra]
+            assert q_arm_targets_using_lifted_object_pose.shape == (TRAJECTORY_LENGTH, 7), f"q_arm_targets_using_lifted_object_pose.shape: {q_arm_targets_using_lifted_object_pose.shape}, expected: ({TRAJECTORY_LENGTH}, 7)"
+        elif MODE == "SAVE_AND_LOAD_FROM_FILE":
+            T_R_W = np.linalg.inv(T_W_R)
+            T_R_Ps_using_lifted_object_pose = np.array([T_R_W @ T_W_P for T_W_P in self.T_W_Ps_using_lifted_object_pose])
+            # Output T_R_Ps_using_lifted_object_pose and q to json
+            with open("trajopt_inputs.json", "w") as f:
+                json.dump({
+                    "T_R_Ps_using_lifted_object_pose": T_R_Ps_using_lifted_object_pose.tolist(),
+                    "q": q.tolist(),
+                }, f, indent=4)
+            print(f"Saved trajopt inputs to trajopt_inputs.json")
+            print(f"python human_demo/run_trajopt.py")
+            print(f"Run trajopt and save the outputs to trajopt_outputs.json")
+            breakpoint()
+            with open("trajopt_outputs.json", "r") as f:
+                retargeted_qs = np.array(json.load(f)["retargeted_qs"])
+            q_arm_targets_using_lifted_object_pose = retargeted_qs[:, :7]
+            print(f"TRAJECTORY_LENGTH: {TRAJECTORY_LENGTH}, retargeted_qs.shape: {retargeted_qs.shape}")
+            assert q_arm_targets_using_lifted_object_pose.shape == (TRAJECTORY_LENGTH, 7), f"q_arm_targets_using_lifted_object_pose.shape: {q_arm_targets_using_lifted_object_pose.shape}, expected: ({TRAJECTORY_LENGTH}, 7)"
+        else:
+            raise ValueError(f"Invalid MODE: {MODE}")
 
         # Concatenate the arm targets and the hand target
         self.q_targets_using_lifted_object_pose = np.concatenate([q_arm_targets_using_lifted_object_pose, q_hand_lifted_target[None].repeat(TRAJECTORY_LENGTH, axis=0)], axis=1)
         assert self.q_targets_using_lifted_object_pose.shape == (TRAJECTORY_LENGTH, 29), f"self.q_targets_using_lifted_object_pose.shape: {self.q_targets_using_lifted_object_pose.shape}, expected: (TRAJECTORY_LENGTH, 29)"
-
 
     def _visualize_relative_object_pose_logic(self, q_targets_using_lifted_object_pose: np.ndarray, T_W_Ps_using_lifted_object_pose: np.ndarray, T_W_O_trajectory: np.ndarray) -> None:
         TRAJECTORY_LENGTH = q_targets_using_lifted_object_pose.shape[0]
@@ -565,6 +670,12 @@ class RLPolicyNode:
         from isaacgymenvs.utils.utils import get_repo_root_dir
 
         SERVER = viser.ViserServer()
+        @SERVER.on_client_connect
+        def _(client):
+            client.camera.position = (0.0, -1.0, 1.03)
+            client.camera.look_at = (0.0, 0.0, 0.53)
+            # client.camera.wxyz = (w, x, y, z)
+
         AXES_LENGTH = 0.0
         AXES_RADIUS = 0.0
 
@@ -604,25 +715,46 @@ class RLPolicyNode:
         sharpa_viser = ViserUrdf(SERVER, SHARPA_URDF_PATH, root_node_name="/sharpa")
         sharpa_viser.update_cfg(HOME_JOINT_POS_SHARPA)
 
+        # Plot the joint targets and limits
+        joint_names = kuka_sharpa_viser._urdf.actuated_joint_names
+        J_arm = 7
+        joint_limit_mins = [kuka_sharpa_viser._urdf.actuated_joints[i].limit.lower for i in range(J_arm)]
+        joint_limit_maxs = [kuka_sharpa_viser._urdf.actuated_joints[i].limit.upper for i in range(J_arm)]
+
+        import matplotlib.pyplot as plt
+        nrows = int(np.ceil(np.sqrt(J_arm)))
+        ncols = int(np.ceil(J_arm / nrows))
+        fig, axes = plt.subplots(nrows, ncols)
+        axes = axes.flatten()
+        for i in range(J_arm):
+            axes[i].plot(q_targets_using_lifted_object_pose[:, i], label="Target")
+            axes[i].plot([joint_limit_mins[i]] * TRAJECTORY_LENGTH, label="Limit min")
+            axes[i].plot([joint_limit_maxs[i]] * TRAJECTORY_LENGTH, label="Limit max")
+            axes[i].legend()
+            axes[i].set_title(joint_names[i])
+        plt.suptitle("Position")
+        plt.tight_layout()
+        plt.show()
+
+        joint_limit_velocity_maxs = [kuka_sharpa_viser._urdf.actuated_joints[i].limit.velocity for i in range(J_arm)]
+        joint_limit_velocity_mins = [-joint_limit_velocity_maxs[i] for i in range(J_arm)]
+
+        fig, axes = plt.subplots(nrows, ncols)
+        axes = axes.flatten()
+        qd_targets_using_lifted_object_pose = np.diff(q_targets_using_lifted_object_pose, axis=0) / self.control_dt
+        for i in range(J_arm):
+            axes[i].plot(qd_targets_using_lifted_object_pose[:, i], label="Velocity")
+            axes[i].plot([joint_limit_velocity_mins[i]] * (TRAJECTORY_LENGTH - 1), label="Limit min")
+            axes[i].plot([joint_limit_velocity_maxs[i]] * (TRAJECTORY_LENGTH - 1), label="Limit max")
+            axes[i].legend()
+            axes[i].set_title(joint_names[i])
+        plt.suptitle("Velocity")
+        plt.tight_layout()
+        plt.show()
+
         # Load object
         from isaacgymenvs.utils.objects import NAME_TO_OBJECT
-        while True:
-            # Ask user for object name
-            available_objects = list(NAME_TO_OBJECT.keys())
-            info(f"Available objects: {', '.join(available_objects)}")
-            user_input = input(colored("Enter object name (or 'q' for default 'mallet'): ", "cyan"))
-
-            if user_input.lower() == 'q':
-                object_name = "mallet"
-                info(f"Using default object: {object_name}")
-                break
-            elif user_input in NAME_TO_OBJECT:
-                object_name = user_input
-                info(f"Using object: {object_name}")
-                break
-            else:
-                warn(f"Object '{user_input}' not found in NAME_TO_OBJECT. Please try again.")
-        OBJECT_URDF_PATH = NAME_TO_OBJECT[object_name].filepath
+        OBJECT_URDF_PATH = NAME_TO_OBJECT[self.object_name].filepath
         object_frame_viser = SERVER.scene.add_frame(
             "/object",
             position=(100, 0, 0),
@@ -633,6 +765,24 @@ class RLPolicyNode:
 
         from tqdm import tqdm
         while True:
+            # Ask user if they want to continue or visualize again
+            while True:
+                user_input = input(colored("Press 'v' to visualize, or 'c' to continue, or 'b' to breakpoint: ", "cyan"))
+                if user_input.lower() == 'v':
+                    info("Visualizing trajectory")
+                    break
+                elif user_input.lower() == 'c':
+                    info("Continuing to use this trajectory")
+                    break
+                elif user_input.lower() == 'b':
+                    info("Breakpointing")
+                    breakpoint()
+                else:
+                    warn("Invalid input. Please enter 'v' or 'c'.")
+
+            if user_input.lower() == 'c':
+                break
+
             for i in tqdm(range(TRAJECTORY_LENGTH), desc="Visualizing trajectory"):
                 start_time = time.time()
 
@@ -658,24 +808,6 @@ class RLPolicyNode:
                     time.sleep(sleep_dt)
                 else:
                     warn(f"Loop too slow! Desired FPS = 60, Actual FPS = {1/loop_dt:.1f}")
-
-            # Ask user if they want to continue or revisualize
-            while True:
-                user_input = input(colored("Press 'r' to revisualize, or 'c' to continue, or 'b' to breakpoint: ", "cyan"))
-                if user_input.lower() == 'r':
-                    info("Restarting visualization loop")
-                    break
-                elif user_input.lower() == 'c':
-                    info("Continuing to use this trajectory")
-                    break
-                elif user_input.lower() == 'b':
-                    info("Breakpointing")
-                    breakpoint()
-                else:
-                    warn("Invalid input. Please enter 'r' or 'c'.")
-
-            if user_input.lower() == 'c':
-                break
 
     def _wait_and_warmup(self):
         assert not self._warmup_completed, "Warmup already completed"
@@ -810,26 +942,21 @@ class RLPolicyNode:
                 self.current_step += 1
 
             if self.use_relative_object_pose_once_lifted:
-                if not hasattr(self, "object_lifted"):
-                    self.object_lifted = False
-
-                # Check if the object has been lifted
-                LIFTED_Z = 0.65
-                prev_object_lifted = self.object_lifted
-                self.object_lifted = prev_object_lifted or (self.object_pose_msg.pose.position.z >= LIFTED_Z)
-                just_lifted = self.object_lifted and not prev_object_lifted
+                # Lifted object threshold
+                if self.automatically_detect_object_lifted:
+                    LIFTED_Z = 0.6
+                    object_z = self.object_pose_msg.pose.position.z
+                    if object_z >= LIFTED_Z:
+                        self.object_lifted = True
 
                 # When just lifted, initialize the relative object pose logic and visualize it
-                if just_lifted:
+                if self.object_lifted and not self.initialized_relative_object_pose_logic:
+                    self.initialized_relative_object_pose_logic = True
                     T_R_O_lifted = pose_msg_to_T(copy.deepcopy(self.object_pose_msg.pose))  # Object pose in robot frame
-                    # T_R_O_lifted = pose_msg_to_T(copy.deepcopy(self.goal_object_pose_msg))  # Goal object pose in robot frame
                     self._initialize_relative_object_pose_logic(
                         q=q,
                         q_target=joint_pos_targets[0],
                         T_R_O_lifted=T_R_O_lifted,
-                        object_type="hammer",
-                        object_name="mallet",
-                        trajectory_name="horizontal_swing_human_closer",
                     )
                     self._visualize_relative_object_pose_logic(
                         q_targets_using_lifted_object_pose=self.q_targets_using_lifted_object_pose,
@@ -911,7 +1038,6 @@ class RLPolicyNode:
     def _signal_handler(self, signum, frame):
         assert self.save_foldername is not None, "save_foldername must be set to save to file"
 
-        import datetime
         if self._is_in_progress_saving_to_file:
             warn("Already in progress of saving to file, skipping")
             return
@@ -923,7 +1049,7 @@ class RLPolicyNode:
             info(f"Received signal {signum}, saving to file")
             datetime_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-            filename = f"{datetime_str}_{self.checkpoint_path.stem}_arm{self.arm_moving_average}"
+            filename = f"{datetime_str}_{self.checkpoint_path.stem}_arm{self.arm_moving_average}_{self.object_name}"
             if self.overwrite_targets_filepath is not None:
                 filename = f"{datetime_str}_replay_{self.overwrite_targets_filepath.stem}"
             output_path = Path("recorded_robot_inputs") / self.save_foldername /f"{filename}.npz"
@@ -997,19 +1123,20 @@ class RLPolicyNode:
 
 if __name__ == "__main__":
     try:
+        OBJECT_NAME = "real_flat_screwdriver"
         rl_policy_node = RLPolicyNode(
             # Old
-            # config_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"),
+            config_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"),
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/cleanInputs.pth"),
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/noisyInputs.pth"),
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/cleanInputsFinetuned.pth"),
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o1t0.pth"),
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o1t1.pth"),
-            # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o0t0.pth"),
+            checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o0t0.pth"),
 
             # New on tools
-            config_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed/config.yaml"),
-            checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed/model.pth"),
+            # config_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed/config.yaml"),
+            # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed/model.pth"),
 
             # Continue finetuning on cuboids
             # config_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/o0t0_fullSpeed/config.yaml"),
@@ -1038,7 +1165,7 @@ if __name__ == "__main__":
             # object_scales=np.array(NAME_TO_OBJECT["hammer_2"].scale),
             # object_scales=np.array(NAME_TO_OBJECT["hammer_2"].scale) * 0.75,
             # object_scales=np.array(NAME_TO_OBJECT["mallet"].scale) * 0.75,
-            object_scales=np.array(NAME_TO_OBJECT["mallet"].scale),
+            # object_scales=np.array(NAME_TO_OBJECT["mallet"].scale),
             # object_scales=np.array(NAME_TO_OBJECT["mallet"].scale) * 0.9,
             # object_scales=np.array(NAME_TO_OBJECT["black_spatula"].scale) * 0.9,
             # object_scales=np.array(NAME_TO_OBJECT["black_spatula"].scale),
@@ -1048,14 +1175,17 @@ if __name__ == "__main__":
             # object_scales=np.array([0.25, 0.02, 0.015]) * 25,  # scanned hammer 2
             # object_scales=np.array([0.25, 0.03, 0.02]) * 25,  # scanned hammer 2
             # object_scales=np.array(NAME_TO_OBJECT["red_brush"].scale),
+            object_scales=np.array(NAME_TO_OBJECT[OBJECT_NAME].scale),
             # save_foldername=None,
-            save_foldername="2026-01-11_real_testing",
+            save_foldername=f"{datetime.datetime.now().strftime('%Y-%m-%d')}_testing",
             # overwrite_targets_filepath=None,
             # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-44-54_noisyInputs_arm0.05.npz"),
             # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-47-13_finetuned_o0t0_arm0.05.npz"),
             # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-48-08_finetuned_o1t0_arm0.05.npz"),
             # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-48-47_finetuned_o1t1_arm0.05.npz"),
-            use_relative_object_pose_once_lifted=False,
+            use_relative_object_pose_once_lifted=True,
+            object_name=OBJECT_NAME,
+            automatically_detect_object_lifted=False,
         )
         rl_policy_node.run()
     except rospy.ROSInterruptException:

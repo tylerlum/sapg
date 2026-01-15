@@ -5,7 +5,6 @@ from datetime import datetime
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
-from isaacgymenvs.utils.utils import get_repo_root_dir
 from typing import Literal
 import pytorch_kinematics as pk
 from pytorch_kinematics.transforms.rotation_conversions import matrix_to_axis_angle
@@ -19,6 +18,9 @@ from tqdm import tqdm
 
 import viser
 from viser.extras import ViserUrdf
+
+def get_repo_root_dir() -> Path:
+    return Path(__file__).parent.parent
 
 T_W_R = np.eye(4)
 T_W_R[:3, 3] = np.array([0.0, 0.8, 0.0])
@@ -346,7 +348,6 @@ def control_ik_weighted(
 
     return u
 
-
 def compute_current_T_R_P(arm_pk_chain: pk.SerialChain, q_arm: np.ndarray) -> np.ndarray:
     NUM_ARM_JOINTS = 7
     assert q_arm.shape == (NUM_ARM_JOINTS,), f"q_arm.shape: {q_arm.shape}"
@@ -443,6 +444,7 @@ def compute_new_q_arm(arm_pk_chain: pk.SerialChain, target_wrist_pose: np.ndarra
     lower_limits = arm_pk_chain.low.cpu().numpy() + BUFFER
     upper_limits = arm_pk_chain.high.cpu().numpy() - BUFFER
     new_q_arm = np.clip(new_q_arm, lower_limits[None], upper_limits[None])
+
     return new_q_arm.cpu().numpy()[0]
 
 def set_robot_state(robot, q: np.ndarray) -> None:
@@ -799,6 +801,127 @@ def save_to_file(file_path: Path, q_array: np.ndarray, object_pose_array: np.nda
     recorded_data.to_file(file_path)
 
 
+def solve_trajopt(T_R_Ps: np.ndarray, q_start: np.ndarray, dt: float, waypoint_buffer: int = 0) -> np.ndarray:
+    from pyroki_tests import pyroki_snippets as pks
+    from pyroki_tests.trajopt_improved_waypoints_sharpa import xyzw_to_wxyz
+    import pyroki as pk
+    N_TIMESTEPS = T_R_Ps.shape[0]
+    assert T_R_Ps.shape == (N_TIMESTEPS, 4, 4), f"T_R_Ps.shape: {T_R_Ps.shape}, expected: (N_TIMESTEPS, 4, 4)"
+    assert q_start.shape == (29,), f"q_start.shape: {q_start.shape}, expected: (29,)"
+
+    import yourdfpy
+
+    # Load robot
+    urdf = yourdfpy.URDF.load(
+        "assets/urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted_restricted.urdf"
+    )
+    target_link_name = "left_hand_C_MC"
+    sphere_json_path = get_repo_root_dir() / "pyroki_tests" / "assets" / "sharpa_spheres.json"
+    robot = pk.Robot.from_urdf(urdf, default_joint_cfg=q_start)
+
+    # Load collision spheres
+    with open(sphere_json_path, "r") as f:
+        sphere_decomposition = json.load(f)
+    robot_coll = pk.collision.RobotCollision.from_sphere_decomposition(
+        sphere_decomposition=sphere_decomposition,
+        urdf=urdf,
+    )
+
+    # Define Obstacles
+    ground_coll = pk.collision.HalfSpace.from_point_and_normal(
+        np.array([0.0, 0.0, 0.0]), np.array([0.0, 0.0, 1.0])
+    )
+
+    table_size = np.array([0.475, 0.4, 0.3])
+    table_center = np.array([0.0, -0.8, 0.38])
+
+    table_coll = pk.collision.Box.from_extent(
+        extent=table_size,
+        position=table_center,
+    )
+    world_coll = [ground_coll, table_coll]
+
+    # Create waypoints
+    WAYPOINT_BUFFER = waypoint_buffer
+    waypoints = {}
+    for i in range(N_TIMESTEPS):
+        pos = T_R_Ps[i, :3, 3]
+        quat_xyzw = R.from_matrix(T_R_Ps[i, :3, :3]).as_quat()
+        quat_wxyz = xyzw_to_wxyz(quat_xyzw)
+        waypoints[WAYPOINT_BUFFER + i] = (pos, quat_wxyz)
+
+    # Solve trajectory
+    start_time = time.time()
+
+    N_TIMESTEPS_WITH_BUFFER = N_TIMESTEPS + WAYPOINT_BUFFER
+    info(f"Solving trajectory with {N_TIMESTEPS_WITH_BUFFER} waypoints, each {dt} seconds apart, for a total time of {N_TIMESTEPS_WITH_BUFFER * dt} seconds")
+    traj = pks.solve_waypoint_trajopt(
+        robot,
+        robot_coll,
+        world_coll,
+        target_link_name,
+        q_start,
+        waypoints,
+        N_TIMESTEPS_WITH_BUFFER,
+        dt,
+    )
+
+    traj = np.array(traj)
+    assert len(traj) == N_TIMESTEPS_WITH_BUFFER, f"len(traj): {len(traj)}, expected: {N_TIMESTEPS_WITH_BUFFER}"
+    info(f"Solved in {time.time() - start_time:.4f}s")
+
+    # Clamp joint position to joint limits with buffer
+    BUFFER = np.deg2rad(7.5)
+    J_arm = 7
+    arm_lower_limits = np.array(robot.joints.lower_limits[:J_arm]) + BUFFER
+    arm_upper_limits = np.array(robot.joints.upper_limits[:J_arm]) - BUFFER
+    traj[:, :J_arm] = np.clip(traj[:, :J_arm], arm_lower_limits[None], arm_upper_limits[None])
+
+    return traj
+
+
+def interpolate_traj(traj: np.ndarray, n_steps: int) -> np.ndarray:
+    from scipy.interpolate import interp1d
+    """
+    Upsamples a trajectory by a factor of n_steps using linear interpolation.
+
+    Args:
+        traj: Numpy array of shape (T, J) where T is time steps and J is joint dims.
+        n_steps: The scaling factor for interpolation (e.g., 10 means 10x more points).
+
+    Returns:
+        new_traj: Interpolated trajectory of shape (T * n_steps, J).
+    """
+    # 1. Get dimensions
+    T = traj.shape[0]
+    J = traj.shape[1]
+    
+    # Input assertion
+    assert traj.shape == (T, J), f"Input shape mismatch. Expected ({T}, {J}), got {traj.shape}"
+
+    # 2. Create the time indices for the original trajectory
+    # We assume the original trajectory is spaced evenly from 0 to T-1
+    old_time = np.arange(T)
+
+    # 3. Create the time indices for the new trajectory
+    # We want T * n_steps points, spanning the exact same timeframe (0 to T-1)
+    new_T = T * n_steps
+    new_time = np.linspace(0, T - 1, new_T)
+
+    # 4. Interpolate
+    # interp1d creates a function we can call with our new timestamps
+    # axis=0 ensures we interpolate along the time axis, independent of J
+    interpolator = interp1d(old_time, traj, kind='linear', axis=0)
+    new_traj = interpolator(new_time)
+
+    # Output assertion (Corrected to check Time dimension, not Joint dimension)
+    assert new_traj.shape == (new_T, J), \
+        f"Output shape mismatch. Expected ({new_T}, {J}), got {new_traj.shape}"
+
+    return new_traj
+
+
+
 
 def main():
     args = tyro.cli(Args)
@@ -971,6 +1094,36 @@ def main():
         # pb.connect(pb.GUI)
         hand_pb = pb.loadURDF(str(SHARPA_URDF_PATH))
 
+        # Compute hand IKs and save them
+        q_hands = []
+        for i, (T_R_P, hand_keypoint_to_xyz) in tqdm(enumerate(zip(T_R_Ps, hand_keypoint_to_xyzs)), total=N_TIMESTEPS, desc="Computing hand IKs"):
+            T_W_P = T_W_R @ T_R_P
+            new_q_hand = solve_fingertip_ik(
+                hand_pb=hand_pb,
+                hand_keypoint_to_xyz=hand_keypoint_to_xyz,
+                target_wrist_pose=T_W_P,
+            )
+            q_hands.append(new_q_hand)
+
+        # Run trajopt for the whole trajectory
+        DOWNSAMPLE_FACTOR = 10
+        retargeted_qs = solve_trajopt(
+            T_R_Ps=T_R_Ps[::DOWNSAMPLE_FACTOR],
+            q_start=HOME_JOINT_POS,
+            dt=args.dt,
+        )
+        retargeted_qs = interpolate_traj(retargeted_qs, n_steps=DOWNSAMPLE_FACTOR)
+        if retargeted_qs.shape[0] < N_TIMESTEPS:
+            extra = N_TIMESTEPS - retargeted_qs.shape[0]
+            retargeted_qs = np.concatenate([retargeted_qs, retargeted_qs[-1][None].repeat(extra, axis=0)], axis=0)
+        elif retargeted_qs.shape[0] > N_TIMESTEPS:
+            extra = retargeted_qs.shape[0] - N_TIMESTEPS
+            retargeted_qs = retargeted_qs[:-extra]
+        assert retargeted_qs.shape == (N_TIMESTEPS, 29), f"retargeted_qs.shape: {retargeted_qs.shape}, expected: (N_TIMESTEPS, 29)"
+
+        # Update hand joints positions
+        retargeted_qs[:, 7:] = q_hands
+
     if args.retarget_robot_using_object_relative_pose:
         idx_lifted = None
         LIFTED_Z = 0.6
@@ -982,25 +1135,6 @@ def main():
         assert idx_lifted is not None, f"No object pose with z >= {LIFTED_Z} found"
         info(f"First object pose with z >= {LIFTED_Z} is at index {idx_lifted}")
 
-    HACK_SAVE_TO_FILE = False
-    if HACK_SAVE_TO_FILE:
-        # HACK: Save T_R_Ps to json
-        with open("T_R_Ps.json", "w") as f:
-            json.dump(T_R_Ps.tolist(), f, indent=4)
-
-        # Compute hand IKs and save them
-        q_hands = []
-        for i, (T_R_P, hand_keypoint_to_xyz) in tqdm(enumerate(zip(T_R_Ps, hand_keypoint_to_xyzs)), total=N_TIMESTEPS, desc="Computing hand IKs"):
-            T_W_P = T_W_R @ T_R_P
-            new_q_hand = solve_fingertip_ik(
-                hand_pb=hand_pb,
-                hand_keypoint_to_xyz=hand_keypoint_to_xyz,
-                target_wrist_pose=T_W_P,
-            )
-            q_hands.append(new_q_hand)
-        with open("q_hands.json", "w") as f:
-            json.dump(np.array(q_hands).tolist(), f, indent=4)
-
         # Compute T_R_Ps using lifted object pose
         T_R_P_lifted = T_R_Ps[idx_lifted]
         T_W_P_lifted = T_W_R @ T_R_P_lifted
@@ -1010,11 +1144,29 @@ def main():
         T_W_Ps_using_lifted_object_pose = np.array([T_W_O @ T_O_P_lifted for T_W_O in T_W_Os])
         T_R_W = np.linalg.inv(T_W_R)
         T_R_Ps_using_lifted_object_pose = np.array([T_R_W @ T_W_P for T_W_P in T_W_Ps_using_lifted_object_pose])
+        retargeted_q_lifted = retargeted_qs[idx_lifted]
         q_hand_using_lifted_pose = q_hands[idx_lifted]
-        with open("q_hand_using_lifted_pose.json", "w") as f:
-            json.dump(q_hand_using_lifted_pose.tolist(), f, indent=4)
-        with open("T_R_Ps_using_lifted_pose.json", "w") as f:
-            json.dump(T_R_Ps_using_lifted_object_pose.tolist(), f, indent=4)
+
+        # Run trajopt for the trajectory after the object was lifted
+        DOWNSAMPLE_FACTOR = 10
+        retargeted_qs_using_lifted_pose = solve_trajopt(
+            T_R_Ps=T_R_Ps_using_lifted_object_pose[idx_lifted:][::DOWNSAMPLE_FACTOR],
+            q_start=retargeted_q_lifted,
+            dt=args.dt,
+        )
+        retargeted_qs_using_lifted_pose = interpolate_traj(retargeted_qs_using_lifted_pose, n_steps=DOWNSAMPLE_FACTOR)
+        if retargeted_qs_using_lifted_pose.shape[0] < N_TIMESTEPS - idx_lifted:
+            extra = N_TIMESTEPS - idx_lifted - retargeted_qs_using_lifted_pose.shape[0]
+            retargeted_qs_using_lifted_pose = np.concatenate([retargeted_qs_using_lifted_pose, retargeted_qs_using_lifted_pose[-1][None].repeat(extra, axis=0)], axis=0)
+        elif retargeted_qs_using_lifted_pose.shape[0] > N_TIMESTEPS - idx_lifted:
+            extra = retargeted_qs_using_lifted_pose.shape[0] - (N_TIMESTEPS - idx_lifted)
+            retargeted_qs_using_lifted_pose = retargeted_qs_using_lifted_pose[:-extra]
+
+        # Connect it with the original trajectory before lifted
+        # And fix hand joints positions after lifted
+        retargeted_qs_using_lifted_pose = np.concatenate([retargeted_qs_using_lifted_pose[:, :7], q_hand_using_lifted_pose[None].repeat(len(retargeted_qs_using_lifted_pose), axis=0)], axis=1)
+        retargeted_qs_using_lifted_pose = np.concatenate([retargeted_qs[:idx_lifted], retargeted_qs_using_lifted_pose], axis=0)
+        assert retargeted_qs_using_lifted_pose.shape == (N_TIMESTEPS, 29), f"retargeted_qs_using_lifted_pose.shape: {retargeted_qs_using_lifted_pose.shape}, expected: (N_TIMESTEPS, 29)"
 
     # Visualization loop
     while True:
@@ -1082,65 +1234,23 @@ def main():
             # Retarget robot
             if args.retarget_robot:
                 if args.retarget_robot_using_object_relative_pose and i >= idx_lifted:
-                    q = np.array(kuka_sharpa_viser._urdf.cfg)
-                    q_arm = q[:7]
-                    q_hand = q[7:]
-
-                    if i == idx_lifted:
-                        q_arm_lifted = q_arm.copy()
-                        q_hand_lifted = q_hand.copy()
-
-                        T_R_P_lifted = compute_current_T_R_P(arm_pk_chain=arm_pk_chain, q_arm=q_arm_lifted)
-                        T_W_P_lifted = T_W_R @ T_R_P_lifted
-                        T_W_O_lifted = T_W_Os[idx_lifted]
-                        T_O_P_lifted = np.linalg.inv(T_W_O_lifted) @ T_W_P_lifted
-
-                        T_W_Ps_using_lifted_object_pose = np.array([T_W_O @ T_O_P_lifted for T_W_O in T_W_Os])
-
-                    # Use relative object pose now
-                    T_W_P_using_lifted_object_pose = T_W_Ps_using_lifted_object_pose[i]
-                    T_R_W = np.linalg.inv(T_W_R)
-                    T_R_P_using_lifted_object_pose = T_R_W @ T_W_P_using_lifted_object_pose
-                    new_q_arm = compute_new_q_arm(
-                        arm_pk_chain=arm_pk_chain,
-                        target_wrist_pose=T_R_P_using_lifted_object_pose,
-                        q_arm=q_arm,
-                    )
-
                     # Move floating hand to wrist pose
+                    T_W_P_using_lifted_object_pose = T_W_Ps_using_lifted_object_pose[i]
                     sharpa_frame.position = T_W_P_using_lifted_object_pose[:3, 3]
                     sharpa_frame.wxyz = xyzw_to_wxyz(R.from_matrix(T_W_P_using_lifted_object_pose[:3, :3]).as_quat())
 
-                    new_q_hand = q_hand_lifted.copy()
-
-                    new_q = np.concatenate([new_q_arm, new_q_hand])
+                    new_q = retargeted_qs_using_lifted_pose[i].copy()
+                    new_q_hand = new_q[7:]
                     kuka_sharpa_viser.update_cfg(new_q)
                     sharpa_viser.update_cfg(new_q_hand)
                 else:
-                    q = np.array(kuka_sharpa_viser._urdf.cfg)
-                    q_arm = q[:7]
-
-                    # Arm IK
-                    new_q_arm = compute_new_q_arm(
-                        arm_pk_chain=arm_pk_chain,
-                        target_wrist_pose=T_R_P,
-                        q_arm=q_arm,
-                    )
-
                     # Move floating hand to wrist pose
                     T_W_P = T_W_R @ T_R_P
                     sharpa_frame.position = T_W_P[:3, 3]
                     sharpa_frame.wxyz = xyzw_to_wxyz(R.from_matrix(T_W_P[:3, :3]).as_quat())
 
-                    # Hand IK
-                    q_hand = q[7:]
-                    new_q_hand = solve_fingertip_ik(
-                        hand_pb=hand_pb,
-                        hand_keypoint_to_xyz=hand_keypoint_to_xyz,
-                        target_wrist_pose=T_W_P,
-                    )
-
-                    new_q = np.concatenate([new_q_arm, new_q_hand])
+                    new_q = retargeted_qs[i].copy()
+                    new_q_hand = new_q[7:]
                     kuka_sharpa_viser.update_cfg(new_q)
                     sharpa_viser.update_cfg(new_q_hand)
 
@@ -1169,7 +1279,7 @@ def main():
                 time.sleep(extra_dt)
             else:
                 warn(
-                    f"Visualization is running slow, late by {-extra_dt * 1000:.2f} ms"
+                    f"Visualization is running slow, late by {-extra_dt * 1000:.2f} ms",
                 )
 
         print("=" * 80)

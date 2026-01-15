@@ -287,10 +287,10 @@ class ViserVisualizationNode:
         if object_name is None:
             # DEFAULT_OBJECT_NAME = "blue_cuboid"
             # DEFAULT_OBJECT_NAME = "cuboidal_mallet"
-            DEFAULT_OBJECT_NAME = "mallet"
+            # DEFAULT_OBJECT_NAME = "mallet"
             # DEFAULT_OBJECT_NAME = "cuboidal_hammer"
             # DEFAULT_OBJECT_NAME = "scanned_hammer_2"
-            # DEFAULT_OBJECT_NAME = "real_flat_screwdriver"
+            DEFAULT_OBJECT_NAME = "real_flat_screwdriver"
             # DEFAULT_OBJECT_NAME = "040_large_marker"
             # DEFAULT_OBJECT_NAME = "whiteboard_eraser"
             # DEFAULT_OBJECT_NAME = "iphone15pro"

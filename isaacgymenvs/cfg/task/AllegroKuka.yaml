@@ -166,12 +166,12 @@ env:
   jointAccelerationPenaltyScale: 0.0
 
   # goal sampling settings
-  goalSamplingType: "absolute" # "absolute" or "delta" or "coin_flip"
+  goalSamplingType: "delta" # "absolute" or "delta" or "coin_flip"
   targetVolumeRegionScale: 1.0 # scale the target volume region by this factor
   deltaGoalDistance: 0.1 # distance to the goal in meters
   deltaRotationDegrees: 90.0 # rotation of the goal in degrees
-  targetVolumeMins: null  # Either null/None or a 3-element list of [x_min, y_min, z_min]
-  targetVolumeMaxs: null  # Either null/None or a 3-element list of [x_max, y_max, z_max]
+  targetVolumeMins: [-0.35, -0.1, 0.68]  # Either null/None or a 3-element list of [x_min, y_min, z_min]
+  targetVolumeMaxs: [0.35, 0.2, 1.05]  # Either null/None or a 3-element list of [x_max, y_max, z_max]
 
   # Delays and noise
   useObsDelay: False
@@ -192,10 +192,6 @@ env:
   objectStartPose: ${eval:"None"}  # If None, will use the default object start pose. Otherwise, a 7-element list of [x, y, z, qx, qy, qz, qw]
   goalObjectPose: ${eval:"None"}  # If None, does nothing. Otherwise, forces the goal object pose to be this value. Must be a 7-element list of [x, y, z, qx, qy, qz, qw]
 
-  handleDensityMin: 300
-  handleDensityMax: 600
-  headDensityMin: 500
-  headDensityMax: 1500
   handleHeadTypes: ["hammer", "screwdriver", "marker", "spatula", "eraser", "brush"]
 
   # asset Friction settings

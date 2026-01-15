@@ -165,7 +165,8 @@ def main():
         # "/home/tylerlum/github_repos/sapg/sharpa_sin_waves/sharpa_sin_wave_hand_10-0s_2-0s.npz"
 
         # Retargeted robot
-        "/home/tylerlum/github_repos/sapg/retargeted_robot/2026-01-11_14-26-18.npz"
+        # "/home/tylerlum/github_repos/sapg/retargeted_robot/2026-01-11_14-26-18.npz"
+        "/home/tylerlum/github_repos/sapg/retargeted_robot/2026-01-13_22-01-39.npz"
     )
     assert file_path.exists(), f"File {file_path} does not exist"
     recorded_data = RecordedData.from_file(file_path)

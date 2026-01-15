@@ -21,8 +21,8 @@ from isaacgymenvs.utils.utils import get_repo_root_dir
 from sim2real.rl_player import RlPlayer
 from sim2sim.isaac_sim.isaac_env import create_env
 
-# TABLE_Z = 0.38
-TABLE_Z = 0.37
+TABLE_Z = 0.38
+# TABLE_Z = 0.37
 
 
 def quat_xyzw_to_wxyz(q):
@@ -350,24 +350,30 @@ def main():
     # trajectory_name = "top_down_screwing_human"
     # trajectory_name = "top_down_screwing_human_easyinit"
 
-    object_type = "marker"
-    object_name = "040_large_marker"
+    # object_type = "marker"
+    # object_name = "040_large_marker"
     # trajectory_name = "write_circle_whiteboard"
     # trajectory_name = "write_circle_whiteboard_adjusted"
-    trajectory_name = "draw_circle_human"
+    # trajectory_name = "draw_circle_human"
     # trajectory_name = "draw_circle_human_hardinit"
 
     # object_type = "knife"
     # object_name = "kitchen_knife"
     # trajectory_name = "knife_on_cutting_board"
 
-    # object_type = "spatula"
-    # object_name = "black_spatula"
+    object_type = "spatula"
+    object_name = "black_spatula"
     # trajectory_name = "pick_and_place"
     # trajectory_name = "pick_and_place_hardinit"
     # trajectory_name = "pick_and_place_hardinit2"
-    # trajectory_name = "pick_and_place_human"
+    trajectory_name = "pick_and_place_human"
     # trajectory_name = "pick_and_place_human_hardinit"
+
+    # object_type = "brush"
+    # object_name = "green_brush"
+    # object_name = "red_brush"
+    # trajectory_name = "simple"
+    # trajectory_name = "complex"
 
     output_dir = None  # Set to Path("videos") to enable recording
 
@@ -417,8 +423,7 @@ def main():
             "task.env.resetDofPosRandomIntervalFingers": 0.0,
             "task.env.resetDofPosRandomIntervalArm": 0.0,
             "task.env.resetDofVelRandomInterval": 0.0,
-            # "task.env.object_type": object_name,
-            "task.env.object_type": "tyler_handle_head",
+            "task.env.object_type": object_name,
             "task.env.randomizeObjectRotation": False,
             "task.env.forceScale": 0.0,
             # "task.env.numEnvs": 1,
@@ -448,6 +453,7 @@ def main():
             "task.env.tableResetZ": TABLE_Z,
             "task.env.fixedSizeKeypointReward": True,
             "task.env.forceOnlyWhenLifted": True,
+            "task.env.startArmHigher": True,
         },
     )
 
