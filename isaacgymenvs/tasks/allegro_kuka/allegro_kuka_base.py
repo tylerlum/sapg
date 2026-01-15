@@ -2913,13 +2913,19 @@ class AllegroKukaBase(VecTask):
         # Random velocity impulses
         if self.lin_vel_impulse_scale > 0.0 or self.ang_vel_impulse_scale > 0.0:
             if self.lin_vel_impulse_scale > 0.0:
-                lin_vel_impulse_env_ids = (torch.rand(self.num_envs, device=self.device) < self.random_lin_vel_impulse_prob).nonzero(as_tuple=False).squeeze(-1)
+                if self.lin_vel_impulse_only_when_lifted:
+                    lin_vel_impulse_env_ids = ((torch.rand(self.num_envs, device=self.device) < self.random_lin_vel_impulse_prob) * self.lifted_object).nonzero(as_tuple=False).squeeze(-1)
+                else:
+                    lin_vel_impulse_env_ids = (torch.rand(self.num_envs, device=self.device) < self.random_lin_vel_impulse_prob).nonzero(as_tuple=False).squeeze(-1)
                 random_lin_vel_impulses = torch.randn(self.num_envs, 3, device=self.device) * self.lin_vel_impulse_scale
                 self.root_state_tensor[self.object_indices[lin_vel_impulse_env_ids], 7:10] = random_lin_vel_impulses[lin_vel_impulse_env_ids, :]
                 self.deferred_set_actor_root_state_tensor_indexed([self.object_indices[lin_vel_impulse_env_ids]])
 
             if self.ang_vel_impulse_scale > 0.0:
-                ang_vel_impulse_env_ids = (torch.rand(self.num_envs, device=self.device) < self.random_ang_vel_impulse_prob).nonzero(as_tuple=False).squeeze(-1)
+                if self.ang_vel_impulse_only_when_lifted:
+                    ang_vel_impulse_env_ids = ((torch.rand(self.num_envs, device=self.device) < self.random_ang_vel_impulse_prob) * self.lifted_object).nonzero(as_tuple=False).squeeze(-1)
+                else:
+                    ang_vel_impulse_env_ids = (torch.rand(self.num_envs, device=self.device) < self.random_ang_vel_impulse_prob).nonzero(as_tuple=False).squeeze(-1)
                 random_ang_vel_impulses = torch.randn(self.num_envs, 3, device=self.device) * self.ang_vel_impulse_scale
                 self.root_state_tensor[self.object_indices[ang_vel_impulse_env_ids], 10:13] = random_ang_vel_impulses[ang_vel_impulse_env_ids, :]
                 self.deferred_set_actor_root_state_tensor_indexed([self.object_indices[ang_vel_impulse_env_ids]])
