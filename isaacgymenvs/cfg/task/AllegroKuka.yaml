@@ -61,6 +61,14 @@ env:
   torqueDecayInterval: 0.08
   torqueOnlyWhenLifted: False
 
+  # Random velocity impulses applied to the object
+  linVelImpulseProbRange: [0.001, 0.1]
+  linVelImpulseScale: 0.0
+  linVelImpulseOnlyWhenLifted: False
+  angVelImpulseProbRange: [0.001, 0.1]
+  angVelImpulseScale: 0.0
+  angVelImpulseOnlyWhenLifted: False
+
   liftingRewScale: 20.0
   liftingBonus: 300.0
   liftingBonusThreshold: 0.15  # when the object is lifted this distance (in meters) above the table, the agent gets the lifting bonus

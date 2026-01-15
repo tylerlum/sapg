@@ -151,6 +151,14 @@ class AllegroKukaBase(VecTask):
         self.torque_decay_interval = self.cfg["env"].get("torqueDecayInterval", 0.08)
         self.torque_only_when_lifted = self.cfg["env"].get("torqueOnlyWhenLifted", False)
 
+        self.lin_vel_impulse_prob_range = self.cfg["env"].get("linVelImpulseProbRange", [0.001, 0.1])
+        self.lin_vel_impulse_scale = self.cfg["env"].get("linVelImpulseScale", 0.0)
+        self.lin_vel_impulse_only_when_lifted = self.cfg["env"].get("linVelImpulseOnlyWhenLifted", False)
+
+        self.ang_vel_impulse_prob_range = self.cfg["env"].get("angVelImpulseProbRange", [0.001, 0.1])
+        self.ang_vel_impulse_scale = self.cfg["env"].get("angVelImpulseScale", 0.0)
+        self.ang_vel_impulse_only_when_lifted = self.cfg["env"].get("angVelImpulseOnlyWhenLifted", False)
+
         self.use_relative_control = self.cfg["env"]["useRelativeControl"]
 
         self.debug_viz = self.cfg["env"]["enableDebugVis"]
@@ -413,6 +421,21 @@ class AllegroKukaBase(VecTask):
         )
         self.rb_torques = torch.zeros((self.num_envs, self.num_bodies, 3), dtype=torch.float, device=self.device)
         self.action_torques = torch.zeros((self.num_envs, self.num_bodies, 3), dtype=torch.float, device=self.device)
+
+        # Random velocity impulses applied to the object
+        self.lin_vel_impulse_prob_range = to_torch(self.lin_vel_impulse_prob_range, dtype=torch.float, device=self.device)
+        self.random_lin_vel_impulse_prob = torch.exp(
+            (torch.log(self.lin_vel_impulse_prob_range[0]) - torch.log(self.lin_vel_impulse_prob_range[1]))
+            * torch.rand(self.num_envs, device=self.device)
+            + torch.log(self.lin_vel_impulse_prob_range[1])
+        )
+
+        self.ang_vel_impulse_prob_range = to_torch(self.ang_vel_impulse_prob_range, dtype=torch.float, device=self.device)
+        self.random_ang_vel_impulse_prob = torch.exp(
+            (torch.log(self.ang_vel_impulse_prob_range[0]) - torch.log(self.ang_vel_impulse_prob_range[1]))
+            * torch.rand(self.num_envs, device=self.device)
+            + torch.log(self.ang_vel_impulse_prob_range[1])
+        )
 
         self.obj_keypoint_pos = torch.zeros(
             (self.num_envs, self.num_keypoints, 3), dtype=torch.float, device=self.device
@@ -962,6 +985,8 @@ class AllegroKukaBase(VecTask):
             rb_torques=self.rb_torques,
             random_force_prob=self.random_force_prob,
             random_torque_prob=self.random_torque_prob,
+            random_lin_vel_impulse_prob=self.random_lin_vel_impulse_prob,
+            random_ang_vel_impulse_prob=self.random_ang_vel_impulse_prob,
             goal_states=self.goal_states,
             goal_init_state=self.goal_init_state,
             object_init_state=self.object_init_state,
@@ -2517,6 +2542,16 @@ class AllegroKukaBase(VecTask):
                 * torch.rand(len(env_ids), device=self.device)
                 + torch.log(self.torque_prob_range[1])
             )
+            self.random_lin_vel_impulse_prob[env_ids] = torch.exp(
+                (torch.log(self.lin_vel_impulse_prob_range[0]) - torch.log(self.lin_vel_impulse_prob_range[1]))
+                * torch.rand(len(env_ids), device=self.device)
+                + torch.log(self.lin_vel_impulse_prob_range[1])
+            )
+            self.random_ang_vel_impulse_prob[env_ids] = torch.exp(
+                (torch.log(self.ang_vel_impulse_prob_range[0]) - torch.log(self.ang_vel_impulse_prob_range[1]))
+                * torch.rand(len(env_ids), device=self.device)
+                + torch.log(self.ang_vel_impulse_prob_range[1])
+            )
 
         # reset allegro hand
         if len(env_ids) > 0 and reset_buf_idxs is None and tensor_reset:
@@ -2780,7 +2815,21 @@ class AllegroKukaBase(VecTask):
             self.gym.apply_rigid_body_force_tensors(
                 self.sim, gymtorch.unwrap_tensor(self.rb_forces), gymtorch.unwrap_tensor(self.rb_torques), gymapi.ENV_SPACE
             )
-        
+
+        if self.lin_vel_impulse_scale > 0.0 or self.ang_vel_impulse_scale > 0.0:
+
+            if self.lin_vel_impulse_scale > 0.0:
+                lin_vel_impulse_env_ids = (torch.rand(self.num_envs, device=self.device) < self.random_lin_vel_impulse_prob).nonzero(as_tuple=False).squeeze(-1)
+                random_lin_vel_impulses = torch.randn(self.num_envs, 3, device=self.device) * self.lin_vel_impulse_scale
+                self.root_state_tensor[self.object_indices[lin_vel_impulse_env_ids], 7:10] = random_lin_vel_impulses[lin_vel_impulse_env_ids, :]
+                self.deferred_set_actor_root_state_tensor_indexed([self.object_indices[lin_vel_impulse_env_ids]])
+
+            if self.ang_vel_impulse_scale > 0.0:
+                ang_vel_impulse_env_ids = (torch.rand(self.num_envs, device=self.device) < self.random_ang_vel_impulse_prob).nonzero(as_tuple=False).squeeze(-1)
+                random_ang_vel_impulses = torch.randn(self.num_envs, 3, device=self.device) * self.ang_vel_impulse_scale
+                self.root_state_tensor[self.object_indices[ang_vel_impulse_env_ids], 10:13] = random_ang_vel_impulses[ang_vel_impulse_env_ids, :]
+                self.deferred_set_actor_root_state_tensor_indexed([self.object_indices[ang_vel_impulse_env_ids]])
+
         if self.good_reset_boundary > 0:
             self.temp_root_states_buf[:, self.temp_buffer_index] = self.root_state_tensor.reshape(self.num_envs, -1, self.root_state_tensor.shape[1:]).cpu()
             self.temp_dof_states_buf[:, self.temp_buffer_index] = self.dof_state.reshape(self.num_envs, -1, self.dof_state.shape[1:]).cpu()
