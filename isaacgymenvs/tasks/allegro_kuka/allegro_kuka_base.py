@@ -500,7 +500,7 @@ class AllegroKukaBase(VecTask):
         self.eval_stats: bool = self.cfg["env"]["evalStats"]
 
         self.good_reset_boundary = self.cfg["env"].get("goodResetBoundary", 0) # Max number of envs that can be reset with good states
-        
+
         if self.good_reset_boundary > 0:
             self.max_buffer_size = self.cfg["env"].get("maxBufferSize", self.max_episode_length * self.num_envs * 2 // max(self.max_consecutive_successes, 20)) # Max number of states that can be stored in the buffer
             self.max_temp_buffer_size = self.max_episode_length # Max number of states that can be stored in the buffer
@@ -511,7 +511,7 @@ class AllegroKukaBase(VecTask):
             self.dof_resets = torch.empty((self.max_buffer_size, self.dof_state.shape[0] // self.num_envs, *self.dof_state.shape[1:]), dtype=self.dof_state.dtype, device='cpu')
             self.buffer_index = 0
             self.buffer_length = 0
-        
+
         if self.eval_stats:
             self.last_success_step = torch.zeros(self.num_envs, dtype=torch.float, device=self.device)
             self.success_time = torch.zeros(self.num_envs, dtype=torch.float, device=self.device)
@@ -632,7 +632,35 @@ class AllegroKukaBase(VecTask):
             for keyboard_shortcut in keyboard_shortcuts
         }
         self._DO_NOT_MOVE = False
+
+        # Keyboard applied force or torque or impulse
+        #
+        # Control flow is currently
+        # - pre_physics_step
+        #   - apply_rigid_body_force_tensors
+        #   - set_actor_root_state_tensor_indexed
+        # - render
+        #   - keyboard callbacks
+        # - sim step
+        #   - root_state_tensor is updated
+        # - post_physics_step
+        #
+        # force and torque is currently stateful
+        # you set it once in self.rb_forces and self.rb_torques and it doesn't automatically get reset
+        # right now, they just decay over time or get overwritten by random forces/torques
+        # doing this from keyboard callbacks is easy because you can set the forces/torques directly
+        #
+        # velocity impulses are not stateful
+        # you are directly setting the root_state_tensor
+        # doing this from keyboard callbacks is not easy because keyboard callbacks are called
+        # after set_actor_root_state_tensor_indexed and before sim_step
+        # directly modifying the root_state_tensor doesn't work because it is overwritten
+        # thus, we instead set a flag and store the impulse in a buffer and apply it in pre_physics_step
+        # after this, the flag and buffer are reset
+
         self.force_or_torque_mode = "force"
+        self.need_apply_vel_impulse_from_keyboard = False
+        self.vel_impulse_from_keyboard = np.array([0.0] * 6)
 
     def _breakpoint_callback(self) -> None:
         print("Breakpoint")
@@ -663,6 +691,14 @@ class AllegroKukaBase(VecTask):
         elif self.force_or_torque_mode == "torque":
             print("Torque x plus...")
             self.rb_torques[:, self.object_rb_handles, 0] += self.torque_scale * self.object_rb_masses
+        elif self.force_or_torque_mode == "lin_vel_impulse":
+            print("Lin vel impulse x plus...")
+            self.need_apply_vel_impulse_from_keyboard = True
+            self.vel_impulse_from_keyboard[0] += self.lin_vel_impulse_scale
+        elif self.force_or_torque_mode == "ang_vel_impulse":
+            print("Ang vel impulse x plus...")
+            self.need_apply_vel_impulse_from_keyboard = True
+            self.vel_impulse_from_keyboard[3] += self.ang_vel_impulse_scale
         else:
             raise ValueError(f"Invalid force or torque mode: {self.force_or_torque_mode}")
 
@@ -673,6 +709,14 @@ class AllegroKukaBase(VecTask):
         elif self.force_or_torque_mode == "torque":
             print("Torque x minus...")
             self.rb_torques[:, self.object_rb_handles, 0] -= self.torque_scale * self.object_rb_masses
+        elif self.force_or_torque_mode == "lin_vel_impulse":
+            print("Lin vel impulse x minus...")
+            self.need_apply_vel_impulse_from_keyboard = True
+            self.vel_impulse_from_keyboard[0] -= self.lin_vel_impulse_scale
+        elif self.force_or_torque_mode == "ang_vel_impulse":
+            print("Ang vel impulse x minus...")
+            self.need_apply_vel_impulse_from_keyboard = True
+            self.vel_impulse_from_keyboard[3] -= self.ang_vel_impulse_scale
         else:
             raise ValueError(f"Invalid force or torque mode: {self.force_or_torque_mode}")
         self.rb_forces[:, self.object_rb_handles, 0] -= self.force_scale * self.object_rb_masses
@@ -684,6 +728,14 @@ class AllegroKukaBase(VecTask):
         elif self.force_or_torque_mode == "torque":
             print("Torque y plus...")
             self.rb_torques[:, self.object_rb_handles, 1] += self.torque_scale * self.object_rb_masses
+        elif self.force_or_torque_mode == "lin_vel_impulse":
+            print("Lin vel impulse y plus...")
+            self.need_apply_vel_impulse_from_keyboard = True
+            self.vel_impulse_from_keyboard[1] += self.lin_vel_impulse_scale
+        elif self.force_or_torque_mode == "ang_vel_impulse":
+            print("Ang vel impulse y plus...")
+            self.need_apply_vel_impulse_from_keyboard = True
+            self.vel_impulse_from_keyboard[4] += self.ang_vel_impulse_scale
         else:
             raise ValueError(f"Invalid force or torque mode: {self.force_or_torque_mode}")
         self.rb_forces[:, self.object_rb_handles, 1] += self.force_scale * self.object_rb_masses
@@ -695,6 +747,14 @@ class AllegroKukaBase(VecTask):
         elif self.force_or_torque_mode == "torque":
             print("Torque y minus...")
             self.rb_torques[:, self.object_rb_handles, 1] -= self.torque_scale * self.object_rb_masses
+        elif self.force_or_torque_mode == "lin_vel_impulse":
+            print("Lin vel impulse y minus...")
+            self.need_apply_vel_impulse_from_keyboard = True
+            self.vel_impulse_from_keyboard[1] -= self.lin_vel_impulse_scale
+        elif self.force_or_torque_mode == "ang_vel_impulse":
+            print("Ang vel impulse y minus...")
+            self.need_apply_vel_impulse_from_keyboard = True
+            self.vel_impulse_from_keyboard[4] -= self.ang_vel_impulse_scale
         else:
             raise ValueError(f"Invalid force or torque mode: {self.force_or_torque_mode}")
 
@@ -705,6 +765,14 @@ class AllegroKukaBase(VecTask):
         elif self.force_or_torque_mode == "torque":
             print("Torque z plus...")
             self.rb_torques[:, self.object_rb_handles, 2] += self.torque_scale * self.object_rb_masses
+        elif self.force_or_torque_mode == "lin_vel_impulse":
+            print("Lin vel impulse z plus...")
+            self.need_apply_vel_impulse_from_keyboard = True
+            self.vel_impulse_from_keyboard[2] += self.lin_vel_impulse_scale
+        elif self.force_or_torque_mode == "ang_vel_impulse":
+            print("Ang vel impulse z plus...")
+            self.need_apply_vel_impulse_from_keyboard = True
+            self.vel_impulse_from_keyboard[5] += self.ang_vel_impulse_scale
         else:
             raise ValueError(f"Invalid force or torque mode: {self.force_or_torque_mode}")
 
@@ -715,18 +783,25 @@ class AllegroKukaBase(VecTask):
         elif self.force_or_torque_mode == "torque":
             print("Torque z minus...")
             self.rb_torques[:, self.object_rb_handles, 2] -= self.torque_scale * self.object_rb_masses
+        elif self.force_or_torque_mode == "lin_vel_impulse":
+            print("Lin vel impulse z minus...")
+            self.need_apply_vel_impulse_from_keyboard = True
+            self.vel_impulse_from_keyboard[2] -= self.lin_vel_impulse_scale
+        elif self.force_or_torque_mode == "ang_vel_impulse":
+            print("Ang vel impulse z minus...")
+            self.need_apply_vel_impulse_from_keyboard = True
+            self.vel_impulse_from_keyboard[5] -= self.ang_vel_impulse_scale
         else:
             raise ValueError(f"Invalid force or torque mode: {self.force_or_torque_mode}")
         self.rb_forces[:, self.object_rb_handles, 2] -= self.force_scale * self.object_rb_masses
 
     def _toggle_force_or_torque_callback(self) -> None:
         print("Toggling force or torque...")
-        if self.force_or_torque_mode == "force":
-            self.force_or_torque_mode = "torque"
-        elif self.force_or_torque_mode == "torque":
-            self.force_or_torque_mode = "force"
-        else:
-            raise ValueError(f"Invalid force or torque mode: {self.force_or_torque_mode}")
+        MODES = ["force", "torque", "lin_vel_impulse", "ang_vel_impulse"]
+        assert self.force_or_torque_mode in MODES, f"Invalid force or torque mode: {self.force_or_torque_mode}"
+        idx = MODES.index(self.force_or_torque_mode)
+        idx = (idx + 1) % len(MODES)
+        self.force_or_torque_mode = MODES[idx]
         print(f"Force or torque mode is now {self.force_or_torque_mode}")
 
     ##### KEYBOARD END #####
@@ -735,7 +810,7 @@ class AllegroKukaBase(VecTask):
     def change_on_restart(self, cfg):
         self.frame_since_restart = 0
         self.last_curriculum_update = 0
-        
+
         self.cfg["env"]["distanceDeltaRewScale"] = cfg["env"]["distanceDeltaRewScale"]
         self.cfg["env"]["liftingRewScale"] = cfg["env"]["liftingRewScale"]
         self.cfg["env"]["liftingBonus"] = cfg["env"]["liftingBonus"]
@@ -754,7 +829,7 @@ class AllegroKukaBase(VecTask):
         self.lifting_bonus_threshold = self.cfg["env"]["liftingBonusThreshold"]
         self.keypoint_rew_scale = self.cfg["env"]["keypointRewScale"]
         self.kuka_actions_penalty_scale = self.cfg["env"]["kukaActionsPenaltyScale"]
-        self.allegro_actions_penalty_scale = self.cfg["env"]["allegroActionsPenaltyScale"]        
+        self.allegro_actions_penalty_scale = self.cfg["env"]["allegroActionsPenaltyScale"]
 
         self.reach_goal_bonus = self.cfg["env"]["reachGoalBonus"]
         self.fall_dist = self.cfg["env"]["fallDistance"]
@@ -909,7 +984,7 @@ class AllegroKukaBase(VecTask):
 
             # Set max consecutive successes to the length of the trajectory so we don't run out of goal states
             self.max_consecutive_successes = len(self.trajectory_states)
-        
+
             FIXED_GOAL_STATES = self.cfg["env"]["fixedGoalStates"]
             if FIXED_GOAL_STATES is not None:
                 self.trajectory_states = torch.tensor(FIXED_GOAL_STATES, device=self.device)
@@ -1020,7 +1095,7 @@ class AllegroKukaBase(VecTask):
     def set_env_state(self, env_state):
         if env_state is None:
             return
-        
+
         rewards_episode = env_state.get("rewards_episode", None)
         if rewards_episode is not None:
             for key in rewards_episode.keys():
@@ -1038,17 +1113,17 @@ class AllegroKukaBase(VecTask):
             if isinstance(value, torch.Tensor) and self.__dict__[key].shape != value.shape:
                 print("Skipping loading env state value", key, "because of shape mismatch")
                 continue
-            
+
             if isinstance(value, torch.Tensor):
                 self.__dict__[key].copy_(value)
             else:
                 self.__dict__[key] = value
             print(f"Loaded env state value {key}:{value}")
-        
+
         self.arm_hand_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, : self.num_hand_arm_dofs]
         self.arm_hand_dof_pos = self.arm_hand_dof_state[..., 0]
         self.arm_hand_dof_vel = self.arm_hand_dof_state[..., 1]
-        
+
         self.reset_idx(torch.arange(self.num_envs, dtype=torch.long, device=self.device), tensor_reset=False)
         self.set_actor_root_state_tensor_indexed()
         print(f"Success tolerance value after loading from checkpoint: {self.success_tolerance}")
@@ -1318,7 +1393,7 @@ class AllegroKukaBase(VecTask):
 
         object_init_state = []
         table_init_state = []
-        
+
         self.rigid_body_name_to_idx = {}
 
         self.allegro_hand_indices = []
@@ -2395,7 +2470,7 @@ class AllegroKukaBase(VecTask):
 
     def reset_target_pose(self, env_ids: Tensor, reset_buf_idxs=None, tensor_reset=True, is_first_goal=True) -> None:
         self._reset_target(env_ids, reset_buf_idxs, tensor_reset=tensor_reset, is_first_goal=is_first_goal)
-        
+
         if tensor_reset:
             self.reset_goal_buf[env_ids] = 0
             self.near_goal_steps[env_ids] = 0
@@ -2408,9 +2483,9 @@ class AllegroKukaBase(VecTask):
         if len(env_ids) > 0 and reset_buf_idxs is None and tensor_reset:
             obj_indices = self.object_indices[env_ids]
             table_indices = self.table_indices[env_ids]
-            
+
             # decide table reset z
-            table_reset_z = torch_rand_float(-self.cfg["env"]["tableResetZRange"], self.cfg["env"]["tableResetZRange"], (len(env_ids),1), device=self.device) + self.cfg["env"]["tableResetZ"] 
+            table_reset_z = torch_rand_float(-self.cfg["env"]["tableResetZRange"], self.cfg["env"]["tableResetZRange"], (len(env_ids),1), device=self.device) + self.cfg["env"]["tableResetZ"]
             self.table_init_state[env_ids, 2:3] = table_reset_z
             self.object_init_state[env_ids, 2:3] = table_reset_z + self.cfg["env"]["tableObjectZOffset"]
 
@@ -2446,10 +2521,10 @@ class AllegroKukaBase(VecTask):
                 self.root_state_tensor[obj_indices, 3:7] = new_object_rot
 
             self.root_state_tensor[obj_indices, 7:13] = torch.zeros_like(self.root_state_tensor[obj_indices, 7:13])
-        
+
         if len(env_ids) > 0 and reset_buf_idxs is not None and tensor_reset:
             obj_indices = self.object_indices[env_ids]
-            # TODO: Check if last 6 indices are 0 
+            # TODO: Check if last 6 indices are 0
             rs_ofs = self.root_state_resets.shape[1]
             self.root_state_tensor[obj_indices, :] = self.root_state_resets[reset_buf_idxs[env_ids].cpu(), obj_indices.cpu() % rs_ofs, :].to(self.device)
 
@@ -2600,7 +2675,7 @@ class AllegroKukaBase(VecTask):
             self.arm_hand_dof_vel[env_ids, :] = self.reset_dof_vel_noise * rand_vel_floats
             self.prev_targets[env_ids, : self.num_hand_arm_dofs] = allegro_pos
             self.cur_targets[env_ids, : self.num_hand_arm_dofs] = allegro_pos
-        
+
         if len(env_ids) > 0 and reset_buf_idxs is not None and tensor_reset:
             self.arm_hand_dof_pos[env_ids, :] = self.dof_resets[reset_buf_idxs[env_ids].cpu(), :, 0].to(self.device)
             self.arm_hand_dof_vel[env_ids, :] = self.dof_resets[reset_buf_idxs[env_ids].cpu(), :, 1].to(self.device)
@@ -2695,7 +2770,7 @@ class AllegroKukaBase(VecTask):
 
         reset_env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
         reset_goal_env_ids = self.reset_goal_buf.nonzero(as_tuple=False).squeeze(-1)
-        
+
         combined_random_env_ids = torch.cat([reset_env_ids, reset_goal_env_ids, reset_goal_env_ids])
         uniques, counts = combined_random_env_ids.unique(return_counts=True)
         reset_goal_env_ids = uniques[counts == 2]
@@ -2849,6 +2924,15 @@ class AllegroKukaBase(VecTask):
                 random_ang_vel_impulses = torch.randn(self.num_envs, 3, device=self.device) * self.ang_vel_impulse_scale
                 self.root_state_tensor[self.object_indices[ang_vel_impulse_env_ids], 10:13] = random_ang_vel_impulses[ang_vel_impulse_env_ids, :]
                 self.deferred_set_actor_root_state_tensor_indexed([self.object_indices[ang_vel_impulse_env_ids]])
+
+        # Keyboard applied velocity impulses
+        # See keyboard callbacks for more details
+        if self.need_apply_vel_impulse_from_keyboard:
+            self.root_state_tensor[self.object_indices, 7:13] += torch.from_numpy(self.vel_impulse_from_keyboard).float().to(self.device)[None, :]
+            self.deferred_set_actor_root_state_tensor_indexed([self.object_indices])
+            self.need_apply_vel_impulse_from_keyboard = False
+            self.vel_impulse_from_keyboard[:] = 0.0
+
         self.set_actor_root_state_tensor_indexed()
 
         if self.good_reset_boundary > 0:
@@ -3115,21 +3199,21 @@ class AllegroKukaBase(VecTask):
         self.populate_sim_buffers()
         rewards, is_success = self.compute_kuka_reward()
         self.populate_obs_and_states_buffers()
-        
+
         if self.good_reset_boundary > 0:
             add_indices = torch.where(is_success)[0]
             add_indices = add_indices[add_indices >= self.good_reset_boundary]
             add_indices = add_indices[self.temp_buffer_index[add_indices] > self.success_steps]
-            
+
             if len(add_indices) > 0:
                 rs_to_add = torch.stack([self.temp_root_states_buf[idx, torch.arange(self.temp_buffer_index[idx]-self.success_steps)] for idx in add_indices])
                 dof_to_add = torch.stack([self.temp_dof_states_buf[idx, torch.arange(self.temp_buffer_index[idx]-self.success_steps)] for idx in add_indices])
-                
+
                 num_to_add = len(rs_to_add)
-                
+
                 next_index = self.buffer_index + num_to_add
                 self.buffer_length = min(self.buffer_length + num_to_add, self.max_buffer_size)
-                
+
                 if next_index >= self.max_buffer_size:
                     num_to_add -= (self.max_buffer_size - self.buffer_index)
                     self.root_state_resets[self.buffer_index:] = rs_to_add[:self.max_buffer_size-self.buffer_index]
@@ -3139,11 +3223,11 @@ class AllegroKukaBase(VecTask):
                 else:
                     self.root_state_resets[self.buffer_index:next_index] = rs_to_add
                     self.dof_resets[self.buffer_index:next_index] = dof_to_add
-                
+
                 self.buffer_index = next_index % self.max_buffer_size
-                
+
                 print(f"Added {len(rs_to_add)} states, lifted {self.lifted_object[add_indices].sum().item()}/{len(add_indices)} objects")
-            
+
             self.temp_buffer_index[torch.where(is_success)[0]] = 0
             self.temp_buffer_index[torch.where(self.reset_buf)[0]] = 0
 
@@ -3518,7 +3602,7 @@ class AllegroKukaBase(VecTask):
     ) -> None:
         sphere_geom = gymutil.WireframeSphereGeometry(radius, num_lats, num_lons, color=color)
         gymutil.draw_lines(sphere_geom, self.gym, self.viewer, env, gymapi.Transform(p=position))
-    
+
     def accumulate_env_states(self):
         root_state_tensor = self.root_state_tensor.reshape(
             [self.num_envs, -1, *self.root_state_tensor.shape[1:]]
