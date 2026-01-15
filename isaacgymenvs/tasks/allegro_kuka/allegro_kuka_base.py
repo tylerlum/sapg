@@ -2938,9 +2938,12 @@ class AllegroKukaBase(VecTask):
 
             sphere_pose = gymapi.Transform()
             sphere_pose.r = gymapi.Quat(0, 0, 0, 1)
-            sphere_geom = gymutil.WireframeSphereGeometry(0.01, 8, 8, sphere_pose, color=(1, 1, 0))
-            sphere_geom_white = gymutil.WireframeSphereGeometry(0.02, 8, 8, sphere_pose, color=(1, 1, 1))
-            sphere_geom_black = gymutil.WireframeSphereGeometry(0.01, 8, 8, sphere_pose, color=(0, 0, 0))
+            YELLOW = (1, 1, 0)
+            WHITE = (1, 1, 1)
+            BLACK = (0, 0, 0)
+            sphere_geom = gymutil.WireframeSphereGeometry(0.01, 8, 8, sphere_pose, color=YELLOW)
+            sphere_geom_white = gymutil.WireframeSphereGeometry(0.02, 8, 8, sphere_pose, color=WHITE)
+            sphere_geom_black = gymutil.WireframeSphereGeometry(0.01, 8, 8, sphere_pose, color=BLACK)
 
             palm_center_pos_cpu = self.palm_center_pos.cpu().numpy()
             palm_rot_cpu = self._palm_rot.cpu().numpy()
@@ -2968,18 +2971,19 @@ class AllegroKukaBase(VecTask):
                 object_pos_cpu = self.object_pos[i].cpu().numpy()
                 assert object_pos_cpu.shape == (3,), f"object_pos_cpu.shape: {object_pos_cpu.shape}"
                 start_pos = gymapi.Vec3(*object_pos_cpu)
-                MAX_FORCE_NORM = 2.0
+                MAX_FORCE_NORM = self.force_scale * 0.1  # Often mass is about 0.1 kg
                 MAX_VECTOR_LENGTH = 0.3
                 force_norm = np.linalg.norm(rb_forces_cpu)
                 if force_norm > MAX_FORCE_NORM:
                     rb_forces_cpu = rb_forces_cpu / force_norm * MAX_FORCE_NORM
                 vector = rb_forces_cpu * MAX_VECTOR_LENGTH / MAX_FORCE_NORM
                 end_pos = start_pos + gymapi.Vec3(*vector)
+                PURPLE = (1, 0, 1)
                 self._draw_debug_line_of_spheres(
                     env=self.envs[i],
                     start_pos=start_pos,
                     end_pos=end_pos,
-                    color=(1, 0, 0),
+                    color=PURPLE,
                 )
 
             for j in range(self.num_keypoints):
