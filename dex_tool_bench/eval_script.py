@@ -425,9 +425,8 @@ def main():
             "task.env.resetDofVelRandomInterval": 0.0,
             "task.env.object_type": object_name,
             "task.env.randomizeObjectRotation": False,
-            "task.env.forceScale": 0.0,
             # "task.env.numEnvs": 1,
-            "task.env.numEnvs": 100,
+            "task.env.numEnvs": 5,
             "task.env.envSpacing": 0.4,
             "task.env.tableResetZRange": 0.0,
             # "task.env.tableResetZ": 0.38 + 0.02,
@@ -452,8 +451,27 @@ def main():
             "task.env.asset.table": str(SELECTED_TABLE_URDF),
             "task.env.tableResetZ": TABLE_Z,
             "task.env.fixedSizeKeypointReward": True,
-            "task.env.forceOnlyWhenLifted": True,
             "task.env.startArmHigher": True,
+
+            # Forces
+            "task.env.forceScale": 0.0,
+            "task.env.torqueScale": 0.0,
+            "task.env.linVelImpulseScale": 0.0,
+            "task.env.angVelImpulseScale": 0.0,
+            # "task.env.forceScale": 2.0,
+            # "task.env.torqueScale": 2.0,
+            # "task.env.linVelImpulseScale": 1.0,
+            # "task.env.angVelImpulseScale": 1.0,
+
+            "task.env.forceOnlyWhenLifted": True,
+            "task.env.torqueOnlyWhenLifted": True,
+            "task.env.linVelImpulseOnlyWhenLifted": True,
+            "task.env.angVelImpulseOnlyWhenLifted": True,
+
+            "task.env.forceProbRange": [0.0001, 0.0001],
+            "task.env.torqueProbRange": [0.0001, 0.0001],
+            "task.env.linVelImpulseProbRange": [0.0001, 0.0001],
+            "task.env.angVelImpulseProbRange": [0.0001, 0.0001],
         },
     )
 
