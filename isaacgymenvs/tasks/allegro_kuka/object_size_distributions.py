@@ -163,8 +163,8 @@ OBJECT_SIZE_DISTRIBUTIONS: List[ObjectSizeDistribution] = [
         head_max_lengths=(0.03, 0.01, 0.01),
         handle_min_density=LOW_DENSITY_MIN,
         handle_max_density=LOW_DENSITY_MAX,
-        head_min_density=HIGH_DENSITY_MIN,
-        head_max_density=HIGH_DENSITY_MAX,
+        head_min_density=LOW_DENSITY_MIN,
+        head_max_density=LOW_DENSITY_MAX,
     ),
 
     # Spatula
@@ -185,8 +185,8 @@ OBJECT_SIZE_DISTRIBUTIONS: List[ObjectSizeDistribution] = [
         head_max_lengths=(0.15, 0.07, 0.03),
         handle_min_density=LOW_DENSITY_MIN,
         handle_max_density=LOW_DENSITY_MAX,
-        head_min_density=HIGH_DENSITY_MIN,
-        head_max_density=HIGH_DENSITY_MAX,
+        head_min_density=LOW_DENSITY_MIN,
+        head_max_density=LOW_DENSITY_MAX,
     ),
     ObjectSizeDistribution(
         type="spatula",
@@ -196,8 +196,8 @@ OBJECT_SIZE_DISTRIBUTIONS: List[ObjectSizeDistribution] = [
         head_max_lengths=(0.15, 0.07, 0.03),
         handle_min_density=LOW_DENSITY_MIN,
         handle_max_density=LOW_DENSITY_MAX,
-        head_min_density=HIGH_DENSITY_MIN,
-        head_max_density=HIGH_DENSITY_MAX,
+        head_min_density=LOW_DENSITY_MIN,
+        head_max_density=LOW_DENSITY_MAX,
     ),
 
     # Eraser
@@ -240,8 +240,8 @@ OBJECT_SIZE_DISTRIBUTIONS: List[ObjectSizeDistribution] = [
         head_max_lengths=(0.12, 0.05, 0.08),  # v1
         handle_min_density=LOW_DENSITY_MIN,
         handle_max_density=LOW_DENSITY_MAX,
-        head_min_density=HIGH_DENSITY_MIN,
-        head_max_density=HIGH_DENSITY_MAX,
+        head_min_density=LOW_DENSITY_MIN,
+        head_max_density=LOW_DENSITY_MAX,
     ),
     ObjectSizeDistribution(
         type="brush",
@@ -251,8 +251,8 @@ OBJECT_SIZE_DISTRIBUTIONS: List[ObjectSizeDistribution] = [
         head_max_lengths=(0.12, 0.05, 0.08),  # v1
         handle_min_density=LOW_DENSITY_MIN,
         handle_max_density=LOW_DENSITY_MAX,
-        head_min_density=HIGH_DENSITY_MIN,
-        head_max_density=HIGH_DENSITY_MAX,
+        head_min_density=LOW_DENSITY_MIN,
+        head_max_density=LOW_DENSITY_MAX,
     ),
     ObjectSizeDistribution(
         type="brush",
@@ -262,8 +262,8 @@ OBJECT_SIZE_DISTRIBUTIONS: List[ObjectSizeDistribution] = [
         head_max_lengths=(0.12, 0.12, 0.04),  # v2
         handle_min_density=LOW_DENSITY_MIN,
         handle_max_density=LOW_DENSITY_MAX,
-        head_min_density=HIGH_DENSITY_MIN,
-        head_max_density=HIGH_DENSITY_MAX,
+        head_min_density=LOW_DENSITY_MIN,
+        head_max_density=LOW_DENSITY_MAX,
     ),
     ObjectSizeDistribution(
         type="brush",
@@ -273,7 +273,7 @@ OBJECT_SIZE_DISTRIBUTIONS: List[ObjectSizeDistribution] = [
         head_max_lengths=(0.12, 0.12, 0.04),  # v2
         handle_min_density=LOW_DENSITY_MIN,
         handle_max_density=LOW_DENSITY_MAX,
-        head_min_density=HIGH_DENSITY_MIN,
-        head_max_density=HIGH_DENSITY_MAX,
+        head_min_density=LOW_DENSITY_MIN,
+        head_max_density=LOW_DENSITY_MAX,
     ),
 ]
