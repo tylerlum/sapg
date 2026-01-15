@@ -29,6 +29,15 @@ def quat_xyzw_to_wxyz(q):
     """Convert quaternion from xyzw to wxyz format."""
     return (q[3], q[0], q[1], q[2])
 
+def log_info(text):
+    print(colored(text, "cyan"))
+
+def log_success(text):
+    print(colored(text, "green"))
+
+def log_warn(text):
+    print(colored(text, "yellow"))
+
 
 class ViserServer:
     """Viser-based visualization server for robot manipulation."""
@@ -121,6 +130,7 @@ class ViserServer:
         """Toggle pause state."""
         self.is_paused = not self.is_paused
         self.pause_button.name = "Resume" if self.is_paused else "Pause"
+        log_info(f"Paused: {self.is_paused}")
 
     def add_controls(self, run_callback):
         """Add run and pause buttons."""
@@ -199,11 +209,10 @@ class EvalRunner:
         if self.record_video:
             self.session_dir = output_dir / datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             self.session_dir.mkdir(parents=True, exist_ok=True)
-            print(colored(f"Recording to: {self.session_dir}", "cyan"))
+            log_info(f"Recording to: {self.session_dir}")
 
         # Visualization
         self.viser = ViserServer(object_name, trajectory_name, env.num_keypoints, table_urdf)
-        print(colored(f"Viser: http://localhost:{self.viser.port}", "green"))
         self.obs = self._reset()
 
     def _reset(self):
@@ -245,7 +254,7 @@ class EvalRunner:
 
     def _render_video(self, states: list, path: Path):
         """Render recorded states to video file."""
-        print(colored(f"Rendering {len(states)} frames...", "cyan"))
+        log_info(f"Rendering {len(states)} frames...")
         frames = []
         for i, state in enumerate(states):
             self.viser.update(*state)
@@ -254,16 +263,25 @@ class EvalRunner:
             if (i + 1) % 50 == 0:
                 print(f"  {i + 1}/{len(states)}")
         imageio.mimsave(str(path), frames, fps=self.record_fps)
-        print(colored(f"Saved: {path}", "green"))
+        log_success(f"Saved: {path}")
 
     def _run_episode(self):
         """Run a single evaluation episode."""
+
+        # Don't let this function be called twice at the same time
+        if not hasattr(self, "_run_episode_in_progress"):
+            self._run_episode_in_progress = False
+        if self._run_episode_in_progress:
+            log_warn("Episode already in progress. Skipping...")
+            return
+        self._run_episode_in_progress = True
+
         self.policy.reset()
-        print(colored("Reset...", "cyan"))
+        log_info("Reset...")
         self.obs = self._reset()
         self.viser.update(*self._get_state())
 
-        print(colored(f"Running{' (+ recording)' if self.record_video else ''}...", "green"))
+        log_success(f"Running{' (+ recording)' if self.record_video else ''}...")
         states, step, done = [], 0, False
 
         while not done:
@@ -284,16 +302,18 @@ class EvalRunner:
         avg_goal_pct = sum(self.episode_goal_pcts) / len(self.episode_goal_pcts)
         avg_time_sec = sum(self.episode_lengths) / len(self.episode_lengths) / self.control_hz
         self.viser.update_stats(self.episode_count, avg_goal_pct, avg_time_sec)
-        print(colored(f"Done: {step / self.control_hz:.1f}s, {goal_pct:.0f}% goals", "green"))
 
         if states and self.record_video:
             self._render_video(states, self.session_dir / f"{self.episode_count}.mp4")
 
+        log_success(f"Done: {step / self.control_hz:.1f}s, {goal_pct:.0f}% goals")
+        self._run_episode_in_progress = False
+
     def run(self):
         """Start the evaluation loop."""
         self.viser.add_controls(self._run_episode)
-        print(colored(f"Open http://localhost:{self.viser.port}", "cyan"))
-        print(colored("Click 'Run Episode' to start.", "cyan"))
+        log_info(f"Open http://localhost:{self.viser.port}")
+        log_info("Click 'Run Episode' to start.")
         while True:
             time.sleep(1.0)
 
