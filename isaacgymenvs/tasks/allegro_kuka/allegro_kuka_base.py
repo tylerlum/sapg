@@ -1922,7 +1922,13 @@ class AllegroKukaBase(VecTask):
         near_goal_fixed_size: Tensor = self.keypoints_max_dist_fixed_size <= keypoint_success_tolerance
         if self.cfg["env"]["fixedSizeKeypointReward"]:
             near_goal = near_goal_fixed_size
-        self.near_goal_steps += near_goal
+
+        if self.cfg["env"]["forceConsecutiveNearGoalSteps"]:
+            # If near_goal is True (1): (steps + 1) * 1 = Increment
+            # If near_goal is False (0): (steps + 0) * 0 = Reset to 0
+            self.near_goal_steps = (self.near_goal_steps + near_goal) * near_goal
+        else:
+            self.near_goal_steps += near_goal
 
         is_success = self.near_goal_steps >= self.success_steps
         goal_resets = is_success

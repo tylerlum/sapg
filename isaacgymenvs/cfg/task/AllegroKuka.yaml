@@ -117,6 +117,7 @@ env:
   toleranceCurriculumInterval: 3000  # in env steps across all agents, with 8192 this is 3000 * 8192 = 24.6M env steps
   maxConsecutiveSuccesses: 50
   successSteps: 1  # how many steps we should be within the tolerance before we declare a success
+  forceConsecutiveNearGoalSteps: False  # If True, require near goal consecutively for successSteps
 
   saveStates: False
   saveStatesFile: "rootTensorsDofStates.bin"
