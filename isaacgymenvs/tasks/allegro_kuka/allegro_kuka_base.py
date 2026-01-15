@@ -488,6 +488,8 @@ class AllegroKukaBase(VecTask):
             "bonus_rew",
             "kuka_actions_penalty",
             "allegro_actions_penalty",
+            "raw_object_lin_vel_penalty",
+            "raw_object_ang_vel_penalty",
             "object_lin_vel_penalty",
             "object_ang_vel_penalty",
         ]
@@ -1775,12 +1777,6 @@ class AllegroKukaBase(VecTask):
 
         return -1 * kuka_actions_penalty, -1 * allegro_actions_penalty
 
-    def _object_vel_penalties(self) -> Tuple[Tensor, Tensor]:
-        object_lin_vel_penalty = self.object_lin_vel_penalty_scale * torch.sum(torch.square(self.object_linvel), dim=-1)
-        object_ang_vel_penalty = self.object_ang_vel_penalty_scale * torch.sum(torch.square(self.object_angvel), dim=-1)
-
-        return -1 * object_lin_vel_penalty, -1 * object_ang_vel_penalty
-
     def _compute_resets(self, is_success):
         ones = torch.ones_like(self.reset_buf)
         zeros = torch.zeros_like(self.reset_buf)
@@ -1941,23 +1937,28 @@ class AllegroKukaBase(VecTask):
 
         self.reset_goal_buf[:] = goal_resets
 
+        object_lin_vel_penalty = -torch.sum(torch.square(self.object_linvel), dim=-1)
+        object_ang_vel_penalty = -torch.sum(torch.square(self.object_angvel), dim=-1)
+
         self.rewards_episode["raw_fingertip_delta_rew"] += fingertip_delta_rew
         self.rewards_episode["raw_hand_delta_penalty"] += hand_delta_penalty
         self.rewards_episode["raw_lifting_rew"] += lifting_rew
         self.rewards_episode["raw_keypoint_rew"] += keypoint_rew
+        self.rewards_episode["raw_object_lin_vel_penalty"] += object_lin_vel_penalty
+        self.rewards_episode["raw_object_ang_vel_penalty"] += object_ang_vel_penalty
 
         fingertip_delta_rew *= self.distance_delta_rew_scale
         hand_delta_penalty *= self.distance_delta_rew_scale * 0  # currently disabled
         lifting_rew *= self.lifting_rew_scale
         keypoint_rew *= self.keypoint_rew_scale
+        object_lin_vel_penalty *= self.object_lin_vel_penalty_scale
+        object_ang_vel_penalty *= self.object_ang_vel_penalty_scale
 
         kuka_actions_penalty, allegro_actions_penalty = self._action_penalties()
 
         # Success bonus: orientation is within `success_tolerance` of goal orientation
         # We spread out the reward over "success_steps"
         bonus_rew = near_goal * (self.reach_goal_bonus / self.success_steps)
-
-        object_lin_vel_penalty, object_ang_vel_penalty = self._object_vel_penalties()
 
         reward = (
             fingertip_delta_rew
