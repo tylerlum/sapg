@@ -688,114 +688,111 @@ class AllegroKukaBase(VecTask):
 
     def _force_or_torque_x_plus_callback(self) -> None:
         if self.force_or_torque_mode == "force":
-            print("Force x plus...")
             self.rb_forces[:, self.object_rb_handles, 0] += self.force_scale * self.object_rb_masses
+            print(f"Force x plus: {self.rb_forces[:, self.object_rb_handles]}")
         elif self.force_or_torque_mode == "torque":
-            print("Torque x plus...")
             self.rb_torques[:, self.object_rb_handles, 0] += self.torque_scale * self.object_rb_masses
+            print(f"Torque x plus: {self.rb_torques[:, self.object_rb_handles]}")
         elif self.force_or_torque_mode == "lin_vel_impulse":
-            print("Lin vel impulse x plus...")
             self.need_apply_vel_impulse_from_keyboard = True
             self.vel_impulse_from_keyboard[0] += self.lin_vel_impulse_scale
+            print(f"Lin vel impulse x plus: {self.vel_impulse_from_keyboard}")
         elif self.force_or_torque_mode == "ang_vel_impulse":
-            print("Ang vel impulse x plus...")
             self.need_apply_vel_impulse_from_keyboard = True
             self.vel_impulse_from_keyboard[3] += self.ang_vel_impulse_scale
+            print(f"Ang vel impulse x plus: {self.vel_impulse_from_keyboard}")
         else:
             raise ValueError(f"Invalid force or torque mode: {self.force_or_torque_mode}")
 
     def _force_or_torque_x_minus_callback(self) -> None:
         if self.force_or_torque_mode == "force":
-            print("Force x minus...")
             self.rb_forces[:, self.object_rb_handles, 0] -= self.force_scale * self.object_rb_masses
+            print(f"Force x minus: {self.rb_forces[:, self.object_rb_handles]}")
         elif self.force_or_torque_mode == "torque":
-            print("Torque x minus...")
             self.rb_torques[:, self.object_rb_handles, 0] -= self.torque_scale * self.object_rb_masses
+            print(f"Torque x minus: {self.rb_torques[:, self.object_rb_handles]}")
         elif self.force_or_torque_mode == "lin_vel_impulse":
-            print("Lin vel impulse x minus...")
             self.need_apply_vel_impulse_from_keyboard = True
             self.vel_impulse_from_keyboard[0] -= self.lin_vel_impulse_scale
+            print(f"Lin vel impulse x minus: {self.vel_impulse_from_keyboard}")
         elif self.force_or_torque_mode == "ang_vel_impulse":
-            print("Ang vel impulse x minus...")
             self.need_apply_vel_impulse_from_keyboard = True
             self.vel_impulse_from_keyboard[3] -= self.ang_vel_impulse_scale
+            print(f"Ang vel impulse x minus: {self.vel_impulse_from_keyboard}")
         else:
             raise ValueError(f"Invalid force or torque mode: {self.force_or_torque_mode}")
-        self.rb_forces[:, self.object_rb_handles, 0] -= self.force_scale * self.object_rb_masses
 
     def _force_or_torque_y_plus_callback(self) -> None:
         if self.force_or_torque_mode == "force":
-            print("Force y plus...")
             self.rb_forces[:, self.object_rb_handles, 1] += self.force_scale * self.object_rb_masses
+            print(f"Force y plus: {self.rb_forces[:, self.object_rb_handles]}")
         elif self.force_or_torque_mode == "torque":
-            print("Torque y plus...")
             self.rb_torques[:, self.object_rb_handles, 1] += self.torque_scale * self.object_rb_masses
+            print(f"Torque y plus: {self.rb_torques[:, self.object_rb_handles]}")
         elif self.force_or_torque_mode == "lin_vel_impulse":
-            print("Lin vel impulse y plus...")
             self.need_apply_vel_impulse_from_keyboard = True
             self.vel_impulse_from_keyboard[1] += self.lin_vel_impulse_scale
+            print(f"Lin vel impulse y plus: {self.vel_impulse_from_keyboard}")
         elif self.force_or_torque_mode == "ang_vel_impulse":
-            print("Ang vel impulse y plus...")
             self.need_apply_vel_impulse_from_keyboard = True
             self.vel_impulse_from_keyboard[4] += self.ang_vel_impulse_scale
+            print(f"Ang vel impulse y plus: {self.vel_impulse_from_keyboard}")
         else:
             raise ValueError(f"Invalid force or torque mode: {self.force_or_torque_mode}")
-        self.rb_forces[:, self.object_rb_handles, 1] += self.force_scale * self.object_rb_masses
 
     def _force_or_torque_y_minus_callback(self) -> None:
         if self.force_or_torque_mode == "force":
-            print("Force y minus...")
             self.rb_forces[:, self.object_rb_handles, 1] -= self.force_scale * self.object_rb_masses
+            print(f"Force y minus: {self.rb_forces[:, self.object_rb_handles]}")
         elif self.force_or_torque_mode == "torque":
-            print("Torque y minus...")
             self.rb_torques[:, self.object_rb_handles, 1] -= self.torque_scale * self.object_rb_masses
+            print(f"Torque y minus: {self.rb_torques[:, self.object_rb_handles]}")
         elif self.force_or_torque_mode == "lin_vel_impulse":
-            print("Lin vel impulse y minus...")
             self.need_apply_vel_impulse_from_keyboard = True
             self.vel_impulse_from_keyboard[1] -= self.lin_vel_impulse_scale
+            print(f"Lin vel impulse y minus: {self.vel_impulse_from_keyboard}")
         elif self.force_or_torque_mode == "ang_vel_impulse":
-            print("Ang vel impulse y minus...")
             self.need_apply_vel_impulse_from_keyboard = True
             self.vel_impulse_from_keyboard[4] -= self.ang_vel_impulse_scale
+            print(f"Ang vel impulse y minus: {self.vel_impulse_from_keyboard}")
         else:
             raise ValueError(f"Invalid force or torque mode: {self.force_or_torque_mode}")
 
     def _force_or_torque_z_plus_callback(self) -> None:
         if self.force_or_torque_mode == "force":
-            print("Force z plus...")
             self.rb_forces[:, self.object_rb_handles, 2] += self.force_scale * self.object_rb_masses
+            print(f"Force z plus: {self.rb_forces[:, self.object_rb_handles]}")
         elif self.force_or_torque_mode == "torque":
-            print("Torque z plus...")
             self.rb_torques[:, self.object_rb_handles, 2] += self.torque_scale * self.object_rb_masses
+            print(f"Torque z plus: {self.rb_torques[:, self.object_rb_handles]}")
         elif self.force_or_torque_mode == "lin_vel_impulse":
-            print("Lin vel impulse z plus...")
             self.need_apply_vel_impulse_from_keyboard = True
             self.vel_impulse_from_keyboard[2] += self.lin_vel_impulse_scale
+            print(f"Lin vel impulse z plus: {self.vel_impulse_from_keyboard}")
         elif self.force_or_torque_mode == "ang_vel_impulse":
-            print("Ang vel impulse z plus...")
             self.need_apply_vel_impulse_from_keyboard = True
             self.vel_impulse_from_keyboard[5] += self.ang_vel_impulse_scale
+            print(f"Ang vel impulse z plus: {self.vel_impulse_from_keyboard}")
         else:
             raise ValueError(f"Invalid force or torque mode: {self.force_or_torque_mode}")
 
     def _force_or_torque_z_minus_callback(self) -> None:
         if self.force_or_torque_mode == "force":
-            print("Force z minus...")
             self.rb_forces[:, self.object_rb_handles, 2] -= self.force_scale * self.object_rb_masses
+            print(f"Force z minus: {self.rb_forces[:, self.object_rb_handles]}")
         elif self.force_or_torque_mode == "torque":
-            print("Torque z minus...")
             self.rb_torques[:, self.object_rb_handles, 2] -= self.torque_scale * self.object_rb_masses
+            print(f"Torque z minus: {self.rb_torques[:, self.object_rb_handles]}")
         elif self.force_or_torque_mode == "lin_vel_impulse":
-            print("Lin vel impulse z minus...")
             self.need_apply_vel_impulse_from_keyboard = True
             self.vel_impulse_from_keyboard[2] -= self.lin_vel_impulse_scale
+            print(f"Lin vel impulse z minus: {self.vel_impulse_from_keyboard}")
         elif self.force_or_torque_mode == "ang_vel_impulse":
-            print("Ang vel impulse z minus...")
             self.need_apply_vel_impulse_from_keyboard = True
             self.vel_impulse_from_keyboard[5] -= self.ang_vel_impulse_scale
+            print(f"Ang vel impulse z minus: {self.vel_impulse_from_keyboard}")
         else:
             raise ValueError(f"Invalid force or torque mode: {self.force_or_torque_mode}")
-        self.rb_forces[:, self.object_rb_handles, 2] -= self.force_scale * self.object_rb_masses
 
     def _toggle_force_or_torque_callback(self) -> None:
         print("Toggling force or torque...")
