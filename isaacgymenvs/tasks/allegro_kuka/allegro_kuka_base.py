@@ -532,6 +532,36 @@ class AllegroKukaBase(VecTask):
                 key=gymapi.KEY_D,
                 function=self._toggle_debug_viz_callback,
             ),
+            KeyboardShortcut(
+                name="force_x_plus",
+                key=gymapi.KEY_RIGHT,
+                function=self._force_x_plus_callback,
+            ),
+            KeyboardShortcut(
+                name="force_x_minus",
+                key=gymapi.KEY_LEFT,
+                function=self._force_x_minus_callback,
+            ),
+            KeyboardShortcut(
+                name="force_y_plus",
+                key=gymapi.KEY_UP,
+                function=self._force_y_plus_callback,
+            ),
+            KeyboardShortcut(
+                name="force_y_minus",
+                key=gymapi.KEY_DOWN,
+                function=self._force_y_minus_callback,
+            ),
+            KeyboardShortcut(
+                name="force_z_plus",
+                key=gymapi.KEY_PAGE_UP,
+                function=self._force_z_plus_callback,
+            ),
+            KeyboardShortcut(
+                name="force_z_minus",
+                key=gymapi.KEY_PAGE_DOWN,
+                function=self._force_z_minus_callback,
+            ),
         ]
         self.name_to_keyboard_shortcut_dict = {
             keyboard_shortcut.name: keyboard_shortcut
@@ -560,6 +590,30 @@ class AllegroKukaBase(VecTask):
         print(f"Debug viz is now {self.debug_viz}")
         if not self.debug_viz:
             self.gym.clear_lines(self.viewer)
+
+    def _force_x_plus_callback(self) -> None:
+        print("Force x plus...")
+        self.rb_forces[:, self.object_rb_handles, 0] += self.force_scale * self.object_rb_masses
+
+    def _force_x_minus_callback(self) -> None:
+        print("Force x minus...")
+        self.rb_forces[:, self.object_rb_handles, 0] -= self.force_scale * self.object_rb_masses
+
+    def _force_y_plus_callback(self) -> None:
+        print("Force y plus...")
+        self.rb_forces[:, self.object_rb_handles, 1] += self.force_scale * self.object_rb_masses
+
+    def _force_y_minus_callback(self) -> None:
+        print("Force y minus...")
+        self.rb_forces[:, self.object_rb_handles, 1] -= self.force_scale * self.object_rb_masses
+
+    def _force_z_plus_callback(self) -> None:
+        print("Force z plus...")
+        self.rb_forces[:, self.object_rb_handles, 2] += self.force_scale * self.object_rb_masses
+
+    def _force_z_minus_callback(self) -> None:
+        print("Force z minus...")
+        self.rb_forces[:, self.object_rb_handles, 2] -= self.force_scale * self.object_rb_masses
 
     ##### KEYBOARD END #####
 
