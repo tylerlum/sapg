@@ -5,11 +5,10 @@ import numpy as np
 # 1. CONFIGURATION & DATA ENTRY
 # ==========================================
 
-# The X-Axis values (Env Iters)
 ENV_STEPS = [0, 1e5, 2e5, 3e5, 4e5, 5e5, 6e5, 7e5, 8e5, 9e5] 
 
-# The Methods
-METHODS = ["No Asymmetric Critic", "No SAPG", "Ours"]
+# Reordered list: "Ours" is FIRST so it appears at the top of the legend
+METHODS = ["Ours", "No SAPG", "No Asymmetric Critic"]
 
 # PASTE YOUR REAL DATA HERE
 RAW_DATA = {
@@ -46,19 +45,17 @@ plt.rcParams.update({
 })
 
 def plot_single_ablation():
-    # Colors:
-    # Ours = Blue (Consistent)
-    # No SAPG = Orange
-    # No Asymmetric Critic = Green (or Grey if you want it to fade back)
+    # Styles configuration
+    # Added 'zorder': Higher number means it sits ON TOP of other lines
     styles = {
-        "Ours":                 {"color": "#1f77b4", "marker": "o"}, # Blue, Circle
-        "No SAPG":              {"color": "#ff7f0e", "marker": "s"}, # Orange, Square
-        "No Asymmetric Critic": {"color": "#2ca02c", "marker": "^"}  # Green, Triangle
+        "Ours":                 {"color": "#1f77b4", "marker": "o", "zorder": 10}, 
+        "No SAPG":              {"color": "#ff7f0e", "marker": "s", "zorder": 5}, 
+        "No Asymmetric Critic": {"color": "#2ca02c", "marker": "^", "zorder": 4}  
     }
 
-    # Figure Size: 5x3.5 is standard for single-column figures
     fig, ax = plt.subplots(figsize=(5, 3.5), constrained_layout=True)
     
+    # Loop through the METHODS list (which puts "Ours" first in the legend)
     for method in METHODS:
         if method in RAW_DATA:
             data = RAW_DATA[method]
@@ -69,31 +66,30 @@ def plot_single_ablation():
             style = styles[method]
             
             # Plot Line
+            # zorder ensures Ours stays on top even if we loop it first
             ax.plot(x, y, label=method, 
-                    color=style["color"], marker=style["marker"], markevery=1)
+                    color=style["color"], marker=style["marker"], 
+                    markevery=1, zorder=style["zorder"])
             
             # Plot Shade
             ax.fill_between(x, y - std, y + std, 
-                            color=style["color"], alpha=0.15, edgecolor='none')
+                            color=style["color"], alpha=0.15, edgecolor='none', 
+                            zorder=style["zorder"]-1) # Shade sits just behind the line
 
     # Formatting
-    # Optional: Add a title if you want, e.g., "Ablation Study"
-    # ax.set_title("Ablation Study", fontweight='bold')
-    
     ax.set_ylim(0, 105)
     ax.grid(True, linestyle='--')
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     
-    # Scientific notation for X axis (1e5, etc.)
+    # Scientific notation
     ax.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
     
     ax.set_xlabel("Env Iters")
     ax.set_ylabel("Reward") 
 
-    # Legend
-    # 'upper left' is usually the best spot for learning curves 
-    # as curves typically start low-left and go high-right.
+    # Legend at Upper Left
+    # Since "Ours" is first in METHODS list, it will be first (top) in the box.
     ax.legend(loc='upper left', frameon=False)
 
     plt.show()
