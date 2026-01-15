@@ -33,6 +33,12 @@ T_W_C = T_W_R @ T_R_C
 AXES_LENGTH = 0.0
 AXES_RADIUS = 0.0
 
+def info(message: str) -> None:
+    print(colored(message, "green"))
+
+def warn(message: str) -> None:
+    print(colored(message, "yellow"))
+
 def xyzw_to_wxyz(xyzw: np.ndarray) -> np.ndarray:
     x, y, z, w = xyzw
     return np.array([w, x, y, z])
@@ -731,7 +737,7 @@ def compute_r_R_P(keypoint_to_xyz: dict) -> np.ndarray:
 
 def save_to_file(file_path: Path, q_array: np.ndarray, object_pose_array: np.ndarray, dt: float):
     file_path.parent.mkdir(parents=True, exist_ok=True)
-    print(colored(f"Saving to file: {file_path}", "blue"))
+    info(f"Saving to file: {file_path}")
 
     T = len(q_array)
     assert q_array.shape == (T, 29), (
@@ -849,8 +855,19 @@ def main():
     )
     with open(args.object_poses_json_path, "r") as f:
         object_poses_data = json.load(f)
-    T_W_O_start = pose_to_T(np.array(object_poses_data["start_pose"]))
-    T_W_Os = np.array([pose_to_T(np.array(pose)) for pose in object_poses_data["goals"]])
+
+    # Handle different jsons
+    if "start_pose" in object_poses_data and "goals" in object_poses_data:
+        info("Using start_pose and goals")
+        T_W_O_start = pose_to_T(np.array(object_poses_data["start_pose"]))
+        T_W_Os = np.array([pose_to_T(np.array(pose)) for pose in object_poses_data["goals"]])
+    else:
+        warn("Did not find start_pose and goals in object_poses_data")
+        warn("Assuming data is just goals and are in robot frame")
+        T_R_Os = np.array([pose_to_T(np.array(pose)) for pose in object_poses_data])
+        T_W_Os = np.array([T_W_R @ T_R_O for T_R_O in T_R_Os])
+        T_W_O_start = T_W_Os[0]
+
     T_W_Os = filter_poses(T_W_Os)
 
     # Load object
@@ -861,7 +878,7 @@ def main():
         object_urdf_path = args.object_path
     else:
         raise ValueError(f"Invalid object path: {args.object_path}")
-    print(f"Loading object from {object_urdf_path}")
+    info(f"Loading object from {object_urdf_path}")
     object_frame_viser = SERVER.scene.add_frame(
         "/object",
         position=T_W_O_start[:3, 3],
@@ -926,7 +943,11 @@ def main():
             hand_visers.append(hand_viser)
 
     N_TIMESTEPS = min(len(T_W_Os), len(hand_keypoint_to_xyzs))
-    print(f"len(T_W_Os): {len(T_W_Os)}, len(hand_keypoint_to_xyzs): {len(hand_keypoint_to_xyzs)}, N_TIMESTEPS: {N_TIMESTEPS}")
+    msg = f"len(T_W_Os): {len(T_W_Os)}, len(hand_keypoint_to_xyzs): {len(hand_keypoint_to_xyzs)}, N_TIMESTEPS: {N_TIMESTEPS}"
+    if np.abs(len(T_W_Os) - len(hand_keypoint_to_xyzs)) > 10:
+        warn(msg)
+    else:
+        info(msg)
     T_W_Os = T_W_Os[:N_TIMESTEPS]
     hand_keypoint_to_xyzs = hand_keypoint_to_xyzs[:N_TIMESTEPS]
     T_R_Ps = filter_poses(np.array([compute_T_R_P(hand_keypoint_to_xyz=hand_keypoint_to_xyz) for hand_keypoint_to_xyz in hand_keypoint_to_xyzs]))
@@ -959,7 +980,7 @@ def main():
                 idx_lifted = i
                 break
         assert idx_lifted is not None, f"No object pose with z >= {LIFTED_Z} found"
-        print(colored(f"First object pose with z >= {LIFTED_Z} is at index {idx_lifted}", "green"))
+        info(f"First object pose with z >= {LIFTED_Z} is at index {idx_lifted}")
 
     HACK_SAVE_TO_FILE = False
     if HACK_SAVE_TO_FILE:
@@ -1147,10 +1168,9 @@ def main():
             if extra_dt > 0:
                 time.sleep(extra_dt)
             else:
-                print(colored(
-                    f"Visualization is running slow, late by {-extra_dt * 1000:.2f} ms",
-                    "yellow"
-                ))
+                warn(
+                    f"Visualization is running slow, late by {-extra_dt * 1000:.2f} ms"
+                )
 
         print("=" * 80)
         print("Setting breakpoint. Continue to start over")
