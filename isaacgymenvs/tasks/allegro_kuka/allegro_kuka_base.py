@@ -551,7 +551,7 @@ class AllegroKukaBase(VecTask):
         """
         assert min_value > 0, f"min_value must be > 0, got {min_value}"
         assert max_value > 0, f"max_value must be > 0, got {max_value}"
-        assert min_value < max_value, f"min_value must be < max_value, got {min_value} < {max_value}"
+        assert min_value <= max_value, f"min_value must be <= max_value, got {min_value} <= {max_value}"
 
         return torch.exp(
             torch.log(min_value)
