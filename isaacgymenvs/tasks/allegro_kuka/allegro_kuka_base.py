@@ -110,6 +110,8 @@ class AllegroKukaBase(VecTask):
         self.keypoint_rew_scale = self.cfg["env"]["keypointRewScale"]
         self.kuka_actions_penalty_scale = self.cfg["env"]["kukaActionsPenaltyScale"]
         self.allegro_actions_penalty_scale = self.cfg["env"]["allegroActionsPenaltyScale"]
+        self.object_lin_vel_penalty_scale = self.cfg["env"]["objectLinVelPenaltyScale"]
+        self.object_ang_vel_penalty_scale = self.cfg["env"]["objectAngVelPenaltyScale"]
 
         self.dof_params: DofParameters = DofParameters.from_cfg(self.cfg)
 
@@ -486,6 +488,8 @@ class AllegroKukaBase(VecTask):
             "bonus_rew",
             "kuka_actions_penalty",
             "allegro_actions_penalty",
+            "object_lin_vel_penalty",
+            "object_ang_vel_penalty",
         ]
 
         self.rewards_episode = {
@@ -1771,6 +1775,12 @@ class AllegroKukaBase(VecTask):
 
         return -1 * kuka_actions_penalty, -1 * allegro_actions_penalty
 
+    def _object_vel_penalties(self) -> Tuple[Tensor, Tensor]:
+        object_lin_vel_penalty = self.object_lin_vel_penalty_scale * torch.sum(torch.square(self.object_linvel), dim=-1)
+        object_ang_vel_penalty = self.object_ang_vel_penalty_scale * torch.sum(torch.square(self.object_angvel), dim=-1)
+
+        return -1 * object_lin_vel_penalty, -1 * object_ang_vel_penalty
+
     def _compute_resets(self, is_success):
         ones = torch.ones_like(self.reset_buf)
         zeros = torch.zeros_like(self.reset_buf)
@@ -1947,6 +1957,8 @@ class AllegroKukaBase(VecTask):
         # We spread out the reward over "success_steps"
         bonus_rew = near_goal * (self.reach_goal_bonus / self.success_steps)
 
+        object_lin_vel_penalty, object_ang_vel_penalty = self._object_vel_penalties()
+
         reward = (
             fingertip_delta_rew
             + hand_delta_penalty  # + sign here because hand_delta_penalty is negative
@@ -1956,6 +1968,8 @@ class AllegroKukaBase(VecTask):
             + kuka_actions_penalty
             + allegro_actions_penalty
             + bonus_rew
+            + object_lin_vel_penalty
+            + object_ang_vel_penalty
         )
 
         self.rew_buf[:] = reward
@@ -1987,6 +2001,8 @@ class AllegroKukaBase(VecTask):
             (kuka_actions_penalty, "kuka_actions_penalty"),
             (allegro_actions_penalty, "allegro_actions_penalty"),
             (bonus_rew, "bonus_rew"),
+            (object_lin_vel_penalty, "object_lin_vel_penalty"),
+            (object_ang_vel_penalty, "object_ang_vel_penalty"),
         ]
 
         episode_cumulative = dict()

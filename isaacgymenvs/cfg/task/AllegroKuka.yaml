@@ -78,6 +78,8 @@ env:
   allegroActionsPenaltyScale: 0.0003
   fallDistance: 0.24
   fallPenalty: 0.0
+  objectLinVelPenaltyScale: 0.0
+  objectAngVelPenaltyScale: 0.0
 
   privilegedActions: False
   privilegedActionsTorque: 0.02
