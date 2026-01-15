@@ -634,6 +634,8 @@ class AllegroKukaBase(VecTask):
         self._DO_NOT_MOVE = False
 
         # Keyboard applied force or torque or impulse
+        # Press arrow keys to apply force or torque or impulse in XY plane, PAGE_UP and PAGE_DOWN for Z direction
+        # Press F to toggle between force, torque, lin_vel_impulse, and ang_vel_impulse
         #
         # Control flow is currently
         # - pre_physics_step
