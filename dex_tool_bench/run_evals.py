@@ -28,6 +28,8 @@ object_type_to_object_names = {
     object_type: object_type_to_real_object_names[object_type] + object_type_to_primitive_object_names[object_type]
     for object_type in object_type_to_real_object_names.keys()
 }
+
+# HACK: Overwrite object names for debugging
 object_type_to_object_names["brush"] = ["red_brush"]
 
 object_type_to_trajectory_names = {
@@ -39,6 +41,7 @@ object_type_to_trajectory_names = {
     "brush": ["simple", "complex"],
 }
 
+# HACK: Overwrite trajectory names for debugging
 object_type_to_trajectory_names = {
     "hammer": [],
     "spatula": [],
