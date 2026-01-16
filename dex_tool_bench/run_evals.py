@@ -86,7 +86,7 @@ print(f"Will evaluate {len(ALL_OBJECT_TYPE_OBJECT_NAME_TRAJECTORY_NAME_POLICY_NA
 
 """
 Making output_directory structure like
-<output_dir_datetime>
+evals/<datetime>
 |--<object_type>
 |   |--<object_name>
 |   |   |--<trajectory_name>
