@@ -381,19 +381,19 @@ def main():
     # object_name = "kitchen_knife"
     # trajectory_name = "knife_on_cutting_board"
 
-    object_type = "spatula"
-    object_name = "black_spatula"
+    # object_type = "spatula"
+    # object_name = "black_spatula"
     # trajectory_name = "pick_and_place"
     # trajectory_name = "pick_and_place_hardinit"
     # trajectory_name = "pick_and_place_hardinit2"
-    trajectory_name = "pick_and_place_human"
+    # trajectory_name = "pick_and_place_human"
     # trajectory_name = "pick_and_place_human_hardinit"
 
-    # object_type = "brush"
+    object_type = "brush"
     # object_name = "green_brush"
-    # object_name = "red_brush"
+    object_name = "red_brush"
     # trajectory_name = "simple"
-    # trajectory_name = "complex"
+    trajectory_name = "complex"
 
     output_dir = None  # Set to Path("videos") to enable recording
 
@@ -416,6 +416,8 @@ def main():
     assert trajectory_path.exists(), f"Trajectory file not found: {trajectory_path}"
     with open(trajectory_path) as f:
         traj_data = json.load(f)
+    DOWNSAMPLE_FACTOR = 1  # No downsampling when 1
+    traj_data["goals"] = traj_data["goals"][::DOWNSAMPLE_FACTOR]
 
     # Create environment
     # config_path, checkpoint_path = parse_checkpoint_dir(checkpoint_dir)
@@ -452,7 +454,7 @@ def main():
             # "task.env.tableResetZ": 0.38 + 0.02,
             "task.env.capture_video": False,
             "task.env.use_fixed_set_of_goal_states": True,
-            "task.env.fixedGoalStates": traj_data["goals"],
+            "task.env.fixedGoalStates": traj_data["goals"][::10],
             # "task.env.fixedGoalStates": None,
             "task.env.objectStartPose": traj_data["start_pose"],
             "task.env.useActionDelay": False,

@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<robot name="primitive_cylindrical_mallet">
+
+  <link name="primitive_cylindrical_mallet">
+    <!-- Handle -->
+    <visual>
+      <origin xyz="0 0 0" rpy="0 1.5707963267948966 0"/>
+      <geometry>
+        <cylinder length="0.2" radius="0.01"/>
+      </geometry>
+      <material name="material">
+        <color rgba="0.639 0.847 0.882 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 1.5707963267948966 0"/>
+      <geometry>
+        <cylinder length="0.2" radius="0.01"/>
+      </geometry>
+    </collision>
+
+    <!-- Head -->
+    <visual>
+      <origin xyz="0.12000000000000001 0 0" rpy="1.5707963267948966 0 0"/>
+      <geometry>
+        <cylinder length="0.1" radius="0.02"/>
+      </geometry>
+      <material name="material">
+        <color rgba="0.639 0.847 0.882 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.12000000000000001 0 0" rpy="1.5707963267948966 0 0"/>
+      <geometry>
+        <cylinder length="0.1" radius="0.02"/>
+      </geometry>
+    </collision>
+
+    <inertial>
+      <density value="400.0"/>
+    </inertial>
+  </link>
+
+</robot>

@@ -41,6 +41,10 @@ class Cuboid:
         """Return the length along the tool axis (X)."""
         return self.length
 
+    def get_scale(self) -> Tuple[float, float, float]:
+        """Return the scale of the cuboid."""
+        return (self.length, self.width, self.height)
+
 
 @dataclass
 class Cylinder:
@@ -73,6 +77,10 @@ class Cylinder:
         if as_head:
             return 2 * self.radius  # Head extends by diameter in X direction
         return self.length
+
+    def get_scale(self) -> Tuple[float, float, float]:
+        """Return the scale of the cylinder."""
+        return (self.length, self.radius * 2, self.radius * 2)
 
 
 # Type alias for any shape

@@ -84,10 +84,10 @@ def main():
     # trajectory_name = "horizontal_swing_human"
     # trajectory_name = "horizontal_swing_human_closer"
 
-    # object_type = "spatula"
-    # object_name = "black_spatula"
+    object_type = "spatula"
+    object_name = "black_spatula"
     # trajectory_name = "pick_and_place_human"
-    # trajectory_name = "pick_and_place_human_hardinit"
+    trajectory_name = "pick_and_place_human_hardinit"
 
     # object_type = "screwdriver"
     # object_name = "real_flat_screwdriver"
@@ -104,11 +104,11 @@ def main():
     # trajectory_name = "draw_circle_human"
     # trajectory_name = "draw_circle_human_hardinit"
 
-    object_type = "brush"
-    object_name = "green_brush"
+    # object_type = "brush"
+    # object_name = "green_brush"
     # object_name = "red_brush"
     # trajectory_name = "simple"
-    trajectory_name = "complex"
+    # trajectory_name = "complex"
 
     trajectory_path = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
     assert trajectory_path.exists(), f"Trajectory file not found: {trajectory_path}"
@@ -179,8 +179,10 @@ def main():
             "task.env.useObjectStateDelayNoise": False,
             "task.env.resetWhenDropped": False,
             "task.env.armMovingAverage": 0.1,
-            "task.env.evalSuccessTolerance": 0.02,
+            # "task.env.evalSuccessTolerance": 0.02,
+            "task.env.evalSuccessTolerance": 0.01,
             "task.env.successSteps": 1,
+            # "task.env.fixedSizeKeypointReward": True,
             "task.env.fixedSizeKeypointReward": True,
             "task.env.forceOnlyWhenLifted": True,
             "task.env.startArmHigher": True,

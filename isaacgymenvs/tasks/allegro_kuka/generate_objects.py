@@ -1,6 +1,7 @@
 from pathlib import Path
 import math
 from typing import Tuple, Union, Optional
+import trimesh
 
 
 def generate_cuboid_urdf_constant_density(
@@ -720,3 +721,85 @@ def generate_handle_head_urdf(
           )
     else:
         raise ValueError(f"Invalid head scale: {head_scale} and head density: {head_density}")
+
+def generate_handle_head_trimesh(
+  handle_scale: Union[Tuple[float, float, float], Tuple[float, float]],
+  head_scale: Union[Tuple[float, float, float], Tuple[float, float], None],
+) -> trimesh.Trimesh:
+  """
+  Generate a trimesh for a handle-head object.
+  """
+  if head_scale is None:
+    return _generate_handle_trimesh(
+      handle_scale=handle_scale,
+    )
+  else:
+    return _generate_handle_head_trimesh(
+      handle_scale=handle_scale,
+      head_scale=head_scale,
+    )
+
+def _generate_handle_trimesh(
+  handle_scale: Union[Tuple[float, float, float], Tuple[float, float]],
+):
+  """
+  Generate a trimesh for a handle object.
+  """
+  import trimesh
+  if len(handle_scale) == 3:
+    return trimesh.creation.box(
+      extents=handle_scale,
+    )
+  elif len(handle_scale) == 2:
+    # Ensure height is along +x
+    # Default cylinder axis is along +z
+    rotation = trimesh.transformations.rotation_matrix(math.pi / 2, [0, 1, 0])
+    mesh = trimesh.creation.cylinder(
+      height=handle_scale[0],
+      radius=handle_scale[1] / 2,
+    )
+    mesh.apply_transform(rotation)
+    return mesh
+  else:
+    raise ValueError(f"Invalid handle scale: {handle_scale}")
+
+def _generate_handle_head_trimesh(
+  handle_scale: Union[Tuple[float, float, float], Tuple[float, float]],
+  head_scale: Union[Tuple[float, float, float], Tuple[float, float]],
+):
+  """
+  Generate a trimesh for a handle-head object.
+  """
+  handle_mesh = _generate_handle_trimesh(handle_scale=handle_scale)
+  head_mesh = _generate_head_trimesh(head_scale=head_scale, handle_scale=handle_scale)
+  merged_mesh = trimesh.util.concatenate([handle_mesh, head_mesh])
+  return merged_mesh
+
+def _generate_head_trimesh(
+  head_scale: Union[Tuple[float, float, float], Tuple[float, float]],
+  handle_scale: Union[Tuple[float, float, float], Tuple[float, float]],
+):
+  """
+  Generate a trimesh for a head object.
+  """
+  if len(head_scale) == 3:
+    mesh = trimesh.creation.box(
+      extents=head_scale,
+    )
+    head_len_x, _, _ = head_scale
+    x_offset = handle_scale[0] / 2 + head_len_x / 2
+  elif len(head_scale) == 2:
+    rotation = trimesh.transformations.rotation_matrix(math.pi / 2, [1, 0, 0])
+    mesh = trimesh.creation.cylinder(
+      height=head_scale[0],
+      radius=head_scale[1] / 2,
+    )
+    mesh.apply_transform(rotation)
+    head_height, head_diameter = head_scale
+    head_radius = head_diameter / 2
+    x_offset = handle_scale[0] / 2 + head_radius
+  else:
+    raise ValueError(f"Invalid head scale: {head_scale}")
+
+  mesh.apply_translation([x_offset, 0, 0])
+  return mesh
