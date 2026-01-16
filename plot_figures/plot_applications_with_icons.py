@@ -36,6 +36,7 @@ RAW_DATA = {
 # 2. HELPER FUNCTION FOR ICONS
 # ==========================================
 
+
 def add_icon_labels(ax, x_coords, labels, zoom=0.08):
     """
     Replaces x-axis text labels with images.
@@ -51,7 +52,7 @@ def add_icon_labels(ax, x_coords, labels, zoom=0.08):
         try:
             img = mpimg.imread(path)
             imagebox = OffsetImage(img, zoom=zoom)
-            
+
             ab = AnnotationBbox(
                 imagebox,
                 (x, 0),
@@ -66,37 +67,40 @@ def add_icon_labels(ax, x_coords, labels, zoom=0.08):
             print(f"Warning: Could not find {path}. Creating a text label instead.")
             ax.text(x, -5, label, ha="center", va="top", fontsize=10)
 
+
 # ==========================================
 # 3. PLOTTING SCRIPT
 # ==========================================
 
-plt.rcParams.update({
-    "font.family": "serif",
-    "font.serif": ["Times New Roman", "DejaVu Serif"],
-    "font.size": 11,
-    "axes.labelsize": 12,
-    "axes.titlesize": 12,
-    "xtick.labelsize": 11,
-    "ytick.labelsize": 11,
-    "legend.fontsize": 10,
-    "lines.linewidth": 1.5,
-    "grid.alpha": 0.3,
-})
+plt.rcParams.update(
+    {
+        "font.family": "serif",
+        "font.serif": ["Times New Roman", "DejaVu Serif"],
+        "font.size": 11,
+        "axes.labelsize": 12,
+        "axes.titlesize": 12,
+        "xtick.labelsize": 11,
+        "ytick.labelsize": 11,
+        "legend.fontsize": 10,
+        "lines.linewidth": 1.5,
+        "grid.alpha": 0.3,
+    }
+)
 
 
 def plot_task_spec_comparison_with_icons():
     colors = {
-        "VideoGen": "#A9A9A9",   # Medium Grey
-        "VLM": "#696969",        # Darker Grey
-        "Human Demo": "#1f77b4", # Professional Deep Blue
+        "VideoGen": "#A9A9A9",  # Medium Grey
+        "VLM": "#696969",  # Darker Grey
+        "Human Demo": "#1f77b4",  # Professional Deep Blue
     }
 
     # Changed constrained_layout to False to manually handle margins for icons
     fig, ax = plt.subplots(figsize=(5, 4), constrained_layout=False)
-    plt.subplots_adjust(bottom=0.2) # Reserve bottom 20% for icons
+    plt.subplots_adjust(bottom=0.2)  # Reserve bottom 20% for icons
 
     x = np.arange(len(OBJECTS))
-    width = 0.25  
+    width = 0.25
     multiplier = 0
 
     for method in METHODS:
@@ -127,13 +131,13 @@ def plot_task_spec_comparison_with_icons():
     # Bars are at [0], [width], [2*width]. Center is at [width].
     center_offset = width
     x_centers = x + center_offset
-    
+
     # Set ticks (labels hidden inside helper function)
     ax.set_xticks(x_centers)
 
     # --- ADD ICONS HERE ---
     # zoom=0.08 matches your previous successful plot
-    add_icon_labels(ax, x_centers, OBJECTS, zoom=0.08) 
+    add_icon_labels(ax, x_centers, OBJECTS, zoom=0.08)
 
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)

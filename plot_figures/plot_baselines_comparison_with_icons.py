@@ -35,6 +35,7 @@ RAW_DATA = {
 # 2. HELPER FUNCTION FOR ICONS
 # ==========================================
 
+
 def add_icon_labels(ax, x_coords, labels, zoom=0.08):
     """
     Replaces x-axis text labels with images.
@@ -94,8 +95,8 @@ plt.rcParams.update(
 def plot_bar_comparison_with_icons():
     colors = {
         "Retargeting": "#A9A9A9",  # Dark Grey
-        "Grasp-Only": "#D3D3D3",   # Light Grey
-        "Ours": "#1f77b4",         # Professional Deep Blue
+        "Grasp-Only": "#D3D3D3",  # Light Grey
+        "Ours": "#1f77b4",  # Professional Deep Blue
     }
 
     # Changed constrained_layout to False to manually handle margins for icons
@@ -123,7 +124,7 @@ def plot_bar_comparison_with_icons():
             capsize=4,
             edgecolor="black",
             linewidth=0.7,
-            zorder=3
+            zorder=3,
         )
 
         multiplier += 1
@@ -137,7 +138,7 @@ def plot_bar_comparison_with_icons():
     # [0], [width], [2*width] -> Center is [width]
     center_offset = width
     x_centers = x + center_offset
-    
+
     # Set ticks (labels are hidden inside the helper function)
     ax.set_xticks(x_centers)
 
