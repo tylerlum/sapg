@@ -112,8 +112,9 @@ class ViserServer:
         # Controls
         self.keypoint_toggle = self.server.gui.add_checkbox("Show Keypoints", initial_value=True)
         self.keypoint_toggle.on_update(lambda _: self._toggle_keypoints())
-        self.keypoint_toggle_fixed_size = self.server.gui.add_checkbox("Show Keypoints Fixed Size", initial_value=False)
+        self.keypoint_toggle_fixed_size = self.server.gui.add_checkbox("Show Keypoints Fixed Size", initial_value=True)
         self.keypoint_toggle_fixed_size.on_update(lambda _: self._toggle_keypoints_fixed_size())
+        self.keypoint_toggle_fixed_size.value = False  # start as True, then set to False to hide them
 
     def _toggle_keypoints(self):
         """Toggle visibility of keypoint spheres."""
