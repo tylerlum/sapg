@@ -1,11 +1,25 @@
-import os
+import signal
+from termcolor import colored
+from subprocess import run
+import sys
 from pathlib import Path
 from datetime import datetime
 from tqdm import tqdm
 
+def log_info(text):
+    print(colored(text, "cyan"))
+
+def _signal_handler(signum, frame):
+    print(f"Received signal {signum}, exiting")
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, _signal_handler)
+signal.signal(signal.SIGTERM, _signal_handler)
+
+
 script_path = Path(__file__).parent / "eval_script.py"
 assert script_path.exists(), f"Script not found: {script_path}"
-DATE_STR = datetime.now().strftime("%Y-%m-%d")
+DATE_STR = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
 object_type_to_real_object_names = {
     "hammer": ["hammer_2", "mallet"],
@@ -88,8 +102,9 @@ Making output_directory structure like
 |   |   |   |   |--<eval.json>
 """
 
-for object_type, object_name, trajectory_name, policy_name in tqdm(ALL_OBJECT_TYPE_OBJECT_NAME_TRAJECTORY_NAME_POLICY_NAME, desc="Running evaluations"):
-    print(f"Running evaluation for {object_type} {object_name} {trajectory_name} {policy_name}")
+total = len(ALL_OBJECT_TYPE_OBJECT_NAME_TRAJECTORY_NAME_POLICY_NAME)
+for i, (object_type, object_name, trajectory_name, policy_name) in tqdm(enumerate(ALL_OBJECT_TYPE_OBJECT_NAME_TRAJECTORY_NAME_POLICY_NAME), desc="Running evaluations", total=total):
+    log_info(f"{i}/{total} Running evaluation for {object_type} {object_name} {trajectory_name} {policy_name}")
     output_dir = Path(f"evals/{DATE_STR}/{object_type}/{object_name}/{trajectory_name}/{policy_name}")
     output_dir.mkdir(parents=True, exist_ok=True)
     cmd = f"python \
@@ -101,6 +116,6 @@ for object_type, object_name, trajectory_name, policy_name in tqdm(ALL_OBJECT_TY
         --output_dir {output_dir} \
         --num_episodes {NUM_EPISODES} \
         --downsample_factor {DOWNSAMPLE_FACTOR}"
-    print(f"Running command: {cmd}")
-    os.system(cmd)
-    print()
+    log_info(f"Running command: {cmd}")
+    run(cmd, shell=True, check=True)
+    log_info(f"{i}/{total} Done")
