@@ -35,7 +35,7 @@ object_type_to_object_names = {
     for object_type in object_type_to_real_object_names.keys()
 }
 # HACK: Only use primitive object names for now
-object_type_to_object_names = object_type_to_primitive_object_names
+# object_type_to_object_names = object_type_to_primitive_object_names
 
 # HACK: Overwrite object names for debugging
 # object_type_to_object_names["brush"] = ["red_brush"]
@@ -50,10 +50,10 @@ object_type_to_trajectory_names = {
 }
 
 # HACK: Overwrite trajectory names for debugging
-object_type_to_trajectory_names = {
-    object_type: object_type_to_trajectory_names[object_type][:1]
-    for object_type in object_type_to_trajectory_names.keys()
-}
+# object_type_to_trajectory_names = {
+#     object_type: object_type_to_trajectory_names[object_type][:1]
+#     for object_type in object_type_to_trajectory_names.keys()
+# }
 
 POLICY_NAME_TO_PATH = {
     "slowSpeed": Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed"),
@@ -61,7 +61,8 @@ POLICY_NAME_TO_PATH = {
 }
 DOWNSAMPLE_FACTOR = 1
 # NUM_EPISODES = 5
-NUM_EPISODES = 1  # For debugging
+NUM_EPISODES = 10
+# NUM_EPISODES = 1  # For debugging
 
 # Validate everything
 for policy_path in POLICY_NAME_TO_PATH.values():
@@ -97,6 +98,8 @@ evals/<datetime>
 
 total = len(ALL_OBJECT_TYPE_OBJECT_NAME_TRAJECTORY_NAME_POLICY_NAME)
 for i, (object_type, object_name, trajectory_name, policy_name) in tqdm(enumerate(ALL_OBJECT_TYPE_OBJECT_NAME_TRAJECTORY_NAME_POLICY_NAME), desc="Running evaluations", total=total):
+    import time
+    start_time = time.time()
     log_info(f"{i}/{total} Running evaluation for {object_type} {object_name} {trajectory_name} {policy_name}")
     output_dir = Path(f"evals/{DATE_STR}/{object_type}/{object_name}/{trajectory_name}/{policy_name}")
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -112,3 +115,5 @@ for i, (object_type, object_name, trajectory_name, policy_name) in tqdm(enumerat
     log_info(f"Running command: {cmd}")
     run(cmd, shell=True, check=True)
     log_info(f"{i}/{total} Done")
+    end_time = time.time()
+    log_info(f"Time taken for evaluation: {end_time - start_time:.2f} seconds")
