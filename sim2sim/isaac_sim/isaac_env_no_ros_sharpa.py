@@ -89,9 +89,9 @@ def main():
     # trajectory_name = "pick_and_place_human"
     # trajectory_name = "pick_and_place_human_hardinit"
 
-    # object_type = "screwdriver"
-    # object_name = "real_flat_screwdriver"
-    # trajectory_name = "top_down_screwing_human_easyinit"
+    object_type = "screwdriver"
+    object_name = "real_flat_screwdriver"
+    trajectory_name = "top_down_screwing_human_easyinit"
     # trajectory_name = "top_down_screwing_human"
 
     # object_type = "eraser"
@@ -104,16 +104,21 @@ def main():
     # trajectory_name = "draw_circle_human"
     # trajectory_name = "draw_circle_human_hardinit"
 
-    object_type = "brush"
-    object_name = "green_brush"
+    # object_type = "brush"
+    # object_name = "green_brush"
     # object_name = "red_brush"
     # trajectory_name = "simple"
-    trajectory_name = "complex"
+    # trajectory_name = "complex"
 
     trajectory_path = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
     assert trajectory_path.exists(), f"Trajectory file not found: {trajectory_path}"
     with open(trajectory_path) as f:
         traj_data = json.load(f)
+
+    # HACK: raise goal z by 0.1m to avoid collision with table
+    traj_data["goals"] = [
+        [x, y, z+0.1, qx, qy, qz, qw] for (x, y, z, qx, qy, qz, qw) in traj_data["goals"]
+    ]
 
     # NOTE: cpu has different physics than training
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -160,10 +165,9 @@ def main():
             "task.env.objectStartPose": traj_data["start_pose"],
             "task.env.use_fixed_set_of_goal_states": True,
             "task.env.fixedGoalStates": traj_data["goals"],
-            "task.env.forceScale": 0.0,
             # "task.env.dofSpeedScale": 10.0,
             # "task.env.numEnvs": 1,
-            "task.env.numEnvs": 100,
+            "task.env.numEnvs": 3,
             "task.env.envSpacing": 0.4,
             # "task.env.useObsDelay": True,
             # "task.env.obsDelayMax": 3,
@@ -179,11 +183,38 @@ def main():
             "task.env.useObjectStateDelayNoise": False,
             "task.env.resetWhenDropped": False,
             "task.env.armMovingAverage": 0.1,
-            "task.env.evalSuccessTolerance": 0.02,
+            # "task.env.evalSuccessTolerance": 0.02,
+            "task.env.evalSuccessTolerance": 0.01,
             "task.env.successSteps": 1,
+            # "task.env.fixedSizeKeypointReward": True,
             "task.env.fixedSizeKeypointReward": True,
-            "task.env.forceOnlyWhenLifted": True,
             "task.env.startArmHigher": True,
+
+            # Forces
+            "task.env.forceScale": 0.0,
+            "task.env.torqueScale": 0.0,
+            "task.env.linVelImpulseScale": 0.0,
+            "task.env.angVelImpulseScale": 0.0,
+
+            # "task.env.forceScale": 20.0,  # Default
+            # "task.env.torqueScale": 2.0,  # 10x smaller than forceScale because objects are ~0.1m
+            # "task.env.linVelImpulseScale": 0.2,  # 20cm/s
+            # "task.env.angVelImpulseScale": 2.0,  # 2rad/s = 114.6 deg/s
+
+            "task.env.forceOnlyWhenLifted": True,
+            "task.env.torqueOnlyWhenLifted": True,
+            "task.env.linVelImpulseOnlyWhenLifted": True,
+            "task.env.angVelImpulseOnlyWhenLifted": True,
+
+            # "task.env.forceProbRange": [0.1, 0.1],
+            # "task.env.torqueProbRange": [0.1, 0.1],
+            "task.env.forceProbRange": [0.0001, 0.0001],
+            "task.env.torqueProbRange": [0.0001, 0.0001],
+            "task.env.linVelImpulseProbRange": [0.0001, 0.0001],
+            "task.env.angVelImpulseProbRange": [0.0001, 0.0001],
+
+            "task.env.forceDecay": 0.0,
+            "task.env.torqueDecay": 0.0,
         },
     )
 

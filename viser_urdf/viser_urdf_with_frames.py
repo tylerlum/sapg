@@ -53,7 +53,7 @@ def create_robot_control_sliders(
     ) in viser_urdf.get_actuated_joint_limits().items():
         lower = lower if lower is not None else -np.pi
         upper = upper if upper is not None else np.pi
-        initial_pos = 0.0 if lower < -0.1 and upper > 0.1 else (lower + upper) / 2.0
+        initial_pos = 0.0
         slider = server.gui.add_slider(
             label=joint_name,
             min=lower,

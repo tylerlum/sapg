@@ -1,9 +1,0 @@
-# Material file for thin_marker.obj
-
-newmtl material_0
-Ka 0.0 0.0 0.0
-Kd 0.639 0.847 0.882
-Ks 0.4 0.4 0.4
-Ns 10.0
-d 1.0
-map_Kd thin_marker.png

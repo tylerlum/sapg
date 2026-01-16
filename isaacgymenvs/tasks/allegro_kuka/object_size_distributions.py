@@ -77,7 +77,7 @@ class ObjectSizeDistribution:
 LOW_DENSITY_MIN, LOW_DENSITY_MAX = 300, 600
 
 # Hammer head and mallet are 800-1500 kg/m^3
-HIGH_DENSITY_MIN, HIGH_DENSITY_MAX = 800, 1500
+HIGH_DENSITY_MIN, HIGH_DENSITY_MAX = 800, 2000
 
 
 OBJECT_SIZE_DISTRIBUTIONS: List[ObjectSizeDistribution] = [

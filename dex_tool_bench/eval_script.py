@@ -3,6 +3,7 @@
 # IsaacGym must be imported before torch
 from isaacgym import gymapi  # noqa: F401 isort:skip
 
+import argparse
 import json
 import time
 from datetime import datetime
@@ -42,16 +43,20 @@ def log_warn(text):
 class ViserServer:
     """Viser-based visualization server for robot manipulation."""
 
-    def __init__(self, object_name: str, trajectory_name: str, num_keypoints: int, table_urdf: str, port: int = 8080):
+    def __init__(self, object_name: str, trajectory_name: str, num_keypoints: int, table_urdf: str, policy_name: str, port: int = 8080):
         self.port = port
         self.num_keypoints = num_keypoints
         self.is_paused = False
         self.show_keypoints = True
         self.server = viser.ViserServer(host="0.0.0.0", port=port)
         self.table_urdf = table_urdf
-        self._setup_scene(object_name, trajectory_name)
+        self._setup_scene(
+            object_name=object_name,
+            trajectory_name=trajectory_name,
+            policy_name=policy_name,
+        )
 
-    def _setup_scene(self, object_name: str, trajectory_name: str):
+    def _setup_scene(self, object_name: str, trajectory_name: str, policy_name: str):
         """Initialize the 3D scene with robot, table, object, and GUI elements."""
         @self.server.on_client_connect
         def _(client):
@@ -100,6 +105,7 @@ class ViserServer:
             )
 
         # GUI elements
+        self.server.gui.add_markdown(f"**Policy:** {policy_name}")
         self.server.gui.add_markdown(f"**Task:** {trajectory_name}")
         self.server.gui.add_markdown(f"**Object:** {object_name}")
         self.server.gui.add_markdown("---")
@@ -111,8 +117,9 @@ class ViserServer:
         # Controls
         self.keypoint_toggle = self.server.gui.add_checkbox("Show Keypoints", initial_value=True)
         self.keypoint_toggle.on_update(lambda _: self._toggle_keypoints())
-        self.keypoint_toggle_fixed_size = self.server.gui.add_checkbox("Show Keypoints Fixed Size", initial_value=False)
+        self.keypoint_toggle_fixed_size = self.server.gui.add_checkbox("Show Keypoints Fixed Size", initial_value=True)
         self.keypoint_toggle_fixed_size.on_update(lambda _: self._toggle_keypoints_fixed_size())
+        self.keypoint_toggle_fixed_size.value = False  # start as True, then set to False to hide them
 
     def _toggle_keypoints(self):
         """Toggle visibility of keypoint spheres."""
@@ -184,7 +191,7 @@ class EvalRunner:
     """Runs policy evaluation with viser visualization."""
 
     def __init__(self, env, config_path: Path, checkpoint_path: Path,
-                 object_name: str, trajectory_name: str, table_urdf: str, output_dir: Optional[Path] = None):
+                 object_name: str, trajectory_name: str, table_urdf: str, output_dir: Optional[Path] = None, policy_name: str = None):
         self.env = env
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.n_act = 29
@@ -212,7 +219,13 @@ class EvalRunner:
             log_info(f"Recording to: {self.session_dir}")
 
         # Visualization
-        self.viser = ViserServer(object_name, trajectory_name, env.num_keypoints, table_urdf)
+        self.viser = ViserServer(
+            object_name=object_name,
+            trajectory_name=trajectory_name,
+            num_keypoints=env.num_keypoints,
+            table_urdf=table_urdf,
+            policy_name=policy_name,
+        )
         self.obs = self._reset()
 
     def _reset(self):
@@ -317,6 +330,34 @@ class EvalRunner:
         while True:
             time.sleep(1.0)
 
+    def run_eval(self, num_episodes: int, output_json_file: Path):
+        for i in range(num_episodes):
+            self._run_episode()
+        log_success(f"Done: {num_episodes} episodes")
+
+        output_json_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(output_json_file, "w") as f:
+            json.dump(
+                {
+                    "avg_goal_pct": np.mean(self.episode_goal_pcts),
+                    "avg_time_sec": np.mean(self.episode_lengths) / self.control_hz,
+                    "episode_goal_pcts": self.episode_goal_pcts,
+                    "episode_lengths": self.episode_lengths,
+                },
+                f,
+                indent=4,
+            )
+
+        output_dir = output_json_file.parent
+
+        # Also need to save the policy config
+        # And save the env cfg because of overrides
+        from omegaconf import OmegaConf
+        with open(output_dir / "policy_config.yaml", "w") as f:
+            f.write(OmegaConf.to_yaml(self.policy.cfg))
+        with open(output_dir / "env_cfg.yaml", "w") as f:
+            f.write(OmegaConf.to_yaml(self.env.cfg))
+
 
 def parse_checkpoint_dir(path: Path) -> Tuple[Path, Path]:
     """Extract config and model paths from checkpoint directory."""
@@ -325,6 +366,18 @@ def parse_checkpoint_dir(path: Path) -> Tuple[Path, Path]:
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--object_type", type=str, required=True)
+    parser.add_argument("--object_name", type=str, required=True)
+    parser.add_argument("--trajectory_name", type=str, required=True)
+    parser.add_argument("--config_path", type=Path, required=True)
+    parser.add_argument("--checkpoint_path", type=Path, required=True)
+    parser.add_argument("--output_dir", type=str, required=True)
+    parser.add_argument("--num_episodes", type=int, required=True)
+    parser.add_argument("--downsample_factor", type=int, required=True)
+    parser.add_argument("--policy_name", type=str, required=True)
+    args = parser.parse_args()
+
     # Configuration
     # checkpoint_dir = Path("/share/portal/kk837/sapg/train_dir/FINAL_ASYMMETRIC_RUNS/FINETUNE_8x/O0T0_tyler_branch_2026-01-05_02-16-57")
 
@@ -377,16 +430,12 @@ def main():
     # trajectory_name = "draw_circle_human"
     # trajectory_name = "draw_circle_human_hardinit"
 
-    # object_type = "knife"
-    # object_name = "kitchen_knife"
-    # trajectory_name = "knife_on_cutting_board"
-
-    object_type = "spatula"
-    object_name = "black_spatula"
+    # object_type = "spatula"
+    # object_name = "black_spatula"
     # trajectory_name = "pick_and_place"
     # trajectory_name = "pick_and_place_hardinit"
     # trajectory_name = "pick_and_place_hardinit2"
-    trajectory_name = "pick_and_place_human"
+    # trajectory_name = "pick_and_place_human"
     # trajectory_name = "pick_and_place_human_hardinit"
 
     # object_type = "brush"
@@ -394,6 +443,10 @@ def main():
     # object_name = "red_brush"
     # trajectory_name = "simple"
     # trajectory_name = "complex"
+
+    object_type = args.object_type
+    object_name = args.object_name
+    trajectory_name = args.trajectory_name
 
     output_dir = None  # Set to Path("videos") to enable recording
 
@@ -404,7 +457,21 @@ def main():
     TABLE_CUTTINGBOARD_URDF = "urdf/table_narrow_cuttingboard.urdf"
     TABLE_BOWL_PLATE_URDF = "urdf/table_narrow_bowl_plate.urdf"
 
+    object_type_to_table_urdf = {
+        "hammer": TABLE_NAIL_URDF,
+        "spatula": TABLE_BOWL_PLATE_URDF,
+        "eraser": TABLE_WHITEBOARD_URDF,
+        # "screwdriver": TABLE_SCREWDRIVER_HOLE_URDF,
+        "screwdriver": TABLE_URDF,
+        "marker": TABLE_WHITEBOARD_URDF,
+        "brush": TABLE_URDF,
+    }
+
+    # For now, use the same table for all object types
     SELECTED_TABLE_URDF = TABLE_URDF
+    # SELECTED_TABLE_URDF = object_type_to_table_urdf[object_type]
+
+    # SELECTED_TABLE_URDF = TABLE_URDF
     # SELECTED_TABLE_URDF = TABLE_NAIL_URDF
     # SELECTED_TABLE_URDF = TABLE_WHITEBOARD_URDF
     # SELECTED_TABLE_URDF = TABLE_SCREWDRIVER_HOLE_URDF
@@ -416,15 +483,18 @@ def main():
     assert trajectory_path.exists(), f"Trajectory file not found: {trajectory_path}"
     with open(trajectory_path) as f:
         traj_data = json.load(f)
+    # Raise the start pose by Z_OFFSET to avoid the table
+    Z_OFFSET = 0.03
+    traj_data["start_pose"][2] += Z_OFFSET
+
+    # DOWNSAMPLE_FACTOR = 1  # No downsampling when 1
+    DOWNSAMPLE_FACTOR = args.downsample_factor
+    traj_data["goals"] = traj_data["goals"][::DOWNSAMPLE_FACTOR]
 
     # Create environment
     # config_path, checkpoint_path = parse_checkpoint_dir(checkpoint_dir)
-
-    # folder_path = Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/o0t0_fullSpeed")
-    folder_path = Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed")
-    # folder_path = Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_fastSpeed")
-    config_path = folder_path / "config.yaml"
-    checkpoint_path = folder_path / "model.pth"
+    config_path = args.config_path
+    checkpoint_path = args.checkpoint_path
 
     # Original one we tried in eral
     # config_path = Path("/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml")
@@ -432,8 +502,8 @@ def main():
 
     env = create_env(
         config_path=str(config_path),
-        # headless=True,
-        headless=False,
+        headless=True,
+        # headless=False,
         device="cuda" if torch.cuda.is_available() else "cpu",
         overrides={
             "task.env.resetPositionNoiseX": 0.0,
@@ -445,8 +515,8 @@ def main():
             "task.env.resetDofVelRandomInterval": 0.0,
             "task.env.object_type": object_name,
             "task.env.randomizeObjectRotation": False,
-            # "task.env.numEnvs": 1,
-            "task.env.numEnvs": 5,
+            "task.env.numEnvs": 1,
+            # "task.env.numEnvs": 5,
             "task.env.envSpacing": 0.4,
             "task.env.tableResetZRange": 0.0,
             # "task.env.tableResetZ": 0.38 + 0.02,
@@ -462,8 +532,8 @@ def main():
             # "task.env.armMovingAverage": 0.05,
             "task.env.armMovingAverage": 0.1,
             # "task.env.evalSuccessTolerance": 0.0075,
-            # "task.env.evalSuccessTolerance": 0.01,
-            "task.env.evalSuccessTolerance": 0.02,
+            "task.env.evalSuccessTolerance": 0.01,
+            # "task.env.evalSuccessTolerance": 0.02,
             # "task.env.evalSuccessTolerance": 0.025,
             # "task.env.evalSuccessTolerance": 0.03,
             # "task.env.successSteps": 3,
@@ -472,6 +542,9 @@ def main():
             "task.env.tableResetZ": TABLE_Z,
             "task.env.fixedSizeKeypointReward": True,
             "task.env.startArmHigher": True,
+
+            # Object scale noise
+            "task.env.objectScaleNoiseMultiplierRange": [1.0, 1.0],
 
             # Forces
             "task.env.forceScale": 0.0,
@@ -495,8 +568,13 @@ def main():
         },
     )
 
-    EvalRunner(env, config_path, checkpoint_path, object_name, trajectory_name, SELECTED_TABLE_URDF, output_dir).run()
-
+    # EvalRunner(env, config_path, checkpoint_path, object_name, trajectory_name, SELECTED_TABLE_URDF, output_dir).run()
+    num_episodes: int = args.num_episodes
+    output_dir = Path(args.output_dir)
+    EvalRunner(env=env, config_path=config_path, checkpoint_path=checkpoint_path, object_name=object_name, trajectory_name=trajectory_name, table_urdf=SELECTED_TABLE_URDF, output_dir=None, policy_name=args.policy_name).run_eval(
+        num_episodes=num_episodes,
+        output_json_file=output_dir / "eval.json")
+    log_success(f"Saved: {output_dir / 'eval.json'}")
 
 if __name__ == "__main__":
     main()

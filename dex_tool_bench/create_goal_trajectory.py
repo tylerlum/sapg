@@ -38,10 +38,12 @@ class GoalTrajectoryCreator:
             client.camera.position = (0.0, -0.8, 1.0)
             client.camera.look_at = (0.0, 0.0, 0.7)
 
-        goal_volume_center = np.array([0, 0.05, 0.8])
-        goal_volume_extent = np.array([[-0.4, 0.4], [-0.05, 0.3], [-0.12, 0.25]])
-        goal_volume_min = goal_volume_center + goal_volume_extent[:, 0]
-        goal_volume_max = goal_volume_center + goal_volume_extent[:, 1]
+        # goal_volume_center = np.array([0, 0.05, 0.8])
+        # goal_volume_extent = np.array([[-0.4, 0.4], [-0.05, 0.3], [-0.12, 0.25]])
+        # goal_volume_min = goal_volume_center + goal_volume_extent[:, 0]
+        # goal_volume_max = goal_volume_center + goal_volume_extent[:, 1]
+        goal_volume_min = np.array([-0.35, -0.2, 0.6])
+        goal_volume_max = np.array([0.35, 0.2, 0.95])
         goal_volume_position = (goal_volume_min + goal_volume_max) / 2
         goal_volume_size = goal_volume_max - goal_volume_min
         self.server.scene.add_box("/goal_volume", position=goal_volume_position, dimensions=goal_volume_size, color=(0, 255, 0), opacity=0.5)

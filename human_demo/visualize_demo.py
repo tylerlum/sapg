@@ -30,8 +30,8 @@ T_R_C = np.array([
 ])
 T_W_C = T_W_R @ T_R_C
 
-AXES_LENGTH = 0.0
-AXES_RADIUS = 0.0
+AXES_LENGTH = 0.1
+AXES_RADIUS = 0.005
 
 def info(message: str) -> None:
     print(colored(message, "green"))
@@ -239,6 +239,53 @@ def filter_keypoint_to_xyzs(keypoint_to_xyzs: List[Dict], sigma: float = 2.0) ->
         for i in range(N_TIMESTEPS)
     ]
     return keypoint_to_xyzs
+
+def interpolate_poses(Ts: np.ndarray, n_steps: int) -> np.ndarray:
+    N_TIMESTEPS = Ts.shape[0]
+    assert Ts.shape == (N_TIMESTEPS, 4, 4), f"Ts.shape: {Ts.shape}, expected: ({N_TIMESTEPS}, 4, 4)"
+    from scipy.spatial.transform import Rotation as R, Slerp
+    from scipy.interpolate import interp1d
+
+    T = N_TIMESTEPS
+    new_T = T * n_steps
+
+    # Extract positions and rotations
+    positions = Ts[:, :3, 3]  # (T, 3)
+    rotations = R.from_matrix(Ts[:, :3, :3])  # (T,) Rotation objects
+
+    # Create time indices
+    old_time = np.arange(T)
+    new_time = np.linspace(0, T - 1, new_T)
+
+    # Interpolate positions linearly
+    pos_interpolator = interp1d(old_time, positions, kind='linear', axis=0)
+    new_positions = pos_interpolator(new_time)  # (new_T, 3)
+
+    # Interpolate rotations using Slerp
+    slerp = Slerp(old_time, rotations)
+    new_rotations = slerp(new_time)  # (new_T,) Rotation objects
+
+    # Reconstruct 4x4 matrices
+    new_Ts = np.zeros((new_T, 4, 4))
+    new_Ts[:, :3, :3] = new_rotations.as_matrix()
+    new_Ts[:, :3, 3] = new_positions
+    new_Ts[:, 3, 3] = 1.0
+
+    return new_Ts
+
+def downsample_and_interpolate_poses(Ts: np.ndarray, downsample_factor: int) -> np.ndarray:
+    N_TIMESTEPS = Ts.shape[0]
+    assert Ts.shape == (N_TIMESTEPS, 4, 4), f"Ts.shape: {Ts.shape}, expected: ({N_TIMESTEPS}, 4, 4)"
+    downsampled_Ts = Ts[::downsample_factor]
+    interpolated_Ts = interpolate_poses(downsampled_Ts, n_steps=downsample_factor)
+    if interpolated_Ts.shape[0] < N_TIMESTEPS:
+        extra = N_TIMESTEPS - interpolated_Ts.shape[0]
+        interpolated_Ts = np.concatenate([interpolated_Ts, interpolated_Ts[-1][None].repeat(extra, axis=0)], axis=0)
+    elif interpolated_Ts.shape[0] > N_TIMESTEPS:
+        extra = interpolated_Ts.shape[0] - N_TIMESTEPS
+        interpolated_Ts = interpolated_Ts[:-extra]
+    assert interpolated_Ts.shape == (N_TIMESTEPS, 4, 4), f"interpolated_Ts.shape: {interpolated_Ts.shape}, expected: ({N_TIMESTEPS}, 4, 4)"
+    return Ts
 
 def control_ik(
     j_eef: torch.Tensor, dpose: torch.Tensor, damping: float = 0.1,
@@ -600,6 +647,9 @@ class Args:
     output_retargeted_robot_path: Path = Path("retargeted_robot") / (datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + ".npz")
     dt: float = 1.0 / 30
     start_idx: int = 0
+    rgb_path: Optional[Path] = None
+    depth_path: Optional[Path] = None
+    cam_intrinsics_path: Optional[Path] = None
 
     def __post_init__(self) -> None:
         if self.retarget_robot_using_object_relative_pose:
@@ -799,6 +849,50 @@ def save_to_file(file_path: Path, q_array: np.ndarray, object_pose_array: np.nda
     recorded_data.to_file(file_path)
 
 
+from typing import Tuple
+def depth_to_points(
+    depth_m: np.ndarray,
+    K: np.ndarray,
+    rgb: Optional[np.ndarray] = None,
+    stride: int = 2,
+    max_depth_m: float = 5.0,
+) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+    h, w = depth_m.shape
+    v_coords, u_coords = np.indices((h, w))
+    if stride > 1:
+        v_coords = v_coords[::stride, ::stride]
+        u_coords = u_coords[::stride, ::stride]
+        depth = depth_m[::stride, ::stride]
+        if rgb is not None:
+            colors = rgb[::stride, ::stride, :]
+        else:
+            colors = None
+    else:
+        depth = depth_m
+        colors = rgb
+
+    z = depth.reshape(-1)
+    valid = (z > 0.0) & (z < max_depth_m)
+    z = z[valid]
+
+    u = u_coords.reshape(-1)[valid]
+    v = v_coords.reshape(-1)[valid]
+
+    fx, fy, cx, cy = K[0, 0], K[1, 1], K[0, 2], K[1, 2]
+    x = (u - cx) / fx * z
+    y = (v - cy) / fy * z
+    pts_c = np.stack([x, y, z], axis=1)
+
+    cols = colors.reshape(-1, 3)[valid]
+    return pts_c, cols
+
+
+def transform_points(T: np.ndarray, pts: np.ndarray) -> np.ndarray:
+    R_rc = T[:3, :3]
+    t_rc = T[:3, 3]
+    return (pts @ R_rc.T) + t_rc[None, :]
+
+
 
 def main():
     args = tyro.cli(Args)
@@ -848,6 +942,52 @@ def main():
     )
     sharpa_viser = ViserUrdf(SERVER, SHARPA_URDF_PATH, root_node_name="/sharpa")
     sharpa_viser.update_cfg(HOME_JOINT_POS_SHARPA)
+
+    # Read in camera stuff
+    if args.rgb_path is not None and args.depth_path is not None and args.cam_intrinsics_path is not None:
+        rgb_path = args.rgb_path
+        depth_path = args.depth_path
+        cam_intrinsics_path = args.cam_intrinsics_path
+        assert rgb_path.exists(), f"RGB path {rgb_path} does not exist"
+        assert depth_path.exists(), f"Depth path {depth_path} does not exist"
+        assert cam_intrinsics_path.exists(), f"Cam intrinsics path {cam_intrinsics_path} does not exist"
+        rgb_paths = sorted(list(rgb_path.glob("*.png")))
+        depth_paths = sorted(list(depth_path.glob("*.png")))
+        K = np.loadtxt(cam_intrinsics_path)
+        assert K.shape == (3, 3), f"K.shape: {K.shape}, expected: (3, 3)"
+        assert len(rgb_paths) == len(depth_paths), f"len(rgb_paths): {len(rgb_paths)}, len(depth_paths): {len(depth_paths)}"
+        from PIL import Image
+        rgbs = [np.array(Image.open(rgb_path)) for rgb_path in tqdm(rgb_paths, total=len(rgb_paths), desc="Loading RGB images")]
+        depths = [np.array(Image.open(depth_path)) / 1000.0 for depth_path in tqdm(depth_paths, total=len(depth_paths), desc="Loading depth images")]
+        print(f"Min depth: {np.min(depths)}, Max depth: {np.max(depths)}")
+        print(f"Mean depth: {np.mean(depths)}, Median depth: {np.median(depths)}")
+
+        pts_c_list, cols_list = [], []
+        for rgb, depth in tqdm(zip(rgbs, depths), total=len(rgbs), desc="Processing RGBD images"):
+            pts_c, cols = depth_to_points(
+                depth, K, rgb=rgb, stride=1, max_depth_m=5,
+            )
+            pts_c_list.append(pts_c)
+            cols_list.append(cols)
+        min_num_pts = min(len(pts_c) for pts_c in pts_c_list)
+        pts_c_list = [pts_c[:min_num_pts] for pts_c in pts_c_list]
+        cols_list = [cols[:min_num_pts] for cols in cols_list]
+        pts_c_array = np.stack(pts_c_list, axis=0)
+        cols_array = np.stack(cols_list, axis=0)
+        SUBSAMPLE_FACTOR = 10
+        pts_c_array = pts_c_array[:, ::SUBSAMPLE_FACTOR]
+        cols_array = cols_array[:, ::SUBSAMPLE_FACTOR]
+        print(f"pts_c_array.shape: {pts_c_array.shape}, cols_array.shape: {cols_array.shape}")
+        pts_w_array = transform_points(T=T_W_C, pts=pts_c_array)
+        print(f"pts_w_array.shape: {pts_w_array.shape}")
+
+        pcd_handle = SERVER.scene.add_point_cloud(
+            "/zed_points_robot_frame",
+            points=pts_w_array[0].astype(np.float32),
+            colors=cols_array[0].astype(np.uint8),
+            # point_size=0.005,
+            point_size=0.002,
+        )
 
     # Load object poses
     assert args.object_poses_json_path.exists(), (
@@ -948,11 +1088,18 @@ def main():
         warn(msg)
     else:
         info(msg)
+
     T_W_Os = T_W_Os[:N_TIMESTEPS]
     hand_keypoint_to_xyzs = hand_keypoint_to_xyzs[:N_TIMESTEPS]
     T_R_Ps = filter_poses(np.array([compute_T_R_P(hand_keypoint_to_xyz=hand_keypoint_to_xyz) for hand_keypoint_to_xyz in hand_keypoint_to_xyzs]))
+    # HACK: Downsample and interpolate the hand_keypoint_to_xyzs
+    T_R_Ps = downsample_and_interpolate_poses(T_R_Ps, downsample_factor=10)
+
     hand_frames = hand_frames[:N_TIMESTEPS]
     hand_visers = hand_visers[:N_TIMESTEPS]
+    if args.rgb_path is not None and args.depth_path is not None and args.cam_intrinsics_path is not None:
+        pts_w_array = pts_w_array[:N_TIMESTEPS]
+        cols_array = cols_array[:N_TIMESTEPS]
 
     if args.retarget_robot:
         with open(KUKA_SHARPA_URDF_PATH, "rb") as f:
@@ -1162,6 +1309,11 @@ def main():
                             object_pose_array=np.array(object_pose_list),
                             dt=args.dt,
                         )
+
+            # Update point cloud
+            if args.rgb_path is not None and args.depth_path is not None and args.cam_intrinsics_path is not None:
+                pcd_handle.points = pts_w_array[i].astype(np.float32)
+                pcd_handle.colors = cols_array[i].astype(np.uint8)
 
             end_time = time.time()
             extra_dt = args.dt - (end_time - start_time)

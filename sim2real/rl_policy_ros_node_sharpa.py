@@ -27,6 +27,8 @@ from isaacgymenvs.utils.objects import (
     NAME_TO_OBJECT,
 )
 
+FORCE_FIXED_ORIENTATION = True
+
 
 T_W_R = np.eye(4)
 T_W_R[:3, 3] = np.array([0.0, 0.8, 0.0])
@@ -95,9 +97,43 @@ def var_to_is_none_str(var) -> str:
 def pose_msg_to_T(msg: Pose) -> np.ndarray:
     T = np.eye(4)
     T[:3, 3] = np.array([msg.position.x, msg.position.y, msg.position.z])
-    T[:3, :3] = R.from_quat(
+
+    # Get the original rotation matrix
+    R_original = R.from_quat(
         [msg.orientation.x, msg.orientation.y, msg.orientation.z, msg.orientation.w]
     ).as_matrix()
+
+    if FORCE_FIXED_ORIENTATION:
+        # 1. Keep the original local X axis (we trust this direction)
+        x_local = R_original[:, 0]
+        
+        # 2. Define the desired "Up" direction (Global Z)
+        z_global = np.array([0, 0, 1])
+        
+        # 3. Project Global Z onto the plane perpendicular to x_local
+        # Formula: v_perp = v - (v dot u) * u
+        # This makes z_new perpendicular to x_local while staying closest to z_global
+        proj_factor = np.dot(z_global, x_local)
+        z_new_raw = z_global - (proj_factor * x_local)
+        
+        # Normalize to get the unit vector for the new local Z
+        # (Add small epsilon to avoid div by zero if x_local is pointing perfectly up/down)
+        if np.linalg.norm(z_new_raw) < 0.001:
+            print(f"z_new_raw: {z_new_raw}")
+            breakpoint()
+        z_new = z_new_raw / (np.linalg.norm(z_new_raw) + 1e-6)
+        
+        # 4. Compute the new local Y using the cross product (Right-Hand Rule)
+        # z cross x = y
+        y_new = np.cross(z_new, x_local)
+        
+        # 5. Construct the new rotation matrix
+        # Columns are [x_local, y_new, z_new]
+        T[:3, :3] = np.column_stack((x_local, y_new, z_new))
+        
+    else:
+        T[:3, :3] = R_original
+
     return T
 
 def pos_quat_xyzw_to_pose_msg(pos: np.ndarray, quat_xyzw: np.ndarray) -> Pose:
@@ -300,6 +336,7 @@ class RLPolicyNode:
         info("Received signal to save relative object pose once lifted")
         self.object_lifted = True
         info(f"Object lifted: {self.object_lifted}")
+        # breakpoint()
 
     def object_pose_callback(self, msg: PoseStamped):
         self.object_pose_msg = msg
@@ -415,11 +452,13 @@ class RLPolicyNode:
 
         # Clamp joint position to joint limits with buffer
         # Hardware has 5 deg buffer, so we add 7.5 deg buffer here to avoid getting overshoots that hits limit
-        BUFFER = np.deg2rad(7.5)
-        J = len(self.urdf_object.actuated_joints)
-        lower_limits = np.array([self.urdf_object.actuated_joints[i].limit.lower for i in range(J)]) + BUFFER
-        upper_limits = np.array([self.urdf_object.actuated_joints[i].limit.upper for i in range(J)]) - BUFFER
-        joint_pos_targets = np.clip(joint_pos_targets, lower_limits, upper_limits)
+        CLAMP_ARM = False
+        if CLAMP_ARM:
+            BUFFER = np.deg2rad(7.5)
+            J_arm = 7
+            arm_lower_limits = np.array([self.urdf_object.actuated_joints[i].limit.lower for i in range(J_arm)]) + BUFFER
+            arm_upper_limits = np.array([self.urdf_object.actuated_joints[i].limit.upper for i in range(J_arm)]) - BUFFER
+            joint_pos_targets[:J_arm] = np.clip(joint_pos_targets[:J_arm], arm_lower_limits, arm_upper_limits)
 
         iiwa_msg = JointState()
         iiwa_msg.header.stamp = rospy.Time.now()
@@ -518,44 +557,59 @@ class RLPolicyNode:
         # object_type = "hammer"
         # object_name = "mallet"
         # object_name = "hammer_2"
-        # trajectory_name = "vertical_swing"
-        # trajectory_name = "horizontal_swing"
         # trajectory_name = "horizontal_swing_higher"
-        # trajectory_name = "horizontal_swing_human"
-        # trajectory_name = "horizontal_swing_human_closer"
+        # trajectory_name = "down_swing"
+        # trajectory_name = "side_swing"
 
         # object_type = "spatula"
         # object_name = "black_spatula"
-        # trajectory_name = "pick_and_place_human"
-        # trajectory_name = "pick_and_place_human_hardinit"
+        # object_name = "spoon_spatula"
+        # trajectory_name = "serve_plate"
+        # trajectory_name = "flip_pancake"
 
-        object_type = "screwdriver"
-        object_name = "real_flat_screwdriver"
-        # trajectory_name = "top_down_screwing_human_easyinit"
-        # trajectory_name = "top_down_screwing_human"
-        trajectory_name = "top_down_screwing_closer"
+        # object_type = "screwdriver"
+        # object_name = "real_flat_screwdriver"
+        # object_name = "black_screwdriver"
+        # object_name = "red_screwdriver"
+        # trajectory_name = "top"
+        # trajectory_name = "side"
 
         # object_type = "eraser"
         # object_name = "whiteboard_eraser"
-        # trajectory_name = "wipe_left_human"
-        # trajectory_name = "wipe_left_human_2"
+        # object_name = "anvil_eraser"
+        # object_name = "expo_eraser"
+        # trajectory_name = "wipe_higher"
+        # trajectory_name = "wipe_lower"
 
         # object_type = "marker"
         # object_name = "040_large_marker"
-        # trajectory_name = "draw_circle_human"
-        # trajectory_name = "draw_circle_human_hardinit"
+        # object_name = "sharpie_closed"
+        # object_name = "staples_open"
+        # trajectory_name = "write_smiley"
+        # trajectory_name = "write_c"
 
-        # object_type = "brush"
-        # object_name = "green_brush"
-        # object_name = "red_brush"
-        # trajectory_name = "simple"
-        # trajectory_name = "complex"
+        object_type = "brush"
+        # object_name = "anvil_brush"
+        object_name = "red_brush"
+        trajectory_name = "sweep_forward"
+        # trajectory_name = "sweep_forward_easy"
+        # trajectory_name = "sweep_forward_right"
+
+        # APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.6_downsampled_10"
+        # APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.6"
+        APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.65"
+        # APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.7"
+        trajectory_name = f"{trajectory_name}{APPEND_TO_TRAJECTORY_NAMES}"
 
         assert self.object_name == object_name, f"self.object_name: {self.object_name}, object_name: {object_name}"
         object_pose_trajectory_filepath = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
         assert object_pose_trajectory_filepath.exists(), f"object_pose_trajectory_filepath not found: {object_pose_trajectory_filepath}"
         with open(object_pose_trajectory_filepath, "r") as f:
             goal_pose_trajectory_full = np.array(json.load(f)["goals"])
+
+        # HACK: Offset same as goal_pose_ros_node.py
+        goal_pose_trajectory_full[:, 0] -= 0.05
+
         old_T = len(goal_pose_trajectory_full)
 
         # Upsample the goal object pose trajectory
@@ -680,7 +734,8 @@ class RLPolicyNode:
         AXES_RADIUS = 0.0
 
         # Load table
-        TABLE_URDF_PATH = get_repo_root_dir() / "assets/urdf/table_narrow.urdf"
+        # TABLE_URDF_PATH = get_repo_root_dir() / "assets/urdf/table_narrow.urdf"
+        TABLE_URDF_PATH = get_repo_root_dir() / "assets/urdf/table_narrow_whiteboard.urdf"
         assert TABLE_URDF_PATH.exists(), f"TABLE_URDF_PATH not found: {TABLE_URDF_PATH}"
 
         table_frame = SERVER.scene.add_frame(
@@ -869,6 +924,7 @@ class RLPolicyNode:
             # We do not actually use the joint pos targets computed by the policy, we use the actual joint states so it doesn't move
             joint_pos_targets = np.clip(
                 q[None],
+                # self.prev_targets[None],
                 Q_LOWER_LIMITS_np,
                 Q_UPPER_LIMITS_np,
             )
@@ -1123,65 +1179,29 @@ class RLPolicyNode:
 
 if __name__ == "__main__":
     try:
-        OBJECT_NAME = "real_flat_screwdriver"
+        OBJECT_NAME = "sharpie_open"
         rl_policy_node = RLPolicyNode(
-            # Old
-            config_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"),
-            # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/cleanInputs.pth"),
-            # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/noisyInputs.pth"),
-            # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/cleanInputsFinetuned.pth"),
-            # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o1t0.pth"),
-            # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o1t1.pth"),
-            checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o0t0.pth"),
-
             # New on tools
             # config_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed/config.yaml"),
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed/model.pth"),
 
-            # Continue finetuning on cuboids
-            # config_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/o0t0_fullSpeed/config.yaml"),
-            # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/o0t0_fullSpeed/model.pth"),
+            # Trained longer with keypoint fix
+            config_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_new_slowSpeed/config.yaml"),
+            checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_new_slowSpeed/model.pth"),
+
+            # Jan 18
+            # config_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/Jan18_tools_slowSpeed/config.yaml"),
+            # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/Jan18_tools_slowSpeed/model.pth"),
 
             hand_moving_average=0.1,
-            # arm_moving_average=0.05,
-            # arm_moving_average=0.03,
-            # arm_moving_average=0.075,
             arm_moving_average=0.1,
-            # hand_dof_speed_scale=2.5,
             hand_dof_speed_scale=1.5,
 
-            # object_scales=np.array([0.24, 0.03, 0.02]) * 25,  # Mallet
-            # object_scales=np.array([0.25, 0.03, 0.02]) * 25,  # scanned hammer 2
-            # object_scales=np.array([0.1, 0.03, 0.02]) * 25,  # real flat screwdriver
-            # object_scales=np.array([0.121277, 0.019341, 0.021183]) * 25,  # 040 large marker
-            # object_scales=np.array([0.121277, 0.015, 0.015]) * 25,  # 040 large marker (smaller)
-            # object_scales=np.array([0.12965531, 0.0337145 , 0.06038587]) * 25,  # whiteboard eraser
-            # object_scales=np.array([0.15954332, 0.0777093 , 0.01231273]) * 25,  # iphone15pro
-            # object_scales=np.array(NAME_TO_OBJECT["whiteboard_eraser"].scale),
-            # object_scales=np.array(NAME_TO_OBJECT["040_large_marker"].scale),
-            # object_scales=np.array(NAME_TO_OBJECT["040_large_marker"].scale) * 0.8,
-            # object_scales=np.array(NAME_TO_OBJECT["040_large_marker"].scale) * 0.9,
-            # object_scales=np.array(NAME_TO_OBJECT["mallet"].scale),
-            # object_scales=np.array(NAME_TO_OBJECT["hammer_2"].scale),
-            # object_scales=np.array(NAME_TO_OBJECT["hammer_2"].scale) * 0.75,
-            # object_scales=np.array(NAME_TO_OBJECT["mallet"].scale) * 0.75,
-            # object_scales=np.array(NAME_TO_OBJECT["mallet"].scale),
-            # object_scales=np.array(NAME_TO_OBJECT["mallet"].scale) * 0.9,
-            # object_scales=np.array(NAME_TO_OBJECT["black_spatula"].scale) * 0.9,
-            # object_scales=np.array(NAME_TO_OBJECT["black_spatula"].scale),
-            # object_scales=np.array(NAME_TO_OBJECT["black_spatula"].scale) * 0.8,
-            # object_scales=np.array(NAME_TO_OBJECT["real_flat_screwdriver"].scale) * 0.8,
-            # object_scales=np.array(NAME_TO_OBJECT["real_flat_screwdriver"].scale),
-            # object_scales=np.array([0.25, 0.02, 0.015]) * 25,  # scanned hammer 2
-            # object_scales=np.array([0.25, 0.03, 0.02]) * 25,  # scanned hammer 2
-            # object_scales=np.array(NAME_TO_OBJECT["red_brush"].scale),
             object_scales=np.array(NAME_TO_OBJECT[OBJECT_NAME].scale),
+            # object_scales=np.array(NAME_TO_OBJECT[OBJECT_NAME].scale) * 0.9,
             # save_foldername=None,
             save_foldername=f"{datetime.datetime.now().strftime('%Y-%m-%d')}_testing",
             # overwrite_targets_filepath=None,
-            # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-44-54_noisyInputs_arm0.05.npz"),
-            # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-47-13_finetuned_o0t0_arm0.05.npz"),
-            # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-48-08_finetuned_o1t0_arm0.05.npz"),
             # overwrite_targets_filepath=Path("recorded_robot_inputs/2025-12-16_isaac/2025-12-16_14-48-47_finetuned_o1t1_arm0.05.npz"),
             use_relative_object_pose_once_lifted=True,
             object_name=OBJECT_NAME,

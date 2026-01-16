@@ -26,7 +26,7 @@ env:
   stiffnessScale: 1.0
   forceLimitScale: 1.0
   useRelativeControl: False
-  dofSpeedScale: 10.0  # often set to 1.0
+  dofSpeedScale: 1.5  # often set to 1.0
   handMovingAverage: 0.1  # often set to 0.1 or 1.0
   armMovingAverage: 0.1  # often set to 0.1 or 1.0
   dofSpeedScaleFinal: ${eval:"None"}  # often set to 1.0
@@ -45,18 +45,18 @@ env:
 
   # Table reset settings
   tableResetZ: 0.38
-  tableResetZRange: 0.025
+  tableResetZRange: 0.01
   tableObjectZOffset: 0.25
 
   # Random forces applied to the object
-  forceScale: 2.0
+  forceScale: 20.0
   forceProbRange: [0.001, 0.1]
-  forceDecay: 0.99
+  forceDecay: 0.0
   forceDecayInterval: 0.08
   forceOnlyWhenLifted: True
-  torqueScale: 0.0
+  torqueScale: 2.0
   torqueProbRange: [0.001, 0.1]
-  torqueDecay: 0.99
+  torqueDecay: 0.0
   torqueDecayInterval: 0.08
   torqueOnlyWhenLifted: True
 
@@ -74,8 +74,8 @@ env:
   keypointRewScale: 200.0
   distanceDeltaRewScale: 50.0
   reachGoalBonus: 1000.0
-  kukaActionsPenaltyScale: 0.003
-  allegroActionsPenaltyScale: 0.0003
+  kukaActionsPenaltyScale: 0.03
+  allegroActionsPenaltyScale: 0.003
   fallDistance: 0.24
   fallPenalty: 0.0
   objectLinVelPenaltyScale: 0.0  # Typically want angvel scale to be 100x smaller than linvel scale
@@ -101,7 +101,7 @@ env:
   kukaArmature: 0
 
   keypointScale: 1.5
-  objectBaseSize: 0.05
+  objectBaseSize: 0.04
 
   randomizeObjectDimensions: True
   withSmallCuboids: True
@@ -116,7 +116,7 @@ env:
   toleranceCurriculumIncrement: 0.9  # multiplicative
   toleranceCurriculumInterval: 3000  # in env steps across all agents, with 8192 this is 3000 * 8192 = 24.6M env steps
   maxConsecutiveSuccesses: 50
-  successSteps: 1  # how many steps we should be within the tolerance before we declare a success
+  successSteps: 10  # how many steps we should be within the tolerance before we declare a success
   forceConsecutiveNearGoalSteps: False  # If True, require near goal consecutively for successSteps
 
   saveStates: False
@@ -127,10 +127,11 @@ env:
 
   goodResetBoundary: 0
 
-  object_type: "scanned_hammer_1"
+  object_type: "tyler_handle_head"
   use_fixed_set_of_goal_states: False
   use_fixed_init_object_pose: False
   fixedGoalStates: null
+  fixedGoalStatesJsonPath: null
 
   use_hack_object_pos_offset: False
   hack_object_pos_offset: 0.05
@@ -167,9 +168,8 @@ env:
 
   # related to Asymmetric Observation
   stateList: ["joint_pos", "joint_vel", "prev_action_targets", "palm_pos", "palm_rot", "palm_vel", "object_rot", "object_vel", "fingertip_pos_rel_palm", "keypoints_rel_palm", "keypoints_rel_goal", "object_scales", "closest_keypoint_max_dist", "closest_fingertip_dist", "lifted_object", "progress", "successes", "reward"]
-
-  obsList: ["joint_pos", "joint_vel", "prev_action_targets", "palm_pos", "palm_rot", "palm_vel", "object_rot", "object_vel", "fingertip_pos_rel_palm", "keypoints_rel_palm", "keypoints_rel_goal", "object_scales", "closest_keypoint_max_dist", "closest_fingertip_dist", "lifted_object", "progress", "successes", "reward"]
-  fixedSizeKeypointReward: False
+  obsList: ["joint_pos", "joint_vel", "prev_action_targets", "palm_pos", "palm_rot", "object_rot", "fingertip_pos_rel_palm", "keypoints_rel_palm", "keypoints_rel_goal", "object_scales"]
+  fixedSizeKeypointReward: True
   fixedSize: [0.141, 0.03025, 0.0271]
 
   startArmHigher: False  # Set to False typically for training, but for evaluation, we typically start the arm higher
@@ -186,23 +186,23 @@ env:
   targetVolumeRegionScale: 1.0 # scale the target volume region by this factor
   deltaGoalDistance: 0.1 # distance to the goal in meters
   deltaRotationDegrees: 90.0 # rotation of the goal in degrees
-  targetVolumeMins: [-0.35, -0.1, 0.68]  # Either null/None or a 3-element list of [x_min, y_min, z_min]
-  targetVolumeMaxs: [0.35, 0.2, 1.05]  # Either null/None or a 3-element list of [x_max, y_max, z_max]
+  targetVolumeMins: [-0.35, -0.2, 0.6]  # Either null/None or a 3-element list of [x_min, y_min, z_min]
+  targetVolumeMaxs: [0.35, 0.2, 0.95]  # Either null/None or a 3-element list of [x_max, y_max, z_max]
 
   # Delays and noise
-  useObsDelay: False
+  useObsDelay: True
   obsDelayMax: 3
 
-  useActionDelay: False
+  useActionDelay: True
   actionDelayMax: 3
 
-  useObjectStateDelayNoise: False
+  useObjectStateDelayNoise: True
   objectStateDelayMax: 10
   objectStateXyzNoiseStd: 0.01
   objectStateRotationNoiseDegrees: 5.0
+  objectScaleNoiseMultiplierRange: [1.0, 1.0]
 
-  # jointVelocityObsNoiseStd: 0.1
-  jointVelocityObsNoiseStd: 0.0
+  jointVelocityObsNoiseStd: 0.1
 
   forceNoReset: False  # If True, will not reset the environment, useful for sim2sim testing
   objectStartPose: ${eval:"None"}  # If None, will use the default object start pose. Otherwise, a 7-element list of [x, y, z, qx, qy, qz, qw]

@@ -166,7 +166,19 @@ def main():
 
         # Retargeted robot
         # "/home/tylerlum/github_repos/sapg/retargeted_robot/2026-01-11_14-26-18.npz"
-        "/home/tylerlum/github_repos/sapg/retargeted_robot/2026-01-13_22-01-39.npz"
+        # "/home/tylerlum/github_repos/sapg/retargeted_robot/2026-01-13_22-01-39.npz"
+
+        # red_brush sweep_forward
+        # "/home/tylerlum/github_repos/sapg/retargeted_robot/2026-01-22_10-27-48.npz"
+
+        # red_brush sweep_forward_easy
+        # "/home/tylerlum/github_repos/sapg/retargeted_robot/2026-01-22_10-30-46.npz"
+
+        # red_brush sweep_forward_easy_1
+        "/home/tylerlum/github_repos/sapg/retargeted_robot/2026-01-25_16-59-17.npz"
+
+        # red_brush sweep_forward_easy_2
+        # "/home/tylerlum/github_repos/sapg/retargeted_robot/2026-01-25_17-00-24.npz"
     )
     assert file_path.exists(), f"File {file_path} does not exist"
     recorded_data = RecordedData.from_file(file_path)
@@ -229,7 +241,9 @@ def main():
             # move_time=0.2,
             # move_time=0.1,
             # move_time=1 / 20,
-            move_time=1 / 30,
+            # move_time=1 / 30 * 10,
+            # move_time=1 / 30 * 3,
+            move_time=(1 / 30) * 2,
             # move_time=1 / 60,
         )
     end_time = time.time()

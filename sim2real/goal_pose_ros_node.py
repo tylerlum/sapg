@@ -16,6 +16,10 @@ import rospy
 from geometry_msgs.msg import PoseStamped, Pose
 from termcolor import colored
 
+FORCE_FIXED_ORIENTATION = True
+
+HACK_OPEN_LOOP = False
+
 def info(message: str):
     print(colored(message, "green"))
 
@@ -79,6 +83,24 @@ class GoalPoseNode:
         assert D == 7, f"Expected 7 dimensions, got {D}"
         assert N > 0, f"Expected at least 1 goal object pose, got {N}"
 
+        if FORCE_FIXED_ORIENTATION:
+            # HACK: Overwite with fixed orientation
+            # x: 0.062478514383575996
+            # y: -0.028937932653575582
+            # z: 0.0324696930013384
+            # w: 0.997098164841635
+            self.goal_object_poses[:, 3] = 0
+            self.goal_object_poses[:, 4] = 0
+            self.goal_object_poses[:, 5] = 0
+            self.goal_object_poses[:, 6] = 1
+
+        FILTER_POSES = False
+        if FILTER_POSES:
+            from human_demo.visualize_demo import filter_poses, pose_to_T, T_to_pose
+            original_goal_Ts = np.array([pose_to_T(pose) for pose in self.goal_object_poses])
+            filtered_goal_Ts = filter_poses(original_goal_Ts)
+            self.goal_object_poses = np.array([T_to_pose(T) for T in filtered_goal_Ts])
+
         # State
         self.current_goal_object_pose_index = 0
 
@@ -94,14 +116,38 @@ class GoalPoseNode:
         self.dt = 1 / self.rate_hz
         self.rate = rospy.Rate(self.rate_hz)
 
+        # HACK: Try to work without the current object pose
+        if HACK_OPEN_LOOP:
+            self.latest_current_object_pose = Pose()
+            self.success_threshold = 10.0
+            self.keypoint_success_threshold = self.success_threshold * KEYPOINT_SCALE
+            self.success_steps = 30
+
     def current_object_pose_callback(self, msg: PoseStamped):
         """Callback to update the current object pose."""
         self.latest_current_object_pose = msg.pose
 
     def update_goal_object_pose(self):
         """Update the goal object pose."""
+        num_goals = self.goal_object_poses.shape[0]
+        if self.current_goal_object_pose_index >= num_goals:
+            print(colored("Reached end of goal object poses", "blue"))
+            print(colored(f"self.current_goal_object_pose_index/num_goals: {self.current_goal_object_pose_index}/{num_goals} = {self.current_goal_object_pose_index/num_goals:.2%}", "blue"))
+            return
+
         latest_current_object_pose = deepcopy(self.latest_current_object_pose)
         p = latest_current_object_pose
+
+        if FORCE_FIXED_ORIENTATION:
+            # HACK: Overwite with fixed orientation
+            # x: 0.062478514383575996
+            # y: -0.028937932653575582
+            # z: 0.0324696930013384
+            # w: 0.997098164841635
+            p.orientation.x = 0
+            p.orientation.y = 0
+            p.orientation.z = 0
+            p.orientation.w = 1
 
         current_object_pose_xyzw = np.array([p.position.x, p.position.y, p.position.z, p.orientation.x, p.orientation.y, p.orientation.z, p.orientation.w])
         current_goal_object_pose_xyzw = self.goal_object_poses[self.current_goal_object_pose_index]
@@ -109,7 +155,8 @@ class GoalPoseNode:
         distance = keypoint_distance(
             pose1_xyzw=current_object_pose_xyzw, pose2_xyzw=current_goal_object_pose_xyzw, object_scales=self.object_scales
         )
-        print(f"Distance: {distance}")
+        num_goals = self.goal_object_poses.shape[0]
+        print(f"Distance: {distance}, self.current_goal_object_pose_index/num_goals: {self.current_goal_object_pose_index}/{num_goals} = {self.current_goal_object_pose_index/num_goals:.2%}")
 
         if distance < self.keypoint_success_threshold:
             self.current_success_steps += 1
@@ -117,14 +164,20 @@ class GoalPoseNode:
                 info(f"Success threshold reached, updating goal object pose index to {self.current_goal_object_pose_index + 1}")
                 self.current_success_steps = 0
                 self.current_goal_object_pose_index += 1
-                if self.current_goal_object_pose_index >= self.goal_object_poses.shape[0]:
-                    self.current_goal_object_pose_index = self.goal_object_poses.shape[0] - 1
+                # if self.current_goal_object_pose_index >= self.goal_object_poses.shape[0]:
+                #     self.current_goal_object_pose_index = self.goal_object_poses.shape[0] - 1
             else:
                 info(f"Success threshold reached, at {self.current_success_steps} of {self.success_steps} steps")
 
     def publish_goal_object_pose(self):
         """Publish the goal object pose."""
-        current_goal_object_pose_xyzw = self.goal_object_poses[self.current_goal_object_pose_index]
+        idx = self.current_goal_object_pose_index
+        if idx >= self.goal_object_poses.shape[0]:
+            idx = self.goal_object_poses.shape[0] - 1
+        elif idx < 0:
+            idx = 0
+
+        current_goal_object_pose_xyzw = self.goal_object_poses[idx]
         goal_object_pose_msg = Pose()
         goal_object_pose_msg.position.x = current_goal_object_pose_xyzw[0]
         goal_object_pose_msg.position.y = current_goal_object_pose_xyzw[1]
@@ -133,6 +186,7 @@ class GoalPoseNode:
         goal_object_pose_msg.orientation.y = current_goal_object_pose_xyzw[4]
         goal_object_pose_msg.orientation.z = current_goal_object_pose_xyzw[5]
         goal_object_pose_msg.orientation.w = current_goal_object_pose_xyzw[6]
+
         self.goal_object_pose_pub.publish(goal_object_pose_msg)
 
     def run(self):
@@ -196,38 +250,58 @@ def main():
     # object_type = "hammer"
     # object_name = "mallet"
     # object_name = "hammer_2"
-    # trajectory_name = "vertical_swing"
-    # trajectory_name = "horizontal_swing"
+    # object_name = "toy_hammer"
     # trajectory_name = "horizontal_swing_higher"
-    # trajectory_name = "horizontal_swing_human"
-    # trajectory_name = "horizontal_swing_human_closer"
+    # trajectory_name = "down_swing"
+    # trajectory_name = "side_swing_new"
+    # trajectory_name = "side_swing_new_shifted"
+    # trajectory_name = "down_swing_shifted"
 
     # object_type = "spatula"
     # object_name = "black_spatula"
-    # trajectory_name = "pick_and_place_human"
-    # trajectory_name = "pick_and_place_human_hardinit"
+    # object_name = "spoon_spatula"
+    # trajectory_name = "serve_strawberry_easy"
+    # trajectory_name = "serve_strawberry_hard"
+    # trajectory_name = "flip_bread_kushal"
+    # trajectory_name = "flip_leek"
+    # trajectory_name = "flip_pancake"
 
-    object_type = "screwdriver"
-    object_name = "real_flat_screwdriver"
-    # trajectory_name = "top_down_screwing_human_easyinit"
-    # trajectory_name = "top_down_screwing_human"
-    trajectory_name = "top_down_screwing_closer"
+    # object_type = "screwdriver"
+    # object_name = "real_flat_screwdriver"
+    # object_name = "black_screwdriver"
+    # object_name = "red_screwdriver"
+    # trajectory_name = "top"
+    # trajectory_name = "side"
+    # trajectory_name = "clockwise_top"
+    # trajectory_name = "clockwise_side"
 
     # object_type = "eraser"
     # object_name = "whiteboard_eraser"
-    # trajectory_name = "wipe_left_human"
-    # trajectory_name = "wipe_left_human_2"
+    # object_name = "anvil_eraser"
+    # object_name = "expo_eraser"
+    # trajectory_name = "wipe_higher"
+    # trajectory_name = "wipe_lower"
 
-    # object_type = "marker"
+    object_type = "marker"
     # object_name = "040_large_marker"
-    # trajectory_name = "draw_circle_human"
-    # trajectory_name = "draw_circle_human_hardinit"
+    object_name = "sharpie_closed"
+    # object_name = "staples_open"
+    trajectory_name = "write_smiley"
+    # trajectory_name = "write_c"
 
     # object_type = "brush"
-    # object_name = "green_brush"
+    # object_name = "anvil_brush"
     # object_name = "red_brush"
-    # trajectory_name = "simple"
-    # trajectory_name = "complex"
+    # trajectory_name = "sweep_forward"
+    # trajectory_name = "sweep_right"
+    # trajectory_name = "sweep_forward_easy"
+    # trajectory_name = "sweep_forward_right"
+
+    # APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.6_downsampled_10"
+    # APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.6"
+    APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.65"
+    # APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.7"
+    trajectory_name = f"{trajectory_name}{APPEND_TO_TRAJECTORY_NAMES}"
 
     trajectory_path = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
     assert trajectory_path.exists(), f"Trajectory file not found: {trajectory_path}"
@@ -237,6 +311,35 @@ def main():
     # Account for robot to world frame
     goals_world_frame = traj_data["goals"]
     goals_robot_frame = [[x, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
+
+    # Additional offsets
+    # goals_robot_frame = [[x, y, z - 0.01, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_robot_frame]
+    goals_robot_frame = [[x - 0.05, y, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_robot_frame]
+    # goals_robot_frame = [[x - 0.015, y, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_robot_frame]
+
+
+    DOWNSAMPLE_FACTOR = 10
+    # DOWNSAMPLE_FACTOR = 1
+    # goals_robot_frame = goals_robot_frame[::DOWNSAMPLE_FACTOR][3:]
+    # goals_robot_frame = goals_robot_frame[::DOWNSAMPLE_FACTOR][10:]
+    goals_robot_frame = goals_robot_frame[::DOWNSAMPLE_FACTOR]
+
+    # HACK: Remove first N goals
+    # REMOVE_FIRST_N_GOALS = 8
+    # goals_robot_frame = goals_robot_frame[REMOVE_FIRST_N_GOALS:]
+
+    # Lower the z of the last points
+    EDIT_AFTER_N_POINTS = 35
+    EDIT_Z_OFFSET = 0.0
+    # EDIT_Z_OFFSET = -0.05
+    # EDIT_Z_OFFSET = 0.03
+    for i in range(len(goals_robot_frame)):
+        if i >= EDIT_AFTER_N_POINTS:
+            goals_robot_frame[i][2] += EDIT_Z_OFFSET
+
+    # HACK: Keep only the first N goals
+    # KEEP_ONLY_FIRST_N_GOALS = 19
+    # goals_robot_frame = goals_robot_frame[:KEEP_ONLY_FIRST_N_GOALS]
 
     tmp_file = Path("tmp.json")
     with open(tmp_file, "w") as f:
@@ -271,10 +374,13 @@ def main():
             # object_scales=np.array([0.12965531, 0.0337145 , 0.06038587]) * 25,  # whiteboard eraser
             # object_scales=np.array([0.15954332, 0.0777093 , 0.01231273]) * 25,  # iphone15pro
             # success_threshold=0.0,
-            # success_threshold=0.01,
-            success_threshold=0.02,
+            success_threshold=0.01,
+            # success_threshold=0.015,
+            # success_threshold=0.02,
+            # success_threshold=0.03,
             # success_threshold=0.05,
             success_steps=1,
+            # success_steps=5,
         )
         node.run()
     except rospy.ROSInterruptException:

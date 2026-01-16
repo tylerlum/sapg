@@ -456,6 +456,8 @@ class AllegroKukaBase(VecTask):
             (self.num_envs, self.num_keypoints, 3), dtype=torch.float, device=self.device
         )
 
+        self.object_scale_noise_multiplier = torch.ones((self.num_envs, 3), dtype=torch.float, device=self.device)
+
         # how many steps we were within the goal tolerance
         self.near_goal_steps = torch.zeros(self.num_envs, dtype=torch.int, device=self.device)
 
@@ -982,6 +984,9 @@ class AllegroKukaBase(VecTask):
                 self.trajectory_states = get_hammer_trajectory(init_state, device=self.device)
             elif object_type in BRUSH_OBJECTS:
                 self.trajectory_states = get_hammer_trajectory(init_state, device=self.device)
+            elif object_type in list(NAME_TO_OBJECT.keys()):
+                # HACK: Use hammer trajectory for all objects that are not in the other categories but in this dict
+                self.trajectory_states = get_hammer_trajectory(init_state, device=self.device)
             else:
                 raise ValueError(f"The following object_type does not have a fixed trajectory: {object_type}, cannot use USE_FIXED_SET_OF_GOAL_STATES with this object type")
 
@@ -1008,6 +1013,12 @@ class AllegroKukaBase(VecTask):
                 self.trajectory_states = torch.tensor(FIXED_GOAL_STATES, device=self.device)
                 # Set max consecutive successes to the length of the trajectory so we don't run out of goal states
                 self.max_consecutive_successes = len(self.trajectory_states)
+            FIXED_GOAL_STATES_JSON_PATH = self.cfg["env"]["fixedGoalStatesJsonPath"]
+            if FIXED_GOAL_STATES_JSON_PATH is not None:
+                with open(FIXED_GOAL_STATES_JSON_PATH, "r") as f:
+                    self.trajectory_states = torch.tensor(json.load(f)["goals"], device=self.device)
+                    # Set max consecutive successes to the length of the trajectory so we don't run out of goal states
+                    self.max_consecutive_successes = len(self.trajectory_states)
 
         return object_asset_files, object_asset_scales, need_vhacds
 
@@ -1948,11 +1959,11 @@ class AllegroKukaBase(VecTask):
         self.successes += is_success
 
         # Print successes when there is only one environment
-        if self.num_envs == 1 and is_success.item():
-            print("~" * 100)
-            print("IS SUCCESS:")
-            print(f"self.successes: {self.successes.item()}")
-            print("~" * 100)
+        # if self.num_envs == 1 and is_success.item():
+        #     print("~" * 100)
+        #     print("IS SUCCESS:")
+        #     print(f"self.successes: {self.successes.item()}")
+        #     print("~" * 100)
 
         self.reset_goal_buf[:] = goal_resets
 
@@ -1978,6 +1989,8 @@ class AllegroKukaBase(VecTask):
         # Success bonus: orientation is within `success_tolerance` of goal orientation
         # We spread out the reward over "success_steps"
         bonus_rew = near_goal * (self.reach_goal_bonus / self.success_steps)
+        if self.cfg["env"]["forceConsecutiveNearGoalSteps"]:
+            bonus_rew = is_success * self.reach_goal_bonus
 
         reward = (
             fingertip_delta_rew
@@ -2236,13 +2249,13 @@ class AllegroKukaBase(VecTask):
 
         for i in range(self.num_keypoints):
             self.obj_keypoint_pos[:, i] = self.object_pos + quat_rotate(
-                self.object_rot, self.object_keypoint_offsets[:, i]
+                self.object_rot, self.object_keypoint_offsets[:, i] * self.object_scale_noise_multiplier
             )
             self.goal_keypoint_pos[:, i] = self.goal_pos + quat_rotate(
-                self.goal_rot, self.object_keypoint_offsets[:, i]
+                self.goal_rot, self.object_keypoint_offsets[:, i] * self.object_scale_noise_multiplier
             )
             self.observed_obj_keypoint_pos[:, i] = self.observed_object_pos + quat_rotate(
-                self.observed_object_rot, self.object_keypoint_offsets[:, i]
+                self.observed_object_rot, self.object_keypoint_offsets[:, i] * self.object_scale_noise_multiplier
             )
 
             self.obj_keypoint_pos_fixed_size[:, i] = self.object_pos + quat_rotate(
@@ -2305,7 +2318,7 @@ class AllegroKukaBase(VecTask):
         fingertip_rel_pos_size = 3 * self.num_allegro_fingertips
         obs_dict["fingertip_pos_rel_palm"] = self.fingertip_pos_rel_palm.reshape(self.num_envs, fingertip_rel_pos_size)
         # object scales
-        obs_dict["object_scales"] = self.object_scales
+        obs_dict["object_scales"] = self.object_scales * self.object_scale_noise_multiplier
 
         ## CRITIC OBSERVATIONS ##
         # palm linvel, ang vel
@@ -2315,7 +2328,7 @@ class AllegroKukaBase(VecTask):
         # closest distance to the furthest keypoint, achieved so far in this episode
         obs_dict["closest_keypoint_max_dist"] = self.closest_keypoint_max_dist.unsqueeze(-1)
         if self.cfg["env"]["fixedSizeKeypointReward"]:
-            obs_dict["closest_keypoint_max_dist_fixed_size"] = self.closest_keypoint_max_dist_fixed_size.unsqueeze(-1)
+            obs_dict["closest_keypoint_max_dist"] = self.closest_keypoint_max_dist_fixed_size.unsqueeze(-1)
 
         # closest distance between a fingertip and an object achieved since last target reset
         # this should help the critic predict the anticipated fingertip reward
@@ -2557,6 +2570,9 @@ class AllegroKukaBase(VecTask):
                 self.root_state_tensor[obj_indices, 3:7] = new_object_rot
 
             self.root_state_tensor[obj_indices, 7:13] = torch.zeros_like(self.root_state_tensor[obj_indices, 7:13])
+
+            noise_min, noise_max = self.cfg["env"]["objectScaleNoiseMultiplierRange"]
+            self.object_scale_noise_multiplier[env_ids] = torch_rand_float(noise_min, noise_max, (len(env_ids), 3), device=self.device)
 
         if len(env_ids) > 0 and reset_buf_idxs is not None and tensor_reset:
             obj_indices = self.object_indices[env_ids]

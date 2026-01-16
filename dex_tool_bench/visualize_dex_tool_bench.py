@@ -29,7 +29,8 @@ METAL_COLOR = (105, 105, 105)  # Dark steel gray
 KEYPOINT_COLOR = (255, 50, 50)  # Bright red for keypoints
 
 # Keypoint configuration
-KEYPOINT_RADIUS = 0.006  # Radius of keypoint spheres
+# KEYPOINT_RADIUS = 0.006  # Radius of keypoint spheres
+KEYPOINT_RADIUS = 0.0  # Radius of keypoint spheres
 KEYPOINT_SCALE = 1.0  # Scale factor for keypoint positions (1.0 = at handle corners)
 OBJECT_BASE_SIZE = 0.04  # Base size used in training
 KEYPOINT_OFFSETS = [
@@ -38,6 +39,16 @@ KEYPOINT_OFFSETS = [
     [-1, -1, 1],
     [-1, -1, -1],
 ]  # Normalized keypoint positions (corners of bounding box)
+
+# If filename starts with "primitive_", sort it to the start
+def sort_primitive_tools_to_start(tool: Tuple[Path, Optional[Path]]) -> Tuple[int, str]:
+    urdf_path = tool[0]
+    filename = urdf_path.stem
+    if filename.startswith("primitive_"):
+        return (0, filename)  # Sort to beginning
+    else:
+        return (1, filename)  # Sort to end
+
 
 
 def get_object_name_from_urdf(urdf_path: Path) -> Optional[str]:
@@ -242,7 +253,7 @@ def main() -> None:
         )
         
         # Load each tool in this section (along Y axis)
-        for i, (urdf_path, obj_path) in enumerate(tools):
+        for i, (urdf_path, obj_path) in enumerate(sorted(tools, key=sort_primitive_tools_to_start)):
             y_pos = i * spacing_y
             
             tool_name = urdf_path.stem
@@ -252,8 +263,10 @@ def main() -> None:
             server.scene.add_frame(
                 f"/section_{tool_type}/{tool_name}",
                 position=(current_x, y_pos, 0.0),
-                axes_length=0.03,
-                axes_radius=0.001,
+                # axes_length=0.1,
+                # axes_radius=0.001,
+                axes_length=0.0,
+                axes_radius=0.0,
             )
             
             # Try to parse as primitive URDF first
@@ -313,12 +326,13 @@ def main() -> None:
         current_x += section_spacing_x
     
     # Add grid for reference
-    server.scene.add_grid(
-        "/grid",
-        width=6,
-        height=4,
-        position=(0.5, 0.5, -0.01),
-    )
+    # server.scene.add_grid(
+    #     "/grid",
+    #     width=6,
+    #     height=4,
+    #     position=(0.5, 0.5, -0.01),
+    #     cell_size=0.1,
+    # )
     
     print(f"\nLoaded {total_tools} tools in {len(tools_by_type)} sections")
     print("Press Ctrl+C to exit.")
