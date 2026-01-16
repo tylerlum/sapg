@@ -633,6 +633,11 @@ class AllegroKukaBase(VecTask):
                 key=gymapi.KEY_F,
                 function=self._toggle_force_or_torque_callback,
             ),
+            KeyboardShortcut(
+                name="teleport_object",
+                key=gymapi.KEY_P,
+                function=self._teleport_object_callback,
+            ),
         ]
         self.name_to_keyboard_shortcut_dict = {
             keyboard_shortcut.name: keyboard_shortcut
@@ -670,6 +675,8 @@ class AllegroKukaBase(VecTask):
         self.force_or_torque_mode = "force"
         self.need_apply_vel_impulse_from_keyboard = False
         self.vel_impulse_from_keyboard = np.array([0.0] * 6)
+
+        self.need_teleport_object_from_keyboard = False
 
     def _breakpoint_callback(self) -> None:
         print("Breakpoint")
@@ -809,6 +816,11 @@ class AllegroKukaBase(VecTask):
         idx = (idx + 1) % len(MODES)
         self.force_or_torque_mode = MODES[idx]
         print(f"Force or torque mode is now {self.force_or_torque_mode}")
+
+    def _teleport_object_callback(self) -> None:
+        print("Teleporting object...")
+        self.need_teleport_object_from_keyboard = True
+        print(f"Object is now teleported: {self.need_teleport_object_from_keyboard}")
 
     ##### KEYBOARD END #####
 
@@ -2962,6 +2974,12 @@ class AllegroKukaBase(VecTask):
             self.deferred_set_actor_root_state_tensor_indexed([self.object_indices])
             self.need_apply_vel_impulse_from_keyboard = False
             self.vel_impulse_from_keyboard[:] = 0.0
+
+        # Teleport object
+        if self.need_teleport_object_from_keyboard:
+            self.root_state_tensor[self.object_indices, :] = self.object_init_state.clone()
+            self.deferred_set_actor_root_state_tensor_indexed([self.object_indices])
+            self.need_teleport_object_from_keyboard = False
 
         self.set_actor_root_state_tensor_indexed()
 
