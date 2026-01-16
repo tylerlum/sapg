@@ -34,6 +34,7 @@ object_type_to_object_names = {
     object_type: object_type_to_real_object_names[object_type] + object_type_to_primitive_object_names[object_type]
     for object_type in object_type_to_real_object_names.keys()
 }
+# HACK: Only use primitive object names for now
 object_type_to_object_names = object_type_to_primitive_object_names
 
 # HACK: Overwrite object names for debugging
