@@ -33,22 +33,18 @@ object_type_to_object_names = {
 object_type_to_object_names["brush"] = ["red_brush"]
 
 object_type_to_trajectory_names = {
-    "hammer": ["horizontal_swing_nail", "horizontal_swing_rotated", "vertical_swing", "vertical_swing_2", "horizontal_swing_human"],
-    "spatula": ["flip_from_left", "pick_and_place_human"],
-    "eraser": ["wipe_right", "wipe_left", "wipe_left_slanted", "wipe_left_slanted_higher", "wipe_left_vertical", "wipe_left_vertical_farther", "wipe_left_slanted_higher_farther", "wipe_left_human", "wipe_left_human_2"],
-    "screwdriver": ["top_down_screwing", "top_down_screwing_closer", "top_down_screwing_closer_lower", "top_down_screwing_closer_lower_hole", "top_down_screwing_human", "top_down_screwing_human_easyinit"],
-    "marker": ["write_circle_whiteboard", "write_circle_whiteboard_adjusted", "draw_circle_human", "draw_circle_human_hardinit"],
-    "brush": ["simple", "complex"],
+    "hammer": ["horizontal_swing_higher"],
+    "spatula": ["pick_and_place_human", "pick_and_place_human_hardinit"],
+    "eraser": ["wipe_left_human", "wipe_left_human_2"],
+    "screwdriver": ["top_down_screwing_human", "top_down_screwing_human_easyinit"],
+    "marker": ["draw_circle_human", "draw_circle_human_hardinit"],
+    "brush": ["complex"],
 }
 
 # HACK: Overwrite trajectory names for debugging
 object_type_to_trajectory_names = {
-    "hammer": [],
-    "spatula": [],
-    "eraser": [],
-    "screwdriver": [],
-    "marker": [],
-    "brush": ["complex"],
+    object_type: object_type_to_trajectory_names[object_type][:1]
+    for object_type in object_type_to_trajectory_names.keys()
 }
 
 POLICY_NAME_TO_PATH = {
@@ -57,6 +53,28 @@ POLICY_NAME_TO_PATH = {
 }
 DOWNSAMPLE_FACTOR = 1
 NUM_EPISODES = 5
+
+# Validate everything
+for policy_path in POLICY_NAME_TO_PATH.values():
+    assert policy_path.exists(), f"Policy path not found: {policy_path}"
+
+# Make in one big list
+ALL_OBJECT_TYPE_OBJECT_NAME_TRAJECTORY_NAME_POLICY_NAME = []
+for object_type in object_type_to_real_object_names.keys():
+    object_names = object_type_to_object_names[object_type]
+    trajectory_names = object_type_to_trajectory_names[object_type]
+    for object_name in object_names:
+        for trajectory_name in trajectory_names:
+            for policy_name, policy_path in POLICY_NAME_TO_PATH.items():
+                ALL_OBJECT_TYPE_OBJECT_NAME_TRAJECTORY_NAME_POLICY_NAME.append((object_type, object_name, trajectory_name, policy_name))
+
+# Make sure all trajectories exist
+evaluation_trajectories_dir = Path(__file__).parent / "evaluation_trajectories"
+for object_type, object_name, trajectory_name, _ in ALL_OBJECT_TYPE_OBJECT_NAME_TRAJECTORY_NAME_POLICY_NAME:
+    trajectory_path = evaluation_trajectories_dir / object_type / object_name / f"{trajectory_name}.json"
+    assert trajectory_path.exists(), f"Trajectory path not found: {trajectory_path}"
+
+print(f"Will evaluate {len(ALL_OBJECT_TYPE_OBJECT_NAME_TRAJECTORY_NAME_POLICY_NAME)} combinations for {NUM_EPISODES} episodes each")
 
 """
 Making output_directory structure like
@@ -68,24 +86,19 @@ Making output_directory structure like
 |   |   |   |   |--<eval.json>
 """
 
-for object_type in object_type_to_real_object_names.keys():
-    object_names = object_type_to_object_names[object_type]
-    trajectory_names = object_type_to_trajectory_names[object_type]
-    for object_name in object_names:
-        for trajectory_name in trajectory_names:
-            for policy_name, policy_path in POLICY_NAME_TO_PATH.items():
-                print(f"Running evaluation for {object_type} {object_name} {trajectory_name} {policy_name}")
-                output_dir = Path(f"evals/{DATE_STR}/{object_type}/{object_name}/{trajectory_name}/{policy_name}")
-                output_dir.mkdir(parents=True, exist_ok=True)
-                cmd = f"python \
-                    {script_path} \
-                    --object_type {object_type} \
-                    --object_name {object_name} \
-                    --trajectory_name {trajectory_name} \
-                    --policy_path {policy_path} \
-                    --output_dir {output_dir} \
-                    --num_episodes {NUM_EPISODES} \
-                    --downsample_factor {DOWNSAMPLE_FACTOR}"
-                print(f"Running command: {cmd}")
-                os.system(cmd)
-                print()
+for object_type, object_name, trajectory_name, policy_name in ALL_OBJECT_TYPE_OBJECT_NAME_TRAJECTORY_NAME_POLICY_NAME:
+    print(f"Running evaluation for {object_type} {object_name} {trajectory_name} {policy_name}")
+    output_dir = Path(f"evals/{DATE_STR}/{object_type}/{object_name}/{trajectory_name}/{policy_name}")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    cmd = f"python \
+        {script_path} \
+        --object_type {object_type} \
+        --object_name {object_name} \
+        --trajectory_name {trajectory_name} \
+        --policy_path {policy_path} \
+        --output_dir {output_dir} \
+        --num_episodes {NUM_EPISODES} \
+        --downsample_factor {DOWNSAMPLE_FACTOR}"
+    print(f"Running command: {cmd}")
+    os.system(cmd)
+    print()
