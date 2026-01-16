@@ -277,8 +277,8 @@ BRUSH_NAME_TO_OBJECT = {
             / "assets/urdf/dex_tool_bench/brush/red_brush/red_brush.urdf"
         ),
         coacd_filepaths=None,
-        scale=rescale_by_factor((0.12, 0.02, 0.015), factor=25),
-        need_vhacd=True,
+        scale=rescale_by_factor((0.1, 0.02, 0.015), factor=25),
+        need_vhacd=False,
     ),
     "green_brush": Object(
         filepath=(
