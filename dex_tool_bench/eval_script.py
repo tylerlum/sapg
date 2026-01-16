@@ -453,7 +453,10 @@ def main():
         "brush": TABLE_URDF,
     }
 
-    SELECTED_TABLE_URDF = object_type_to_table_urdf[object_type]
+    # For now, use the same table for all object types
+    SELECTED_TABLE_URDF = TABLE_URDF
+    # SELECTED_TABLE_URDF = object_type_to_table_urdf[object_type]
+
     # SELECTED_TABLE_URDF = TABLE_URDF
     # SELECTED_TABLE_URDF = TABLE_NAIL_URDF
     # SELECTED_TABLE_URDF = TABLE_WHITEBOARD_URDF
