@@ -31,7 +31,7 @@ object_type_to_object_names = {
 }
 
 # HACK: Overwrite object names for debugging
-object_type_to_object_names["brush"] = ["red_brush"]
+# object_type_to_object_names["brush"] = ["red_brush"]
 
 object_type_to_trajectory_names = {
     "hammer": ["horizontal_swing_higher"],
@@ -53,7 +53,8 @@ POLICY_NAME_TO_PATH = {
     "fastSpeed": Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_fastSpeed"),
 }
 DOWNSAMPLE_FACTOR = 1
-NUM_EPISODES = 5
+# NUM_EPISODES = 5
+NUM_EPISODES = 1  # For debugging
 
 # Validate everything
 for policy_path in POLICY_NAME_TO_PATH.values():
