@@ -53,7 +53,20 @@ env:
   forceProbRange: [0.001, 0.1]
   forceDecay: 0.99
   forceDecayInterval: 0.08
-  forceOnlyWhenLifted: False
+  forceOnlyWhenLifted: True
+  torqueScale: 0.0
+  torqueProbRange: [0.001, 0.1]
+  torqueDecay: 0.99
+  torqueDecayInterval: 0.08
+  torqueOnlyWhenLifted: True
+
+  # Random velocity impulses applied to the object
+  linVelImpulseProbRange: [0.001, 0.1]
+  linVelImpulseScale: 0.0
+  linVelImpulseOnlyWhenLifted: True
+  angVelImpulseProbRange: [0.001, 0.1]
+  angVelImpulseScale: 0.0
+  angVelImpulseOnlyWhenLifted: True
 
   liftingRewScale: 20.0
   liftingBonus: 300.0
@@ -65,6 +78,8 @@ env:
   allegroActionsPenaltyScale: 0.0003
   fallDistance: 0.24
   fallPenalty: 0.0
+  objectLinVelPenaltyScale: 0.0  # Typically want angvel scale to be 100x smaller than linvel scale
+  objectAngVelPenaltyScale: 0.0  # Because 0.05-0.2m/s ~~ 0.5-2.0rad/s, 10x factor, which is squared
 
   privilegedActions: False
   privilegedActionsTorque: 0.02
@@ -102,6 +117,7 @@ env:
   toleranceCurriculumInterval: 3000  # in env steps across all agents, with 8192 this is 3000 * 8192 = 24.6M env steps
   maxConsecutiveSuccesses: 50
   successSteps: 1  # how many steps we should be within the tolerance before we declare a success
+  forceConsecutiveNearGoalSteps: False  # If True, require near goal consecutively for successSteps
 
   saveStates: False
   saveStatesFile: "rootTensorsDofStates.bin"

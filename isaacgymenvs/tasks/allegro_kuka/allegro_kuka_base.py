@@ -110,6 +110,8 @@ class AllegroKukaBase(VecTask):
         self.keypoint_rew_scale = self.cfg["env"]["keypointRewScale"]
         self.kuka_actions_penalty_scale = self.cfg["env"]["kukaActionsPenaltyScale"]
         self.allegro_actions_penalty_scale = self.cfg["env"]["allegroActionsPenaltyScale"]
+        self.object_lin_vel_penalty_scale = self.cfg["env"]["objectLinVelPenaltyScale"]
+        self.object_ang_vel_penalty_scale = self.cfg["env"]["objectAngVelPenaltyScale"]
 
         self.dof_params: DofParameters = DofParameters.from_cfg(self.cfg)
 
@@ -143,6 +145,21 @@ class AllegroKukaBase(VecTask):
         self.force_prob_range = self.cfg["env"].get("forceProbRange", [0.001, 0.1])
         self.force_decay = self.cfg["env"].get("forceDecay", 0.99)
         self.force_decay_interval = self.cfg["env"].get("forceDecayInterval", 0.08)
+        self.force_only_when_lifted = self.cfg["env"].get("forceOnlyWhenLifted", False)
+
+        self.torque_scale = self.cfg["env"].get("torqueScale", 0.0)
+        self.torque_prob_range = self.cfg["env"].get("torqueProbRange", [0.001, 0.1])
+        self.torque_decay = self.cfg["env"].get("torqueDecay", 0.99)
+        self.torque_decay_interval = self.cfg["env"].get("torqueDecayInterval", 0.08)
+        self.torque_only_when_lifted = self.cfg["env"].get("torqueOnlyWhenLifted", False)
+
+        self.lin_vel_impulse_prob_range = self.cfg["env"].get("linVelImpulseProbRange", [0.001, 0.1])
+        self.lin_vel_impulse_scale = self.cfg["env"].get("linVelImpulseScale", 0.0)
+        self.lin_vel_impulse_only_when_lifted = self.cfg["env"].get("linVelImpulseOnlyWhenLifted", False)
+
+        self.ang_vel_impulse_prob_range = self.cfg["env"].get("angVelImpulseProbRange", [0.001, 0.1])
+        self.ang_vel_impulse_scale = self.cfg["env"].get("angVelImpulseScale", 0.0)
+        self.ang_vel_impulse_only_when_lifted = self.cfg["env"].get("angVelImpulseOnlyWhenLifted", False)
 
         self.use_relative_control = self.cfg["env"]["useRelativeControl"]
 
@@ -390,14 +407,37 @@ class AllegroKukaBase(VecTask):
         # object apply random forces parameters
         self.force_decay = to_torch(self.force_decay, dtype=torch.float, device=self.device)
         self.force_prob_range = to_torch(self.force_prob_range, dtype=torch.float, device=self.device)
-        self.random_force_prob = torch.exp(
-            (torch.log(self.force_prob_range[0]) - torch.log(self.force_prob_range[1]))
-            * torch.rand(self.num_envs, device=self.device)
-            + torch.log(self.force_prob_range[1])
+        self.random_force_prob = self._sample_log_uniform(
+            min_value=self.force_prob_range[0],
+            max_value=self.force_prob_range[1],
+            num_samples=self.num_envs,
+        )
+        self.rb_forces = torch.zeros((self.num_envs, self.num_bodies, 3), dtype=torch.float, device=self.device)
+
+        self.torque_decay = to_torch(self.torque_decay, dtype=torch.float, device=self.device)
+        self.torque_prob_range = to_torch(self.torque_prob_range, dtype=torch.float, device=self.device)
+        self.random_torque_prob = self._sample_log_uniform(
+            min_value=self.torque_prob_range[0],
+            max_value=self.torque_prob_range[1],
+            num_samples=self.num_envs,
+        )
+        self.rb_torques = torch.zeros((self.num_envs, self.num_bodies, 3), dtype=torch.float, device=self.device)
+        self.action_torques = torch.zeros((self.num_envs, self.num_bodies, 3), dtype=torch.float, device=self.device)
+
+        # Random velocity impulses applied to the object
+        self.lin_vel_impulse_prob_range = to_torch(self.lin_vel_impulse_prob_range, dtype=torch.float, device=self.device)
+        self.random_lin_vel_impulse_prob = self._sample_log_uniform(
+            min_value=self.lin_vel_impulse_prob_range[0],
+            max_value=self.lin_vel_impulse_prob_range[1],
+            num_samples=self.num_envs,
         )
 
-        self.rb_forces = torch.zeros((self.num_envs, self.num_bodies, 3), dtype=torch.float, device=self.device)
-        self.action_torques = torch.zeros((self.num_envs, self.num_bodies, 3), dtype=torch.float, device=self.device)
+        self.ang_vel_impulse_prob_range = to_torch(self.ang_vel_impulse_prob_range, dtype=torch.float, device=self.device)
+        self.random_ang_vel_impulse_prob = self._sample_log_uniform(
+            min_value=self.ang_vel_impulse_prob_range[0],
+            max_value=self.ang_vel_impulse_prob_range[1],
+            num_samples=self.num_envs,
+        )
 
         self.obj_keypoint_pos = torch.zeros(
             (self.num_envs, self.num_keypoints, 3), dtype=torch.float, device=self.device
@@ -448,6 +488,11 @@ class AllegroKukaBase(VecTask):
             "bonus_rew",
             "kuka_actions_penalty",
             "allegro_actions_penalty",
+            "raw_object_lin_vel_penalty",
+            "raw_object_ang_vel_penalty",
+            "object_lin_vel_penalty",
+            "object_ang_vel_penalty",
+            "total_reward",
         ]
 
         self.rewards_episode = {
@@ -462,7 +507,7 @@ class AllegroKukaBase(VecTask):
         self.eval_stats: bool = self.cfg["env"]["evalStats"]
 
         self.good_reset_boundary = self.cfg["env"].get("goodResetBoundary", 0) # Max number of envs that can be reset with good states
-        
+
         if self.good_reset_boundary > 0:
             self.max_buffer_size = self.cfg["env"].get("maxBufferSize", self.max_episode_length * self.num_envs * 2 // max(self.max_consecutive_successes, 20)) # Max number of states that can be stored in the buffer
             self.max_temp_buffer_size = self.max_episode_length # Max number of states that can be stored in the buffer
@@ -473,7 +518,7 @@ class AllegroKukaBase(VecTask):
             self.dof_resets = torch.empty((self.max_buffer_size, self.dof_state.shape[0] // self.num_envs, *self.dof_state.shape[1:]), dtype=self.dof_state.dtype, device='cpu')
             self.buffer_index = 0
             self.buffer_length = 0
-        
+
         if self.eval_stats:
             self.last_success_step = torch.zeros(self.num_envs, dtype=torch.float, device=self.device)
             self.success_time = torch.zeros(self.num_envs, dtype=torch.float, device=self.device)
@@ -499,6 +544,27 @@ class AllegroKukaBase(VecTask):
         self._init_tyler_curriculum()
 
         self._init_obs_action_queue()
+
+    def _sample_log_uniform(self, min_value: float, max_value: float, num_samples: int) -> torch.Tensor:
+        """
+        Sample values log-uniformly between min_value and max_value.
+
+        Args:
+            min_value: Lower bound (must be > 0).
+            max_value: Upper bound (must be > 0).
+
+        Returns:
+            A tensor of shape (self.num_envs,) sampled log-uniformly.
+        """
+        assert min_value > 0, f"min_value must be > 0, got {min_value}"
+        assert max_value > 0, f"max_value must be > 0, got {max_value}"
+        assert min_value <= max_value, f"min_value must be <= max_value, got {min_value} <= {max_value}"
+
+        return torch.exp(
+            torch.log(min_value)
+            + (torch.log(max_value) - torch.log(min_value))
+            * torch.rand(num_samples, device=self.device)
+        )
 
     ##### KEYBOARD START #####
     def _subscribe_to_keyboard_events(self) -> None:
@@ -532,12 +598,85 @@ class AllegroKukaBase(VecTask):
                 key=gymapi.KEY_D,
                 function=self._toggle_debug_viz_callback,
             ),
+            KeyboardShortcut(
+                name="force_or_torque_x_plus",
+                key=gymapi.KEY_RIGHT,
+                function=self._force_or_torque_x_plus_callback,
+            ),
+            KeyboardShortcut(
+                name="force_or_torque_x_minus",
+                key=gymapi.KEY_LEFT,
+                function=self._force_or_torque_x_minus_callback,
+            ),
+            KeyboardShortcut(
+                name="force_or_torque_y_plus",
+                key=gymapi.KEY_UP,
+                function=self._force_or_torque_y_plus_callback,
+            ),
+            KeyboardShortcut(
+                name="force_or_torque_y_minus",
+                key=gymapi.KEY_DOWN,
+                function=self._force_or_torque_y_minus_callback,
+            ),
+            KeyboardShortcut(
+                name="force_or_torque_z_plus",
+                key=gymapi.KEY_PAGE_UP,
+                function=self._force_or_torque_z_plus_callback,
+            ),
+            KeyboardShortcut(
+                name="force_or_torque_z_minus",
+                key=gymapi.KEY_PAGE_DOWN,
+                function=self._force_or_torque_z_minus_callback,
+            ),
+            KeyboardShortcut(
+                name="toggle_force_or_torque",
+                key=gymapi.KEY_F,
+                function=self._toggle_force_or_torque_callback,
+            ),
+            KeyboardShortcut(
+                name="teleport_object",
+                key=gymapi.KEY_P,
+                function=self._teleport_object_callback,
+            ),
         ]
         self.name_to_keyboard_shortcut_dict = {
             keyboard_shortcut.name: keyboard_shortcut
             for keyboard_shortcut in keyboard_shortcuts
         }
         self._DO_NOT_MOVE = False
+
+        # Keyboard applied force or torque or impulse
+        # Press arrow keys to apply force or torque or impulse in XY plane, PAGE_UP and PAGE_DOWN for Z direction
+        # Press F to toggle between force, torque, lin_vel_impulse, and ang_vel_impulse
+        #
+        # Control flow is currently
+        # - pre_physics_step
+        #   - apply_rigid_body_force_tensors
+        #   - set_actor_root_state_tensor_indexed
+        # - render
+        #   - keyboard callbacks
+        # - sim step
+        #   - root_state_tensor is updated
+        # - post_physics_step
+        #
+        # force and torque is currently stateful
+        # you set it once in self.rb_forces and self.rb_torques and it doesn't automatically get reset
+        # right now, they just decay over time or get overwritten by random forces/torques
+        # doing this from keyboard callbacks is easy because you can set the forces/torques directly
+        #
+        # velocity impulses are not stateful
+        # you are directly setting the root_state_tensor
+        # doing this from keyboard callbacks is not easy because keyboard callbacks are called
+        # after set_actor_root_state_tensor_indexed and before sim_step
+        # directly modifying the root_state_tensor doesn't work because it is overwritten
+        # thus, we instead set a flag and store the impulse in a buffer and apply it in pre_physics_step
+        # after this, the flag and buffer are reset
+
+        self.force_or_torque_mode = "force"
+        self.need_apply_vel_impulse_from_keyboard = False
+        self.vel_impulse_from_keyboard = np.array([0.0] * 6)
+
+        self.need_teleport_object_from_keyboard = False
 
     def _breakpoint_callback(self) -> None:
         print("Breakpoint")
@@ -561,13 +700,135 @@ class AllegroKukaBase(VecTask):
         if not self.debug_viz:
             self.gym.clear_lines(self.viewer)
 
+    def _force_or_torque_x_plus_callback(self) -> None:
+        if self.force_or_torque_mode == "force":
+            self.rb_forces[:, self.object_rb_handles, 0] += self.force_scale * self.object_rb_masses
+            print(f"Force x plus: {self.rb_forces[:, self.object_rb_handles]}")
+        elif self.force_or_torque_mode == "torque":
+            self.rb_torques[:, self.object_rb_handles, 0] += self.torque_scale * self.object_rb_masses
+            print(f"Torque x plus: {self.rb_torques[:, self.object_rb_handles]}")
+        elif self.force_or_torque_mode == "lin_vel_impulse":
+            self.need_apply_vel_impulse_from_keyboard = True
+            self.vel_impulse_from_keyboard[0] += self.lin_vel_impulse_scale
+            print(f"Lin vel impulse x plus: {self.vel_impulse_from_keyboard}")
+        elif self.force_or_torque_mode == "ang_vel_impulse":
+            self.need_apply_vel_impulse_from_keyboard = True
+            self.vel_impulse_from_keyboard[3] += self.ang_vel_impulse_scale
+            print(f"Ang vel impulse x plus: {self.vel_impulse_from_keyboard}")
+        else:
+            raise ValueError(f"Invalid force or torque mode: {self.force_or_torque_mode}")
+
+    def _force_or_torque_x_minus_callback(self) -> None:
+        if self.force_or_torque_mode == "force":
+            self.rb_forces[:, self.object_rb_handles, 0] -= self.force_scale * self.object_rb_masses
+            print(f"Force x minus: {self.rb_forces[:, self.object_rb_handles]}")
+        elif self.force_or_torque_mode == "torque":
+            self.rb_torques[:, self.object_rb_handles, 0] -= self.torque_scale * self.object_rb_masses
+            print(f"Torque x minus: {self.rb_torques[:, self.object_rb_handles]}")
+        elif self.force_or_torque_mode == "lin_vel_impulse":
+            self.need_apply_vel_impulse_from_keyboard = True
+            self.vel_impulse_from_keyboard[0] -= self.lin_vel_impulse_scale
+            print(f"Lin vel impulse x minus: {self.vel_impulse_from_keyboard}")
+        elif self.force_or_torque_mode == "ang_vel_impulse":
+            self.need_apply_vel_impulse_from_keyboard = True
+            self.vel_impulse_from_keyboard[3] -= self.ang_vel_impulse_scale
+            print(f"Ang vel impulse x minus: {self.vel_impulse_from_keyboard}")
+        else:
+            raise ValueError(f"Invalid force or torque mode: {self.force_or_torque_mode}")
+
+    def _force_or_torque_y_plus_callback(self) -> None:
+        if self.force_or_torque_mode == "force":
+            self.rb_forces[:, self.object_rb_handles, 1] += self.force_scale * self.object_rb_masses
+            print(f"Force y plus: {self.rb_forces[:, self.object_rb_handles]}")
+        elif self.force_or_torque_mode == "torque":
+            self.rb_torques[:, self.object_rb_handles, 1] += self.torque_scale * self.object_rb_masses
+            print(f"Torque y plus: {self.rb_torques[:, self.object_rb_handles]}")
+        elif self.force_or_torque_mode == "lin_vel_impulse":
+            self.need_apply_vel_impulse_from_keyboard = True
+            self.vel_impulse_from_keyboard[1] += self.lin_vel_impulse_scale
+            print(f"Lin vel impulse y plus: {self.vel_impulse_from_keyboard}")
+        elif self.force_or_torque_mode == "ang_vel_impulse":
+            self.need_apply_vel_impulse_from_keyboard = True
+            self.vel_impulse_from_keyboard[4] += self.ang_vel_impulse_scale
+            print(f"Ang vel impulse y plus: {self.vel_impulse_from_keyboard}")
+        else:
+            raise ValueError(f"Invalid force or torque mode: {self.force_or_torque_mode}")
+
+    def _force_or_torque_y_minus_callback(self) -> None:
+        if self.force_or_torque_mode == "force":
+            self.rb_forces[:, self.object_rb_handles, 1] -= self.force_scale * self.object_rb_masses
+            print(f"Force y minus: {self.rb_forces[:, self.object_rb_handles]}")
+        elif self.force_or_torque_mode == "torque":
+            self.rb_torques[:, self.object_rb_handles, 1] -= self.torque_scale * self.object_rb_masses
+            print(f"Torque y minus: {self.rb_torques[:, self.object_rb_handles]}")
+        elif self.force_or_torque_mode == "lin_vel_impulse":
+            self.need_apply_vel_impulse_from_keyboard = True
+            self.vel_impulse_from_keyboard[1] -= self.lin_vel_impulse_scale
+            print(f"Lin vel impulse y minus: {self.vel_impulse_from_keyboard}")
+        elif self.force_or_torque_mode == "ang_vel_impulse":
+            self.need_apply_vel_impulse_from_keyboard = True
+            self.vel_impulse_from_keyboard[4] -= self.ang_vel_impulse_scale
+            print(f"Ang vel impulse y minus: {self.vel_impulse_from_keyboard}")
+        else:
+            raise ValueError(f"Invalid force or torque mode: {self.force_or_torque_mode}")
+
+    def _force_or_torque_z_plus_callback(self) -> None:
+        if self.force_or_torque_mode == "force":
+            self.rb_forces[:, self.object_rb_handles, 2] += self.force_scale * self.object_rb_masses
+            print(f"Force z plus: {self.rb_forces[:, self.object_rb_handles]}")
+        elif self.force_or_torque_mode == "torque":
+            self.rb_torques[:, self.object_rb_handles, 2] += self.torque_scale * self.object_rb_masses
+            print(f"Torque z plus: {self.rb_torques[:, self.object_rb_handles]}")
+        elif self.force_or_torque_mode == "lin_vel_impulse":
+            self.need_apply_vel_impulse_from_keyboard = True
+            self.vel_impulse_from_keyboard[2] += self.lin_vel_impulse_scale
+            print(f"Lin vel impulse z plus: {self.vel_impulse_from_keyboard}")
+        elif self.force_or_torque_mode == "ang_vel_impulse":
+            self.need_apply_vel_impulse_from_keyboard = True
+            self.vel_impulse_from_keyboard[5] += self.ang_vel_impulse_scale
+            print(f"Ang vel impulse z plus: {self.vel_impulse_from_keyboard}")
+        else:
+            raise ValueError(f"Invalid force or torque mode: {self.force_or_torque_mode}")
+
+    def _force_or_torque_z_minus_callback(self) -> None:
+        if self.force_or_torque_mode == "force":
+            self.rb_forces[:, self.object_rb_handles, 2] -= self.force_scale * self.object_rb_masses
+            print(f"Force z minus: {self.rb_forces[:, self.object_rb_handles]}")
+        elif self.force_or_torque_mode == "torque":
+            self.rb_torques[:, self.object_rb_handles, 2] -= self.torque_scale * self.object_rb_masses
+            print(f"Torque z minus: {self.rb_torques[:, self.object_rb_handles]}")
+        elif self.force_or_torque_mode == "lin_vel_impulse":
+            self.need_apply_vel_impulse_from_keyboard = True
+            self.vel_impulse_from_keyboard[2] -= self.lin_vel_impulse_scale
+            print(f"Lin vel impulse z minus: {self.vel_impulse_from_keyboard}")
+        elif self.force_or_torque_mode == "ang_vel_impulse":
+            self.need_apply_vel_impulse_from_keyboard = True
+            self.vel_impulse_from_keyboard[5] -= self.ang_vel_impulse_scale
+            print(f"Ang vel impulse z minus: {self.vel_impulse_from_keyboard}")
+        else:
+            raise ValueError(f"Invalid force or torque mode: {self.force_or_torque_mode}")
+
+    def _toggle_force_or_torque_callback(self) -> None:
+        print("Toggling force or torque...")
+        MODES = ["force", "torque", "lin_vel_impulse", "ang_vel_impulse"]
+        assert self.force_or_torque_mode in MODES, f"Invalid force or torque mode: {self.force_or_torque_mode}"
+        idx = MODES.index(self.force_or_torque_mode)
+        idx = (idx + 1) % len(MODES)
+        self.force_or_torque_mode = MODES[idx]
+        print(f"Force or torque mode is now {self.force_or_torque_mode}")
+
+    def _teleport_object_callback(self) -> None:
+        print("Teleporting object...")
+        self.need_teleport_object_from_keyboard = True
+        print(f"Object is now teleported: {self.need_teleport_object_from_keyboard}")
+
     ##### KEYBOARD END #####
 
     # AllegroKukaBase abstract interface - to be overriden in derived classes
     def change_on_restart(self, cfg):
         self.frame_since_restart = 0
         self.last_curriculum_update = 0
-        
+
         self.cfg["env"]["distanceDeltaRewScale"] = cfg["env"]["distanceDeltaRewScale"]
         self.cfg["env"]["liftingRewScale"] = cfg["env"]["liftingRewScale"]
         self.cfg["env"]["liftingBonus"] = cfg["env"]["liftingBonus"]
@@ -586,7 +847,7 @@ class AllegroKukaBase(VecTask):
         self.lifting_bonus_threshold = self.cfg["env"]["liftingBonusThreshold"]
         self.keypoint_rew_scale = self.cfg["env"]["keypointRewScale"]
         self.kuka_actions_penalty_scale = self.cfg["env"]["kukaActionsPenaltyScale"]
-        self.allegro_actions_penalty_scale = self.cfg["env"]["allegroActionsPenaltyScale"]        
+        self.allegro_actions_penalty_scale = self.cfg["env"]["allegroActionsPenaltyScale"]
 
         self.reach_goal_bonus = self.cfg["env"]["reachGoalBonus"]
         self.fall_dist = self.cfg["env"]["fallDistance"]
@@ -741,7 +1002,7 @@ class AllegroKukaBase(VecTask):
 
             # Set max consecutive successes to the length of the trajectory so we don't run out of goal states
             self.max_consecutive_successes = len(self.trajectory_states)
-        
+
             FIXED_GOAL_STATES = self.cfg["env"]["fixedGoalStates"]
             if FIXED_GOAL_STATES is not None:
                 self.trajectory_states = torch.tensor(FIXED_GOAL_STATES, device=self.device)
@@ -835,7 +1096,11 @@ class AllegroKukaBase(VecTask):
             rewards_episode=self.rewards_episode,
             last_curriculum_update=self.last_curriculum_update,
             rb_forces=self.rb_forces,
+            rb_torques=self.rb_torques,
             random_force_prob=self.random_force_prob,
+            random_torque_prob=self.random_torque_prob,
+            random_lin_vel_impulse_prob=self.random_lin_vel_impulse_prob,
+            random_ang_vel_impulse_prob=self.random_ang_vel_impulse_prob,
             goal_states=self.goal_states,
             goal_init_state=self.goal_init_state,
             object_init_state=self.object_init_state,
@@ -848,7 +1113,7 @@ class AllegroKukaBase(VecTask):
     def set_env_state(self, env_state):
         if env_state is None:
             return
-        
+
         rewards_episode = env_state.get("rewards_episode", None)
         if rewards_episode is not None:
             for key in rewards_episode.keys():
@@ -866,17 +1131,17 @@ class AllegroKukaBase(VecTask):
             if isinstance(value, torch.Tensor) and self.__dict__[key].shape != value.shape:
                 print("Skipping loading env state value", key, "because of shape mismatch")
                 continue
-            
+
             if isinstance(value, torch.Tensor):
                 self.__dict__[key].copy_(value)
             else:
                 self.__dict__[key] = value
             print(f"Loaded env state value {key}:{value}")
-        
+
         self.arm_hand_dof_state = self.dof_state.view(self.num_envs, -1, 2)[:, : self.num_hand_arm_dofs]
         self.arm_hand_dof_pos = self.arm_hand_dof_state[..., 0]
         self.arm_hand_dof_vel = self.arm_hand_dof_state[..., 1]
-        
+
         self.reset_idx(torch.arange(self.num_envs, dtype=torch.long, device=self.device), tensor_reset=False)
         self.set_actor_root_state_tensor_indexed()
         print(f"Success tolerance value after loading from checkpoint: {self.success_tolerance}")
@@ -1146,7 +1411,7 @@ class AllegroKukaBase(VecTask):
 
         object_init_state = []
         table_init_state = []
-        
+
         self.rigid_body_name_to_idx = {}
 
         self.allegro_hand_indices = []
@@ -1670,7 +1935,13 @@ class AllegroKukaBase(VecTask):
         near_goal_fixed_size: Tensor = self.keypoints_max_dist_fixed_size <= keypoint_success_tolerance
         if self.cfg["env"]["fixedSizeKeypointReward"]:
             near_goal = near_goal_fixed_size
-        self.near_goal_steps += near_goal
+
+        if self.cfg["env"]["forceConsecutiveNearGoalSteps"]:
+            # If near_goal is True (1): (steps + 1) * 1 = Increment
+            # If near_goal is False (0): (steps + 0) * 0 = Reset to 0
+            self.near_goal_steps = (self.near_goal_steps + near_goal) * near_goal
+        else:
+            self.near_goal_steps += near_goal
 
         is_success = self.near_goal_steps >= self.success_steps
         goal_resets = is_success
@@ -1685,15 +1956,22 @@ class AllegroKukaBase(VecTask):
 
         self.reset_goal_buf[:] = goal_resets
 
+        object_lin_vel_penalty = -torch.sum(torch.square(self.object_linvel), dim=-1)
+        object_ang_vel_penalty = -torch.sum(torch.square(self.object_angvel), dim=-1)
+
         self.rewards_episode["raw_fingertip_delta_rew"] += fingertip_delta_rew
         self.rewards_episode["raw_hand_delta_penalty"] += hand_delta_penalty
         self.rewards_episode["raw_lifting_rew"] += lifting_rew
         self.rewards_episode["raw_keypoint_rew"] += keypoint_rew
+        self.rewards_episode["raw_object_lin_vel_penalty"] += object_lin_vel_penalty
+        self.rewards_episode["raw_object_ang_vel_penalty"] += object_ang_vel_penalty
 
         fingertip_delta_rew *= self.distance_delta_rew_scale
         hand_delta_penalty *= self.distance_delta_rew_scale * 0  # currently disabled
         lifting_rew *= self.lifting_rew_scale
         keypoint_rew *= self.keypoint_rew_scale
+        object_lin_vel_penalty *= self.object_lin_vel_penalty_scale
+        object_ang_vel_penalty *= self.object_ang_vel_penalty_scale
 
         kuka_actions_penalty, allegro_actions_penalty = self._action_penalties()
 
@@ -1710,6 +1988,8 @@ class AllegroKukaBase(VecTask):
             + kuka_actions_penalty
             + allegro_actions_penalty
             + bonus_rew
+            + object_lin_vel_penalty
+            + object_ang_vel_penalty
         )
 
         self.rew_buf[:] = reward
@@ -1741,6 +2021,9 @@ class AllegroKukaBase(VecTask):
             (kuka_actions_penalty, "kuka_actions_penalty"),
             (allegro_actions_penalty, "allegro_actions_penalty"),
             (bonus_rew, "bonus_rew"),
+            (object_lin_vel_penalty, "object_lin_vel_penalty"),
+            (object_ang_vel_penalty, "object_ang_vel_penalty"),
+            (reward, "total_reward"),
         ]
 
         episode_cumulative = dict()
@@ -2223,7 +2506,7 @@ class AllegroKukaBase(VecTask):
 
     def reset_target_pose(self, env_ids: Tensor, reset_buf_idxs=None, tensor_reset=True, is_first_goal=True) -> None:
         self._reset_target(env_ids, reset_buf_idxs, tensor_reset=tensor_reset, is_first_goal=is_first_goal)
-        
+
         if tensor_reset:
             self.reset_goal_buf[env_ids] = 0
             self.near_goal_steps[env_ids] = 0
@@ -2236,9 +2519,9 @@ class AllegroKukaBase(VecTask):
         if len(env_ids) > 0 and reset_buf_idxs is None and tensor_reset:
             obj_indices = self.object_indices[env_ids]
             table_indices = self.table_indices[env_ids]
-            
+
             # decide table reset z
-            table_reset_z = torch_rand_float(-self.cfg["env"]["tableResetZRange"], self.cfg["env"]["tableResetZRange"], (len(env_ids),1), device=self.device) + self.cfg["env"]["tableResetZ"] 
+            table_reset_z = torch_rand_float(-self.cfg["env"]["tableResetZRange"], self.cfg["env"]["tableResetZRange"], (len(env_ids),1), device=self.device) + self.cfg["env"]["tableResetZ"]
             self.table_init_state[env_ids, 2:3] = table_reset_z
             self.object_init_state[env_ids, 2:3] = table_reset_z + self.cfg["env"]["tableObjectZOffset"]
 
@@ -2274,10 +2557,10 @@ class AllegroKukaBase(VecTask):
                 self.root_state_tensor[obj_indices, 3:7] = new_object_rot
 
             self.root_state_tensor[obj_indices, 7:13] = torch.zeros_like(self.root_state_tensor[obj_indices, 7:13])
-        
+
         if len(env_ids) > 0 and reset_buf_idxs is not None and tensor_reset:
             obj_indices = self.object_indices[env_ids]
-            # TODO: Check if last 6 indices are 0 
+            # TODO: Check if last 6 indices are 0
             rs_ofs = self.root_state_resets.shape[1]
             self.root_state_tensor[obj_indices, :] = self.root_state_resets[reset_buf_idxs[env_ids].cpu(), obj_indices.cpu() % rs_ofs, :].to(self.device)
 
@@ -2369,6 +2652,7 @@ class AllegroKukaBase(VecTask):
         # reset rigid body forces
         if tensor_reset:
             self.rb_forces[env_ids, :, :] = 0.0
+            self.rb_torques[env_ids, :, :] = 0.0
 
         # reset object
         self.reset_object_pose(env_ids, reset_buf_idxs, tensor_reset=tensor_reset)
@@ -2380,10 +2664,25 @@ class AllegroKukaBase(VecTask):
 
         # reset random force probabilities
         if tensor_reset:
-            self.random_force_prob[env_ids] = torch.exp(
-                (torch.log(self.force_prob_range[0]) - torch.log(self.force_prob_range[1]))
-                * torch.rand(len(env_ids), device=self.device)
-                + torch.log(self.force_prob_range[1])
+            self.random_force_prob[env_ids] = self._sample_log_uniform(
+                min_value=self.force_prob_range[0],
+                max_value=self.force_prob_range[1],
+                num_samples=len(env_ids),
+            )
+            self.random_torque_prob[env_ids] = self._sample_log_uniform(
+                min_value=self.torque_prob_range[0],
+                max_value=self.torque_prob_range[1],
+                num_samples=len(env_ids),
+            )
+            self.random_lin_vel_impulse_prob[env_ids] = self._sample_log_uniform(
+                min_value=self.lin_vel_impulse_prob_range[0],
+                max_value=self.lin_vel_impulse_prob_range[1],
+                num_samples=len(env_ids),
+            )
+            self.random_ang_vel_impulse_prob[env_ids] = self._sample_log_uniform(
+                min_value=self.ang_vel_impulse_prob_range[0],
+                max_value=self.ang_vel_impulse_prob_range[1],
+                num_samples=len(env_ids),
             )
 
         # reset allegro hand
@@ -2412,7 +2711,7 @@ class AllegroKukaBase(VecTask):
             self.arm_hand_dof_vel[env_ids, :] = self.reset_dof_vel_noise * rand_vel_floats
             self.prev_targets[env_ids, : self.num_hand_arm_dofs] = allegro_pos
             self.cur_targets[env_ids, : self.num_hand_arm_dofs] = allegro_pos
-        
+
         if len(env_ids) > 0 and reset_buf_idxs is not None and tensor_reset:
             self.arm_hand_dof_pos[env_ids, :] = self.dof_resets[reset_buf_idxs[env_ids].cpu(), :, 0].to(self.device)
             self.arm_hand_dof_vel[env_ids, :] = self.dof_resets[reset_buf_idxs[env_ids].cpu(), :, 1].to(self.device)
@@ -2507,14 +2806,13 @@ class AllegroKukaBase(VecTask):
 
         reset_env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
         reset_goal_env_ids = self.reset_goal_buf.nonzero(as_tuple=False).squeeze(-1)
-        
+
         combined_random_env_ids = torch.cat([reset_env_ids, reset_goal_env_ids, reset_goal_env_ids])
         uniques, counts = combined_random_env_ids.unique(return_counts=True)
         reset_goal_env_ids = uniques[counts == 2]
         self.reset_target_pose(reset_goal_env_ids, None, is_first_goal=False)
         if len(reset_env_ids) > 0:
             self.reset_idx(reset_env_ids, None)
-        self.set_actor_root_state_tensor_indexed()
 
         if self.use_relative_control:
             # arm relative to current position
@@ -2611,30 +2909,85 @@ class AllegroKukaBase(VecTask):
         self.set_dof_state_tensor_indexed()
         self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(self.cur_targets))
 
-        if self.force_scale > 0.0:
-            self.rb_forces *= torch.pow(self.force_decay, self.dt / self.force_decay_interval)
+        # Random forces
+        if self.force_scale > 0.0 or self.torque_scale > 0.0:
+            if self.force_scale > 0.0:
+                self.rb_forces *= torch.pow(self.force_decay, self.dt / self.force_decay_interval)
 
-            # apply new forces
-            force_indices = (torch.rand(self.num_envs, device=self.device) < self.random_force_prob).nonzero()
-            self.rb_forces[force_indices, self.object_rb_handles, :] = (
-                torch.randn(self.rb_forces[force_indices, self.object_rb_handles, :].shape, device=self.device)
-                * self.object_rb_masses
-                * self.force_scale
-            )
+                # apply new forces
+                force_indices = (torch.rand(self.num_envs, device=self.device) < self.random_force_prob).nonzero()
+                self.rb_forces[force_indices, self.object_rb_handles, :] = (
+                    torch.randn(self.rb_forces[force_indices, self.object_rb_handles, :].shape, device=self.device)
+                    * self.object_rb_masses
+                    * self.force_scale
+                )
 
-            if self.cfg["env"]["forceOnlyWhenLifted"]:
-                # self.rb_forces is (N, R, 3), assuming there are R rigid bodies per env
-                # self.lifted_object is (N,), True if the object is lifted
-                self.rb_forces[:, self.object_rb_handles, :] *= self.lifted_object.unsqueeze(1).unsqueeze(2)
+                if self.force_only_when_lifted:
+                    # self.rb_forces is (N, R, 3), assuming there are R rigid bodies per env
+                    # self.lifted_object is (N,), True if the object is lifted
+                    self.rb_forces[:, self.object_rb_handles, :] *= self.lifted_object.unsqueeze(1).unsqueeze(2)
+
+            if self.torque_scale > 0.0:
+                self.rb_torques *= torch.pow(self.torque_decay, self.dt / self.torque_decay_interval)
+
+                # apply new torques
+                torque_indices = (torch.rand(self.num_envs, device=self.device) < self.random_torque_prob).nonzero()
+                self.rb_torques[torque_indices, self.object_rb_handles, :] = (
+                    torch.randn(self.rb_torques[torque_indices, self.object_rb_handles, :].shape, device=self.device)
+                    * self.object_rb_masses  # in theory should do inertia, but harder to do this, so just use mass for now
+                    * self.torque_scale
+                )
+
+                if self.torque_only_when_lifted:
+                    # self.rb_torques is (N, R, 3), assuming there are R rigid bodies per env
+                    # self.lifted_object is (N,), True if the object is lifted
+                    self.rb_torques[:, self.object_rb_handles, :] *= self.lifted_object.unsqueeze(1).unsqueeze(2)
 
             self.gym.apply_rigid_body_force_tensors(
-                self.sim, gymtorch.unwrap_tensor(self.rb_forces), None, gymapi.ENV_SPACE
+                self.sim, gymtorch.unwrap_tensor(self.rb_forces), gymtorch.unwrap_tensor(self.rb_torques), gymapi.ENV_SPACE
             )
-        
+
+        # Random velocity impulses
+        if self.lin_vel_impulse_scale > 0.0 or self.ang_vel_impulse_scale > 0.0:
+            if self.lin_vel_impulse_scale > 0.0:
+                if self.lin_vel_impulse_only_when_lifted:
+                    lin_vel_impulse_env_ids = ((torch.rand(self.num_envs, device=self.device) < self.random_lin_vel_impulse_prob) * self.lifted_object).nonzero(as_tuple=False).squeeze(-1)
+                else:
+                    lin_vel_impulse_env_ids = (torch.rand(self.num_envs, device=self.device) < self.random_lin_vel_impulse_prob).nonzero(as_tuple=False).squeeze(-1)
+                random_lin_vel_impulses = torch.randn(self.num_envs, 3, device=self.device) * self.lin_vel_impulse_scale
+                self.root_state_tensor[self.object_indices[lin_vel_impulse_env_ids], 7:10] = random_lin_vel_impulses[lin_vel_impulse_env_ids, :]
+                self.deferred_set_actor_root_state_tensor_indexed([self.object_indices[lin_vel_impulse_env_ids]])
+
+            if self.ang_vel_impulse_scale > 0.0:
+                if self.ang_vel_impulse_only_when_lifted:
+                    ang_vel_impulse_env_ids = ((torch.rand(self.num_envs, device=self.device) < self.random_ang_vel_impulse_prob) * self.lifted_object).nonzero(as_tuple=False).squeeze(-1)
+                else:
+                    ang_vel_impulse_env_ids = (torch.rand(self.num_envs, device=self.device) < self.random_ang_vel_impulse_prob).nonzero(as_tuple=False).squeeze(-1)
+                random_ang_vel_impulses = torch.randn(self.num_envs, 3, device=self.device) * self.ang_vel_impulse_scale
+                self.root_state_tensor[self.object_indices[ang_vel_impulse_env_ids], 10:13] = random_ang_vel_impulses[ang_vel_impulse_env_ids, :]
+                self.deferred_set_actor_root_state_tensor_indexed([self.object_indices[ang_vel_impulse_env_ids]])
+
+        # Keyboard applied velocity impulses
+        # See keyboard callbacks for more details
+        if self.need_apply_vel_impulse_from_keyboard:
+            self.root_state_tensor[self.object_indices, 7:13] += torch.from_numpy(self.vel_impulse_from_keyboard).float().to(self.device)[None, :]
+            self.deferred_set_actor_root_state_tensor_indexed([self.object_indices])
+            self.need_apply_vel_impulse_from_keyboard = False
+            self.vel_impulse_from_keyboard[:] = 0.0
+
+        # Teleport object
+        if self.need_teleport_object_from_keyboard:
+            self.root_state_tensor[self.object_indices, :] = self.object_init_state.clone()
+            self.deferred_set_actor_root_state_tensor_indexed([self.object_indices])
+            self.need_teleport_object_from_keyboard = False
+
+        self.set_actor_root_state_tensor_indexed()
+
         if self.good_reset_boundary > 0:
             self.temp_root_states_buf[:, self.temp_buffer_index] = self.root_state_tensor.reshape(self.num_envs, -1, self.root_state_tensor.shape[1:]).cpu()
             self.temp_dof_states_buf[:, self.temp_buffer_index] = self.dof_state.reshape(self.num_envs, -1, self.dof_state.shape[1:]).cpu()
             self.temp_buffer_index += 1
+
         # apply torques
         if self.privileged_actions:
             torque_actions = torque_actions.unsqueeze(1)
@@ -2647,183 +3000,246 @@ class AllegroKukaBase(VecTask):
 
         USE_LIVE_PLOTTER = False
         if USE_LIVE_PLOTTER:
-            if not hasattr(self, "live_plotter"):
-                from live_plotter import FastLivePlotter
-
-                # Plot table force raw and smoothed
-                self.live_plotter = FastLivePlotter(
-                    n_plots=1,
-                    titles=["Table Force"],
-                    xlabels=["idx"],
-                    ylabels=["force"],
-                    # ylims=[(self.joint_lower_limits[0], self.joint_upper_limits[0])],
-                    legends=[["raw", "smoothed", "max smoothed"]],
-                )
-                self.table_force_raw_history = []
-                self.table_force_smoothed_history = []
-                self.max_table_sensor_force_norm_smoothed_history = []
-
-                # Plot joint pos and target
-                # self.live_plotter = FastLivePlotter(
-                #     n_plots=len(self.joint_names),
-                #     titles=self.joint_names,
-                #     xlabels=["idx"] * len(self.joint_names),
-                #     ylabels=["joint pos"] * len(self.joint_names),
-                #     ylims=[(self.joint_lower_limits[i], self.joint_upper_limits[i]) for i in range(len(self.joint_names))],
-                #     legends=[["pos", "target"]] * len(self.joint_names),
-                # )
-                # self.joint_pos_history = []
-                # self.joint_target_history = []
-
-            # Plot table force raw and smoothed
-            ENV_IDX = 0
-            if self.with_table_force_sensor:
-                table_force = self.table_sensor_forces_raw[ENV_IDX, :3].norm(dim=-1).item()
-                table_force_smoothed = self.table_sensor_forces_smoothed[ENV_IDX, :3].norm(dim=-1).item()
-                max_table_sensor_force_norm_smoothed = self.max_table_sensor_force_norm_smoothed[ENV_IDX].item()
-                self.table_force_raw_history.append(table_force)
-                self.table_force_smoothed_history.append(table_force_smoothed)
-                self.max_table_sensor_force_norm_smoothed_history.append(max_table_sensor_force_norm_smoothed)
-                # Should be (N, 2)
-                self.live_plotter.plot(
-                    y_data_list=[
-                        np.stack([
-                            np.array(self.table_force_raw_history),
-                            np.array(self.table_force_smoothed_history),
-                            np.array(self.max_table_sensor_force_norm_smoothed_history),
-                        ], axis=-1),
-                    ]
-                )
-
-            # Plot joint pos and target
-            # ENV_IDX = 0
-            # joint_pos = self.arm_hand_dof_pos[ENV_IDX].cpu().numpy().copy()
-            # joint_target = self.cur_targets[ENV_IDX].cpu().numpy().copy()
-            # assert joint_pos.shape == joint_target.shape == (len(self.joint_names),), f"{joint_pos.shape} != {joint_target.shape} != {len(self.joint_names)}"
-            # self.joint_pos_history.append(joint_pos)
-            # self.joint_target_history.append(joint_target)
-            # joint_pos_history = np.stack(self.joint_pos_history, axis=0)
-            # joint_target_history = np.stack(self.joint_target_history, axis=0)
-            # joint_pos_and_target_history = np.stack([joint_pos_history, joint_target_history], axis=-1)
-            # assert joint_pos_and_target_history.shape == (len(self.joint_pos_history), len(self.joint_names), 2), f"{joint_pos_and_target_history.shape} != ({len(self.joint_pos_history)}, {len(self.joint_names)}, 2)"
-            # # Should be (N, 2)
-            # self.live_plotter.plot(
-            #     y_data_list=[
-            #         joint_pos_and_target_history[:, i, :] for i in range(len(self.joint_names))
-            #     ]
-            # )
+            self._use_live_plotter()
 
         RECORD_DATA = self.cfg["env"]["record_data"]
         if RECORD_DATA:
-            from recorded_data_scripts.recorded_data import RecordedData
-            N_TIMESTEPS = self.cfg["env"]["record_data_num_steps"]
+            self._record_data()
 
-            # Get data from sim
-            robot_root_state = self.root_state_tensor[self.allegro_hand_indices, :13].cpu().numpy()
-            object_root_state = self.root_state_tensor[self.object_indices, :13].cpu().numpy()
-            robot_joint_position = self.arm_hand_dof_pos.cpu().numpy()
-            table_root_state = self.root_state_tensor[self.table_indices, :13].cpu().numpy()
+    def _use_live_plotter(self):
+        if not hasattr(self, "live_plotter"):
+            from live_plotter import FastLivePlotter
+
+            # Plot table force raw and smoothed
+            # self.live_plotter = FastLivePlotter(
+            #     n_plots=1,
+            #     titles=["Table Force"],
+            #     xlabels=["idx"],
+            #     ylabels=["force"],
+            #     # ylims=[(self.joint_lower_limits[0], self.joint_upper_limits[0])],
+            #     legends=[["raw", "smoothed", "max smoothed"]],
+            # )
+            # self.table_force_raw_history = []
+            # self.table_force_smoothed_history = []
+            # self.max_table_sensor_force_norm_smoothed_history = []
+
+            # Plot joint pos and target
+            # self.live_plotter = FastLivePlotter(
+            #     n_plots=len(self.joint_names),
+            #     titles=self.joint_names,
+            #     xlabels=["idx"] * len(self.joint_names),
+            #     ylabels=["joint pos"] * len(self.joint_names),
+            #     ylims=[(self.joint_lower_limits[i], self.joint_upper_limits[i]) for i in range(len(self.joint_names))],
+            #     legends=[["pos", "target"]] * len(self.joint_names),
+            # )
+            # self.joint_pos_history = []
+            # self.joint_target_history = []
+
+            # Plot the object velocity penalty
+            self.live_plotter = FastLivePlotter(
+                n_plots=5,
+                titles=["Linear Velocity Penalty", "Angular Velocity Penalty", "Cumulative Linear Velocity Penalty", "Cumulative Angular Velocity Penalty", "Cumulative Total Reward"],
+            )
+            self.object_lin_vel_penalty_history = []
+            self.object_ang_vel_penalty_history = []
+            self.cumulative_object_lin_vel_penalty_history = []
+            self.cumulative_object_ang_vel_penalty_history = []
+            self.cumulative_total_reward_history = []
+
+        # # Plot table force raw and smoothed
+        # ENV_IDX = 0
+        # if self.with_table_force_sensor:
+        #     table_force = self.table_sensor_forces_raw[ENV_IDX, :3].norm(dim=-1).item()
+        #     table_force_smoothed = self.table_sensor_forces_smoothed[ENV_IDX, :3].norm(dim=-1).item()
+        #     max_table_sensor_force_norm_smoothed = self.max_table_sensor_force_norm_smoothed[ENV_IDX].item()
+        #     self.table_force_raw_history.append(table_force)
+        #     self.table_force_smoothed_history.append(table_force_smoothed)
+        #     self.max_table_sensor_force_norm_smoothed_history.append(max_table_sensor_force_norm_smoothed)
+        #     # Should be (N, 2)
+        #     self.live_plotter.plot(
+        #         y_data_list=[
+        #             np.stack([
+        #                 np.array(self.table_force_raw_history),
+        #                 np.array(self.table_force_smoothed_history),
+        #                 np.array(self.max_table_sensor_force_norm_smoothed_history),
+        #             ], axis=-1),
+        #         ]
+        #     )
+
+        # Plot joint pos and target
+        # ENV_IDX = 0
+        # joint_pos = self.arm_hand_dof_pos[ENV_IDX].cpu().numpy().copy()
+        # joint_target = self.cur_targets[ENV_IDX].cpu().numpy().copy()
+        # assert joint_pos.shape == joint_target.shape == (len(self.joint_names),), f"{joint_pos.shape} != {joint_target.shape} != {len(self.joint_names)}"
+        # self.joint_pos_history.append(joint_pos)
+        # self.joint_target_history.append(joint_target)
+        # joint_pos_history = np.stack(self.joint_pos_history, axis=0)
+        # joint_target_history = np.stack(self.joint_target_history, axis=0)
+        # joint_pos_and_target_history = np.stack([joint_pos_history, joint_target_history], axis=-1)
+        # assert joint_pos_and_target_history.shape == (len(self.joint_pos_history), len(self.joint_names), 2), f"{joint_pos_and_target_history.shape} != ({len(self.joint_pos_history)}, {len(self.joint_names)}, 2)"
+        # # Should be (N, 2)
+        # self.live_plotter.plot(
+        #     y_data_list=[
+        #         joint_pos_and_target_history[:, i, :] for i in range(len(self.joint_names))
+        #     ]
+        # )
+
+        # Plot object velocity penalty
+        ENV_IDX = 0
+        if "rewards_episode" in self.extras and "episode_cumulative" in self.extras:
+            # Note to self: these names probably got mixed up
+            # episode_cumulative should be rewards_episode and vice versa
+            #
+            # Should be:
+            # rewards_episode is the rewards for the current step
+            # episode_cumulative is the cumulative rewards over the current episode
+            #
+            # Right now:
+            # episode_cumulative is the rewards for the current step
+            # rewards_episode is the cumulative rewards over the current episode
+
+            rewards_episode = self.extras["rewards_episode"]
+            episode_cumulative =self.extras["episode_cumulative"]
+
+            # object_lin_vel_penalty = rewards_episode["object_lin_vel_penalty"].cpu().numpy()[ENV_IDX].item()
+            # object_ang_vel_penalty = rewards_episode["object_ang_vel_penalty"].cpu().numpy()[ENV_IDX].item()
+            # cumulative_object_lin_vel_penalty = episode_cumulative["object_lin_vel_penalty"].cpu().numpy()[ENV_IDX].item()
+            # cumulative_object_ang_vel_penalty = episode_cumulative["object_ang_vel_penalty"].cpu().numpy()[ENV_IDX].item()
+
+            cumulative_object_lin_vel_penalty = rewards_episode["object_lin_vel_penalty"].cpu().numpy()[ENV_IDX].item()
+            cumulative_object_ang_vel_penalty = rewards_episode["object_ang_vel_penalty"].cpu().numpy()[ENV_IDX].item()
+            object_lin_vel_penalty = episode_cumulative["object_lin_vel_penalty"].cpu().numpy()[ENV_IDX].item()
+            object_ang_vel_penalty = episode_cumulative["object_ang_vel_penalty"].cpu().numpy()[ENV_IDX].item()
+            cumulative_total_reward = rewards_episode["total_reward"].cpu().numpy()[ENV_IDX].item()
+
+            self.object_lin_vel_penalty_history.append(object_lin_vel_penalty)
+            self.object_ang_vel_penalty_history.append(object_ang_vel_penalty)
+            self.cumulative_object_lin_vel_penalty_history.append(cumulative_object_lin_vel_penalty)
+            self.cumulative_object_ang_vel_penalty_history.append(cumulative_object_ang_vel_penalty)
+            self.cumulative_total_reward_history.append(cumulative_total_reward)
+
+            self.live_plotter.plot(
+                y_data_list=[
+                    np.array(self.object_lin_vel_penalty_history),
+                    np.array(self.object_ang_vel_penalty_history),
+                    np.array(self.cumulative_object_lin_vel_penalty_history),
+                    np.array(self.cumulative_object_ang_vel_penalty_history),
+                    np.array(self.cumulative_total_reward_history),
+                ]
+            )
+        else:
+            print("No rewards_episode or episode_cumulative found in extras")
+
+    def _record_data(self):
+        from recorded_data_scripts.recorded_data import RecordedData
+        N_TIMESTEPS = self.cfg["env"]["record_data_num_steps"]
+
+        # Get data from sim
+        robot_root_state = self.root_state_tensor[self.allegro_hand_indices, :13].cpu().numpy()
+        object_root_state = self.root_state_tensor[self.object_indices, :13].cpu().numpy()
+        robot_joint_position = self.arm_hand_dof_pos.cpu().numpy()
+        table_root_state = self.root_state_tensor[self.table_indices, :13].cpu().numpy()
+        if hasattr(self, "goal_object_indices"):
+            goal_root_state = self.root_state_tensor[self.goal_object_indices, :13].cpu().numpy()
+        robot_joint_velocity = self.arm_hand_dof_vel.cpu().numpy()
+        robot_joint_pos_target = self.cur_targets[:, :self.num_hand_arm_dofs].cpu().numpy()
+        observations = self.obs_buf.cpu().numpy()
+        actions = self.actions.cpu().numpy()
+
+        # Initialize arrays if not already initialized
+        if not hasattr(self, "robot_root_states_array"):
+            self.robot_root_states_array = []
+            self.object_root_states_array = []
+            self.robot_joint_positions_array = []
+            self.robot_joint_names = self.joint_names
+
+            self.table_root_states_array = []
             if hasattr(self, "goal_object_indices"):
-                goal_root_state = self.root_state_tensor[self.goal_object_indices, :13].cpu().numpy()
-            robot_joint_velocity = self.arm_hand_dof_vel.cpu().numpy()
-            robot_joint_pos_target = self.cur_targets[:, :self.num_hand_arm_dofs].cpu().numpy()
-            observations = self.obs_buf.cpu().numpy()
-            actions = self.actions.cpu().numpy()
+                self.goal_root_states_array = []
+            self.robot_joint_velocities_array = []
+            self.robot_joint_pos_targets_array = []
 
-            # Initialize arrays if not already initialized
-            if not hasattr(self, "robot_root_states_array"):
-                self.robot_root_states_array = []
-                self.object_root_states_array = []
-                self.robot_joint_positions_array = []
-                self.robot_joint_names = self.joint_names
+            self.observations_array = []
+            self.actions_array = []
 
-                self.table_root_states_array = []
-                if hasattr(self, "goal_object_indices"):
-                    self.goal_root_states_array = []
-                self.robot_joint_velocities_array = []
-                self.robot_joint_pos_targets_array = []
+        # Append data to arrays
+        self.robot_root_states_array.append(robot_root_state)
+        self.object_root_states_array.append(object_root_state)
+        self.robot_joint_positions_array.append(robot_joint_position)
+        self.table_root_states_array.append(table_root_state)
+        if hasattr(self, "goal_object_indices"):
+            self.goal_root_states_array.append(goal_root_state)
+        self.robot_joint_velocities_array.append(robot_joint_velocity)
+        self.robot_joint_pos_targets_array.append(robot_joint_pos_target)
+        self.observations_array.append(observations)
+        self.actions_array.append(actions)
+        print(f"Recorded {len(self.robot_root_states_array)} / {N_TIMESTEPS} steps")
 
-                self.observations_array = []
-                self.actions_array = []
+        # Save data to file
+        if len(self.robot_root_states_array) >= N_TIMESTEPS:
+            datetime_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            this_dir = Path(__file__).parent
+            root_dir = this_dir.parent.parent.parent
+            recorded_data_path = root_dir / "recorded_data" / f"{datetime_str}.npz"
+            recorded_data_path.parent.mkdir(parents=True, exist_ok=True)
 
-            # Append data to arrays
-            self.robot_root_states_array.append(robot_root_state)
-            self.object_root_states_array.append(object_root_state)
-            self.robot_joint_positions_array.append(robot_joint_position)
-            self.table_root_states_array.append(table_root_state)
+            self.robot_root_states_array = np.stack(self.robot_root_states_array, axis=0)
+            self.object_root_states_array = np.stack(self.object_root_states_array, axis=0)
+            self.robot_joint_positions_array = np.stack(self.robot_joint_positions_array, axis=0)
+            self.table_root_states_array = np.stack(self.table_root_states_array, axis=0)
             if hasattr(self, "goal_object_indices"):
-                self.goal_root_states_array.append(goal_root_state)
-            self.robot_joint_velocities_array.append(robot_joint_velocity)
-            self.robot_joint_pos_targets_array.append(robot_joint_pos_target)
-            self.observations_array.append(observations)
-            self.actions_array.append(actions)
-            print(f"Recorded {len(self.robot_root_states_array)} / {N_TIMESTEPS} steps")
+                self.goal_root_states_array = np.stack(self.goal_root_states_array, axis=0)
+            self.robot_joint_velocities_array = np.stack(self.robot_joint_velocities_array, axis=0)
+            self.robot_joint_pos_targets_array = np.stack(self.robot_joint_pos_targets_array, axis=0)
+            self.observations_array = np.stack(self.observations_array, axis=0)
+            self.actions_array = np.stack(self.actions_array, axis=0)
 
-            # Save data to file
-            if len(self.robot_root_states_array) >= N_TIMESTEPS:
-                datetime_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-                this_dir = Path(__file__).parent
-                root_dir = this_dir.parent.parent.parent
-                recorded_data_path = root_dir / "recorded_data" / f"{datetime_str}.npz"
-                recorded_data_path.parent.mkdir(parents=True, exist_ok=True)
+            assert self.robot_root_states_array.shape == (N_TIMESTEPS, self.num_envs, 13), f"{self.robot_root_states_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, 13)"
+            assert self.object_root_states_array.shape == (N_TIMESTEPS, self.num_envs, 13), f"{self.object_root_states_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, 13)"
+            assert self.robot_joint_positions_array.shape == (N_TIMESTEPS, self.num_envs, len(self.robot_joint_names)), f"{self.robot_joint_positions_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, {len(self.robot_joint_names)})"
+            assert self.table_root_states_array.shape == (N_TIMESTEPS, self.num_envs, 13), f"{self.table_root_states_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, 13)"
+            if hasattr(self, "goal_object_indices"):
+                assert self.goal_root_states_array.shape == (N_TIMESTEPS, self.num_envs, 13), f"{self.goal_root_states_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, 13)"
+            assert self.robot_joint_velocities_array.shape == (N_TIMESTEPS, self.num_envs, len(self.robot_joint_names)), f"{self.robot_joint_velocities_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, {len(self.robot_joint_names)})"
+            assert self.robot_joint_pos_targets_array.shape == (N_TIMESTEPS, self.num_envs, len(self.robot_joint_names)), f"{self.robot_joint_pos_targets_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, {len(self.robot_joint_names)})"
+            assert self.observations_array.shape == (N_TIMESTEPS, self.num_envs, self.obs_buf.shape[1]), f"{self.observations_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, {self.obs_buf.shape[1]})"
+            assert self.actions_array.shape == (N_TIMESTEPS, self.num_envs, self.actions.shape[1]), f"{self.actions_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, {self.actions.shape[1]})"
 
-                self.robot_root_states_array = np.stack(self.robot_root_states_array, axis=0)
-                self.object_root_states_array = np.stack(self.object_root_states_array, axis=0)
-                self.robot_joint_positions_array = np.stack(self.robot_joint_positions_array, axis=0)
-                self.table_root_states_array = np.stack(self.table_root_states_array, axis=0)
-                if hasattr(self, "goal_object_indices"):
-                    self.goal_root_states_array = np.stack(self.goal_root_states_array, axis=0)
-                self.robot_joint_velocities_array = np.stack(self.robot_joint_velocities_array, axis=0)
-                self.robot_joint_pos_targets_array = np.stack(self.robot_joint_pos_targets_array, axis=0)
-                self.observations_array = np.stack(self.observations_array, axis=0)
-                self.actions_array = np.stack(self.actions_array, axis=0)
+            time_array = np.arange(N_TIMESTEPS) * self.dt
 
-                assert self.robot_root_states_array.shape == (N_TIMESTEPS, self.num_envs, 13), f"{self.robot_root_states_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, 13)"
-                assert self.object_root_states_array.shape == (N_TIMESTEPS, self.num_envs, 13), f"{self.object_root_states_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, 13)"
-                assert self.robot_joint_positions_array.shape == (N_TIMESTEPS, self.num_envs, len(self.robot_joint_names)), f"{self.robot_joint_positions_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, {len(self.robot_joint_names)})"
-                assert self.table_root_states_array.shape == (N_TIMESTEPS, self.num_envs, 13), f"{self.table_root_states_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, 13)"
-                if hasattr(self, "goal_object_indices"):
-                    assert self.goal_root_states_array.shape == (N_TIMESTEPS, self.num_envs, 13), f"{self.goal_root_states_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, 13)"
-                assert self.robot_joint_velocities_array.shape == (N_TIMESTEPS, self.num_envs, len(self.robot_joint_names)), f"{self.robot_joint_velocities_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, {len(self.robot_joint_names)})"
-                assert self.robot_joint_pos_targets_array.shape == (N_TIMESTEPS, self.num_envs, len(self.robot_joint_names)), f"{self.robot_joint_pos_targets_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, {len(self.robot_joint_names)})"
-                assert self.observations_array.shape == (N_TIMESTEPS, self.num_envs, self.obs_buf.shape[1]), f"{self.observations_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, {self.obs_buf.shape[1]})"
-                assert self.actions_array.shape == (N_TIMESTEPS, self.num_envs, self.actions.shape[1]), f"{self.actions_array.shape} != ({N_TIMESTEPS}, {self.num_envs}, {self.actions.shape[1]})"
+            ENV_IDX = 0
+            recorded_data = RecordedData(
+                robot_root_states_array=self.robot_root_states_array[:, ENV_IDX],
+                object_root_states_array=self.object_root_states_array[:, ENV_IDX],
+                robot_joint_positions_array=self.robot_joint_positions_array[:, ENV_IDX],
+                time_array=time_array,
+                robot_joint_names=self.robot_joint_names,
+                table_root_states_array=self.table_root_states_array[:, ENV_IDX],
+                goal_root_states_array=self.goal_root_states_array[:, ENV_IDX] if hasattr(self, "goal_object_indices") else None,
+                robot_joint_velocities_array=self.robot_joint_velocities_array[:, ENV_IDX],
+                robot_joint_pos_targets_array=self.robot_joint_pos_targets_array[:, ENV_IDX],
+                observations_array=self.observations_array[:, ENV_IDX],
+                actions_array=self.actions_array[:, ENV_IDX],
+                object_name=self.cfg["env"]["object_type"],
+            )
+            recorded_data.to_file(recorded_data_path)
+            print(f"Saved recorded data to {recorded_data_path}")
+            breakpoint()
 
-                time_array = np.arange(N_TIMESTEPS) * self.dt
+            # Reset arrays
+            self.robot_root_states_array = []
+            self.object_root_states_array = []
+            self.robot_joint_positions_array = []
+            self.robot_joint_names = self.joint_names
 
-                ENV_IDX = 0
-                recorded_data = RecordedData(
-                    robot_root_states_array=self.robot_root_states_array[:, ENV_IDX],
-                    object_root_states_array=self.object_root_states_array[:, ENV_IDX],
-                    robot_joint_positions_array=self.robot_joint_positions_array[:, ENV_IDX],
-                    time_array=time_array,
-                    robot_joint_names=self.robot_joint_names,
-                    table_root_states_array=self.table_root_states_array[:, ENV_IDX],
-                    goal_root_states_array=self.goal_root_states_array[:, ENV_IDX] if hasattr(self, "goal_object_indices") else None,
-                    robot_joint_velocities_array=self.robot_joint_velocities_array[:, ENV_IDX],
-                    robot_joint_pos_targets_array=self.robot_joint_pos_targets_array[:, ENV_IDX],
-                    observations_array=self.observations_array[:, ENV_IDX],
-                    actions_array=self.actions_array[:, ENV_IDX],
-                    object_name=self.cfg["env"]["object_type"],
-                )
-                recorded_data.to_file(recorded_data_path)
-                print(f"Saved recorded data to {recorded_data_path}")
-                breakpoint()
+            self.table_root_states_array = []
+            if hasattr(self, "goal_object_indices"):
+                self.goal_root_states_array = []
+            self.robot_joint_velocities_array = []
+            self.robot_joint_pos_targets_array = []
 
-                # Reset arrays
-                self.robot_root_states_array = []
-                self.object_root_states_array = []
-                self.robot_joint_positions_array = []
-                self.robot_joint_names = self.joint_names
-
-                self.table_root_states_array = []
-                if hasattr(self, "goal_object_indices"):
-                    self.goal_root_states_array = []
-                self.robot_joint_velocities_array = []
-                self.robot_joint_pos_targets_array = []
-
-                self.observations_array = []
-                self.actions_array = []
+            self.observations_array = []
+            self.actions_array = []
 
     @property
     def use_sharpa(self) -> bool:
@@ -2888,21 +3304,21 @@ class AllegroKukaBase(VecTask):
         self.populate_sim_buffers()
         rewards, is_success = self.compute_kuka_reward()
         self.populate_obs_and_states_buffers()
-        
+
         if self.good_reset_boundary > 0:
             add_indices = torch.where(is_success)[0]
             add_indices = add_indices[add_indices >= self.good_reset_boundary]
             add_indices = add_indices[self.temp_buffer_index[add_indices] > self.success_steps]
-            
+
             if len(add_indices) > 0:
                 rs_to_add = torch.stack([self.temp_root_states_buf[idx, torch.arange(self.temp_buffer_index[idx]-self.success_steps)] for idx in add_indices])
                 dof_to_add = torch.stack([self.temp_dof_states_buf[idx, torch.arange(self.temp_buffer_index[idx]-self.success_steps)] for idx in add_indices])
-                
+
                 num_to_add = len(rs_to_add)
-                
+
                 next_index = self.buffer_index + num_to_add
                 self.buffer_length = min(self.buffer_length + num_to_add, self.max_buffer_size)
-                
+
                 if next_index >= self.max_buffer_size:
                     num_to_add -= (self.max_buffer_size - self.buffer_index)
                     self.root_state_resets[self.buffer_index:] = rs_to_add[:self.max_buffer_size-self.buffer_index]
@@ -2912,11 +3328,11 @@ class AllegroKukaBase(VecTask):
                 else:
                     self.root_state_resets[self.buffer_index:next_index] = rs_to_add
                     self.dof_resets[self.buffer_index:next_index] = dof_to_add
-                
+
                 self.buffer_index = next_index % self.max_buffer_size
-                
+
                 print(f"Added {len(rs_to_add)} states, lifted {self.lifted_object[add_indices].sum().item()}/{len(add_indices)} objects")
-            
+
             self.temp_buffer_index[torch.where(is_success)[0]] = 0
             self.temp_buffer_index[torch.where(self.reset_buf)[0]] = 0
 
@@ -2938,9 +3354,12 @@ class AllegroKukaBase(VecTask):
 
             sphere_pose = gymapi.Transform()
             sphere_pose.r = gymapi.Quat(0, 0, 0, 1)
-            sphere_geom = gymutil.WireframeSphereGeometry(0.01, 8, 8, sphere_pose, color=(1, 1, 0))
-            sphere_geom_white = gymutil.WireframeSphereGeometry(0.02, 8, 8, sphere_pose, color=(1, 1, 1))
-            sphere_geom_black = gymutil.WireframeSphereGeometry(0.01, 8, 8, sphere_pose, color=(0, 0, 0))
+            YELLOW = (1, 1, 0)
+            WHITE = (1, 1, 1)
+            BLACK = (0, 0, 0)
+            sphere_geom = gymutil.WireframeSphereGeometry(0.01, 8, 8, sphere_pose, color=YELLOW)
+            sphere_geom_white = gymutil.WireframeSphereGeometry(0.02, 8, 8, sphere_pose, color=WHITE)
+            sphere_geom_black = gymutil.WireframeSphereGeometry(0.01, 8, 8, sphere_pose, color=BLACK)
 
             palm_center_pos_cpu = self.palm_center_pos.cpu().numpy()
             palm_rot_cpu = self._palm_rot.cpu().numpy()
@@ -2968,18 +3387,40 @@ class AllegroKukaBase(VecTask):
                 object_pos_cpu = self.object_pos[i].cpu().numpy()
                 assert object_pos_cpu.shape == (3,), f"object_pos_cpu.shape: {object_pos_cpu.shape}"
                 start_pos = gymapi.Vec3(*object_pos_cpu)
-                MAX_FORCE_NORM = 2.0
+                MAX_FORCE_NORM = self.force_scale * 0.1  # Often mass is about 0.1 kg
                 MAX_VECTOR_LENGTH = 0.3
                 force_norm = np.linalg.norm(rb_forces_cpu)
                 if force_norm > MAX_FORCE_NORM:
                     rb_forces_cpu = rb_forces_cpu / force_norm * MAX_FORCE_NORM
-                vector = rb_forces_cpu * MAX_VECTOR_LENGTH / MAX_FORCE_NORM
+                vector = rb_forces_cpu * MAX_VECTOR_LENGTH / (MAX_FORCE_NORM + 1e-6)
                 end_pos = start_pos + gymapi.Vec3(*vector)
+                PURPLE = (1, 0, 1)
                 self._draw_debug_line_of_spheres(
                     env=self.envs[i],
                     start_pos=start_pos,
                     end_pos=end_pos,
-                    color=(1, 0, 0),
+                    color=PURPLE,
+                )
+
+            for i in range(self.num_envs):
+                rb_torques_cpu = self.rb_torques[i, self.object_rb_handles, :].cpu().numpy().squeeze(axis=0)
+                assert rb_torques_cpu.shape == (3,), f"rb_torques_cpu.shape: {rb_torques_cpu.shape}"
+                object_pos_cpu = self.object_pos[i].cpu().numpy()
+                assert object_pos_cpu.shape == (3,), f"object_pos_cpu.shape: {object_pos_cpu.shape}"
+                start_pos = gymapi.Vec3(*object_pos_cpu)
+                MAX_TORQUE_NORM = self.torque_scale * 0.1  # Often mass is about 0.1 kg
+                MAX_VECTOR_LENGTH = 0.3
+                torque_norm = np.linalg.norm(rb_torques_cpu)
+                if torque_norm > MAX_TORQUE_NORM:
+                    rb_torques_cpu = rb_torques_cpu / torque_norm * MAX_TORQUE_NORM
+                vector = rb_torques_cpu * MAX_VECTOR_LENGTH / (MAX_TORQUE_NORM + 1e-6)
+                end_pos = start_pos + gymapi.Vec3(*vector)
+                CYAN = (0, 1, 1)
+                self._draw_debug_line_of_spheres(
+                    env=self.envs[i],
+                    start_pos=start_pos,
+                    end_pos=end_pos,
+                    color=CYAN,
                 )
 
             for j in range(self.num_keypoints):
@@ -3266,7 +3707,7 @@ class AllegroKukaBase(VecTask):
     ) -> None:
         sphere_geom = gymutil.WireframeSphereGeometry(radius, num_lats, num_lons, color=color)
         gymutil.draw_lines(sphere_geom, self.gym, self.viewer, env, gymapi.Transform(p=position))
-    
+
     def accumulate_env_states(self):
         root_state_tensor = self.root_state_tensor.reshape(
             [self.num_envs, -1, *self.root_state_tensor.shape[1:]]
