@@ -1,20 +1,11 @@
-import signal
 from termcolor import colored
 from subprocess import run
-import sys
 from pathlib import Path
 from datetime import datetime
 from tqdm import tqdm
 
 def log_info(text):
     print(colored(text, "cyan"))
-
-def _signal_handler(signum, frame):
-    print(f"Received signal {signum}, exiting")
-    sys.exit(0)
-
-signal.signal(signal.SIGINT, _signal_handler)
-signal.signal(signal.SIGTERM, _signal_handler)
 
 
 script_path = Path(__file__).parent / "eval_script.py"
@@ -43,6 +34,7 @@ object_type_to_object_names = {
     object_type: object_type_to_real_object_names[object_type] + object_type_to_primitive_object_names[object_type]
     for object_type in object_type_to_real_object_names.keys()
 }
+object_type_to_object_names = object_type_to_primitive_object_names
 
 # HACK: Overwrite object names for debugging
 # object_type_to_object_names["brush"] = ["red_brush"]

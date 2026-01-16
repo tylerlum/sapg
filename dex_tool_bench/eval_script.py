@@ -43,16 +43,20 @@ def log_warn(text):
 class ViserServer:
     """Viser-based visualization server for robot manipulation."""
 
-    def __init__(self, object_name: str, trajectory_name: str, num_keypoints: int, table_urdf: str, port: int = 8080):
+    def __init__(self, object_name: str, trajectory_name: str, num_keypoints: int, table_urdf: str, policy_name: str, port: int = 8080):
         self.port = port
         self.num_keypoints = num_keypoints
         self.is_paused = False
         self.show_keypoints = True
         self.server = viser.ViserServer(host="0.0.0.0", port=port)
         self.table_urdf = table_urdf
-        self._setup_scene(object_name, trajectory_name)
+        self._setup_scene(
+            object_name=object_name,
+            trajectory_name=trajectory_name,
+            policy_name=policy_name,
+        )
 
-    def _setup_scene(self, object_name: str, trajectory_name: str):
+    def _setup_scene(self, object_name: str, trajectory_name: str, policy_name: str):
         """Initialize the 3D scene with robot, table, object, and GUI elements."""
         @self.server.on_client_connect
         def _(client):
@@ -101,6 +105,7 @@ class ViserServer:
             )
 
         # GUI elements
+        self.server.gui.add_markdown(f"**Policy:** {policy_name}")
         self.server.gui.add_markdown(f"**Task:** {trajectory_name}")
         self.server.gui.add_markdown(f"**Object:** {object_name}")
         self.server.gui.add_markdown("---")
@@ -214,7 +219,14 @@ class EvalRunner:
             log_info(f"Recording to: {self.session_dir}")
 
         # Visualization
-        self.viser = ViserServer(object_name, trajectory_name, env.num_keypoints, table_urdf)
+        policy_name = checkpoint_path.parent.name
+        self.viser = ViserServer(
+            object_name=object_name,
+            trajectory_name=trajectory_name,
+            num_keypoints=env.num_keypoints,
+            table_urdf=table_urdf,
+            policy_name=policy_name,
+        )
         self.obs = self._reset()
 
     def _reset(self):
@@ -338,13 +350,14 @@ class EvalRunner:
             )
 
         output_dir = output_json_file.parent
-        import yaml
+
         # Also need to save the policy config
         # And save the env cfg because of overrides
+        from omegaconf import OmegaConf
         with open(output_dir / "policy_config.yaml", "w") as f:
-            yaml.dump(self.policy.config, f)
+            f.write(OmegaConf.to_yaml(self.policy.cfg))
         with open(output_dir / "env_cfg.yaml", "w") as f:
-            yaml.dump(self.env.cfg, f)
+            f.write(OmegaConf.to_yaml(self.env.cfg))
 
 
 def parse_checkpoint_dir(path: Path) -> Tuple[Path, Path]:

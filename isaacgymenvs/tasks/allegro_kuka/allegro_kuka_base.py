@@ -982,6 +982,9 @@ class AllegroKukaBase(VecTask):
                 self.trajectory_states = get_hammer_trajectory(init_state, device=self.device)
             elif object_type in BRUSH_OBJECTS:
                 self.trajectory_states = get_hammer_trajectory(init_state, device=self.device)
+            elif object_type in list(NAME_TO_OBJECT.keys()):
+                # HACK: Use hammer trajectory for all objects that are not in the other categories but in this dict
+                self.trajectory_states = get_hammer_trajectory(init_state, device=self.device)
             else:
                 raise ValueError(f"The following object_type does not have a fixed trajectory: {object_type}, cannot use USE_FIXED_SET_OF_GOAL_STATES with this object type")
 
