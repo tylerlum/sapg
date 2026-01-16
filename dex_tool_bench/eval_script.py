@@ -3,6 +3,7 @@
 # IsaacGym must be imported before torch
 from isaacgym import gymapi  # noqa: F401 isort:skip
 
+import argparse
 import json
 import time
 from datetime import datetime
@@ -317,6 +318,33 @@ class EvalRunner:
         while True:
             time.sleep(1.0)
 
+    def run_eval(self, num_episodes: int, output_json_file: Path):
+        for i in range(num_episodes):
+            self._run_episode()
+        log_success(f"Done: {num_episodes} episodes")
+
+        output_json_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(output_json_file, "w") as f:
+            json.dump(
+                {
+                    "avg_goal_pct": np.mean(self.episode_goal_pcts),
+                    "avg_time_sec": np.mean(self.episode_lengths) / self.control_hz,
+                    "episode_goal_pcts": self.episode_goal_pcts,
+                    "episode_lengths": self.episode_lengths,
+                },
+                f,
+                indent=4,
+            )
+
+        output_dir = output_json_file.parent
+        import yaml
+        # Also need to save the policy config
+        # And save the env cfg because of overrides
+        with open(output_dir / "policy_config.yaml", "w") as f:
+            yaml.dump(self.policy.config, f)
+        with open(output_dir / "env_cfg.yaml", "w") as f:
+            yaml.dump(self.env.cfg, f)
+
 
 def parse_checkpoint_dir(path: Path) -> Tuple[Path, Path]:
     """Extract config and model paths from checkpoint directory."""
@@ -325,6 +353,16 @@ def parse_checkpoint_dir(path: Path) -> Tuple[Path, Path]:
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--object_type", type=str, required=True)
+    parser.add_argument("--object_name", type=str, required=True)
+    parser.add_argument("--trajectory_name", type=str, required=True)
+    parser.add_argument("--policy_path", type=Path, required=True)
+    parser.add_argument("--output_dir", type=str, required=True)
+    parser.add_argument("--num_episodes", type=int, required=True)
+    parser.add_argument("--downsample_factor", type=int, required=True)
+    args = parser.parse_args()
+
     # Configuration
     # checkpoint_dir = Path("/share/portal/kk837/sapg/train_dir/FINAL_ASYMMETRIC_RUNS/FINETUNE_8x/O0T0_tyler_branch_2026-01-05_02-16-57")
 
@@ -377,10 +415,6 @@ def main():
     # trajectory_name = "draw_circle_human"
     # trajectory_name = "draw_circle_human_hardinit"
 
-    # object_type = "knife"
-    # object_name = "kitchen_knife"
-    # trajectory_name = "knife_on_cutting_board"
-
     # object_type = "spatula"
     # object_name = "black_spatula"
     # trajectory_name = "pick_and_place"
@@ -389,11 +423,15 @@ def main():
     # trajectory_name = "pick_and_place_human"
     # trajectory_name = "pick_and_place_human_hardinit"
 
-    object_type = "brush"
+    # object_type = "brush"
     # object_name = "green_brush"
-    object_name = "red_brush"
+    # object_name = "red_brush"
     # trajectory_name = "simple"
-    trajectory_name = "complex"
+    # trajectory_name = "complex"
+
+    object_type = args.object_type
+    object_name = args.object_name
+    trajectory_name = args.trajectory_name
 
     output_dir = None  # Set to Path("videos") to enable recording
 
@@ -404,7 +442,18 @@ def main():
     TABLE_CUTTINGBOARD_URDF = "urdf/table_narrow_cuttingboard.urdf"
     TABLE_BOWL_PLATE_URDF = "urdf/table_narrow_bowl_plate.urdf"
 
-    SELECTED_TABLE_URDF = TABLE_URDF
+    object_type_to_table_urdf = {
+        "hammer": TABLE_NAIL_URDF,
+        "spatula": TABLE_BOWL_PLATE_URDF,
+        "eraser": TABLE_WHITEBOARD_URDF,
+        # "screwdriver": TABLE_SCREWDRIVER_HOLE_URDF,
+        "screwdriver": TABLE_URDF,
+        "marker": TABLE_WHITEBOARD_URDF,
+        "brush": TABLE_URDF,
+    }
+
+    SELECTED_TABLE_URDF = object_type_to_table_urdf[object_type]
+    # SELECTED_TABLE_URDF = TABLE_URDF
     # SELECTED_TABLE_URDF = TABLE_NAIL_URDF
     # SELECTED_TABLE_URDF = TABLE_WHITEBOARD_URDF
     # SELECTED_TABLE_URDF = TABLE_SCREWDRIVER_HOLE_URDF
@@ -416,17 +465,20 @@ def main():
     assert trajectory_path.exists(), f"Trajectory file not found: {trajectory_path}"
     with open(trajectory_path) as f:
         traj_data = json.load(f)
-    DOWNSAMPLE_FACTOR = 1  # No downsampling when 1
+    # DOWNSAMPLE_FACTOR = 1  # No downsampling when 1
+    DOWNSAMPLE_FACTOR = args.downsample_factor
     traj_data["goals"] = traj_data["goals"][::DOWNSAMPLE_FACTOR]
 
     # Create environment
     # config_path, checkpoint_path = parse_checkpoint_dir(checkpoint_dir)
 
-    # folder_path = Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/o0t0_fullSpeed")
-    folder_path = Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed")
-    # folder_path = Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_fastSpeed")
-    config_path = folder_path / "config.yaml"
-    checkpoint_path = folder_path / "model.pth"
+    # policy_path = Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/o0t0_fullSpeed")
+    # policy_path = Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed")
+    # policy_path = Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_fastSpeed")
+    policy_path = args.policy_path
+
+    config_path = policy_path / "config.yaml"
+    checkpoint_path = policy_path / "model.pth"
 
     # Original one we tried in eral
     # config_path = Path("/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml")
@@ -434,8 +486,8 @@ def main():
 
     env = create_env(
         config_path=str(config_path),
-        # headless=True,
-        headless=False,
+        headless=True,
+        # headless=False,
         device="cuda" if torch.cuda.is_available() else "cpu",
         overrides={
             "task.env.resetPositionNoiseX": 0.0,
@@ -447,14 +499,14 @@ def main():
             "task.env.resetDofVelRandomInterval": 0.0,
             "task.env.object_type": object_name,
             "task.env.randomizeObjectRotation": False,
-            # "task.env.numEnvs": 1,
-            "task.env.numEnvs": 5,
+            "task.env.numEnvs": 1,
+            # "task.env.numEnvs": 5,
             "task.env.envSpacing": 0.4,
             "task.env.tableResetZRange": 0.0,
             # "task.env.tableResetZ": 0.38 + 0.02,
             "task.env.capture_video": False,
             "task.env.use_fixed_set_of_goal_states": True,
-            "task.env.fixedGoalStates": traj_data["goals"][::10],
+            "task.env.fixedGoalStates": traj_data["goals"],
             # "task.env.fixedGoalStates": None,
             "task.env.objectStartPose": traj_data["start_pose"],
             "task.env.useActionDelay": False,
@@ -497,8 +549,13 @@ def main():
         },
     )
 
-    EvalRunner(env, config_path, checkpoint_path, object_name, trajectory_name, SELECTED_TABLE_URDF, output_dir).run()
-
+    # EvalRunner(env, config_path, checkpoint_path, object_name, trajectory_name, SELECTED_TABLE_URDF, output_dir).run()
+    num_episodes: int = args.num_episodes
+    output_dir = Path(args.output_dir)
+    EvalRunner(env=env, config_path=config_path, checkpoint_path=checkpoint_path, object_name=object_name, trajectory_name=trajectory_name, table_urdf=SELECTED_TABLE_URDF, output_dir=None).run_eval(
+        num_episodes=num_episodes,
+        output_json_file=output_dir / "eval.json")
+    log_success(f"Saved: {output_dir / 'eval.json'}")
 
 if __name__ == "__main__":
     main()

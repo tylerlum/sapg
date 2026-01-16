@@ -1948,11 +1948,11 @@ class AllegroKukaBase(VecTask):
         self.successes += is_success
 
         # Print successes when there is only one environment
-        if self.num_envs == 1 and is_success.item():
-            print("~" * 100)
-            print("IS SUCCESS:")
-            print(f"self.successes: {self.successes.item()}")
-            print("~" * 100)
+        # if self.num_envs == 1 and is_success.item():
+        #     print("~" * 100)
+        #     print("IS SUCCESS:")
+        #     print(f"self.successes: {self.successes.item()}")
+        #     print("~" * 100)
 
         self.reset_goal_buf[:] = goal_resets
 
