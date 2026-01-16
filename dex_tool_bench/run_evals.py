@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from datetime import datetime
+from tqdm import tqdm
 
 script_path = Path(__file__).parent / "eval_script.py"
 assert script_path.exists(), f"Script not found: {script_path}"
@@ -86,7 +87,7 @@ Making output_directory structure like
 |   |   |   |   |--<eval.json>
 """
 
-for object_type, object_name, trajectory_name, policy_name in ALL_OBJECT_TYPE_OBJECT_NAME_TRAJECTORY_NAME_POLICY_NAME:
+for object_type, object_name, trajectory_name, policy_name in tqdm(ALL_OBJECT_TYPE_OBJECT_NAME_TRAJECTORY_NAME_POLICY_NAME, desc="Running evaluations"):
     print(f"Running evaluation for {object_type} {object_name} {trajectory_name} {policy_name}")
     output_dir = Path(f"evals/{DATE_STR}/{object_type}/{object_name}/{trajectory_name}/{policy_name}")
     output_dir.mkdir(parents=True, exist_ok=True)
