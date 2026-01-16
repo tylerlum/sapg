@@ -45,7 +45,7 @@ env:
 
   # Table reset settings
   tableResetZ: 0.38
-  tableResetZRange: 0.025
+  tableResetZRange: 0.01
   tableObjectZOffset: 0.25
 
   # Random forces applied to the object
