@@ -7,7 +7,7 @@ for each tool using the functions from create_obj_urdf.py.
 from pathlib import Path
 from typing import List
 
-from create_obj_urdf import (
+from dex_tool_bench.create_obj_urdf import (
     Cuboid,
     Cylinder,
     ToolConfig,
