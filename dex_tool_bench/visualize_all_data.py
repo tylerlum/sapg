@@ -17,8 +17,8 @@ import trimesh
 import viser
 
 # Data directory
-# DATA_DIR = Path("/juno/u/kedia/FoundationPose/human_videos/Jan_17")
-DATA_DIR = Path("dex_tool_bench/evaluation_trajectories")
+DATA_DIR = Path("/juno/u/kedia/FoundationPose/human_videos/Jan_17")
+# DATA_DIR = Path("dex_tool_bench/evaluation_trajectories")
 
 # Assets directory for tool meshes
 ASSETS_DIR = Path("/juno/u/kedia/sapg/assets/urdf/dex_tool_bench")
@@ -129,9 +129,9 @@ def find_all_trajectories(base_dir: Path) -> List[TrajectoryInfo]:
     """Find all trajectories and return as flat list."""
     trajectories = []
     
-    # for json_path in sorted(base_dir.rglob("subgoals.json")):
+    for json_path in sorted(base_dir.rglob("subgoals.json")):
     # for json_path in sorted(base_dir.rglob("*world_frame_min_z_0.6.json")):
-    for json_path in sorted(base_dir.rglob("*world_frame_min_z_0.6_downsampled_10.json")):
+    # for json_path in sorted(base_dir.rglob("*world_frame_min_z_0.6_downsampled_10.json")):
         print(f"Found trajectory: {json_path}")
         relative_path = json_path.relative_to(base_dir)
         parts = relative_path.parts
@@ -235,7 +235,7 @@ def create_category_view(
             
             # Load trajectory
             trajectory = load_trajectory_as_array(traj_info.json_path)
-            trajectory = normalize_trajectory(trajectory)
+            # trajectory = normalize_trajectory(trajectory)
             
             if len(trajectory) < 2:
                 continue
@@ -315,6 +315,13 @@ def create_category_view(
                 position=(x_pos, current_y - 0.15, -0.05),
             )
             view.scene_handles.append(obj_label)
+
+            # Add goal volume
+            goal_volume_min = np.array([-0.35, -0.2, 0.6]) + offset - np.array([0.0, 0.8, 0.0])
+            goal_volume_max = np.array([0.35, 0.2, 0.95]) + offset - np.array([0.0, 0.8, 0.0])
+            goal_volume_position = (goal_volume_min + goal_volume_max) / 2
+            goal_volume_size = goal_volume_max - goal_volume_min
+            server.scene.add_box(f"{base_path}/goal_volume", position=goal_volume_position, dimensions=goal_volume_size, color=(0, 255, 0), opacity=0.5)
         
         # Move to next task section
         current_y += TASK_SPACING_Y
