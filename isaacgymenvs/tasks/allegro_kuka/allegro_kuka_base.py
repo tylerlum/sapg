@@ -1013,6 +1013,12 @@ class AllegroKukaBase(VecTask):
                 self.trajectory_states = torch.tensor(FIXED_GOAL_STATES, device=self.device)
                 # Set max consecutive successes to the length of the trajectory so we don't run out of goal states
                 self.max_consecutive_successes = len(self.trajectory_states)
+            FIXED_GOAL_STATES_JSON_PATH = self.cfg["env"]["fixedGoalStatesJsonPath"]
+            if FIXED_GOAL_STATES_JSON_PATH is not None:
+                with open(FIXED_GOAL_STATES_JSON_PATH, "r") as f:
+                    self.trajectory_states = torch.tensor(json.load(f)["goals"], device=self.device)
+                    # Set max consecutive successes to the length of the trajectory so we don't run out of goal states
+                    self.max_consecutive_successes = len(self.trajectory_states)
 
         return object_asset_files, object_asset_scales, need_vhacds
 
