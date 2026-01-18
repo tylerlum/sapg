@@ -12,42 +12,58 @@ script_path = Path(__file__).parent / "eval_script.py"
 assert script_path.exists(), f"Script not found: {script_path}"
 DATE_STR = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-object_type_to_real_object_names = {
-    "hammer": ["hammer_2", "mallet"],
-    "spatula": ["black_spatula", "wooden_spatula", "spoon_spatula"],
-    "eraser": ["whiteboard_eraser", "anvil_eraser", "expo_eraser", "amazon_eraser"],
-    "screwdriver": ["real_flat_screwdriver", "black_screwdriver", "red_screwdriver"],
-    "marker": ["040_large_marker", "sharpie_closed", "staples_open"],
-    "brush": ["red_brush", "anvil_brush", "lab_brush"],
-}
+# object_type_to_real_object_names = {
+#     "hammer": ["hammer_2", "mallet"],
+#     "spatula": ["black_spatula", "wooden_spatula", "spoon_spatula"],
+#     "eraser": ["whiteboard_eraser", "anvil_eraser", "expo_eraser", "amazon_eraser"],
+#     "screwdriver": ["real_flat_screwdriver", "black_screwdriver", "red_screwdriver"],
+#     "marker": ["040_large_marker", "sharpie_closed", "staples_open"],
+#     "brush": ["red_brush", "anvil_brush", "lab_brush"],
+# }
+# 
+# object_type_to_primitive_object_names = {
+#     "hammer": ["primitive_cuboidal_hammer", "primitive_cylindrical_mallet"],
+#     "spatula": ["primitive_small_spatula", "primitive_large_spatula"],
+#     "eraser": ["primitive_small_eraser", "primitive_large_eraser"],
+#     "screwdriver": ["primitive_cuboidal_screwdriver", "primitive_cylindrical_screwdriver"],
+#     "marker": ["primitive_thin_marker", "primitive_thick_marker"],
+#     "brush": ["primitive_frontal_brush", "primitive_sideways_brush"],
+# }
 
-object_type_to_primitive_object_names = {
-    "hammer": ["primitive_cuboidal_hammer", "primitive_cylindrical_mallet"],
-    "spatula": ["primitive_small_spatula", "primitive_large_spatula"],
-    "eraser": ["primitive_small_eraser", "primitive_large_eraser"],
-    "screwdriver": ["primitive_cuboidal_screwdriver", "primitive_cylindrical_screwdriver"],
-    "marker": ["primitive_thin_marker", "primitive_thick_marker"],
-    "brush": ["primitive_frontal_brush", "primitive_sideways_brush"],
-}
-
-object_type_to_object_names = {
-    object_type: object_type_to_real_object_names[object_type] + object_type_to_primitive_object_names[object_type]
-    for object_type in object_type_to_real_object_names.keys()
-}
+# object_type_to_object_names = {
+#     object_type: object_type_to_real_object_names[object_type] + object_type_to_primitive_object_names[object_type]
+#     for object_type in object_type_to_real_object_names.keys()
+# }
 # HACK: Only use primitive object names for now
 # object_type_to_object_names = object_type_to_primitive_object_names
 
 # HACK: Overwrite object names for debugging
 # object_type_to_object_names["brush"] = ["red_brush"]
 
-object_type_to_trajectory_names = {
-    "hammer": ["horizontal_swing_higher"],
-    "spatula": ["pick_and_place_human", "pick_and_place_human_hardinit"],
-    "eraser": ["wipe_left_human", "wipe_left_human_2"],
-    "screwdriver": ["top_down_screwing_human", "top_down_screwing_human_easyinit"],
-    "marker": ["draw_circle_human", "draw_circle_human_hardinit"],
-    "brush": ["complex"],
+object_type_to_object_names = {
+    "hammer": ["hammer_2", "mallet"],
+    "spatula": ["black_spatula", "spoon_spatula"],
+    "eraser": ["anvil_eraser", "expo_eraser", "amazon_eraser"],
+    "screwdriver": ["real_flat_screwdriver", "black_screwdriver", "red_screwdriver"],
+    "marker": ["040_large_marker", "sharpie_closed", "staples_open"],
+    "brush": ["red_brush", "anvil_brush"],
 }
+
+object_type_to_trajectory_names = {
+    "hammer": ["down_swing", "side_swing"],
+    "spatula": ["serve_plate", "flip_pancake"],
+    "eraser": ["wipe_higher", "wipe_lower"],
+    "screwdriver": ["top", "side"],
+    "marker": ["write_smiley", "write_c"],
+    "brush": ["sweep_forward", "sweep_forward_right"],
+}
+APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.6_downsampled_10"
+# Append stuff to the trajectory names
+for object_type in object_type_to_trajectory_names.keys():
+    object_type_to_trajectory_names[object_type] = [
+        f"{trajectory_name}{APPEND_TO_TRAJECTORY_NAMES}"
+        for trajectory_name in object_type_to_trajectory_names[object_type]
+    ]
 
 # HACK: Overwrite trajectory names for debugging
 # object_type_to_trajectory_names = {
@@ -57,12 +73,12 @@ object_type_to_trajectory_names = {
 
 POLICY_NAME_TO_PATH = {
     "slowSpeed": Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed"),
-    "fastSpeed": Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_fastSpeed"),
+    # "fastSpeed": Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_fastSpeed"),
 }
 DOWNSAMPLE_FACTOR = 1
 # NUM_EPISODES = 5
-NUM_EPISODES = 10
-# NUM_EPISODES = 1  # For debugging
+# NUM_EPISODES = 10
+NUM_EPISODES = 1  # For debugging
 
 # Validate everything
 for policy_path in POLICY_NAME_TO_PATH.values():
@@ -70,7 +86,7 @@ for policy_path in POLICY_NAME_TO_PATH.values():
 
 # Make in one big list
 ALL_OBJECT_TYPE_OBJECT_NAME_TRAJECTORY_NAME_POLICY_NAME = []
-for object_type in object_type_to_real_object_names.keys():
+for object_type in object_type_to_object_names.keys():
     object_names = object_type_to_object_names[object_type]
     trajectory_names = object_type_to_trajectory_names[object_type]
     for object_name in object_names:

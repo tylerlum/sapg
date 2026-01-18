@@ -150,7 +150,8 @@ def main():
     # trajectory_name = "horizontal_swing"
     # trajectory_name = "horizontal_swing_higher"
     # trajectory_name = "horizontal_swing_human"
-    trajectory_name = "horizontal_swing_human_closer"
+    # trajectory_name = "horizontal_swing_human_closer"
+    trajectory_name = "down_swing_close_easy_world_frame_min_z_0.6"
 
     # object_type = "spatula"
     # object_name = "black_spatula"
