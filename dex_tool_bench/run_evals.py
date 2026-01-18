@@ -12,53 +12,29 @@ script_path = Path(__file__).parent / "eval_script.py"
 assert script_path.exists(), f"Script not found: {script_path}"
 DATE_STR = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-# object_type_to_real_object_names = {
-#     "hammer": ["hammer_2", "mallet"],
-#     "spatula": ["black_spatula", "wooden_spatula", "spoon_spatula"],
-#     "eraser": ["whiteboard_eraser", "anvil_eraser", "expo_eraser", "amazon_eraser"],
-#     "screwdriver": ["real_flat_screwdriver", "black_screwdriver", "red_screwdriver"],
-#     "marker": ["040_large_marker", "sharpie_closed", "staples_open"],
-#     "brush": ["red_brush", "anvil_brush", "lab_brush"],
-# }
-# 
-# object_type_to_primitive_object_names = {
-#     "hammer": ["primitive_cuboidal_hammer", "primitive_cylindrical_mallet"],
-#     "spatula": ["primitive_small_spatula", "primitive_large_spatula"],
-#     "eraser": ["primitive_small_eraser", "primitive_large_eraser"],
-#     "screwdriver": ["primitive_cuboidal_screwdriver", "primitive_cylindrical_screwdriver"],
-#     "marker": ["primitive_thin_marker", "primitive_thick_marker"],
-#     "brush": ["primitive_frontal_brush", "primitive_sideways_brush"],
-# }
-
-# object_type_to_object_names = {
-#     object_type: object_type_to_real_object_names[object_type] + object_type_to_primitive_object_names[object_type]
-#     for object_type in object_type_to_real_object_names.keys()
-# }
-# HACK: Only use primitive object names for now
-# object_type_to_object_names = object_type_to_primitive_object_names
-
-# HACK: Overwrite object names for debugging
-# object_type_to_object_names["brush"] = ["red_brush"]
-
 object_type_to_object_names = {
-    # "hammer": ["hammer_2", "mallet"],
-    # "spatula": ["black_spatula", "spoon_spatula"],
-    # "eraser": ["anvil_eraser", "expo_eraser", "amazon_eraser"],
-    # "screwdriver": ["real_flat_screwdriver", "black_screwdriver", "red_screwdriver"],
-    # "marker": ["040_large_marker", "sharpie_closed", "staples_open"],
-    # "brush": ["red_brush", "anvil_brush"],
+    "hammer": ["hammer_2", "mallet"],
+    "spatula": ["black_spatula", "spoon_spatula"],
+    "eraser": ["anvil_eraser", "expo_eraser", "amazon_eraser"],
+    "screwdriver": ["real_flat_screwdriver", "black_screwdriver", "red_screwdriver"],
+    "marker": ["040_large_marker", "sharpie_closed", "staples_open"],
+    "brush": ["red_brush", "anvil_brush"],
+
+    # "Easy"
     # "spatula": ["black_spatula"],
     # "hammer": ["mallet"],
     # "brush": ["red_brush"],
 }
 
 object_type_to_trajectory_names = {
-    # "hammer": ["down_swing", "side_swing"],
+    "hammer": ["down_swing", "side_swing"],
     "spatula": ["serve_plate", "flip_pancake"],
-    # "eraser": ["wipe_higher", "wipe_lower"],
-    # "screwdriver": ["top", "side"],
-    # "marker": ["write_smiley", "write_c"],
-    # "brush": ["sweep_forward", "sweep_forward_right"],
+    "eraser": ["wipe_higher", "wipe_lower"],
+    "screwdriver": ["top", "side"],
+    "marker": ["write_smiley", "write_c"],
+    "brush": ["sweep_forward", "sweep_forward_right"],
+
+    # "Easy"
     # "spatula": ["flip_pancake_easy"],
     # "hammer": ["down_swing_close_easy", "down_swing_close_easy"],
     # "brush": ["sweep_forward_easy"],
@@ -79,7 +55,7 @@ for object_type in object_type_to_trajectory_names.keys():
 
 POLICY_NAME_TO_PATH = {
     "newSlowSpeed": Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_new_slowSpeed"),
-    # "slowSpeed": Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed"),
+    "slowSpeed": Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed"),
     # "fastSpeed": Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_fastSpeed"),
 }
 DOWNSAMPLE_FACTOR = 1
@@ -125,6 +101,7 @@ for i, (object_type, object_name, trajectory_name, policy_name) in tqdm(enumerat
     start_time = time.time()
     log_info(f"{i}/{total} Running evaluation for {object_type} {object_name} {trajectory_name} {policy_name}")
     output_dir = Path(f"evals/{DATE_STR}/{object_type}/{object_name}/{trajectory_name}/{policy_name}")
+    policy_path = POLICY_NAME_TO_PATH[policy_name]
     output_dir.mkdir(parents=True, exist_ok=True)
     cmd = f"python \
         {script_path} \
