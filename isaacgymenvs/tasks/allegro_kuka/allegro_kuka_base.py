@@ -1983,6 +1983,8 @@ class AllegroKukaBase(VecTask):
         # Success bonus: orientation is within `success_tolerance` of goal orientation
         # We spread out the reward over "success_steps"
         bonus_rew = near_goal * (self.reach_goal_bonus / self.success_steps)
+        if self.cfg["env"]["forceConsecutiveNearGoalSteps"]:
+            bonus_rew = is_success * self.reach_goal_bonus
 
         reward = (
             fingertip_delta_rew
