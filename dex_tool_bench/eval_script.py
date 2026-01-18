@@ -482,6 +482,10 @@ def main():
     assert trajectory_path.exists(), f"Trajectory file not found: {trajectory_path}"
     with open(trajectory_path) as f:
         traj_data = json.load(f)
+    # Raise the start pose by Z_OFFSET to avoid the table
+    Z_OFFSET = 0.03
+    traj_data["start_pose"][2] += Z_OFFSET
+
     # DOWNSAMPLE_FACTOR = 1  # No downsampling when 1
     DOWNSAMPLE_FACTOR = args.downsample_factor
     traj_data["goals"] = traj_data["goals"][::DOWNSAMPLE_FACTOR]
