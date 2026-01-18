@@ -14,7 +14,9 @@
       </geometry>
     </collision>
     <inertial>
-      <density value="400.0"/>
+      <!-- From real world measurement, this is about 289.5g, this density gets us there, and CoM is at (0.1, 0, 0) wrt origin -->
+      <density value="325.0"/>
+      <origin xyz="0.1 0 0" rpy="0 0 0"/>
     </inertial>
   </link>
 </robot>
