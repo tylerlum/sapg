@@ -191,7 +191,7 @@ class EvalRunner:
     """Runs policy evaluation with viser visualization."""
 
     def __init__(self, env, config_path: Path, checkpoint_path: Path,
-                 object_name: str, trajectory_name: str, table_urdf: str, output_dir: Optional[Path] = None):
+                 object_name: str, trajectory_name: str, table_urdf: str, output_dir: Optional[Path] = None, policy_name: str = None):
         self.env = env
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.n_act = 29
@@ -219,7 +219,6 @@ class EvalRunner:
             log_info(f"Recording to: {self.session_dir}")
 
         # Visualization
-        policy_name = checkpoint_path.parent.name
         self.viser = ViserServer(
             object_name=object_name,
             trajectory_name=trajectory_name,
@@ -371,10 +370,12 @@ def main():
     parser.add_argument("--object_type", type=str, required=True)
     parser.add_argument("--object_name", type=str, required=True)
     parser.add_argument("--trajectory_name", type=str, required=True)
-    parser.add_argument("--policy_path", type=Path, required=True)
+    parser.add_argument("--config_path", type=Path, required=True)
+    parser.add_argument("--checkpoint_path", type=Path, required=True)
     parser.add_argument("--output_dir", type=str, required=True)
     parser.add_argument("--num_episodes", type=int, required=True)
     parser.add_argument("--downsample_factor", type=int, required=True)
+    parser.add_argument("--policy_name", type=str, required=True)
     args = parser.parse_args()
 
     # Configuration
@@ -492,14 +493,8 @@ def main():
 
     # Create environment
     # config_path, checkpoint_path = parse_checkpoint_dir(checkpoint_dir)
-
-    # policy_path = Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/o0t0_fullSpeed")
-    # policy_path = Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed")
-    # policy_path = Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_fastSpeed")
-    policy_path = args.policy_path
-
-    config_path = policy_path / "config.yaml"
-    checkpoint_path = policy_path / "model.pth"
+    config_path = args.config_path
+    checkpoint_path = args.checkpoint_path
 
     # Original one we tried in eral
     # config_path = Path("/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml")
@@ -576,7 +571,7 @@ def main():
     # EvalRunner(env, config_path, checkpoint_path, object_name, trajectory_name, SELECTED_TABLE_URDF, output_dir).run()
     num_episodes: int = args.num_episodes
     output_dir = Path(args.output_dir)
-    EvalRunner(env=env, config_path=config_path, checkpoint_path=checkpoint_path, object_name=object_name, trajectory_name=trajectory_name, table_urdf=SELECTED_TABLE_URDF, output_dir=None).run_eval(
+    EvalRunner(env=env, config_path=config_path, checkpoint_path=checkpoint_path, object_name=object_name, trajectory_name=trajectory_name, table_urdf=SELECTED_TABLE_URDF, output_dir=None, policy_name=args.policy_name).run_eval(
         num_episodes=num_episodes,
         output_json_file=output_dir / "eval.json")
     log_success(f"Saved: {output_dir / 'eval.json'}")
