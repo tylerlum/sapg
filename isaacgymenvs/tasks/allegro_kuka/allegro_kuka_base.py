@@ -2318,7 +2318,7 @@ class AllegroKukaBase(VecTask):
         # closest distance to the furthest keypoint, achieved so far in this episode
         obs_dict["closest_keypoint_max_dist"] = self.closest_keypoint_max_dist.unsqueeze(-1)
         if self.cfg["env"]["fixedSizeKeypointReward"]:
-            obs_dict["closest_keypoint_max_dist_fixed_size"] = self.closest_keypoint_max_dist_fixed_size.unsqueeze(-1)
+            obs_dict["closest_keypoint_max_dist"] = self.closest_keypoint_max_dist_fixed_size.unsqueeze(-1)
 
         # closest distance between a fingertip and an object achieved since last target reset
         # this should help the critic predict the anticipated fingertip reward
