@@ -2310,7 +2310,7 @@ class AllegroKukaBase(VecTask):
         fingertip_rel_pos_size = 3 * self.num_allegro_fingertips
         obs_dict["fingertip_pos_rel_palm"] = self.fingertip_pos_rel_palm.reshape(self.num_envs, fingertip_rel_pos_size)
         # object scales
-        obs_dict["object_scales"] = self.object_scales
+        obs_dict["object_scales"] = self.object_scales * self.object_scale_noise_multiplier
 
         ## CRITIC OBSERVATIONS ##
         # palm linvel, ang vel
