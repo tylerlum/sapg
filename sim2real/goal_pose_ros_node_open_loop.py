@@ -68,8 +68,8 @@ class GoalPoseNode:
             self.current_step = 0
         self.current_step += 1
 
-
-        UPDATE_EVERY_N_SECONDS = 0.1
+        # UPDATE_EVERY_N_SECONDS = 0.1
+        UPDATE_EVERY_N_SECONDS = 1/15
         # UPDATE_EVERY_N_SECONDS = 1/30
         UPDATE_EVERY_N_STEPS = int(UPDATE_EVERY_N_SECONDS / self.dt)
         if self.current_step % UPDATE_EVERY_N_STEPS == 0:
@@ -143,13 +143,14 @@ def main():
     # object_name = "whiteboard_eraser"
     # trajectory_name = "wipe_left"
 
-    # object_type = "hammer"
-    # object_name = "mallet"
+    object_type = "hammer"
+    object_name = "mallet"
     # object_name = "hammer_2"
     # trajectory_name = "vertical_swing"
     # trajectory_name = "horizontal_swing"
     # trajectory_name = "horizontal_swing_higher"
     # trajectory_name = "horizontal_swing_human"
+    trajectory_name = "horizontal_swing_human_closer"
 
     # object_type = "spatula"
     # object_name = "black_spatula"
@@ -171,10 +172,10 @@ def main():
     # trajectory_name = "draw_circle_human"
     # trajectory_name = "draw_circle_human_hardinit"
 
-    object_type = "brush"
-    object_name = "green_brush"
+    # object_type = "brush"
+    # object_name = "green_brush"
     # trajectory_name = "simple"
-    trajectory_name = "complex"
+    # trajectory_name = "complex"
 
     trajectory_path = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
     assert trajectory_path.exists(), f"Trajectory file not found: {trajectory_path}"

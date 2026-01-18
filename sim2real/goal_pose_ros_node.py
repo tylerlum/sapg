@@ -193,25 +193,25 @@ def main():
     # Load trajectory
     # This makes it easier to change object and trajectory
 
-    # object_type = "hammer"
-    # object_name = "mallet"
+    object_type = "hammer"
+    object_name = "mallet"
     # object_name = "hammer_2"
     # trajectory_name = "vertical_swing"
     # trajectory_name = "horizontal_swing"
     # trajectory_name = "horizontal_swing_higher"
     # trajectory_name = "horizontal_swing_human"
-    # trajectory_name = "horizontal_swing_human_closer"
+    trajectory_name = "horizontal_swing_human_closer"
 
     # object_type = "spatula"
     # object_name = "black_spatula"
     # trajectory_name = "pick_and_place_human"
     # trajectory_name = "pick_and_place_human_hardinit"
 
-    object_type = "screwdriver"
-    object_name = "real_flat_screwdriver"
+    # object_type = "screwdriver"
+    # object_name = "real_flat_screwdriver"
     # trajectory_name = "top_down_screwing_human_easyinit"
     # trajectory_name = "top_down_screwing_human"
-    trajectory_name = "top_down_screwing_closer"
+    # trajectory_name = "top_down_screwing_closer"
 
     # object_type = "eraser"
     # object_name = "whiteboard_eraser"
@@ -270,9 +270,9 @@ def main():
             object_scales=np.array([0.141, 0.03025, 0.0271]) * 25,  # fixed size
             # object_scales=np.array([0.12965531, 0.0337145 , 0.06038587]) * 25,  # whiteboard eraser
             # object_scales=np.array([0.15954332, 0.0777093 , 0.01231273]) * 25,  # iphone15pro
-            # success_threshold=0.0,
+            success_threshold=0.0,
             # success_threshold=0.01,
-            success_threshold=0.02,
+            # success_threshold=0.02,
             # success_threshold=0.05,
             success_steps=1,
         )

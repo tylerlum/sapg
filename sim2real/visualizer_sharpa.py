@@ -291,6 +291,8 @@ class ViserVisualizationNode:
             # DEFAULT_OBJECT_NAME = "cuboidal_hammer"
             # DEFAULT_OBJECT_NAME = "scanned_hammer_2"
             # DEFAULT_OBJECT_NAME = "real_flat_screwdriver"
+            # DEFAULT_OBJECT_NAME = "red_screwdriver"
+            DEFAULT_OBJECT_NAME = "black_screwdriver"
             # DEFAULT_OBJECT_NAME = "040_large_marker"
             # DEFAULT_OBJECT_NAME = "whiteboard_eraser"
             # DEFAULT_OBJECT_NAME = "iphone15pro"
@@ -303,7 +305,14 @@ class ViserVisualizationNode:
             # DEFAULT_OBJECT_NAME = "hammer_2"
             # DEFAULT_OBJECT_NAME = "hairbrush"
             # DEFAULT_OBJECT_NAME = "black_spatula"
-            DEFAULT_OBJECT_NAME = "sharpie_closed"
+            # DEFAULT_OBJECT_NAME = "spoon_spatula"
+            # DEFAULT_OBJECT_NAME = "sharpie_closed"
+            # DEFAULT_OBJECT_NAME = "black_screwdriver"
+            # DEFAULT_OBJECT_NAME = "amazon_eraser"
+            # DEFAULT_OBJECT_NAME = "expo_eraser"
+            # DEFAULT_OBJECT_NAME = "anvil_eraser"
+            # DEFAULT_OBJECT_NAME = "anvil_brush"
+            # DEFAULT_OBJECT_NAME = "staples_open"
             warn(f"Using default object name: {DEFAULT_OBJECT_NAME}")
             object_name = DEFAULT_OBJECT_NAME
 

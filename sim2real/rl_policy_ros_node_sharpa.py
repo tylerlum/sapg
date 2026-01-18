@@ -300,6 +300,7 @@ class RLPolicyNode:
         info("Received signal to save relative object pose once lifted")
         self.object_lifted = True
         info(f"Object lifted: {self.object_lifted}")
+        # breakpoint()
 
     def object_pose_callback(self, msg: PoseStamped):
         self.object_pose_msg = msg
@@ -515,25 +516,25 @@ class RLPolicyNode:
         # Stop listening to the published one
         import json
 
-        # object_type = "hammer"
-        # object_name = "mallet"
+        object_type = "hammer"
+        object_name = "mallet"
         # object_name = "hammer_2"
         # trajectory_name = "vertical_swing"
         # trajectory_name = "horizontal_swing"
         # trajectory_name = "horizontal_swing_higher"
         # trajectory_name = "horizontal_swing_human"
-        # trajectory_name = "horizontal_swing_human_closer"
+        trajectory_name = "horizontal_swing_human_closer"
 
         # object_type = "spatula"
         # object_name = "black_spatula"
         # trajectory_name = "pick_and_place_human"
         # trajectory_name = "pick_and_place_human_hardinit"
 
-        object_type = "screwdriver"
-        object_name = "real_flat_screwdriver"
+        # object_type = "screwdriver"
+        # object_name = "real_flat_screwdriver"
         # trajectory_name = "top_down_screwing_human_easyinit"
         # trajectory_name = "top_down_screwing_human"
-        trajectory_name = "top_down_screwing_closer"
+        # trajectory_name = "top_down_screwing_closer"
 
         # object_type = "eraser"
         # object_name = "whiteboard_eraser"
@@ -1123,20 +1124,20 @@ class RLPolicyNode:
 
 if __name__ == "__main__":
     try:
-        OBJECT_NAME = "real_flat_screwdriver"
+        OBJECT_NAME = "mallet"
         rl_policy_node = RLPolicyNode(
             # Old
-            config_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"),
+            # config_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml"),
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/cleanInputs.pth"),
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/2025-12-11_newGains/noisyInputs.pth"),
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/cleanInputsFinetuned.pth"),
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o1t0.pth"),
             # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o1t1.pth"),
-            checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o0t0.pth"),
+            # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o0t0.pth"),
 
             # New on tools
-            # config_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed/config.yaml"),
-            # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed/model.pth"),
+            config_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed/config.yaml"),
+            checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed/model.pth"),
 
             # Continue finetuning on cuboids
             # config_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/o0t0_fullSpeed/config.yaml"),
