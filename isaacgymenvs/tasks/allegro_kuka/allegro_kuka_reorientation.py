@@ -151,14 +151,16 @@ class AllegroKukaReorientation(AllegroKukaBase):
                 self.goal_states[env_ids, 0:7] = trajectory_state[batch_indices, current_subgoal_idx, 0:7]
             elif not is_first_goal and self.goal_sampling_type == "delta":
                 self.goal_states[env_ids, 0:7] = self._sample_delta_goal(self.goal_states[env_ids, 0:7], self.delta_goal_distance, self.delta_rotation_degrees)
-                self._clip_goal_z(env_ids)
+                # Actually don't clip goal z for delta poses to allow it to go below the lifted z
+                # self._clip_goal_z(env_ids)
             elif not is_first_goal and self.goal_sampling_type == "coin_flip":
                 # flip a coin. 50% of envs only get delta translation, 0 rotation and 50% get delta rotation, 0 translation
                 coin_flips = torch_rand_float(0.0, 1.0, (len(env_ids), 1), device=self.device)
                 translation_only_goal_states = self._sample_delta_goal(self.goal_states[env_ids, 0:7], self.delta_goal_distance, 0.0)
                 rotation_only_goal_states = self._sample_delta_goal(self.goal_states[env_ids, 0:7], 0.0, self.delta_rotation_degrees)
                 self.goal_states[env_ids, 0:7] = torch.where(coin_flips < 0.5, translation_only_goal_states, rotation_only_goal_states)
-                self._clip_goal_z(env_ids)
+                # Actually don't clip goal z for delta poses to allow it to go below the lifted z
+                # self._clip_goal_z(env_ids)
             else:
                 # Randomly sample a target pose
                 target_volume_origin = self.target_volume_origin
