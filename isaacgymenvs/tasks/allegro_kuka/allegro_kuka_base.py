@@ -456,6 +456,8 @@ class AllegroKukaBase(VecTask):
             (self.num_envs, self.num_keypoints, 3), dtype=torch.float, device=self.device
         )
 
+        self.object_scale_noise_multiplier = torch.ones((self.num_envs, 3), dtype=torch.float, device=self.device)
+
         # how many steps we were within the goal tolerance
         self.near_goal_steps = torch.zeros(self.num_envs, dtype=torch.int, device=self.device)
 
@@ -2239,13 +2241,13 @@ class AllegroKukaBase(VecTask):
 
         for i in range(self.num_keypoints):
             self.obj_keypoint_pos[:, i] = self.object_pos + quat_rotate(
-                self.object_rot, self.object_keypoint_offsets[:, i]
+                self.object_rot, self.object_keypoint_offsets[:, i] * self.object_scale_noise_multiplier
             )
             self.goal_keypoint_pos[:, i] = self.goal_pos + quat_rotate(
-                self.goal_rot, self.object_keypoint_offsets[:, i]
+                self.goal_rot, self.object_keypoint_offsets[:, i] * self.object_scale_noise_multiplier
             )
             self.observed_obj_keypoint_pos[:, i] = self.observed_object_pos + quat_rotate(
-                self.observed_object_rot, self.object_keypoint_offsets[:, i]
+                self.observed_object_rot, self.object_keypoint_offsets[:, i] * self.object_scale_noise_multiplier
             )
 
             self.obj_keypoint_pos_fixed_size[:, i] = self.object_pos + quat_rotate(
@@ -2560,6 +2562,9 @@ class AllegroKukaBase(VecTask):
                 self.root_state_tensor[obj_indices, 3:7] = new_object_rot
 
             self.root_state_tensor[obj_indices, 7:13] = torch.zeros_like(self.root_state_tensor[obj_indices, 7:13])
+
+            noise_min, noise_max = self.cfg["env"]["objectScaleNoiseMultiplierRange"]
+            self.object_scale_noise_multiplier[env_ids] = torch_rand_float(noise_min, noise_max, (len(env_ids), 3), device=self.device)
 
         if len(env_ids) > 0 and reset_buf_idxs is not None and tensor_reset:
             obj_indices = self.object_indices[env_ids]

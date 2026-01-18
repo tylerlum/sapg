@@ -548,6 +548,9 @@ def main():
             "task.env.fixedSizeKeypointReward": True,
             "task.env.startArmHigher": True,
 
+            # Object scale noise
+            "task.env.objectScaleNoiseMultiplierRange": [1.0, 1.0],
+
             # Forces
             "task.env.forceScale": 0.0,
             "task.env.torqueScale": 0.0,

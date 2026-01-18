@@ -200,6 +200,7 @@ env:
   objectStateDelayMax: 10
   objectStateXyzNoiseStd: 0.01
   objectStateRotationNoiseDegrees: 5.0
+  objectScaleNoiseMultiplierRange: [1.0, 1.0]
 
   # jointVelocityObsNoiseStd: 0.1
   jointVelocityObsNoiseStd: 0.0
