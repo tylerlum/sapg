@@ -1,7 +1,8 @@
 from pathlib import Path
 import json
 
-evaluation_trajectories_dir = Path("evals/2026-01-17_17-40-36")
+# evaluation_trajectories_dir = Path("evals/2026-01-17_17-40-36")
+evaluation_trajectories_dir = Path("evals/2026-01-17_18-26-36")
 assert evaluation_trajectories_dir.exists(), f"Evaluation trajectories directory not found: {evaluation_trajectories_dir}"
 
 """
