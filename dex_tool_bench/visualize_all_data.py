@@ -17,7 +17,8 @@ import trimesh
 import viser
 
 # Data directory
-DATA_DIR = Path("/juno/u/kedia/FoundationPose/human_videos/Jan_17")
+# DATA_DIR = Path("/juno/u/kedia/FoundationPose/human_videos/Jan_17")
+DATA_DIR = Path("dex_tool_bench/evaluation_trajectories")
 
 # Assets directory for tool meshes
 ASSETS_DIR = Path("/juno/u/kedia/sapg/assets/urdf/dex_tool_bench")
@@ -80,6 +81,8 @@ def load_trajectory_as_array(json_path: Path) -> np.ndarray:
     """Load trajectory as (N, 7) numpy array."""
     with open(json_path, 'r') as f:
         data = json.load(f)
+    if "goals" in data:
+        data = data["goals"]
     return np.array(data, dtype=np.float32)
 
 
@@ -126,7 +129,10 @@ def find_all_trajectories(base_dir: Path) -> List[TrajectoryInfo]:
     """Find all trajectories and return as flat list."""
     trajectories = []
     
-    for json_path in sorted(base_dir.rglob("subgoals.json")):
+    # for json_path in sorted(base_dir.rglob("subgoals.json")):
+    # for json_path in sorted(base_dir.rglob("*world_frame_min_z_0.6.json")):
+    for json_path in sorted(base_dir.rglob("*world_frame_min_z_0.6_downsampled_10.json")):
+        print(f"Found trajectory: {json_path}")
         relative_path = json_path.relative_to(base_dir)
         parts = relative_path.parts
         
@@ -134,6 +140,16 @@ def find_all_trajectories(base_dir: Path) -> List[TrajectoryInfo]:
             tool_type = parts[0]
             object_name = parts[1]
             task_name = parts[2]
+            trajectories.append(TrajectoryInfo(
+                tool_type=tool_type,
+                object_name=object_name,
+                task_name=task_name,
+                json_path=json_path,
+            ))
+        elif len(parts) == 3:
+            tool_type = parts[0]
+            object_name = parts[1]
+            task_name = Path(parts[2]).stem
             trajectories.append(TrajectoryInfo(
                 tool_type=tool_type,
                 object_name=object_name,
