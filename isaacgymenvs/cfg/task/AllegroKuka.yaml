@@ -49,14 +49,14 @@ env:
   tableObjectZOffset: 0.25
 
   # Random forces applied to the object
-  forceScale: 2.0
+  forceScale: 20.0
   forceProbRange: [0.001, 0.1]
-  forceDecay: 0.99
+  forceDecay: 0.0
   forceDecayInterval: 0.08
   forceOnlyWhenLifted: True
-  torqueScale: 0.0
+  torqueScale: 2.0
   torqueProbRange: [0.001, 0.1]
-  torqueDecay: 0.99
+  torqueDecay: 0.0
   torqueDecayInterval: 0.08
   torqueOnlyWhenLifted: True
 
@@ -169,7 +169,7 @@ env:
   stateList: ["joint_pos", "joint_vel", "prev_action_targets", "palm_pos", "palm_rot", "palm_vel", "object_rot", "object_vel", "fingertip_pos_rel_palm", "keypoints_rel_palm", "keypoints_rel_goal", "object_scales", "closest_keypoint_max_dist", "closest_fingertip_dist", "lifted_object", "progress", "successes", "reward"]
 
   obsList: ["joint_pos", "joint_vel", "prev_action_targets", "palm_pos", "palm_rot", "palm_vel", "object_rot", "object_vel", "fingertip_pos_rel_palm", "keypoints_rel_palm", "keypoints_rel_goal", "object_scales", "closest_keypoint_max_dist", "closest_fingertip_dist", "lifted_object", "progress", "successes", "reward"]
-  fixedSizeKeypointReward: False
+  fixedSizeKeypointReward: True
   fixedSize: [0.141, 0.03025, 0.0271]
 
   startArmHigher: False  # Set to False typically for training, but for evaluation, we typically start the arm higher
