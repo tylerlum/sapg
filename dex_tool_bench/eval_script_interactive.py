@@ -191,7 +191,7 @@ class EvalRunner:
     """Runs policy evaluation with viser visualization."""
 
     def __init__(self, env, config_path: Path, checkpoint_path: Path,
-                 object_name: str, trajectory_name: str, table_urdf: str, output_dir: Optional[Path] = None, policy_name: str = None):
+                 object_name: str, trajectory_name: str, table_urdf: str, output_dir: Optional[Path] = None):
         self.env = env
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.n_act = 29
@@ -219,6 +219,7 @@ class EvalRunner:
             log_info(f"Recording to: {self.session_dir}")
 
         # Visualization
+        policy_name = checkpoint_path.parent.name
         self.viser = ViserServer(
             object_name=object_name,
             trajectory_name=trajectory_name,
@@ -366,18 +367,6 @@ def parse_checkpoint_dir(path: Path) -> Tuple[Path, Path]:
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--object_type", type=str, required=True)
-    parser.add_argument("--object_name", type=str, required=True)
-    parser.add_argument("--trajectory_name", type=str, required=True)
-    parser.add_argument("--config_path", type=Path, required=True)
-    parser.add_argument("--checkpoint_path", type=Path, required=True)
-    parser.add_argument("--output_dir", type=str, required=True)
-    parser.add_argument("--num_episodes", type=int, required=True)
-    parser.add_argument("--downsample_factor", type=int, required=True)
-    parser.add_argument("--policy_name", type=str, required=True)
-    args = parser.parse_args()
-
     # Configuration
     # checkpoint_dir = Path("/share/portal/kk837/sapg/train_dir/FINAL_ASYMMETRIC_RUNS/FINETUNE_8x/O0T0_tyler_branch_2026-01-05_02-16-57")
 
@@ -385,8 +374,9 @@ def main():
 
     # checkpoint_dir = Path("/share/portal/kk837/sapg/train_dir/customPretraining/FINETUNE_5x/FINETUNE_5x_SLOW_SPEED_ADD_ACTION_DELAY_2026-01-05_02-10-22")
 
-    # object_type = "hammer"
-    # object_name = "hammer_2"
+    object_type = "hammer"
+    object_name = "hammer_2"
+    trajectory_name = "down_swing_world_frame_min_z_0.6_downsampled_10"
     # object_name = "mallet"
     # trajectory_name = "horizontal_swing_nail"
     # trajectory_name = "horizontal_swing_rotated"
@@ -444,9 +434,6 @@ def main():
     # trajectory_name = "simple"
     # trajectory_name = "complex"
 
-    object_type = args.object_type
-    object_name = args.object_name
-    trajectory_name = args.trajectory_name
 
     output_dir = None  # Set to Path("videos") to enable recording
 
@@ -488,13 +475,19 @@ def main():
     traj_data["start_pose"][2] += Z_OFFSET
 
     # DOWNSAMPLE_FACTOR = 1  # No downsampling when 1
-    DOWNSAMPLE_FACTOR = args.downsample_factor
+    DOWNSAMPLE_FACTOR = 1
     traj_data["goals"] = traj_data["goals"][::DOWNSAMPLE_FACTOR]
 
     # Create environment
     # config_path, checkpoint_path = parse_checkpoint_dir(checkpoint_dir)
-    config_path = args.config_path
-    checkpoint_path = args.checkpoint_path
+
+    # policy_path = Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/o0t0_fullSpeed")
+    # policy_path = Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed")
+    # policy_path = Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_fastSpeed")
+    policy_path = Path("/share/portal/kk837/sapg/train_dir/LATEST/FINETUNING_1x/NEW_FT_FixedSize_True_Force_True_Scale_2_2026-01-14_23-35-22/runs/00_NEW_FT_FixedSize_True_Force_True_Scale_2_2026-01-14_23-35-22")
+
+    config_path = policy_path / "config.yaml"
+    checkpoint_path = policy_path / "best" / "model.pth"
 
     # Original one we tried in eral
     # config_path = Path("/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml")
@@ -568,13 +561,13 @@ def main():
         },
     )
 
-    # EvalRunner(env, config_path, checkpoint_path, object_name, trajectory_name, SELECTED_TABLE_URDF, output_dir).run()
-    num_episodes: int = args.num_episodes
-    output_dir = Path(args.output_dir)
-    EvalRunner(env=env, config_path=config_path, checkpoint_path=checkpoint_path, object_name=object_name, trajectory_name=trajectory_name, table_urdf=SELECTED_TABLE_URDF, output_dir=None, policy_name=args.policy_name).run_eval(
-        num_episodes=num_episodes,
-        output_json_file=output_dir / "eval.json")
-    log_success(f"Saved: {output_dir / 'eval.json'}")
+    EvalRunner(env, config_path, checkpoint_path, object_name, trajectory_name, SELECTED_TABLE_URDF, output_dir).run()
+    # num_episodes: int = args.num_episodes
+    # output_dir = Path(args.output_dir)
+    # EvalRunner(env=env, config_path=config_path, checkpoint_path=checkpoint_path, object_name=object_name, trajectory_name=trajectory_name, table_urdf=SELECTED_TABLE_URDF, output_dir=None).run_eval(
+    #     num_episodes=num_episodes,
+    #     output_json_file=output_dir / "eval.json")
+    # log_success(f"Saved: {output_dir / 'eval.json'}")
 
 if __name__ == "__main__":
     main()
