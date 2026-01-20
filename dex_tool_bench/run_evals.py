@@ -13,13 +13,12 @@ assert script_path.exists(), f"Script not found: {script_path}"
 DATE_STR = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
 object_type_to_object_names = {
-    # "hammer": ["hammer_2", "mallet"],
-    # "spatula": ["black_spatula", "spoon_spatula"],
-    # "eraser": ["anvil_eraser", "expo_eraser", "amazon_eraser"],
-    # "screwdriver": ["real_flat_screwdriver", "black_screwdriver", "red_screwdriver"],
-    # "marker": ["040_large_marker", "sharpie_closed", "staples_open"],
-    # "brush": ["red_brush", "anvil_brush"],
-    "brush": ["anvil_brush"],
+    "hammer": ["hammer_2", "mallet"],
+    "spatula": ["black_spatula", "spoon_spatula"],
+    "eraser": ["anvil_eraser", "expo_eraser"],
+    "screwdriver": ["real_flat_screwdriver", "red_screwdriver"],
+    "marker": ["sharpie_closed", "staples_open"],
+    "brush": ["red_brush", "anvil_brush"],
 
     # "Easy"
     # "spatula": ["black_spatula"],
@@ -28,12 +27,13 @@ object_type_to_object_names = {
 }
 
 object_type_to_trajectory_names = {
-    # "hammer": ["down_swing", "side_swing"],
-    # "spatula": ["serve_plate", "flip_pancake"],
-    # "eraser": ["wipe_higher", "wipe_lower"],
-    # "screwdriver": ["top", "side"],
-    # "marker": ["write_smiley", "write_c"],
+    "hammer": ["down_swing", "side_swing"],
+    "spatula": ["serve_plate", "flip_pancake"],
+    "eraser": ["wipe_higher", "wipe_lower"],
+    "screwdriver": ["top", "side"],
+    "marker": ["write_smiley", "write_c"],
     "brush": ["sweep_forward", "sweep_forward_right"],
+    # "brush": ["sweep_forward"],
 
     # "Easy"
     # "spatula": ["flip_pancake_easy"],
@@ -56,7 +56,8 @@ for object_type in object_type_to_trajectory_names.keys():
 
 POLICY_NAME_TO_PATH = {
     "newSlowSpeed": Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_new_slowSpeed"),
-    "slowSpeed": Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed"),
+    # "slowSpeed": Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed"),
+    "Jan18_tools_slowSpeed": Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/Jan18_tools_slowSpeed"),
     # "fastSpeed": Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_fastSpeed"),
 }
 DOWNSAMPLE_FACTOR = 1
