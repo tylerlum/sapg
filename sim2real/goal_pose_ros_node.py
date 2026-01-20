@@ -244,11 +244,11 @@ def main():
     # trajectory_name = "serve_plate"
     # trajectory_name = "flip_pancake"
 
-    # object_type = "screwdriver"
-    # object_name = "real_flat_screwdriver"
+    object_type = "screwdriver"
+    object_name = "real_flat_screwdriver"
     # object_name = "black_screwdriver"
     # object_name = "red_screwdriver"
-    # trajectory_name = "top"
+    trajectory_name = "top"
     # trajectory_name = "side"
 
     # object_type = "eraser"
@@ -258,12 +258,12 @@ def main():
     # trajectory_name = "wipe_higher"
     # trajectory_name = "wipe_lower"
 
-    object_type = "marker"
+    # object_type = "marker"
     # object_name = "040_large_marker"
-    object_name = "sharpie_closed"
+    # object_name = "sharpie_closed"
     # object_name = "staples_open"
     # trajectory_name = "write_smiley"
-    trajectory_name = "write_c"
+    # trajectory_name = "write_c"
 
     # object_type = "brush"
     # object_name = "anvil_brush"
@@ -294,8 +294,8 @@ def main():
     # goals_robot_frame = [[x - 0.02, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
     goals_robot_frame = [[x - 0.05, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
 
-    # DOWNSAMPLE_FACTOR = 10
-    DOWNSAMPLE_FACTOR = 1
+    DOWNSAMPLE_FACTOR = 10
+    # DOWNSAMPLE_FACTOR = 1
     # goals_robot_frame = goals_robot_frame[::DOWNSAMPLE_FACTOR][10:]
     goals_robot_frame = goals_robot_frame[::DOWNSAMPLE_FACTOR]
 
@@ -332,8 +332,8 @@ def main():
             # object_scales=np.array([0.12965531, 0.0337145 , 0.06038587]) * 25,  # whiteboard eraser
             # object_scales=np.array([0.15954332, 0.0777093 , 0.01231273]) * 25,  # iphone15pro
             # success_threshold=0.0,
-            success_threshold=0.01,
-            # success_threshold=0.03,
+            # success_threshold=0.01,
+            success_threshold=0.03,
             # success_threshold=0.04,
             # success_threshold=0.05,
             success_steps=1,
