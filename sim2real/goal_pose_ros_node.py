@@ -16,6 +16,8 @@ import rospy
 from geometry_msgs.msg import PoseStamped, Pose
 from termcolor import colored
 
+FORCE_FIXED_ORIENTATION = False
+
 def info(message: str):
     print(colored(message, "green"))
 
@@ -79,15 +81,16 @@ class GoalPoseNode:
         assert D == 7, f"Expected 7 dimensions, got {D}"
         assert N > 0, f"Expected at least 1 goal object pose, got {N}"
 
-        # HACK: Overwite with fixed orientation
-        # x: 0.062478514383575996
-        # y: -0.028937932653575582
-        # z: 0.0324696930013384
-        # w: 0.997098164841635
-        self.goal_object_poses[:, 3] = 0
-        self.goal_object_poses[:, 4] = 0
-        self.goal_object_poses[:, 5] = 0
-        self.goal_object_poses[:, 6] = 1
+        if FORCE_FIXED_ORIENTATION:
+            # HACK: Overwite with fixed orientation
+            # x: 0.062478514383575996
+            # y: -0.028937932653575582
+            # z: 0.0324696930013384
+            # w: 0.997098164841635
+            self.goal_object_poses[:, 3] = 0
+            self.goal_object_poses[:, 4] = 0
+            self.goal_object_poses[:, 5] = 0
+            self.goal_object_poses[:, 6] = 1
 
         # State
         self.current_goal_object_pose_index = 0
@@ -119,15 +122,16 @@ class GoalPoseNode:
         latest_current_object_pose = deepcopy(self.latest_current_object_pose)
         p = latest_current_object_pose
 
-        # HACK: Overwite with fixed orientation
-        # x: 0.062478514383575996
-        # y: -0.028937932653575582
-        # z: 0.0324696930013384
-        # w: 0.997098164841635
-        p.orientation.x = 0
-        p.orientation.y = 0
-        p.orientation.z = 0
-        p.orientation.w = 1
+        if FORCE_FIXED_ORIENTATION:
+            # HACK: Overwite with fixed orientation
+            # x: 0.062478514383575996
+            # y: -0.028937932653575582
+            # z: 0.0324696930013384
+            # w: 0.997098164841635
+            p.orientation.x = 0
+            p.orientation.y = 0
+            p.orientation.z = 0
+            p.orientation.w = 1
 
         current_object_pose_xyzw = np.array([p.position.x, p.position.y, p.position.z, p.orientation.x, p.orientation.y, p.orientation.z, p.orientation.w])
         current_goal_object_pose_xyzw = self.goal_object_poses[self.current_goal_object_pose_index]

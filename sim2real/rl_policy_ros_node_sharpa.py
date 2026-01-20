@@ -27,6 +27,8 @@ from isaacgymenvs.utils.objects import (
     NAME_TO_OBJECT,
 )
 
+FORCE_FIXED_ORIENTATION = False
+
 
 T_W_R = np.eye(4)
 T_W_R[:3, 3] = np.array([0.0, 0.8, 0.0])
@@ -95,19 +97,20 @@ def var_to_is_none_str(var) -> str:
 def pose_msg_to_T(msg: Pose) -> np.ndarray:
     T = np.eye(4)
     T[:3, 3] = np.array([msg.position.x, msg.position.y, msg.position.z])
-    # T[:3, :3] = R.from_quat(
-    #     [msg.orientation.x, msg.orientation.y, msg.orientation.z, msg.orientation.w]
-    # ).as_matrix()
-
-    # HACK: Overwite with fixed orientation
-    # x: 0.062478514383575996
-    # y: -0.028937932653575582
-    # z: 0.0324696930013384
-    # w: 0.997098164841635
-
     T[:3, :3] = R.from_quat(
-        [0, 0, 0, 1]
+        [msg.orientation.x, msg.orientation.y, msg.orientation.z, msg.orientation.w]
     ).as_matrix()
+
+    if FORCE_FIXED_ORIENTATION:
+        # HACK: Overwite with fixed orientation
+        # x: 0.062478514383575996
+        # y: -0.028937932653575582
+        # z: 0.0324696930013384
+        # w: 0.997098164841635
+
+        T[:3, :3] = R.from_quat(
+            [0, 0, 0, 1]
+        ).as_matrix()
 
     return T
 
