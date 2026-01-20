@@ -95,9 +95,20 @@ def var_to_is_none_str(var) -> str:
 def pose_msg_to_T(msg: Pose) -> np.ndarray:
     T = np.eye(4)
     T[:3, 3] = np.array([msg.position.x, msg.position.y, msg.position.z])
+    # T[:3, :3] = R.from_quat(
+    #     [msg.orientation.x, msg.orientation.y, msg.orientation.z, msg.orientation.w]
+    # ).as_matrix()
+
+    # HACK: Overwite with fixed orientation
+    # x: 0.062478514383575996
+    # y: -0.028937932653575582
+    # z: 0.0324696930013384
+    # w: 0.997098164841635
+
     T[:3, :3] = R.from_quat(
-        [msg.orientation.x, msg.orientation.y, msg.orientation.z, msg.orientation.w]
+        [0, 0, 0, 1]
     ).as_matrix()
+
     return T
 
 def pos_quat_xyzw_to_pose_msg(pos: np.ndarray, quat_xyzw: np.ndarray) -> Pose:
@@ -1127,15 +1138,15 @@ class RLPolicyNode:
 
 if __name__ == "__main__":
     try:
-        OBJECT_NAME = "hammer_2"
+        OBJECT_NAME = "sharpie_closed"
         rl_policy_node = RLPolicyNode(
             # New on tools
-            config_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed/config.yaml"),
-            checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed/model.pth"),
+            # config_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed/config.yaml"),
+            # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed/model.pth"),
 
             # Trained longer with keypoint fix
-            # config_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_new_slowSpeed/config.yaml"),
-            # checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_new_slowSpeed/model.pth"),
+            config_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_new_slowSpeed/config.yaml"),
+            checkpoint_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_new_slowSpeed/model.pth"),
 
             # Jan 18
             # config_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/Jan18_tools_slowSpeed/config.yaml"),
@@ -1145,6 +1156,7 @@ if __name__ == "__main__":
             arm_moving_average=0.1,
             hand_dof_speed_scale=1.5,
 
+            # object_scales=np.array(NAME_TO_OBJECT[OBJECT_NAME].scale) * 0.75,
             object_scales=np.array(NAME_TO_OBJECT[OBJECT_NAME].scale),
             # save_foldername=None,
             save_foldername=f"{datetime.datetime.now().strftime('%Y-%m-%d')}_testing",
