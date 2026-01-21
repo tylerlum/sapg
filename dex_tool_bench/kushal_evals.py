@@ -17,11 +17,12 @@ object_type_to_object_names = {
     # "hammer": ["hammer_2", "mallet"],
     # "spatula": ["black_spatula", "spoon_spatula"],
     # "eraser": ["anvil_eraser", "expo_eraser", "amazon_eraser"],
-    "screwdriver": ["real_flat_screwdriver", "black_screwdriver", "red_screwdriver"],
+    # "screwdriver": ["real_flat_screwdriver", "black_screwdriver", "red_screwdriver"],
     # "marker": ["040_large_marker", "sharpie_closed", "staples_open"],
     # "brush": ["red_brush", "anvil_brush"],
 
-    # "hammer": ["mallet"],
+
+    "hammer": ["hammer_2"],
     # "brush": ["anvil_brush"],
 
     # "Easy"
@@ -35,9 +36,12 @@ object_type_to_trajectory_names = {
     # "hammer": ["down_swing", "side_swing"],
     # "spatula": ["serve_plate", "flip_pancake"],
     # "eraser": ["wipe_higher", "wipe_lower"],
-    "screwdriver": ["top", "side"],
+    # "screwdriver": ["top", "side"],
     # "marker": ["write_smiley", "write_c"],
     # "brush": ["sweep_forward", "sweep_forward_right"],
+
+    # "hammer": ["down_swing", "side_swing"],
+    # "hammer": ["down_swing", "side_swing"],
 
     # "Easy"
     # "spatula": ["flip_pancake_easy"],
@@ -62,8 +66,13 @@ for object_type in object_type_to_trajectory_names.keys():
 
 POLICY_NAME_TO_PATH = {
     "newSlowSpeed": Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_new_slowSpeed"),
-    "slowSpeed": Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed"),
-    "Jan18_tools_slowSpeed": Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/Jan18_tools_slowSpeed"),
+    # "slowSpeed": Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed"),
+    # "Jan18_tools_slowSpeed": Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/Jan18_tools_slowSpeed"),
+    # "Jan18_objVelPenalty": Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/Jan18_objVelPenalty"),
+    "Jan20_allChanges": Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/Jan20_allChanges"),
+    # "Jan20_h2s2r": Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/Jan20_h2s2r"),
+    # "Jan20_higherForceSmall_30F_3_torque": Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/Jan20_higherForceSmall_30F_3_torque"),
+    # "Jan20_objVelPenalty": Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/Jan20_objVelPenalty"),
     # "fastSpeed": Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_fastSpeed"),
 }
 DOWNSAMPLE_FACTOR = 1

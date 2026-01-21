@@ -175,9 +175,9 @@ class ViserServer:
         object_pos = object_state[:3]
         self.object_state_text.content = f"**Object State:** {object_pos[0]:.3f}, {object_pos[1]:.3f}, {object_pos[2]:.3f}"
 
-    def update_stats(self, num_episodes: int, avg_goal_pct: float, avg_time_sec: float):
+    def update_stats(self, num_episodes: int, avg_goal_pct: float, avg_goal_distance: float, avg_time_sec: float):
         """Update statistics display."""
-        self.stats_text.content = f"**Episodes:** {num_episodes} | **Avg Goal:** {avg_goal_pct:.1f}% | **Avg Time:** {avg_time_sec:.1f}s"
+        self.stats_text.content = f"**Episodes:** {num_episodes} | **Avg Goal:** {avg_goal_pct:.1f}% | **Avg Goal Distance:** {avg_goal_distance:.3f}m | **Avg Time:** {avg_time_sec:.1f}s"
 
     def get_frame(self) -> np.ndarray:
         """Capture current view as image."""
@@ -213,6 +213,7 @@ class EvalRunner:
         self.episode_count = 0
         self.episode_goal_pcts = []
         self.episode_lengths = []
+        self.episode_goal_distances = []
         if self.record_video:
             self.session_dir = output_dir / datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             self.session_dir.mkdir(parents=True, exist_ok=True)
@@ -251,6 +252,14 @@ class EvalRunner:
             self.env.obj_keypoint_pos_fixed_size[0].cpu().numpy(),
             self.env.goal_keypoint_pos_fixed_size[0].cpu().numpy(),
         )
+
+    def _get_goal_distance(self) -> float:
+        """Get the distance between the object and the goal."""
+        goal_pose = self.env.goal_pose[0].cpu().numpy()
+        object_pose = self.env.object_state[0, :7].cpu().numpy()
+        goal_pos = goal_pose[:3]
+        object_pos = object_pose[:3]
+        return np.linalg.norm(goal_pos - object_pos)
 
     def _sim_step(self, timestep: int) -> bool:
         """Execute one simulation step with timing control."""
@@ -297,6 +306,7 @@ class EvalRunner:
         log_success(f"Running{' (+ recording)' if self.record_video else ''}...")
         states, step, done = [], 0, False
 
+        goal_distances = []
         while not done:
             # Handle pause
             while self.viser.is_paused:
@@ -305,16 +315,24 @@ class EvalRunner:
             if self.record_video and step % self.record_interval == 0:
                 states.append(tuple(x.copy() for x in self._get_state()))
             done = self._sim_step(step)
+            goal_distances.append(self._get_goal_distance())
             step += 1
 
         # Update stats
         goal_pct = 100 * int(self.env.successes[0].item()) / self.env.max_consecutive_successes
         self.episode_goal_pcts.append(goal_pct)
         self.episode_lengths.append(step)
+        self.episode_goal_distances.append(np.mean(goal_distances).item())
         self.episode_count += 1
-        avg_goal_pct = sum(self.episode_goal_pcts) / len(self.episode_goal_pcts)
-        avg_time_sec = sum(self.episode_lengths) / len(self.episode_lengths) / self.control_hz
-        self.viser.update_stats(self.episode_count, avg_goal_pct, avg_time_sec)
+        avg_goal_pct = np.mean(self.episode_goal_pcts)
+        avg_goal_distance = np.mean(self.episode_goal_distances)
+        avg_time_sec = np.mean(self.episode_lengths) / self.control_hz
+        self.viser.update_stats(
+            num_episodes=self.episode_count,
+            avg_goal_pct=avg_goal_pct,
+            avg_goal_distance=avg_goal_distance,
+            avg_time_sec=avg_time_sec,
+        )
 
         if states and self.record_video:
             self._render_video(states, self.session_dir / f"{self.episode_count}.mp4")
@@ -341,8 +359,10 @@ class EvalRunner:
                 {
                     "avg_goal_pct": np.mean(self.episode_goal_pcts),
                     "avg_time_sec": np.mean(self.episode_lengths) / self.control_hz,
+                    "avg_goal_distance": np.mean(self.episode_goal_distances),
                     "episode_goal_pcts": self.episode_goal_pcts,
                     "episode_lengths": self.episode_lengths,
+                    "episode_goal_distances": self.episode_goal_distances,
                 },
                 f,
                 indent=4,
@@ -571,7 +591,17 @@ def main():
     # EvalRunner(env, config_path, checkpoint_path, object_name, trajectory_name, SELECTED_TABLE_URDF, output_dir).run()
     num_episodes: int = args.num_episodes
     output_dir = Path(args.output_dir)
-    EvalRunner(env=env, config_path=config_path, checkpoint_path=checkpoint_path, object_name=object_name, trajectory_name=trajectory_name, table_urdf=SELECTED_TABLE_URDF, output_dir=None, policy_name=args.policy_name).run_eval(
+    SAVE_VIDEO = False
+    EvalRunner(
+        env=env,
+        config_path=config_path,
+        checkpoint_path=checkpoint_path,
+        object_name=object_name,
+        trajectory_name=trajectory_name,
+        table_urdf=SELECTED_TABLE_URDF,
+        output_dir=None if not SAVE_VIDEO else output_dir,
+        policy_name=args.policy_name,
+    ).run_eval(
         num_episodes=num_episodes,
         output_json_file=output_dir / "eval.json")
     log_success(f"Saved: {output_dir / 'eval.json'}")
