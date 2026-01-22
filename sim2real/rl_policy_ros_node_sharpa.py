@@ -27,7 +27,7 @@ from isaacgymenvs.utils.objects import (
     NAME_TO_OBJECT,
 )
 
-FORCE_FIXED_ORIENTATION = False
+FORCE_FIXED_ORIENTATION = True
 
 
 T_W_R = np.eye(4)
@@ -1141,7 +1141,7 @@ class RLPolicyNode:
 
 if __name__ == "__main__":
     try:
-        OBJECT_NAME = "expo_eraser"
+        OBJECT_NAME = "staples_open"
         rl_policy_node = RLPolicyNode(
             # New on tools
             # config_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed/config.yaml"),

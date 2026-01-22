@@ -16,7 +16,7 @@ import rospy
 from geometry_msgs.msg import PoseStamped, Pose
 from termcolor import colored
 
-FORCE_FIXED_ORIENTATION = False
+FORCE_FIXED_ORIENTATION = True
 
 def info(message: str):
     print(colored(message, "green"))
@@ -251,18 +251,18 @@ def main():
     # trajectory_name = "top"
     # trajectory_name = "side"
 
-    object_type = "eraser"
+    # object_type = "eraser"
     # object_name = "whiteboard_eraser"
     # object_name = "anvil_eraser"
-    object_name = "expo_eraser"
+    # object_name = "expo_eraser"
     # trajectory_name = "wipe_higher"
-    trajectory_name = "wipe_lower"
+    # trajectory_name = "wipe_lower"
 
-    # object_type = "marker"
+    object_type = "marker"
     # object_name = "040_large_marker"
     # object_name = "sharpie_closed"
-    # object_name = "staples_open"
-    # trajectory_name = "write_smiley"
+    object_name = "staples_open"
+    trajectory_name = "write_smiley"
     # trajectory_name = "write_c"
 
     # object_type = "brush"
@@ -296,9 +296,9 @@ def main():
     # goals_robot_frame = [[x - 0.05, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
 
     # goals_robot_frame = [[x, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
-    goals_robot_frame = [[x - 0.02, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
+    # goals_robot_frame = [[x - 0.02, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
     # goals_robot_frame = [[x - 0.03, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
-    # goals_robot_frame = [[x - 0.05, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
+    goals_robot_frame = [[x - 0.05, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
 
     DOWNSAMPLE_FACTOR = 10
     # DOWNSAMPLE_FACTOR = 1
