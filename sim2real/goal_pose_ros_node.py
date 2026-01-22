@@ -253,10 +253,10 @@ def main():
 
     object_type = "eraser"
     # object_name = "whiteboard_eraser"
-    object_name = "anvil_eraser"
-    # object_name = "expo_eraser"
-    # trajectory_name = "wipe_higher"
-    trajectory_name = "wipe_lower"
+    # object_name = "anvil_eraser"
+    object_name = "expo_eraser"
+    trajectory_name = "wipe_higher"
+    # trajectory_name = "wipe_lower"
 
     # object_type = "marker"
     # object_name = "040_large_marker"
