@@ -266,11 +266,11 @@ def main():
     # trajectory_name = "write_c"
 
     object_type = "brush"
-    # object_name = "anvil_brush"
-    object_name = "red_brush"
-    # trajectory_name = "sweep_forward"
+    object_name = "anvil_brush"
+    # object_name = "red_brush"
+    trajectory_name = "sweep_forward"
     # trajectory_name = "sweep_forward_easy"
-    trajectory_name = "sweep_forward_right"
+    # trajectory_name = "sweep_forward_right"
 
     # APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.6_downsampled_10"
     # APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.6"
@@ -315,7 +315,7 @@ def main():
 
     # Lower the z of the last points
     EDIT_AFTER_N_POINTS = 10
-    EDIT_Z_OFFSET = 0.01
+    EDIT_Z_OFFSET = 0.0
     for i in range(len(goals_robot_frame)):
         if i >= EDIT_AFTER_N_POINTS:
             goals_robot_frame[i][2] += EDIT_Z_OFFSET
