@@ -801,7 +801,7 @@ def save_to_file(file_path: Path, q_array: np.ndarray, object_pose_array: np.nda
     recorded_data.to_file(file_path)
 
 
-def solve_trajopt(T_R_Ps: np.ndarray, q_start: np.ndarray, dt: float, waypoint_buffer: int = 0) -> np.ndarray:
+def solve_trajopt(T_R_Ps: np.ndarray, q_start: np.ndarray, dt: float, waypoint_buffer: int = 0, use_collision_avoidance: bool = True) -> np.ndarray:
     from pyroki_tests import pyroki_snippets as pks
     from pyroki_tests.trajopt_improved_waypoints_sharpa import xyzw_to_wxyz
     import pyroki as pk
@@ -822,6 +822,11 @@ def solve_trajopt(T_R_Ps: np.ndarray, q_start: np.ndarray, dt: float, waypoint_b
     # Load collision spheres
     with open(sphere_json_path, "r") as f:
         sphere_decomposition = json.load(f)
+    if not use_collision_avoidance:
+        # Needs to have >0 spheres, so just include the base link
+        sphere_decomposition = {
+            "iiwa14_link_0": sphere_decomposition["iiwa14_link_0"]
+        }
     robot_coll = pk.collision.RobotCollision.from_sphere_decomposition(
         sphere_decomposition=sphere_decomposition,
         urdf=urdf,

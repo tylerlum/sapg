@@ -19,6 +19,7 @@ retargeted_qs = solve_trajopt(
     T_R_Ps=T_R_Ps_using_lifted_object_pose[::DOWNSAMPLE_FACTOR],
     q_start=q.copy(),
     dt=1/30,
+    use_collision_avoidance=False,
 )
 
 retargeted_qs = interpolate_traj(retargeted_qs, n_steps=DOWNSAMPLE_FACTOR)
