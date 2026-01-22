@@ -310,6 +310,9 @@ def main():
     with open(trajectory_path) as f:
         traj_data = json.load(f)
 
+    Z_OFFSET = 0.03
+    traj_data["start_pose"][2] += Z_OFFSET
+
     env = create_env(
         config_path=str(CONFIG_PATH),
         headless=True,
