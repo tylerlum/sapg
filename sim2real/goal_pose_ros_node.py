@@ -301,7 +301,7 @@ def main():
     # goals_robot_frame = [[x, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
     # goals_robot_frame = [[x, y - 0.8 - 0.05, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
     # goals_robot_frame = [[x - 0.05, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
-    goals_robot_frame = [[x - 0.05, y - 0.8, z - 0.04, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
+    goals_robot_frame = [[x - 0.05, y - 0.8 + 0.05, z - 0.04, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
     # goals_robot_frame = [[x - 0.015, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
     # goals_robot_frame = [[x - 0.0175, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
     # goals_robot_frame = [[x - 0.02, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
@@ -317,7 +317,7 @@ def main():
 
     # Lower the z of the last points
     EDIT_AFTER_N_POINTS = 10
-    EDIT_Z_OFFSET = 0.0
+    EDIT_Z_OFFSET = 0.02
     for i in range(len(goals_robot_frame)):
         if i >= EDIT_AFTER_N_POINTS:
             goals_robot_frame[i][2] += EDIT_Z_OFFSET
