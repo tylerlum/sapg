@@ -268,8 +268,8 @@ def main():
     object_type = "brush"
     # object_name = "anvil_brush"
     object_name = "red_brush"
-    # trajectory_name = "sweep_forward"
-    trajectory_name = "sweep_forward_easy"
+    trajectory_name = "sweep_forward"
+    # trajectory_name = "sweep_forward_easy"
     # trajectory_name = "sweep_forward_right"
 
     # APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.6_downsampled_10"
