@@ -312,6 +312,13 @@ def main():
     # goals_robot_frame = goals_robot_frame[::DOWNSAMPLE_FACTOR][10:]
     goals_robot_frame = goals_robot_frame[::DOWNSAMPLE_FACTOR]
 
+    # Lower the z of the last points
+    EDIT_AFTER_N_POINTS = 10
+    EDIT_Z_OFFSET = 0.02
+    for i in range(len(goals_robot_frame)):
+        if i >= EDIT_AFTER_N_POINTS:
+            goals_robot_frame[i][2] -= EDIT_Z_OFFSET
+
     tmp_file = Path("tmp.json")
     with open(tmp_file, "w") as f:
         json.dump(goals_robot_frame, f)
