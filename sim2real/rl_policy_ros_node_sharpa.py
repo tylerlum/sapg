@@ -1170,8 +1170,8 @@ if __name__ == "__main__":
             arm_moving_average=0.1,
             hand_dof_speed_scale=1.5,
 
-            # object_scales=np.array(NAME_TO_OBJECT[OBJECT_NAME].scale) * 0.75,
-            object_scales=np.array(NAME_TO_OBJECT[OBJECT_NAME].scale),
+            object_scales=np.array(NAME_TO_OBJECT[OBJECT_NAME].scale) * 0.75,
+            # object_scales=np.array(NAME_TO_OBJECT[OBJECT_NAME].scale),
             # save_foldername=None,
             save_foldername=f"{datetime.datetime.now().strftime('%Y-%m-%d')}_testing",
             # overwrite_targets_filepath=None,
