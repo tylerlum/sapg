@@ -341,8 +341,8 @@ def main():
             object_scales=np.array([0.141, 0.03025, 0.0271]) * 25,  # fixed size
             # object_scales=np.array([0.12965531, 0.0337145 , 0.06038587]) * 25,  # whiteboard eraser
             # object_scales=np.array([0.15954332, 0.0777093 , 0.01231273]) * 25,  # iphone15pro
-            # success_threshold=0.0,
-            success_threshold=0.01,
+            success_threshold=0.0,
+            # success_threshold=0.01,
             # success_threshold=0.03,
             # success_threshold=0.04,
             # success_threshold=0.05,
