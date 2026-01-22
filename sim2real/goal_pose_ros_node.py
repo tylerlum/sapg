@@ -268,7 +268,8 @@ def main():
     object_type = "brush"
     object_name = "anvil_brush"
     # object_name = "red_brush"
-    trajectory_name = "sweep_forward"
+    # trajectory_name = "sweep_forward"
+    trajectory_name = "sweep_right"
     # trajectory_name = "sweep_forward_easy"
     # trajectory_name = "sweep_forward_right"
 
@@ -296,12 +297,12 @@ def main():
     # goals_robot_frame = [[x - 0.02, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
     # goals_robot_frame = [[x - 0.05, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
 
-    # goals_robot_frame = [[x, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
+    goals_robot_frame = [[x, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
     # goals_robot_frame = [[x, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
     # goals_robot_frame = [[x, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
     # goals_robot_frame = [[x, y - 0.8 - 0.05, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
     # goals_robot_frame = [[x - 0.05, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
-    goals_robot_frame = [[x - 0.05, y - 0.8 + 0.05, z + 0.03, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
+    # goals_robot_frame = [[x - 0.05, y - 0.8 + 0.05, z + 0.03, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
     # goals_robot_frame = [[x - 0.015, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
     # goals_robot_frame = [[x - 0.0175, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
     # goals_robot_frame = [[x - 0.02, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
@@ -311,13 +312,13 @@ def main():
 
     DOWNSAMPLE_FACTOR = 10
     # DOWNSAMPLE_FACTOR = 1
-    goals_robot_frame = goals_robot_frame[::DOWNSAMPLE_FACTOR][3:]
+    # goals_robot_frame = goals_robot_frame[::DOWNSAMPLE_FACTOR][3:]
     # goals_robot_frame = goals_robot_frame[::DOWNSAMPLE_FACTOR][10:]
-    # goals_robot_frame = goals_robot_frame[::DOWNSAMPLE_FACTOR]
+    goals_robot_frame = goals_robot_frame[::DOWNSAMPLE_FACTOR]
 
     # Lower the z of the last points
     EDIT_AFTER_N_POINTS = 10
-    EDIT_Z_OFFSET = 0.02
+    EDIT_Z_OFFSET = 0.0
     for i in range(len(goals_robot_frame)):
         if i >= EDIT_AFTER_N_POINTS:
             goals_robot_frame[i][2] += EDIT_Z_OFFSET

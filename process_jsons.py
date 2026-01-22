@@ -286,7 +286,7 @@ breakpoint()
 # Process the world frame JSONs to:
 # * Start after z >= MIN_Z
 # * Downsample by DOWNSAMPLE_FACTOR
-MIN_Z = 0.65
+MIN_Z = 0.7
 DOWNSAMPLE_FACTOR = 10
 world_frame_min_z_json_paths = []
 world_frame_min_z_downsampled_json_paths = []
