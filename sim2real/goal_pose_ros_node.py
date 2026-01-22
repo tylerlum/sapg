@@ -238,11 +238,11 @@ def main():
     # trajectory_name = "down_swing"
     # trajectory_name = "side_swing"
 
-    # object_type = "spatula"
+    object_type = "spatula"
     # object_name = "black_spatula"
-    # object_name = "spoon_spatula"
+    object_name = "spoon_spatula"
     # trajectory_name = "serve_plate"
-    # trajectory_name = "flip_pancake"
+    trajectory_name = "flip_pancake"
 
     # object_type = "screwdriver"
     # object_name = "real_flat_screwdriver"
@@ -265,10 +265,10 @@ def main():
     # trajectory_name = "write_smiley"
     # trajectory_name = "write_c"
 
-    object_type = "brush"
+    # object_type = "brush"
     # object_name = "anvil_brush"
-    object_name = "red_brush"
-    trajectory_name = "sweep_forward"
+    # object_name = "red_brush"
+    # trajectory_name = "sweep_forward"
     # trajectory_name = "sweep_forward_easy"
     # trajectory_name = "sweep_forward_right"
 
