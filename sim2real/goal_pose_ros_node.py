@@ -238,10 +238,10 @@ def main():
     # trajectory_name = "down_swing"
     # trajectory_name = "side_swing"
 
-    object_type = "spatula"
-    object_name = "black_spatula"
+    # object_type = "spatula"
+    # object_name = "black_spatula"
     # object_name = "spoon_spatula"
-    trajectory_name = "serve_plate"
+    # trajectory_name = "serve_plate"
     # trajectory_name = "flip_pancake"
 
     # object_type = "screwdriver"
@@ -265,17 +265,17 @@ def main():
     # trajectory_name = "write_smiley"
     # trajectory_name = "write_c"
 
-    # object_type = "brush"
+    object_type = "brush"
     # object_name = "anvil_brush"
-    # object_name = "red_brush"
-    # trajectory_name = "sweep_forward"
+    object_name = "red_brush"
+    trajectory_name = "sweep_forward"
     # trajectory_name = "sweep_forward_easy"
     # trajectory_name = "sweep_forward_right"
 
     # APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.6_downsampled_10"
     # APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.6"
-    # APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.65"
-    APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.7"
+    APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.65"
+    # APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.7"
     trajectory_name = f"{trajectory_name}{APPEND_TO_TRAJECTORY_NAMES}"
 
     trajectory_path = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
@@ -298,7 +298,8 @@ def main():
 
     # goals_robot_frame = [[x, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
     # goals_robot_frame = [[x, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
-    goals_robot_frame = [[x - 0.05, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
+    goals_robot_frame = [[x - 0.05, y - 0.8 - 0.05, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
+    # goals_robot_frame = [[x - 0.05, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
     # goals_robot_frame = [[x - 0.015, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
     # goals_robot_frame = [[x - 0.0175, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
     # goals_robot_frame = [[x - 0.02, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
