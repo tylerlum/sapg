@@ -241,8 +241,8 @@ def main():
     object_type = "spatula"
     # object_name = "black_spatula"
     object_name = "spoon_spatula"
-    # trajectory_name = "serve_plate"
-    trajectory_name = "flip_pancake"
+    trajectory_name = "serve_plate"
+    # trajectory_name = "flip_pancake"
 
     # object_type = "screwdriver"
     # object_name = "real_flat_screwdriver"
