@@ -314,7 +314,7 @@ def main():
 
     # Lower the z of the last points
     EDIT_AFTER_N_POINTS = 10
-    EDIT_Z_OFFSET = 0.01
+    EDIT_Z_OFFSET = 0.0
     for i in range(len(goals_robot_frame)):
         if i >= EDIT_AFTER_N_POINTS:
             goals_robot_frame[i][2] -= EDIT_Z_OFFSET
