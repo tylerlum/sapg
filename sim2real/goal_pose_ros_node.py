@@ -239,8 +239,8 @@ def main():
     # trajectory_name = "side_swing"
 
     object_type = "spatula"
-    # object_name = "black_spatula"
-    object_name = "spoon_spatula"
+    object_name = "black_spatula"
+    # object_name = "spoon_spatula"
     trajectory_name = "serve_plate"
     # trajectory_name = "flip_pancake"
 
