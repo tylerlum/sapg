@@ -308,8 +308,8 @@ def main():
 
     DOWNSAMPLE_FACTOR = 10
     # DOWNSAMPLE_FACTOR = 1
-    # goals_robot_frame = goals_robot_frame[::DOWNSAMPLE_FACTOR][10:]
-    goals_robot_frame = goals_robot_frame[::DOWNSAMPLE_FACTOR]
+    goals_robot_frame = goals_robot_frame[::DOWNSAMPLE_FACTOR][10:]
+    # goals_robot_frame = goals_robot_frame[::DOWNSAMPLE_FACTOR]
 
     tmp_file = Path("tmp.json")
     with open(tmp_file, "w") as f:
