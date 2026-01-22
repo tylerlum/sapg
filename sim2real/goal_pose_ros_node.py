@@ -244,18 +244,18 @@ def main():
     # trajectory_name = "serve_plate"
     # trajectory_name = "flip_pancake"
 
-    object_type = "screwdriver"
-    object_name = "real_flat_screwdriver"
+    # object_type = "screwdriver"
+    # object_name = "real_flat_screwdriver"
     # object_name = "black_screwdriver"
     # object_name = "red_screwdriver"
-    trajectory_name = "top"
+    # trajectory_name = "top"
     # trajectory_name = "side"
 
-    # object_type = "eraser"
+    object_type = "eraser"
     # object_name = "whiteboard_eraser"
-    # object_name = "anvil_eraser"
+    object_name = "anvil_eraser"
     # object_name = "expo_eraser"
-    # trajectory_name = "wipe_higher"
+    trajectory_name = "wipe_higher"
     # trajectory_name = "wipe_lower"
 
     # object_type = "marker"
@@ -292,7 +292,10 @@ def main():
     # goals_robot_frame = [[x - 0.02, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
     # goals_robot_frame = [[x - 0.05, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
     # goals_robot_frame = [[x - 0.02, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
-    goals_robot_frame = [[x - 0.05, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
+    # goals_robot_frame = [[x - 0.05, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
+
+    goals_robot_frame = [[x, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
+    # goals_robot_frame = [[x - 0.05, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
 
     DOWNSAMPLE_FACTOR = 10
     # DOWNSAMPLE_FACTOR = 1
