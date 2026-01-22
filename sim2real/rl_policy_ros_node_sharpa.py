@@ -27,7 +27,7 @@ from isaacgymenvs.utils.objects import (
     NAME_TO_OBJECT,
 )
 
-FORCE_FIXED_ORIENTATION = True
+FORCE_FIXED_ORIENTATION = False
 
 
 T_W_R = np.eye(4)
@@ -532,41 +532,51 @@ class RLPolicyNode:
         # Stop listening to the published one
         import json
 
-        object_type = "hammer"
-        object_name = "mallet"
+        # object_type = "hammer"
+        # object_name = "mallet"
         # object_name = "hammer_2"
-        # trajectory_name = "vertical_swing"
-        # trajectory_name = "horizontal_swing"
         # trajectory_name = "horizontal_swing_higher"
-        # trajectory_name = "horizontal_swing_human"
-        trajectory_name = "horizontal_swing_human_closer"
+        # trajectory_name = "down_swing"
+        # trajectory_name = "side_swing"
 
         # object_type = "spatula"
         # object_name = "black_spatula"
-        # trajectory_name = "pick_and_place_human"
-        # trajectory_name = "pick_and_place_human_hardinit"
+        # object_name = "spoon_spatula"
+        # trajectory_name = "serve_plate"
+        # trajectory_name = "flip_pancake"
 
         # object_type = "screwdriver"
         # object_name = "real_flat_screwdriver"
-        # trajectory_name = "top_down_screwing_human_easyinit"
-        # trajectory_name = "top_down_screwing_human"
-        # trajectory_name = "top_down_screwing_closer"
+        # object_name = "black_screwdriver"
+        # object_name = "red_screwdriver"
+        # trajectory_name = "top"
+        # trajectory_name = "side"
 
         # object_type = "eraser"
         # object_name = "whiteboard_eraser"
-        # trajectory_name = "wipe_left_human"
-        # trajectory_name = "wipe_left_human_2"
+        # object_name = "anvil_eraser"
+        # object_name = "expo_eraser"
+        # trajectory_name = "wipe_higher"
+        # trajectory_name = "wipe_lower"
 
         # object_type = "marker"
         # object_name = "040_large_marker"
-        # trajectory_name = "draw_circle_human"
-        # trajectory_name = "draw_circle_human_hardinit"
+        # object_name = "sharpie_closed"
+        # object_name = "staples_open"
+        # trajectory_name = "write_smiley"
+        # trajectory_name = "write_c"
 
-        # object_type = "brush"
-        # object_name = "green_brush"
-        # object_name = "red_brush"
-        # trajectory_name = "simple"
-        # trajectory_name = "complex"
+        object_type = "brush"
+        # object_name = "anvil_brush"
+        object_name = "red_brush"
+        trajectory_name = "sweep_forward"
+        # trajectory_name = "sweep_forward_right"
+
+        # APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.6_downsampled_10"
+        # APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.6"
+        APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.65"
+        # APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.7"
+        trajectory_name = f"{trajectory_name}{APPEND_TO_TRAJECTORY_NAMES}"
 
         assert self.object_name == object_name, f"self.object_name: {self.object_name}, object_name: {object_name}"
         object_pose_trajectory_filepath = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
@@ -1141,7 +1151,7 @@ class RLPolicyNode:
 
 if __name__ == "__main__":
     try:
-        OBJECT_NAME = "sharpie_closed"
+        OBJECT_NAME = "red_brush"
         rl_policy_node = RLPolicyNode(
             # New on tools
             # config_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed/config.yaml"),
