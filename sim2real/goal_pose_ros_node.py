@@ -275,8 +275,8 @@ def main():
 
     # APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.6_downsampled_10"
     # APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.6"
-    APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.65"
-    # APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.7"
+    # APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.65"
+    APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.7"
     trajectory_name = f"{trajectory_name}{APPEND_TO_TRAJECTORY_NAMES}"
 
     trajectory_path = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
