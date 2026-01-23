@@ -245,11 +245,11 @@ def main():
     # trajectory_name = "flip_pancake"
 
     object_type = "screwdriver"
-    object_name = "real_flat_screwdriver"
+    # object_name = "real_flat_screwdriver"
     # object_name = "black_screwdriver"
-    # object_name = "red_screwdriver"
-    trajectory_name = "top"
-    # trajectory_name = "side"
+    object_name = "red_screwdriver"
+    # trajectory_name = "top"
+    trajectory_name = "side"
 
     # object_type = "eraser"
     # object_name = "whiteboard_eraser"
@@ -297,7 +297,8 @@ def main():
     # goals_robot_frame = [[x - 0.02, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
     # goals_robot_frame = [[x - 0.05, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
 
-    goals_robot_frame = [[x, y - 0.8 - 0.05, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
+    # goals_robot_frame = [[x, y - 0.8 - 0.05, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
+    goals_robot_frame = [[x - 0.05, y - 0.8 - 0.05, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
     # goals_robot_frame = [[x, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
     # goals_robot_frame = [[x, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
     # goals_robot_frame = [[x, y - 0.8 - 0.05, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
