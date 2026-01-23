@@ -1,12 +1,12 @@
 #!/bin/bash
-objectScaleNoiseMultiplierRange=[1.0,1.0]
-forceConsecutiveNearGoalSteps=false
-forceScale=2 
-torqueScale=0
-objectAngVelPenaltyScale=1.0
+objectScaleNoiseMultiplierRange=[0.9,1.1]
+forceConsecutiveNearGoalSteps=true
+forceScale=20
+torqueScale=2
+objectAngVelPenaltyScale=0
 
-CUSTOM_EXPERIMENT_NAME="ObjectAngVelPenaltyScale1.0"
-WANDB_GROUP="FINETUNE_1x"
+CUSTOM_EXPERIMENT_NAME="FT_All_Changes"
+WANDB_GROUP="FINETUNE_3x"
 
 WANDB_ENTITY="kk837"
 WANDB_PROJECT="PAPER_RUNS"
@@ -15,7 +15,7 @@ DATETIME=$(date +"%Y-%m-%d_%H-%M-%S")
 EXPERIMENT_NAME="${CUSTOM_EXPERIMENT_NAME}_$DATETIME"
 HYDRA_RUN_DIR=./train_dir/${WANDB_PROJECT}/${WANDB_GROUP}/${EXPERIMENT_NAME}
 
-CHECKPOINT=/share/portal/kk837/sapg/train_dir/LATEST/FINETUNING_1x/NEW_FT_FixedSize_True_Force_True_Scale_2_2026-01-14_23-35-22/runs/00_NEW_FT_FixedSize_True_Force_True_Scale_2_2026-01-14_23-35-22/last/model.pth
+CHECKPOINT=/share/portal/kk837/sapg/train_dir/PAPER_RUNS/FINETUNE_2x/FT_ALL_CHANGES_2026-01-18_20-00-16/runs/00_FT_ALL_CHANGES_2026-01-18_20-00-16/last/model.pth
 
 python -m isaacgymenvs.train \
 task/env=reorientation \

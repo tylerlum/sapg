@@ -6,7 +6,7 @@ torqueScale=0
 objectAngVelPenaltyScale=0.0
 
 CUSTOM_EXPERIMENT_NAME="NoChanges"
-WANDB_GROUP="HAMMER_DOWN_SWING"
+WANDB_GROUP="2x_HAMMER_DOWN_SWING"
 
 WANDB_ENTITY="kk837"
 WANDB_PROJECT="Human2Sim2Robot"
@@ -14,6 +14,8 @@ WANDB_PROJECT="Human2Sim2Robot"
 DATETIME=$(date +"%Y-%m-%d_%H-%M-%S")
 EXPERIMENT_NAME="${CUSTOM_EXPERIMENT_NAME}_$DATETIME"
 HYDRA_RUN_DIR=./train_dir/${WANDB_PROJECT}/${WANDB_GROUP}/${EXPERIMENT_NAME}
+
+CHECKPOINT=/share/portal/kk837/sapg/train_dir/Human2Sim2Robot/HAMMER_DOWN_SWING/NoChanges_2026-01-18_03-43-03/runs/00_NoChanges_2026-01-18_03-43-03/last/model.pth
 
 python -m isaacgymenvs.train \
 task/env=reorientation \
@@ -48,4 +50,5 @@ task.env.torqueScale=${torqueScale} \
 task.env.objectAngVelPenaltyScale=${objectAngVelPenaltyScale} \
 task.env.object_type="hammer_2" \
 task.env.use_fixed_set_of_goal_states=True \
-task.env.fixedGoalStatesJsonPath="/share/portal/kk837/sapg/dex_tool_bench/evaluation_trajectories/hammer/hammer_2/down_swing_world_frame_min_z_0.6_downsampled_10.json"
+task.env.fixedGoalStatesJsonPath="/share/portal/kk837/sapg/dex_tool_bench/evaluation_trajectories/hammer/hammer_2/down_swing_world_frame_min_z_0.6_downsampled_10.json" \
+checkpoint=${CHECKPOINT} \

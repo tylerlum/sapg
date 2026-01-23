@@ -105,7 +105,7 @@ HAMMER_NAME_TO_OBJECT = {
         #         / "assets/urdf/tyler_objects_convex_decomp/mallet"
         #     ).glob("decomp_*.obj")
         # ),
-        scale=rescale_by_factor((0.24, 0.03, 0.02), factor=25),
+        scale=rescale_by_factor((0.25, 0.03, 0.02), factor=25),
         # need_vhacd=True,
         need_vhacd=False,
     ),

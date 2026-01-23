@@ -1,12 +1,13 @@
-"""Visualize all tools in the dex_tool_bench_training folder using viser.
+"""Visualize 100 random tools from dex_tool_bench_training using viser.
 
-This script finds all URDF and OBJ files in the dex_tool_bench_training assets folder
-and displays them organized by tool type with section titles.
+This script randomly selects and shuffles 100 tools from the training set
+and displays them in a grid layout with 3:2 aspect ratio.
 
 Handle is colored with wooden color, head with gray metallic color.
 """
 
 import math
+import random
 import re
 import time
 from collections import defaultdict
@@ -169,7 +170,7 @@ def find_all_tools_by_type(base_dir: Path) -> Dict[str, List[Path]]:
 
 
 def main() -> None:
-    """Visualize all tools in the dex_tool_bench_training folder."""
+    """Visualize 100 random tools in a grid layout."""
     
     # Find all tools grouped by type
     tools_by_type = find_all_tools_by_type(ASSETS_DIR)
@@ -178,96 +179,96 @@ def main() -> None:
         print(f"No tools found in {ASSETS_DIR}")
         return
     
-    total_tools = sum(len(tools) for tools in tools_by_type.values())
+    # Flatten all tools into a single list
+    all_tools = []
+    for tool_type, tools in tools_by_type.items():
+        for urdf_path in tools:
+            all_tools.append((tool_type, urdf_path))
+    
+    total_tools = len(all_tools)
     print(f"Found {total_tools} tools in {len(tools_by_type)} categories:")
     for tool_type, tools in tools_by_type.items():
         print(f"  [{tool_type.upper()}]: {len(tools)} tools")
     
+    # Shuffle and select 100 random tools
+    random.seed(42)  # For reproducibility
+    random.shuffle(all_tools)
+    num_to_display = min(100, total_tools)
+    selected_tools = all_tools[:num_to_display]
+    
+    print(f"\nDisplaying {num_to_display} randomly selected tools")
+    
     # Start viser server
     server = viser.ViserServer(port=8080)
-    print(f"\nViser server running at http://localhost:8080")
+    print(f"Viser server running at http://localhost:8080")
     
-    # Layout parameters - adjusted for more tools
-    spacing_y = 0.25  # Space between tools along Y axis (tighter for more tools)
-    section_spacing_x = 0.65  # Space between sections along X axis
-    title_height = 0.15  # Height of title above tools
-    x_offset = -0.5  # Shift all objects back in X direction
+    # Grid layout parameters for 3:2 aspect ratio (cols:rows)
+    # 12 columns × 9 rows = 108 slots (showing 100 objects)
+    num_cols = 12
+    num_rows = 9
+    spacing_x = 0.35  # Space between tools along X axis
+    spacing_y = 0.35  # Space between tools along Y axis
+    x_offset = -2.0  # Starting X position
+    y_offset = -1.5  # Starting Y position
     
-    current_x = x_offset
-    
-    # Load tools by section (sections along X, tools along Y)
-    for tool_type, tools in sorted(tools_by_type.items()):
-        print(f"\nLoading section: {tool_type} ({len(tools)} tools)")
+    # Load tools in grid layout
+    for idx, (tool_type, urdf_path) in enumerate(selected_tools):
+        if idx >= num_to_display:
+            break
         
-        # Add section title at the front of the section
-        server.scene.add_label(
-            f"/section_{tool_type}/title",
-            text=f"{tool_type.upper().replace('_', ' ')} ({len(tools)})",
-            position=(current_x, -0.15, title_height),
+        # Calculate grid position
+        row = idx // num_cols
+        col = idx % num_cols
+        
+        x_pos = x_offset + row * spacing_x
+        y_pos = y_offset + col * spacing_y
+        
+        tool_name = urdf_path.stem
+        print(f"[{idx+1}/{num_to_display}] Loading: {tool_name} ({tool_type})")
+        
+        # Parse URDF to get handle and head geometry
+        handle_params, head_params, head_offset = parse_urdf_geometry(urdf_path)
+        
+        # Create frame for this tool
+        server.scene.add_frame(
+            f"/tool_{idx:03d}_{tool_name}",
+            position=(x_pos, y_pos, 0.0),
+            show_axes=False,
+            axes_length=0.03,
+            axes_radius=0.001,
         )
         
-        # Load each tool in this section (along Y axis)
-        for i, urdf_path in enumerate(tools):
-            y_pos = i * spacing_y
-            
-            tool_name = urdf_path.stem
-            print(f"  [{i+1}/{len(tools)}] Loading: {tool_name}")
-            
-            # Parse URDF to get handle and head geometry
-            handle_params, head_params, head_offset = parse_urdf_geometry(urdf_path)
-            
-            # Create frame for this tool
-            server.scene.add_frame(
-                f"/section_{tool_type}/{tool_name}",
-                position=(current_x, y_pos, 0.0),
-                axes_length=0.03,
-                axes_radius=0.001,
-            )
-            
-            # Create and add handle mesh (wooden color)
-            if handle_params:
-                handle_mesh = create_mesh_from_params(handle_params, is_head=False)
-                if handle_mesh:
-                    handle_mesh.visual.face_colors = [*WOOD_COLOR, 255]
-                    server.scene.add_mesh_trimesh(
-                        name=f"/section_{tool_type}/{tool_name}/handle",
-                        mesh=handle_mesh,
-                    )
-            
-            # Create and add head mesh (metallic gray color)
-            if head_params and head_offset:
-                head_mesh = create_mesh_from_params(head_params, is_head=True)
-                if head_mesh:
-                    head_mesh.apply_translation([head_offset, 0, 0])
-                    head_mesh.visual.face_colors = [*METAL_COLOR, 255]
-                    server.scene.add_mesh_trimesh(
-                        name=f"/section_{tool_type}/{tool_name}/head",
-                        mesh=head_mesh,
-                    )
-            
-            # Add keypoints as small spheres around the handle
-            if handle_params:
-                keypoints = compute_keypoints(handle_params)
-                for kp_idx, kp_pos in enumerate(keypoints):
-                    server.scene.add_icosphere(
-                        name=f"/section_{tool_type}/{tool_name}/keypoint_{kp_idx}",
-                        radius=KEYPOINT_RADIUS,
-                        color=KEYPOINT_COLOR,
-                        position=kp_pos,
-                    )
+        # Create and add handle mesh (wooden color)
+        if handle_params:
+            handle_mesh = create_mesh_from_params(handle_params, is_head=False)
+            if handle_mesh:
+                handle_mesh.visual.face_colors = [*WOOD_COLOR, 255]
+                server.scene.add_mesh_trimesh(
+                    name=f"/tool_{idx:03d}_{tool_name}/handle",
+                    mesh=handle_mesh,
+                )
         
-        # Move to next section along X axis
-        current_x += section_spacing_x
+        # Create and add head mesh (metallic gray color)
+        if head_params and head_offset:
+            head_mesh = create_mesh_from_params(head_params, is_head=True)
+            if head_mesh:
+                head_mesh.apply_translation([head_offset, 0, 0])
+                head_mesh.visual.face_colors = [*METAL_COLOR, 255]
+                server.scene.add_mesh_trimesh(
+                    name=f"/tool_{idx:03d}_{tool_name}/head",
+                    mesh=head_mesh,
+                )
     
     # Add grid for reference
     server.scene.add_grid(
         "/grid",
-        width=8,
-        height=10,
-        position=(1.0, 2.0, -0.01),
+        width=5,
+        height=5,
+        position=(0.0, 0.0, -0.01),
+        cell_size=0.1,
     )
     
-    print(f"\nLoaded {total_tools} tools in {len(tools_by_type)} sections")
+    print(f"\nLoaded {num_to_display} random tools in a {num_rows}×{num_cols} grid")
     print("Press Ctrl+C to exit.")
     
     # Keep the server running

@@ -40,3 +40,5 @@ isaacgym/
 recorded_robot_states/
 assets/urdf/dex_tool_bench_training
 evals/
+plot_figures/plot_drafts/
+plot_figures/data/

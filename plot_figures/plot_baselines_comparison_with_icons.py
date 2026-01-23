@@ -154,7 +154,9 @@ def plot_bar_comparison_with_icons():
 
     ax.legend(loc="upper left", frameon=False, ncol=1)
 
-    plt.show()
+    plt.savefig(Path(__file__).parent / "plot_drafts" / "baselines_comparison_with_icons.png")
+    plt.close()
+    print(f"Saved figure to {Path(__file__).parent / 'plot_drafts' / 'baselines_comparison_with_icons.png'}")
 
 
 if __name__ == "__main__":
