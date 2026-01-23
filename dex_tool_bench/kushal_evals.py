@@ -13,13 +13,14 @@ assert script_path.exists(), f"Script not found: {script_path}"
 DATE_STR = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
 object_type_to_object_names = {
-    "hammer": ["hammer_2", "mallet"],
-    "spatula": ["black_spatula", "spoon_spatula"],
-    "eraser": ["anvil_eraser", "expo_eraser", "amazon_eraser"],
-    "screwdriver": ["real_flat_screwdriver", "black_screwdriver", "red_screwdriver"],
-    "marker": ["040_large_marker", "sharpie_closed", "staples_open"],
-    "brush": ["red_brush", "anvil_brush"],
-    # "brush": ["anvil_brush"],
+    # "hammer": ["hammer_2", "mallet"],
+    # "spatula": ["black_spatula", "spoon_spatula"],
+    # "eraser": ["anvil_eraser", "expo_eraser", "amazon_eraser"],
+    # "screwdriver": ["real_flat_screwdriver", "black_screwdriver", "red_screwdriver"],
+    # "marker": ["040_large_marker", "sharpie_closed", "staples_open"],
+    # "brush": ["red_brush", "anvil_brush"],
+
+    "hammer": ["new_hammer_2", "toy_hammer"],
 
     # "Easy"
     # "spatula": ["black_spatula"],
@@ -28,19 +29,22 @@ object_type_to_object_names = {
 }
 
 object_type_to_trajectory_names = {
-    "hammer": ["down_swing", "side_swing"],
-    "spatula": ["serve_plate", "flip_pancake"],
-    "eraser": ["wipe_higher", "wipe_lower"],
-    "screwdriver": ["top", "side"],
-    "marker": ["write_smiley", "write_c"],
-    "brush": ["sweep_forward", "sweep_forward_right"],
+    # "hammer": ["down_swing", "side_swing"],
+    # "spatula": ["serve_plate", "flip_pancake"],
+    # "eraser": ["wipe_higher", "wipe_lower"],
+    # "screwdriver": ["top", "side"],
+    # "marker": ["write_smiley", "write_c"],
+    # "brush": ["sweep_forward", "sweep_forward_right"],
+
+    "hammer": ["side_swing", "down_swing"],
 
     # "Easy"
     # "spatula": ["flip_pancake_easy"],
     # "hammer": ["down_swing_close_easy", "down_swing_close"],
     # "brush": ["sweep_forward_easy"],
 }
-APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.6_downsampled_10"
+# APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.6_downsampled_10"
+APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.7"
 # Append stuff to the trajectory names
 for object_type in object_type_to_trajectory_names.keys():
     object_type_to_trajectory_names[object_type] = [
@@ -55,14 +59,15 @@ for object_type in object_type_to_trajectory_names.keys():
 # }
 
 POLICY_NAME_TO_PATH = {
-    "2days_of_training": Path("/share/portal/kk837/sapg/train_dir/customPretraining/TYLER_HANDLE_HEAD/CONSTANT_DENSITY_NO_ACTION_DELAY_Speed_1.5_2025-12-27_23-07-47"),
-    "4days_of_training": Path("/share/portal/kk837/sapg/train_dir/customPretraining/TYLER_HANDLE_HEAD/FINETUNE_2x_SLOWER_SPEED_noActionDelay_2025-12-30_00-56-18/"),
-    "6days_of_training": Path("/share/portal/kk837/sapg/train_dir/customPretraining/FINETUNE_3x/FINETUNE_3x_SLOW_noActionDelay_2026-01-01_01-28-46"),
-    "8days_of_training": Path("/share/portal/kk837/sapg/train_dir/customPretraining/FINETUNE_4x/FINETUNE_4x_SLOWSPEED_ADD_ACTION_DELAY_2026-01-03_01-32-46"),
-    "10days_of_training": Path("/share/portal/kk837/sapg/train_dir/customPretraining/FINETUNE_5x/FINETUNE_5x_SLOW_SPEED_ADD_ACTION_DELAY_2026-01-05_02-10-22"),
-    "12days_of_training": Path("/share/portal/kk837/sapg/train_dir/LATEST/FINETUNING_1x/NEW_FT_FixedSize_True_Force_True_Scale_2_2026-01-14_23-35-22"),
+    "newSlowSpeed": Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_new_slowSpeed"),
+    # "2days_of_training": Path("/share/portal/kk837/sapg/train_dir/customPretraining/TYLER_HANDLE_HEAD/CONSTANT_DENSITY_NO_ACTION_DELAY_Speed_1.5_2025-12-27_23-07-47"),
+    # "4days_of_training": Path("/share/portal/kk837/sapg/train_dir/customPretraining/TYLER_HANDLE_HEAD/FINETUNE_2x_SLOWER_SPEED_noActionDelay_2025-12-30_00-56-18/"),
+    # "6days_of_training": Path("/share/portal/kk837/sapg/train_dir/customPretraining/FINETUNE_3x/FINETUNE_3x_SLOW_noActionDelay_2026-01-01_01-28-46"),
+    # "8days_of_training": Path("/share/portal/kk837/sapg/train_dir/customPretraining/FINETUNE_4x/FINETUNE_4x_SLOWSPEED_ADD_ACTION_DELAY_2026-01-03_01-32-46"),
+    # "10days_of_training": Path("/share/portal/kk837/sapg/train_dir/customPretraining/FINETUNE_5x/FINETUNE_5x_SLOW_SPEED_ADD_ACTION_DELAY_2026-01-05_02-10-22"),
+    # "12days_of_training": Path("/share/portal/kk837/sapg/train_dir/LATEST/FINETUNING_1x/NEW_FT_FixedSize_True_Force_True_Scale_2_2026-01-14_23-35-22"),
 }
-DOWNSAMPLE_FACTOR = 1
+DOWNSAMPLE_FACTOR = 10
 # NUM_EPISODES = 5
 # NUM_EPISODES = 10
 NUM_EPISODES = 1  # For debugging
@@ -107,8 +112,10 @@ for i, (object_type, object_name, trajectory_name, policy_name) in tqdm(enumerat
     output_dir = Path(f"evals/{DATE_STR}/{object_type}/{object_name}/{trajectory_name}/{policy_name}")
     policy_path = POLICY_NAME_TO_PATH[policy_name]
     policy_stem = policy_path.name
-    checkpoint_path = policy_path / "runs" / f"00_{policy_stem}" / "best" / "model.pth"
-    config_path = policy_path / "runs" / f"00_{policy_stem}" / "config.yaml"
+    # checkpoint_path = policy_path / "runs" / f"00_{policy_stem}" / "best" / "model.pth"
+    # config_path = policy_path / "runs" / f"00_{policy_stem}" / "config.yaml"
+    checkpoint_path = policy_path / "model.pth"
+    config_path = policy_path / "config.yaml"
 
     output_dir.mkdir(parents=True, exist_ok=True)
     cmd = f"python \
