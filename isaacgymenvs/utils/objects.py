@@ -109,6 +109,24 @@ HAMMER_NAME_TO_OBJECT = {
         # need_vhacd=True,
         need_vhacd=False,
     ),
+    "toy_hammer": Object(
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/dex_tool_bench/hammer/toy_hammer/toy_hammer.urdf"
+        ),
+        coacd_filepaths=None,
+        scale=rescale_by_factor((0.10, 0.0225, 0.015), factor=25),
+        need_vhacd=False,
+    ),
+    "new_hammer_2": Object(
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/dex_tool_bench/hammer/new_hammer_2/new_hammer_2.urdf"
+        ),
+        coacd_filepaths=None,
+        scale=rescale_by_factor((0.25, 0.03, 0.02), factor=25),
+        need_vhacd=False,
+    ),
 }
 
 #overwrite NAME_TO_OBJECT with HAMMER_NAME_TO_OBJECT even if they share keys
