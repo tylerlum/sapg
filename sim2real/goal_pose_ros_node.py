@@ -232,9 +232,9 @@ def main():
     # This makes it easier to change object and trajectory
 
     object_type = "hammer"
-    # object_name = "mallet"
+    object_name = "mallet"
     # object_name = "hammer_2"
-    object_name = "toy_hammer"
+    # object_name = "toy_hammer"
     # trajectory_name = "horizontal_swing_higher"
     # trajectory_name = "down_swing"
     trajectory_name = "side_swing_new"
@@ -298,8 +298,8 @@ def main():
     # goals_robot_frame = [[x - 0.02, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
     # goals_robot_frame = [[x - 0.05, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
 
-    # goals_robot_frame = [[x, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
-    goals_robot_frame = [[x + 0.005, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
+    goals_robot_frame = [[x - 0.05, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
+    # goals_robot_frame = [[x + 0.005, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
     # goals_robot_frame = [[x, y - 0.8 - 0.05, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
     # goals_robot_frame = [[x, y - 0.8 - 0.05, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
     # goals_robot_frame = [[x, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
