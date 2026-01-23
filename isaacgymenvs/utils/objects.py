@@ -116,7 +116,7 @@ HAMMER_NAME_TO_OBJECT = {
         ),
         coacd_filepaths=None,
         scale=rescale_by_factor((0.10, 0.0225, 0.015), factor=25),
-        need_vhacd=False,
+        need_vhacd=True,
     ),
     "new_hammer_2": Object(
         filepath=(
@@ -125,7 +125,7 @@ HAMMER_NAME_TO_OBJECT = {
         ),
         coacd_filepaths=None,
         scale=rescale_by_factor((0.25, 0.03, 0.02), factor=25),
-        need_vhacd=False,
+        need_vhacd=True,
     ),
 }
 
