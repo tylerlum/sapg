@@ -237,7 +237,8 @@ def main():
     # object_name = "toy_hammer"
     # trajectory_name = "horizontal_swing_higher"
     # trajectory_name = "down_swing"
-    trajectory_name = "side_swing_new"
+    # trajectory_name = "side_swing_new"
+    trajectory_name = "side_swing_new_shifted"
 
     # object_type = "spatula"
     # object_name = "black_spatula"
