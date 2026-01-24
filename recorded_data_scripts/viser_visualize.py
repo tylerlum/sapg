@@ -97,7 +97,8 @@ def main():
     # DEFAULT_OBJECT_NAME = "red_brush"
     # DEFAULT_OBJECT_NAME = "whiteboard_eraser"
     # DEFAULT_OBJECT_NAME = "black_spatula"
-    DEFAULT_OBJECT_NAME = "anvil_brush"
+    # DEFAULT_OBJECT_NAME = "anvil_brush"
+    DEFAULT_OBJECT_NAME = "mallet"
     object_name = DEFAULT_OBJECT_NAME
     if recorded_data.object_name is None:
         print(f"Using default object name: {DEFAULT_OBJECT_NAME}")
