@@ -316,8 +316,8 @@ def main():
     # goals_robot_frame = [[x - 0.04, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
     # goals_robot_frame = [[x - 0.05, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
 
-    DOWNSAMPLE_FACTOR = 10
-    # DOWNSAMPLE_FACTOR = 1
+    # DOWNSAMPLE_FACTOR = 10
+    DOWNSAMPLE_FACTOR = 1
     # goals_robot_frame = goals_robot_frame[::DOWNSAMPLE_FACTOR][3:]
     # goals_robot_frame = goals_robot_frame[::DOWNSAMPLE_FACTOR][10:]
     goals_robot_frame = goals_robot_frame[::DOWNSAMPLE_FACTOR]
