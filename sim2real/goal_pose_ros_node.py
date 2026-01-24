@@ -238,12 +238,12 @@ def main():
     # Load trajectory
     # This makes it easier to change object and trajectory
 
-    object_type = "hammer"
+    # object_type = "hammer"
     # object_name = "mallet"
     # object_name = "hammer_2"
-    object_name = "toy_hammer"
+    # object_name = "toy_hammer"
     # trajectory_name = "horizontal_swing_higher"
-    trajectory_name = "down_swing"
+    # trajectory_name = "down_swing"
     # trajectory_name = "side_swing_new"
     # trajectory_name = "side_swing_new_shifted"
     # trajectory_name = "down_swing_shifted"
@@ -254,11 +254,11 @@ def main():
     # trajectory_name = "serve_plate"
     # trajectory_name = "flip_pancake"
 
-    # object_type = "screwdriver"
+    object_type = "screwdriver"
     # object_name = "real_flat_screwdriver"
     # object_name = "black_screwdriver"
-    # object_name = "red_screwdriver"
-    # trajectory_name = "top"
+    object_name = "red_screwdriver"
+    trajectory_name = "top"
     # trajectory_name = "side"
 
     # object_type = "eraser"
@@ -285,8 +285,8 @@ def main():
 
     # APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.6_downsampled_10"
     # APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.6"
-    # APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.65"
-    APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.7"
+    APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.65"
+    # APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.7"
     trajectory_name = f"{trajectory_name}{APPEND_TO_TRAJECTORY_NAMES}"
 
     trajectory_path = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
@@ -307,7 +307,7 @@ def main():
     # goals_robot_frame = [[x - 0.02, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
     # goals_robot_frame = [[x - 0.05, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
 
-    goals_robot_frame = [[x, y - 0.8, z - 0.01, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
+    goals_robot_frame = [[x, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
     # goals_robot_frame = [[x + 0.005, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
     # goals_robot_frame = [[x, y - 0.8 - 0.05, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
     # goals_robot_frame = [[x, y - 0.8 - 0.05, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
@@ -323,8 +323,7 @@ def main():
     # goals_robot_frame = [[x - 0.04, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
     # goals_robot_frame = [[x - 0.05, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
 
-    # DOWNSAMPLE_FACTOR = 10
-    DOWNSAMPLE_FACTOR = 5
+    DOWNSAMPLE_FACTOR = 10
     # DOWNSAMPLE_FACTOR = 1
     # goals_robot_frame = goals_robot_frame[::DOWNSAMPLE_FACTOR][3:]
     # goals_robot_frame = goals_robot_frame[::DOWNSAMPLE_FACTOR][10:]
@@ -370,7 +369,7 @@ def main():
             # object_scales=np.array([0.12965531, 0.0337145 , 0.06038587]) * 25,  # whiteboard eraser
             # object_scales=np.array([0.15954332, 0.0777093 , 0.01231273]) * 25,  # iphone15pro
             # success_threshold=0.0,
-            success_threshold=0.02,
+            success_threshold=0.03,
             # success_threshold=0.03,
             success_steps=1,
             # success_threshold=10.0,
