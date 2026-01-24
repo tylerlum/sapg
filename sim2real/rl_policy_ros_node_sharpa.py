@@ -1152,7 +1152,7 @@ class RLPolicyNode:
 
 if __name__ == "__main__":
     try:
-        OBJECT_NAME = "mallet"
+        OBJECT_NAME = "toy_hammer"
         rl_policy_node = RLPolicyNode(
             # New on tools
             # config_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed/config.yaml"),
@@ -1171,7 +1171,7 @@ if __name__ == "__main__":
             hand_dof_speed_scale=1.5,
 
             # object_scales=np.array(NAME_TO_OBJECT[OBJECT_NAME].scale),
-            object_scales=np.array(NAME_TO_OBJECT[OBJECT_NAME].scale) * 0.75,
+            object_scales=np.array(NAME_TO_OBJECT[OBJECT_NAME].scale),
             # save_foldername=None,
             save_foldername=f"{datetime.datetime.now().strftime('%Y-%m-%d')}_testing",
             # overwrite_targets_filepath=None,

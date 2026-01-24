@@ -232,14 +232,14 @@ def main():
     # This makes it easier to change object and trajectory
 
     object_type = "hammer"
-    object_name = "mallet"
+    # object_name = "mallet"
     # object_name = "hammer_2"
-    # object_name = "toy_hammer"
+    object_name = "toy_hammer"
     # trajectory_name = "horizontal_swing_higher"
-    # trajectory_name = "down_swing"
+    trajectory_name = "down_swing"
     # trajectory_name = "side_swing_new"
     # trajectory_name = "side_swing_new_shifted"
-    trajectory_name = "down_swing_shifted"
+    # trajectory_name = "down_swing_shifted"
 
     # object_type = "spatula"
     # object_name = "black_spatula"
