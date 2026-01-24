@@ -285,8 +285,8 @@ def main():
 
     # APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.6_downsampled_10"
     # APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.6"
-    APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.65"
-    # APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.7"
+    # APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.65"
+    APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.7"
     trajectory_name = f"{trajectory_name}{APPEND_TO_TRAJECTORY_NAMES}"
 
     trajectory_path = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
@@ -323,7 +323,8 @@ def main():
     # goals_robot_frame = [[x - 0.04, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
     # goals_robot_frame = [[x - 0.05, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
 
-    DOWNSAMPLE_FACTOR = 10
+    # DOWNSAMPLE_FACTOR = 10
+    DOWNSAMPLE_FACTOR = 5
     # DOWNSAMPLE_FACTOR = 1
     # goals_robot_frame = goals_robot_frame[::DOWNSAMPLE_FACTOR][3:]
     # goals_robot_frame = goals_robot_frame[::DOWNSAMPLE_FACTOR][10:]
@@ -371,8 +372,7 @@ def main():
             # success_threshold=0.0,
             success_threshold=0.02,
             # success_threshold=0.03,
-            # success_steps=1,
-            success_steps=10,
+            success_steps=1,
             # success_threshold=10.0,
             # success_steps=30,
         )
