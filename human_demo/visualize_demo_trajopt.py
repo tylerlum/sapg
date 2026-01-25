@@ -844,7 +844,13 @@ def solve_trajopt(T_R_Ps: np.ndarray, q_start: np.ndarray, dt: float, waypoint_b
         extent=table_size,
         position=table_center,
     )
-    world_coll = [ground_coll, table_coll]
+    whiteboard_size = np.array([0.02, 0.4, 0.4])
+    whiteboard_center = np.array([0.325, -0.8, 0.35])
+    whiteboard_coll = pk.collision.Box.from_extent(
+        extent=whiteboard_size,
+        position=whiteboard_center,
+    )
+    world_coll = [ground_coll, table_coll, whiteboard_coll]
 
     # Create waypoints
     WAYPOINT_BUFFER = waypoint_buffer
