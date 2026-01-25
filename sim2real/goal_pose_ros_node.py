@@ -296,7 +296,7 @@ def main():
 
     # Account for robot to world frame
     goals_world_frame = traj_data["goals"]
-    goals_robot_frame = [[x - 0.05, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
+    goals_robot_frame = [[x - 0.05, y - 0.8 - 0.03, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
 
     DOWNSAMPLE_FACTOR = 10
     # DOWNSAMPLE_FACTOR = 1
@@ -306,7 +306,7 @@ def main():
 
     # Lower the z of the last points
     EDIT_AFTER_N_POINTS = 10
-    EDIT_Z_OFFSET = 0.0
+    EDIT_Z_OFFSET = -0.01
     for i in range(len(goals_robot_frame)):
         if i >= EDIT_AFTER_N_POINTS:
             goals_robot_frame[i][2] += EDIT_Z_OFFSET
