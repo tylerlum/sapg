@@ -569,8 +569,8 @@ class RLPolicyNode:
         object_type = "brush"
         # object_name = "anvil_brush"
         object_name = "red_brush"
-        # trajectory_name = "sweep_forward"
-        trajectory_name = "sweep_forward_easy"
+        trajectory_name = "sweep_forward"
+        # trajectory_name = "sweep_forward_easy"
         # trajectory_name = "sweep_forward_right"
 
         # APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.6_downsampled_10"
@@ -708,7 +708,8 @@ class RLPolicyNode:
         AXES_RADIUS = 0.0
 
         # Load table
-        TABLE_URDF_PATH = get_repo_root_dir() / "assets/urdf/table_narrow.urdf"
+        # TABLE_URDF_PATH = get_repo_root_dir() / "assets/urdf/table_narrow.urdf"
+        TABLE_URDF_PATH = get_repo_root_dir() / "assets/urdf/table_narrow_whiteboard.urdf"
         assert TABLE_URDF_PATH.exists(), f"TABLE_URDF_PATH not found: {TABLE_URDF_PATH}"
 
         table_frame = SERVER.scene.add_frame(
@@ -1152,7 +1153,7 @@ class RLPolicyNode:
 
 if __name__ == "__main__":
     try:
-        OBJECT_NAME = "red_screwdriver"
+        OBJECT_NAME = "red_brush"
         rl_policy_node = RLPolicyNode(
             # New on tools
             # config_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed/config.yaml"),

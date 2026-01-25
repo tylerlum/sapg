@@ -249,7 +249,8 @@ class ViserVisualizationNode:
 
         LOAD_TABLE = True
         if LOAD_TABLE:
-            table_urdf_path = get_repo_root_dir() / "assets/urdf/table_narrow.urdf"
+            # table_urdf_path = get_repo_root_dir() / "assets/urdf/table_narrow.urdf"
+            table_urdf_path = get_repo_root_dir() / "assets/urdf/table_narrow_whiteboard.urdf"
             assert table_urdf_path.exists(), (
                 f"table_urdf_path not found: {table_urdf_path}"
             )
@@ -313,7 +314,8 @@ class ViserVisualizationNode:
             # DEFAULT_OBJECT_NAME = "red_brush"
             # DEFAULT_OBJECT_NAME = "anvil_brush"
             # DEFAULT_OBJECT_NAME = "real_flat_screwdriver"
-            DEFAULT_OBJECT_NAME = "red_screwdriver"
+            # DEFAULT_OBJECT_NAME = "red_screwdriver"
+            DEFAULT_OBJECT_NAME = "red_brush"
             # DEFAULT_OBJECT_NAME = "toy_hammer"
             # DEFAULT_OBJECT_NAME = "mallet"
             # DEFAULT_OBJECT_NAME = "spoon_spatula"

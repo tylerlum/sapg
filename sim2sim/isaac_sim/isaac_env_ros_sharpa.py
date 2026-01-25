@@ -304,7 +304,6 @@ def main():
     # APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.7"
     trajectory_name = f"{trajectory_name}{APPEND_TO_TRAJECTORY_NAMES}"
 
-
     trajectory_path = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
     assert trajectory_path.exists(), f"Trajectory file not found: {trajectory_path}"
     with open(trajectory_path) as f:
@@ -312,6 +311,10 @@ def main():
 
     Z_OFFSET = 0.03
     traj_data["start_pose"][2] += Z_OFFSET
+
+    # HACK: Change the start pose
+    # traj_data["start_pose"][0] -= 0.05
+    # traj_data["goals"] = [[x - 0.05, y, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in traj_data["goals"]]
 
     env = create_env(
         config_path=str(CONFIG_PATH),

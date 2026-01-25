@@ -254,11 +254,11 @@ def main():
     # trajectory_name = "serve_plate"
     # trajectory_name = "flip_pancake"
 
-    object_type = "screwdriver"
+    # object_type = "screwdriver"
     # object_name = "real_flat_screwdriver"
     # object_name = "black_screwdriver"
-    object_name = "red_screwdriver"
-    trajectory_name = "top"
+    # object_name = "red_screwdriver"
+    # trajectory_name = "top"
     # trajectory_name = "side"
 
     # object_type = "eraser"
@@ -275,10 +275,10 @@ def main():
     # trajectory_name = "write_smiley"
     # trajectory_name = "write_c"
 
-    # object_type = "brush"
+    object_type = "brush"
     # object_name = "anvil_brush"
-    # object_name = "red_brush"
-    # trajectory_name = "sweep_forward"
+    object_name = "red_brush"
+    trajectory_name = "sweep_forward"
     # trajectory_name = "sweep_right"
     # trajectory_name = "sweep_forward_easy"
     # trajectory_name = "sweep_forward_right"
@@ -297,32 +297,7 @@ def main():
     # Account for robot to world frame
     goals_world_frame = traj_data["goals"]
     # goals_robot_frame = [[x - 0.1, y - 0.8 - 0.05, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
-    # goals_robot_frame = [[x - 0.1, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
-    # goals_robot_frame = [[x - 0.1, y - 0.8, z + 0.03, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
-    # goals_robot_frame = [[x - 0.1, y - 0.8, z + 0.01, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
-    # goals_robot_frame = [[x, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
-    # goals_robot_frame = [[x - 0.1, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
-    # goals_robot_frame = [[x - 0.02, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
-    # goals_robot_frame = [[x - 0.05, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
-    # goals_robot_frame = [[x - 0.02, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
-    # goals_robot_frame = [[x - 0.05, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
-
-    goals_robot_frame = [[x, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
-    goals_robot_frame = [[x, y - 0.8 - 0.05, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
-    # goals_robot_frame = [[x + 0.005, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
-    # goals_robot_frame = [[x, y - 0.8 - 0.05, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
-    # goals_robot_frame = [[x, y - 0.8 - 0.05, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
-    # goals_robot_frame = [[x, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
-    # goals_robot_frame = [[x, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
-    # goals_robot_frame = [[x, y - 0.8 - 0.05, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
-    # goals_robot_frame = [[x - 0.05, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
-    # goals_robot_frame = [[x - 0.05, y - 0.8 + 0.05, z + 0.03, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
-    # goals_robot_frame = [[x - 0.015, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
-    # goals_robot_frame = [[x - 0.0175, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
-    # goals_robot_frame = [[x - 0.02, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
-    # goals_robot_frame = [[x - 0.03, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
-    # goals_robot_frame = [[x - 0.04, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
-    # goals_robot_frame = [[x - 0.05, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
+    goals_robot_frame = [[x - 0.05, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
 
     DOWNSAMPLE_FACTOR = 10
     # DOWNSAMPLE_FACTOR = 1
@@ -370,8 +345,8 @@ def main():
             # object_scales=np.array([0.12965531, 0.0337145 , 0.06038587]) * 25,  # whiteboard eraser
             # object_scales=np.array([0.15954332, 0.0777093 , 0.01231273]) * 25,  # iphone15pro
             # success_threshold=0.0,
+            # success_threshold=0.02,
             success_threshold=0.03,
-            # success_threshold=0.03,
             success_steps=1,
             # success_threshold=10.0,
             # success_steps=30,
