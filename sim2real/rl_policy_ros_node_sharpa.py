@@ -584,6 +584,10 @@ class RLPolicyNode:
         assert object_pose_trajectory_filepath.exists(), f"object_pose_trajectory_filepath not found: {object_pose_trajectory_filepath}"
         with open(object_pose_trajectory_filepath, "r") as f:
             goal_pose_trajectory_full = np.array(json.load(f)["goals"])
+
+        # HACK: Offset same as goal_pose_ros_node.py
+        goal_pose_trajectory_full[:, 0] -= 0.05
+
         old_T = len(goal_pose_trajectory_full)
 
         # Upsample the goal object pose trajectory
