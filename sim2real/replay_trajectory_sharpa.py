@@ -169,10 +169,16 @@ def main():
         # "/home/tylerlum/github_repos/sapg/retargeted_robot/2026-01-13_22-01-39.npz"
 
         # red_brush sweep_forward
-        "/home/tylerlum/github_repos/sapg/retargeted_robot/2026-01-22_10-27-48.npz"
+        # "/home/tylerlum/github_repos/sapg/retargeted_robot/2026-01-22_10-27-48.npz"
 
         # red_brush sweep_forward_easy
         # "/home/tylerlum/github_repos/sapg/retargeted_robot/2026-01-22_10-30-46.npz"
+
+        # red_brush sweep_forward_easy_1
+        "/home/tylerlum/github_repos/sapg/retargeted_robot/2026-01-25_16-59-17.npz"
+
+        # red_brush sweep_forward_easy_2
+        # "/home/tylerlum/github_repos/sapg/retargeted_robot/2026-01-25_17-00-24.npz"
     )
     assert file_path.exists(), f"File {file_path} does not exist"
     recorded_data = RecordedData.from_file(file_path)
