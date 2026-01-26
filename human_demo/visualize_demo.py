@@ -240,6 +240,53 @@ def filter_keypoint_to_xyzs(keypoint_to_xyzs: List[Dict], sigma: float = 2.0) ->
     ]
     return keypoint_to_xyzs
 
+def interpolate_poses(Ts: np.ndarray, n_steps: int) -> np.ndarray:
+    N_TIMESTEPS = Ts.shape[0]
+    assert Ts.shape == (N_TIMESTEPS, 4, 4), f"Ts.shape: {Ts.shape}, expected: ({N_TIMESTEPS}, 4, 4)"
+    from scipy.spatial.transform import Rotation as R, Slerp
+    from scipy.interpolate import interp1d
+
+    T = N_TIMESTEPS
+    new_T = T * n_steps
+
+    # Extract positions and rotations
+    positions = Ts[:, :3, 3]  # (T, 3)
+    rotations = R.from_matrix(Ts[:, :3, :3])  # (T,) Rotation objects
+
+    # Create time indices
+    old_time = np.arange(T)
+    new_time = np.linspace(0, T - 1, new_T)
+
+    # Interpolate positions linearly
+    pos_interpolator = interp1d(old_time, positions, kind='linear', axis=0)
+    new_positions = pos_interpolator(new_time)  # (new_T, 3)
+
+    # Interpolate rotations using Slerp
+    slerp = Slerp(old_time, rotations)
+    new_rotations = slerp(new_time)  # (new_T,) Rotation objects
+
+    # Reconstruct 4x4 matrices
+    new_Ts = np.zeros((new_T, 4, 4))
+    new_Ts[:, :3, :3] = new_rotations.as_matrix()
+    new_Ts[:, :3, 3] = new_positions
+    new_Ts[:, 3, 3] = 1.0
+
+    return new_Ts
+
+def downsample_and_interpolate_poses(Ts: np.ndarray, downsample_factor: int) -> np.ndarray:
+    N_TIMESTEPS = Ts.shape[0]
+    assert Ts.shape == (N_TIMESTEPS, 4, 4), f"Ts.shape: {Ts.shape}, expected: ({N_TIMESTEPS}, 4, 4)"
+    downsampled_Ts = Ts[::downsample_factor]
+    interpolated_Ts = interpolate_poses(downsampled_Ts, n_steps=downsample_factor)
+    if interpolated_Ts.shape[0] < N_TIMESTEPS:
+        extra = N_TIMESTEPS - interpolated_Ts.shape[0]
+        interpolated_Ts = np.concatenate([interpolated_Ts, interpolated_Ts[-1][None].repeat(extra, axis=0)], axis=0)
+    elif interpolated_Ts.shape[0] > N_TIMESTEPS:
+        extra = interpolated_Ts.shape[0] - N_TIMESTEPS
+        interpolated_Ts = interpolated_Ts[:-extra]
+    assert interpolated_Ts.shape == (N_TIMESTEPS, 4, 4), f"interpolated_Ts.shape: {interpolated_Ts.shape}, expected: ({N_TIMESTEPS}, 4, 4)"
+    return Ts
+
 def control_ik(
     j_eef: torch.Tensor, dpose: torch.Tensor, damping: float = 0.1,
     pos_only: bool = False,
@@ -1045,6 +1092,9 @@ def main():
     T_W_Os = T_W_Os[:N_TIMESTEPS]
     hand_keypoint_to_xyzs = hand_keypoint_to_xyzs[:N_TIMESTEPS]
     T_R_Ps = filter_poses(np.array([compute_T_R_P(hand_keypoint_to_xyz=hand_keypoint_to_xyz) for hand_keypoint_to_xyz in hand_keypoint_to_xyzs]))
+    # HACK: Downsample and interpolate the hand_keypoint_to_xyzs
+    T_R_Ps = downsample_and_interpolate_poses(T_R_Ps, downsample_factor=10)
+
     hand_frames = hand_frames[:N_TIMESTEPS]
     hand_visers = hand_visers[:N_TIMESTEPS]
     if args.rgb_path is not None and args.depth_path is not None and args.cam_intrinsics_path is not None:

@@ -242,7 +242,8 @@ def main():
             # move_time=0.1,
             # move_time=1 / 20,
             # move_time=1 / 30 * 10,
-            move_time=1 / 30 * 3,
+            # move_time=1 / 30 * 3,
+            move_time=(1 / 30) * 2,
             # move_time=1 / 60,
         )
     end_time = time.time()
