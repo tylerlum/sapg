@@ -285,7 +285,7 @@ def downsample_and_interpolate_poses(Ts: np.ndarray, downsample_factor: int) -> 
         extra = interpolated_Ts.shape[0] - N_TIMESTEPS
         interpolated_Ts = interpolated_Ts[:-extra]
     assert interpolated_Ts.shape == (N_TIMESTEPS, 4, 4), f"interpolated_Ts.shape: {interpolated_Ts.shape}, expected: ({N_TIMESTEPS}, 4, 4)"
-    return Ts
+    return interpolated_Ts
 
 def control_ik(
     j_eef: torch.Tensor, dpose: torch.Tensor, damping: float = 0.1,
@@ -892,6 +892,99 @@ def transform_points(T: np.ndarray, pts: np.ndarray) -> np.ndarray:
     t_rc = T[:3, 3]
     return (pts @ R_rc.T) + t_rc[None, :]
 
+def plot_poses(Ts: np.ndarray) -> None:
+    import matplotlib.pyplot as plt
+    
+    T = Ts.shape[0]
+    assert Ts.shape == (T, 4, 4), f"Ts.shape: {Ts.shape}, expected: ({T}, 4, 4)"
+    
+    # Extract xyz positions
+    xyz = Ts[:, :3, 3]  # (T, 3)
+    
+    # Extract RPY (roll, pitch, yaw) from rotation matrices
+    rpy = np.array([R.from_matrix(Ts[i, :3, :3]).as_euler('xyz', degrees=True) for i in range(T)])  # (T, 3)
+    
+    # Make RPY continuous by unwrapping (avoiding 360 degree jumps)
+    for dim in range(3):
+        for i in range(1, T):
+            diff = rpy[i, dim] - rpy[i-1, dim]
+            if diff > 180:
+                rpy[i:, dim] -= 360
+            elif diff < -180:
+                rpy[i:, dim] += 360
+    
+    # Create 6 subplots
+    fig, axes = plt.subplots(2, 3, figsize=(15, 8))
+    time_steps = np.arange(T)
+    
+    # Plot x, y, z
+    axes[0, 0].plot(time_steps, xyz[:, 0])
+    axes[0, 0].set_title('X Position')
+    axes[0, 0].set_xlabel('Time Step')
+    axes[0, 0].set_ylabel('X (m)')
+    
+    axes[0, 1].plot(time_steps, xyz[:, 1])
+    axes[0, 1].set_title('Y Position')
+    axes[0, 1].set_xlabel('Time Step')
+    axes[0, 1].set_ylabel('Y (m)')
+    
+    axes[0, 2].plot(time_steps, xyz[:, 2])
+    axes[0, 2].set_title('Z Position')
+    axes[0, 2].set_xlabel('Time Step')
+    axes[0, 2].set_ylabel('Z (m)')
+    
+    # Plot R, P, Y
+    axes[1, 0].plot(time_steps, rpy[:, 0])
+    axes[1, 0].set_title('Roll')
+    axes[1, 0].set_xlabel('Time Step')
+    axes[1, 0].set_ylabel('Roll (deg)')
+    
+    axes[1, 1].plot(time_steps, rpy[:, 1])
+    axes[1, 1].set_title('Pitch')
+    axes[1, 1].set_xlabel('Time Step')
+    axes[1, 1].set_ylabel('Pitch (deg)')
+    
+    axes[1, 2].plot(time_steps, rpy[:, 2])
+    axes[1, 2].set_title('Yaw')
+    axes[1, 2].set_xlabel('Time Step')
+    axes[1, 2].set_ylabel('Yaw (deg)')
+    
+    plt.tight_layout()
+    plt.show()
+
+def interpolate_pose(T1: np.ndarray, T2: np.ndarray, n_steps: int) -> np.ndarray:
+    assert T1.shape == T2.shape == (4, 4), f"T1.shape: {T1.shape}, T2.shape: {T2.shape}, expected: (4, 4)"
+
+    from scipy.spatial.transform import Rotation as R, Slerp
+    from scipy.interpolate import interp1d
+
+    # Stack the two poses
+    Ts = np.stack([T1, T2], axis=0)  # (2, 4, 4)
+
+    # Extract positions and rotations
+    positions = Ts[:, :3, 3]  # (2, 3)
+    rotations = R.from_matrix(Ts[:, :3, :3])  # (2,) Rotation objects
+
+    # Create time indices
+    old_time = np.array([0.0, 1.0])
+    new_time = np.linspace(0, 1, n_steps)
+
+    # Interpolate positions linearly
+    pos_interpolator = interp1d(old_time, positions, kind='linear', axis=0)
+    new_positions = pos_interpolator(new_time)  # (n_steps, 3)
+
+    # Interpolate rotations using Slerp
+    slerp = Slerp(old_time, rotations)
+    new_rotations = slerp(new_time)  # (n_steps,) Rotation objects
+
+    # Reconstruct 4x4 matrices
+    interpolated_Ts = np.zeros((n_steps, 4, 4))
+    interpolated_Ts[:, :3, :3] = new_rotations.as_matrix()
+    interpolated_Ts[:, :3, 3] = new_positions
+    interpolated_Ts[:, 3, 3] = 1.0
+
+    assert interpolated_Ts.shape == (n_steps, 4, 4), f"interpolated_Ts.shape: {interpolated_Ts.shape}, expected: ({n_steps}, 4, 4)"
+    return interpolated_Ts
 
 
 def main():
@@ -1091,9 +1184,48 @@ def main():
 
     T_W_Os = T_W_Os[:N_TIMESTEPS]
     hand_keypoint_to_xyzs = hand_keypoint_to_xyzs[:N_TIMESTEPS]
-    T_R_Ps = filter_poses(np.array([compute_T_R_P(hand_keypoint_to_xyz=hand_keypoint_to_xyz) for hand_keypoint_to_xyz in hand_keypoint_to_xyzs]))
+    # T_R_Ps = filter_poses(np.array([compute_T_R_P(hand_keypoint_to_xyz=hand_keypoint_to_xyz) for hand_keypoint_to_xyz in hand_keypoint_to_xyzs]))
+    T_R_Ps = np.array([compute_T_R_P(hand_keypoint_to_xyz=hand_keypoint_to_xyz) for hand_keypoint_to_xyz in hand_keypoint_to_xyzs])
     # HACK: Downsample and interpolate the hand_keypoint_to_xyzs
-    T_R_Ps = downsample_and_interpolate_poses(T_R_Ps, downsample_factor=10)
+    plot_poses(T_R_Ps)
+
+    diffs = []
+    for i in range(N_TIMESTEPS):
+        if i == 0:
+            continue
+        T_R_P_prev = T_R_Ps[i - 1]
+        T_R_P_curr = T_R_Ps[i]
+        xyz_prev = T_R_P_prev[:3, 3]
+        xyz_curr = T_R_P_curr[:3, 3]
+        diff = np.linalg.norm(xyz_curr - xyz_prev)
+        diffs.append(diff)
+
+    # import matplotlib.pyplot as plt
+    # plt.plot(diffs)
+    # plt.title("Diff between xyz_curr and xyz_prev")
+    # plt.xlabel("Time Step")
+    # plt.ylabel("Diff (m)")
+    # plt.grid(True)
+    # plt.tight_layout()
+    # plt.show()
+
+    # for i in range(N_TIMESTEPS):
+    #     if i == 0:
+    #         continue
+    #     T_R_P_prev = T_R_Ps[i - 1]
+    #     T_R_P_curr = T_R_Ps[i]
+    #     xyz_prev = T_R_P_prev[:3, 3]
+    #     xyz_curr = T_R_P_curr[:3, 3]
+    #     diff = np.linalg.norm(xyz_curr - xyz_prev)
+    #     if diff > 0.005:
+    #         print(f"Diff {i} and {i - 1} between xyz_curr and xyz_prev is too large: {diff}")
+    #         T_R_Ps[i] = T_R_Ps[i - 1]
+    START_IDX = 190
+    END_IDX = 220
+    T_R_Ps[START_IDX:END_IDX] = interpolate_pose(T_R_Ps[START_IDX], T_R_Ps[END_IDX], n_steps=END_IDX - START_IDX)
+    plot_poses(T_R_Ps)
+
+    T_R_Ps = filter_poses(T_R_Ps)
 
     hand_frames = hand_frames[:N_TIMESTEPS]
     hand_visers = hand_visers[:N_TIMESTEPS]

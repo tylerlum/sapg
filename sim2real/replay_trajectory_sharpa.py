@@ -175,10 +175,17 @@ def main():
         # "/home/tylerlum/github_repos/sapg/retargeted_robot/2026-01-22_10-30-46.npz"
 
         # red_brush sweep_forward_easy_1
-        "/home/tylerlum/github_repos/sapg/retargeted_robot/2026-01-25_16-59-17.npz"
+        # "/home/tylerlum/github_repos/sapg/retargeted_robot/2026-01-25_16-59-17.npz"
 
         # red_brush sweep_forward_easy_2
         # "/home/tylerlum/github_repos/sapg/retargeted_robot/2026-01-25_17-00-24.npz"
+
+        # red_brush sweep_forward_easy_1 (downsample and interpolated)
+        # "/home/tylerlum/github_repos/sapg/retargeted_robot/2026-01-25_17-15-07.npz"
+
+        # red_brush sweep_forward_easy_1 HACKED TO IMPROVE
+        # "/home/tylerlum/github_repos/sapg/retargeted_robot/2026-01-25_18-00-33.npz"
+        "/home/tylerlum/github_repos/sapg/retargeted_robot/2026-01-25_18-20-49.npz"
     )
     assert file_path.exists(), f"File {file_path} does not exist"
     recorded_data = RecordedData.from_file(file_path)
@@ -225,7 +232,8 @@ def main():
         joint_positions_array[0],
         pub_iiwa=pub_iiwa,
         pub_sharpa=pub_sharpa,
-        move_time=10.0,
+        # move_time=10.0,
+        move_time=3.0,
     )
     print("Reached initial pose")
 
@@ -242,8 +250,9 @@ def main():
             # move_time=0.1,
             # move_time=1 / 20,
             # move_time=1 / 30 * 10,
-            # move_time=1 / 30 * 3,
-            move_time=(1 / 30) * 2,
+            # move_time=(1 / 30) * 3,
+            # move_time=(1 / 30) * 2,
+            move_time=(1 / 30),
             # move_time=1 / 60,
         )
     end_time = time.time()
