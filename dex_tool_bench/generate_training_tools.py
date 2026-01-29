@@ -15,6 +15,7 @@ from create_obj_urdf import (
     ToolConfig,
     create_tool,
 )
+from isaacgymenvs.utils.utils import get_repo_root_dir
 
 # Import the training size distributions
 import sys
@@ -24,7 +25,8 @@ from object_size_distributions import OBJECT_SIZE_DISTRIBUTIONS, ObjectSizeDistr
 
 
 # Base output directory for training tools
-BASE_OUTPUT_DIR = Path("/share/portal/kk837/sapg/assets/urdf/dex_tool_bench_training")
+# BASE_OUTPUT_DIR = Path("/share/portal/kk837/sapg/assets/urdf/dex_tool_bench_training")
+BASE_OUTPUT_DIR = get_repo_root_dir() / "assets/urdf/dex_tool_bench_training"
 
 # Total number of tools to generate
 TOTAL_NUM_TOOLS = 200

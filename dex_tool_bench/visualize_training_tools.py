@@ -28,7 +28,8 @@ METAL_COLOR = (105, 105, 105)  # Dark steel gray
 KEYPOINT_COLOR = (255, 50, 50)  # Bright red for keypoints
 
 # Keypoint configuration
-KEYPOINT_RADIUS = 0.006  # Radius of keypoint spheres
+# KEYPOINT_RADIUS = 0.006  # Radius of keypoint spheres
+KEYPOINT_RADIUS = 0.0  # Radius of keypoint spheres
 KEYPOINT_SCALE = 1.0  # Scale factor for keypoint positions (1.0 = at handle corners)
 KEYPOINT_OFFSETS = [
     [1, 1, 1],
@@ -220,8 +221,10 @@ def main() -> None:
             server.scene.add_frame(
                 f"/section_{tool_type}/{tool_name}",
                 position=(current_x, y_pos, 0.0),
-                axes_length=0.03,
-                axes_radius=0.001,
+                # axes_length=0.03,
+                # axes_radius=0.001,
+                axes_length=0.0,
+                axes_radius=0.0,
             )
             
             # Create and add handle mesh (wooden color)
@@ -260,12 +263,12 @@ def main() -> None:
         current_x += section_spacing_x
     
     # Add grid for reference
-    server.scene.add_grid(
-        "/grid",
-        width=8,
-        height=10,
-        position=(1.0, 2.0, -0.01),
-    )
+    # server.scene.add_grid(
+    #     "/grid",
+    #     width=8,
+    #     height=10,
+    #     position=(1.0, 2.0, -0.01),
+    # )
     
     print(f"\nLoaded {total_tools} tools in {len(tools_by_type)} sections")
     print("Press Ctrl+C to exit.")
