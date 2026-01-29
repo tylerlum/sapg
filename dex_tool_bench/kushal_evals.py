@@ -20,7 +20,9 @@ object_type_to_object_names = {
     # "marker": ["040_large_marker", "sharpie_closed", "staples_open"],
     # "brush": ["red_brush", "anvil_brush"],
 
-    "hammer": ["new_hammer_2", "toy_hammer"],
+    # "hammer": ["new_hammer_2", "toy_hammer"],
+    # "tyler": ["tyler_handle_head"],
+    "brush": ["cuboid_brush_v10009"],
 
     # "Easy"
     # "spatula": ["black_spatula"],
@@ -36,7 +38,9 @@ object_type_to_trajectory_names = {
     # "marker": ["write_smiley", "write_c"],
     # "brush": ["sweep_forward", "sweep_forward_right"],
 
-    "hammer": ["side_swing", "down_swing"],
+    # "hammer": ["side_swing", "down_swing"],
+    # "tyler": ["tyler_handle_head"],
+    "brush": ["sweep_forward"],
 
     # "Easy"
     # "spatula": ["flip_pancake_easy"],

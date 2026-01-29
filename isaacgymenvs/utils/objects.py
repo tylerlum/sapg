@@ -325,6 +325,15 @@ BRUSH_NAME_TO_OBJECT = {
         scale=rescale_by_factor((0.06, 0.022, 0.022), factor=25),
         need_vhacd=True,
     ),
+    "cuboid_brush_v10009": Object(
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/dex_tool_bench/brush/cuboid_brush_v10009/cuboid_brush_v10009.urdf"
+        ),
+        coacd_filepaths=None,
+        scale=rescale_by_factor((0.17778997366921984, 0.027526835801836548, 0.024702588550392666), factor=25),
+        need_vhacd=False,
+    )
 }
 #overwrite NAME_TO_OBJECT with BRUSH_NAME_TO_OBJECT even if they share keys
 NAME_TO_OBJECT.update(BRUSH_NAME_TO_OBJECT)

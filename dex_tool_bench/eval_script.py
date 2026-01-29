@@ -76,14 +76,16 @@ class ViserServer:
         table_urdf = get_repo_root_dir() / "assets" / self.table_urdf
         self.server.scene.add_frame("/table", position=(0, 0, TABLE_Z), wxyz=(1, 0, 0, 0), show_axes=False)
         # ViserUrdf(self.server, table_urdf, root_node_name="/table", mesh_color_override=(0, 0, 0, 0.5))
+        # ViserUrdf(self.server, table_urdf, root_node_name="/table", mesh_color_override=(0, 0, 0, 1.0))
         ViserUrdf(self.server, table_urdf, root_node_name="/table", mesh_color_override=(0, 0, 0, 1.0))
 
         # Object and goal
         object_urdf = NAME_TO_OBJECT[object_name].filepath
-        self.object_frame = self.server.scene.add_frame("/object", show_axes=True, axes_length=0.1, axes_radius=0.001)
+        self.object_frame = self.server.scene.add_frame("/object", show_axes=False, axes_length=0.1, axes_radius=0.001)
         ViserUrdf(self.server, object_urdf, root_node_name="/object")
-        self.goal_frame = self.server.scene.add_frame("/goal", show_axes=True, axes_length=0.1, axes_radius=0.001)
+        self.goal_frame = self.server.scene.add_frame("/goal", show_axes=False, axes_length=0.1, axes_radius=0.001)
         ViserUrdf(self.server, object_urdf, root_node_name="/goal", mesh_color_override=(0, 255, 0, 0.5))
+        self.goal_frame.visible = False
 
         # Keypoint spheres (red for object, green for goal)
         self.obj_keypoint_spheres = []
@@ -120,6 +122,7 @@ class ViserServer:
         self.keypoint_toggle_fixed_size = self.server.gui.add_checkbox("Show Keypoints Fixed Size", initial_value=True)
         self.keypoint_toggle_fixed_size.on_update(lambda _: self._toggle_keypoints_fixed_size())
         self.keypoint_toggle_fixed_size.value = False  # start as True, then set to False to hide them
+        self.keypoint_toggle.value = False
 
     def _toggle_keypoints(self):
         """Toggle visibility of keypoint spheres."""
@@ -479,17 +482,19 @@ def main():
     # SELECTED_TABLE_URDF = TABLE_BOWL_PLATE_URDF
 
     # Load trajectory
-    trajectory_path = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
-    assert trajectory_path.exists(), f"Trajectory file not found: {trajectory_path}"
-    with open(trajectory_path) as f:
-        traj_data = json.load(f)
-    # Raise the start pose by Z_OFFSET to avoid the table
-    Z_OFFSET = 0.03
-    traj_data["start_pose"][2] += Z_OFFSET
+    use_tyler_mode = "tyler" in object_name
+    if not use_tyler_mode:
+        trajectory_path = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
+        assert trajectory_path.exists(), f"Trajectory file not found: {trajectory_path}"
+        with open(trajectory_path) as f:
+            traj_data = json.load(f)
+        # Raise the start pose by Z_OFFSET to avoid the table
+        Z_OFFSET = 0.03
+        traj_data["start_pose"][2] += Z_OFFSET
 
-    # DOWNSAMPLE_FACTOR = 1  # No downsampling when 1
-    DOWNSAMPLE_FACTOR = args.downsample_factor
-    traj_data["goals"] = traj_data["goals"][::DOWNSAMPLE_FACTOR]
+        # DOWNSAMPLE_FACTOR = 1  # No downsampling when 1
+        DOWNSAMPLE_FACTOR = args.downsample_factor
+        traj_data["goals"] = traj_data["goals"][::DOWNSAMPLE_FACTOR]
 
     # Create environment
     # config_path, checkpoint_path = parse_checkpoint_dir(checkpoint_dir)
@@ -499,6 +504,7 @@ def main():
     # Original one we tried in eral
     # config_path = Path("/juno/u/kedia/sapg/train_dir/checkpoints/asymmetric/newGains_2.5speed/config.yaml")
     # checkpoint_path = Path("/juno/u/kedia/sapg/train_dir/checkpoints/FINETUNED/finetuned_o0t0.pth")
+    use_tyler_mode = True
 
     env = create_env(
         config_path=str(config_path),
@@ -521,10 +527,10 @@ def main():
             "task.env.tableResetZRange": 0.0,
             # "task.env.tableResetZ": 0.38 + 0.02,
             "task.env.capture_video": False,
-            "task.env.use_fixed_set_of_goal_states": True,
-            "task.env.fixedGoalStates": traj_data["goals"],
+            "task.env.use_fixed_set_of_goal_states": True if not use_tyler_mode else False,
+            "task.env.fixedGoalStates": traj_data["goals"] if not use_tyler_mode else None,
             # "task.env.fixedGoalStates": None,
-            "task.env.objectStartPose": traj_data["start_pose"],
+            "task.env.objectStartPose": traj_data["start_pose"] if not use_tyler_mode else None, 
             "task.env.useActionDelay": False,
             "task.env.useObsDelay": False,
             "task.env.useObjectStateDelayNoise": False,
@@ -571,10 +577,11 @@ def main():
     # EvalRunner(env, config_path, checkpoint_path, object_name, trajectory_name, SELECTED_TABLE_URDF, output_dir).run()
     num_episodes: int = args.num_episodes
     output_dir = Path(args.output_dir)
-    EvalRunner(env=env, config_path=config_path, checkpoint_path=checkpoint_path, object_name=object_name, trajectory_name=trajectory_name, table_urdf=SELECTED_TABLE_URDF, output_dir=None, policy_name=args.policy_name).run_eval(
-        num_episodes=num_episodes,
-        output_json_file=output_dir / "eval.json")
-    log_success(f"Saved: {output_dir / 'eval.json'}")
+    # EvalRunner(env=env, config_path=config_path, checkpoint_path=checkpoint_path, object_name=object_name, trajectory_name=trajectory_name, table_urdf=SELECTED_TABLE_URDF, output_dir=None, policy_name=args.policy_name).run_eval(
+    #     num_episodes=num_episodes,
+    #     output_json_file=output_dir / "eval.json")
+    # log_success(f"Saved: {output_dir / 'eval.json'}")
+    EvalRunner(env=env, config_path=config_path, checkpoint_path=checkpoint_path, object_name=object_name, trajectory_name=trajectory_name, table_urdf=SELECTED_TABLE_URDF, output_dir=None, policy_name=args.policy_name).run()
 
 if __name__ == "__main__":
     main()

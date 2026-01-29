@@ -89,7 +89,8 @@ def update_frames(viser_urdf: ViserUrdf, link_name_to_frame: Dict[str, FrameHand
 
 def main(
     urdf_path: Path = (
-        get_repo_root_dir() / "assets/urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted_restricted.urdf"
+        # get_repo_root_dir() / "assets/urdf/kuka_allegro_description/iiwa14_left_sharpa_adjusted_restricted.urdf"
+        get_repo_root_dir() / "assets/urdf/dex_tool_bench/brush/cuboid_brush_v10009/cuboid_brush_v10009.urdf"
     ),
     load_meshes: bool = True,
     load_collision_meshes: bool = True,
