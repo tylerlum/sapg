@@ -1,5 +1,11 @@
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+from pathlib import Path
+
+# Clear font cache and configure Times New Roman with fallbacks
+matplotlib.rcParams['font.family'] = 'serif'
+matplotlib.rcParams['font.serif'] = ['Times New Roman', 'Times', 'DejaVu Serif', 'Nimbus Roman', 'Liberation Serif']
 
 # ==========================================
 # 1. CONFIGURATION & DATA ENTRY
@@ -30,35 +36,37 @@ RAW_DATA = {
 # 2. PLOTTING SCRIPT
 # ==========================================
 
+# Font sizes designed for single-column figure (~3.5" wide)
 plt.rcParams.update(
     {
-        "font.family": "serif",
-        "font.serif": ["Times New Roman", "DejaVu Serif"],
-        "font.size": 11,
-        "axes.labelsize": 12,
-        "axes.titlesize": 12,
-        "xtick.labelsize": 10,
-        "ytick.labelsize": 10,
-        "legend.fontsize": 10,
-        "lines.linewidth": 2.0,
-        "lines.markersize": 5,
+        "font.size": 8,
+        "axes.labelsize": 9,
+        "axes.titlesize": 10,
+        "axes.titleweight": "normal",
+        "xtick.labelsize": 8,
+        "ytick.labelsize": 8,
+        "legend.fontsize": 7.5,
+        "lines.linewidth": 1.5,
+        "lines.markersize": 4,
         "grid.alpha": 0.3,
+        "mathtext.fontset": "stix",
     }
 )
 
 
 def plot_single_ablation():
-    # Styles configuration
-    # Ours = Blue
-    # No SAPG = Dark Grey (Charcoal)
-    # No Asymmetric Critic = Lighter Grey
+    """Plot ablation study.
+    
+    Designed for single-column width in two-column paper (~3.5 inches).
+    """
+    # Styles configuration - Ours = Teal (consistent across all figures)
     styles = {
-        "Ours": {"color": "#1f77b4", "marker": "o", "zorder": 10},
+        "Ours": {"color": "#20B2AA", "marker": "o", "zorder": 10},
         "No SAPG": {"color": "#555555", "marker": "s", "zorder": 5},
         "No Asymmetric Critic": {"color": "#A9A9A9", "marker": "^", "zorder": 4},
     }
 
-    fig, ax = plt.subplots(figsize=(5, 3.5), constrained_layout=True)
+    fig, ax = plt.subplots(figsize=(3.5, 2.5), constrained_layout=True)
 
     # Loop through the METHODS list (which puts "Ours" first in the legend)
     for method in METHODS:
@@ -87,27 +95,59 @@ def plot_single_ablation():
                 y - std,
                 y + std,
                 color=style["color"],
-                alpha=0.15,
+                alpha=0.12,
                 edgecolor="none",
                 zorder=style["zorder"] - 1,
             )
 
     # Formatting
     ax.set_ylim(0, 105)
-    ax.grid(True, linestyle="--")
+    ax.set_yticks([0, 25, 50, 75, 100])
+    
+    # Subtle horizontal grid
+    ax.grid(axis="y", linestyle="--", alpha=0.25, linewidth=0.5, color="#888888", zorder=0)
+    ax.set_axisbelow(True)
+    
+    # Clean spines
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_linewidth(0.8)
+    ax.spines["bottom"].set_linewidth(0.8)
+    ax.spines["left"].set_color("#333333")
+    ax.spines["bottom"].set_color("#333333")
 
-    # Scientific notation
-    ax.ticklabel_format(style="sci", axis="x", scilimits=(0, 0))
+    # X-axis: convert to millions for cleaner look (consistent with Steps (B) style)
+    ax.set_xticks([0, 3e5, 6e5, 9e5])
+    ax.set_xticklabels(["0", "0.3", "0.6", "0.9"])
 
-    ax.set_xlabel("Env Iters")
-    ax.set_ylabel("Reward")
+    ax.set_xlabel("Env Steps (M)", labelpad=6)
+    ax.set_ylabel("Reward", labelpad=6)
 
-    # Legend at Upper Left
-    ax.legend(loc="upper left", frameon=False)
+    ax.tick_params(axis="both", which="major", length=3, width=0.8, colors="#333333")
 
-    plt.show()
+    # Legend - no box, positioned below x-axis labels
+    ax.legend(
+        loc="upper center",
+        bbox_to_anchor=(0.5, -0.18),
+        ncol=3,
+        frameon=False,
+        handlelength=1.5,
+        handletextpad=0.5,
+        borderaxespad=0,
+    )
+
+    output_dir = Path(__file__).parent / "plot_drafts" / "final_figures"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_path = output_dir / "sim_ablation.png"
+    plt.savefig(
+        output_path,
+        dpi=300,
+        bbox_inches="tight",
+        facecolor="white",
+        edgecolor="none",
+    )
+    plt.close()
+    print(f"Saved figure to {output_path}")
 
 
 if __name__ == "__main__":

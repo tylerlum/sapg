@@ -2,8 +2,15 @@ import json
 from collections import defaultdict
 from pathlib import Path
 
+import matplotlib
 import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import numpy as np
+
+# Clear font cache and configure Times New Roman with fallbacks
+matplotlib.rcParams['font.family'] = 'serif'
+matplotlib.rcParams['font.serif'] = ['Times New Roman', 'Times', 'DejaVu Serif', 'Nimbus Roman', 'Liberation Serif']
 
 # ==========================================
 # 1. CONFIGURATION & DATA LOADING
@@ -113,29 +120,33 @@ AVERAGED_DATA = compute_averaged_statistics(raw_data)
 # 2. PLOTTING SCRIPT
 # ==========================================
 
+# Font sizes designed for single-column figure (~3.5" wide)
 plt.rcParams.update(
     {
-        "font.family": "serif",
-        "font.serif": ["Times New Roman", "DejaVu Serif"],
-        "font.size": 12,
-        "axes.labelsize": 14,
-        "axes.titlesize": 14,
-        "xtick.labelsize": 12,
-        "ytick.labelsize": 12,
-        "legend.fontsize": 11,
-        "lines.linewidth": 2.5,
-        "lines.markersize": 8,
+        "font.size": 8,
+        "axes.labelsize": 9,
+        "axes.titlesize": 10,
+        "axes.titleweight": "normal",
+        "xtick.labelsize": 8,
+        "ytick.labelsize": 8,
+        "legend.fontsize": 7.5,
+        "lines.linewidth": 1.5,
+        "lines.markersize": 4,
         "grid.alpha": 0.3,
+        "mathtext.fontset": "stix",
     }
 )
 
 
 def plot_combined_figure():
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
-    plt.subplots_adjust(wspace=0.25)
+    """Plot combined training reward and test performance.
+    
+    Wider layout with side-by-side subplots to show correlation.
+    """
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(3.5, 1.75), gridspec_kw={"wspace": 0.5})
 
     # ============ Left plot: Training Reward ============
-    color1 = "#d62728"  # Red
+    color_ours = "#20B2AA"  # Teal - consistent "Ours" color
 
     x1 = np.array(TRAINING_REWARD_ENV_STEPS)
     y1 = np.array(TRAINING_REWARDS)
@@ -143,27 +154,32 @@ def plot_combined_figure():
     ax1.plot(
         x1,
         y1,
-        color=color1,
-        marker="o",
+        color=color_ours,
+        marker="s",  # Square marker
+        markersize=4,
         markevery=1,
+        zorder=10,
     )
 
-    ax1.set_title("(Train) Episode Reward on Primitives", fontweight="bold")
-    # ax1.set_yscale("log")
     ax1.set_xlim(min(TRAINING_REWARD_ENV_STEPS) - 5, max(TRAINING_REWARD_ENV_STEPS) + 5)
-    ax1.set_ylim(0, 14000)
-    ax1.set_yticks([1000, 3000, 5000, 7000, 9000, 11000, 13000])
-    ax1.set_yticklabels(["1k", "3k", "5k", "7k", "9k", "11k", "13k"])
-    ax1.grid(True, linestyle="--")
+    ax1.set_ylim(0, 15000)
+    ax1.set_yticks([0, 3000, 6000, 9000, 12000, 15000])
+    ax1.set_yticklabels(["0", "3k", "6k", "9k", "12k", "15k"])
+    
+    # Clean spines
     ax1.spines["top"].set_visible(False)
     ax1.spines["right"].set_visible(False)
-    ax1.set_xticks(TRAINING_REWARD_ENV_STEPS)
-    ax1.set_ylabel("Episode Reward")
-    ax1.set_xlabel("Training Steps on Primitive Objects (Billions)")
+    ax1.spines["left"].set_linewidth(0.8)
+    ax1.spines["bottom"].set_linewidth(0.8)
+    ax1.spines["left"].set_color("#333333")
+    ax1.spines["bottom"].set_color("#333333")
+    
+    ax1.set_xticks([40, 80, 120])
+    ax1.set_ylabel("Episode Reward", labelpad=0, fontsize=8)
+    ax1.set_xlabel("Env Steps (B)", labelpad=2, fontsize=8)
+    ax1.tick_params(axis="both", which="major", length=3, width=0.8, colors="#333333")
 
     # ============ Right plot: Tool Use Performance on DexToolBench ============
-    color2 = "#1f77b4"  # Deep Blue
-
     y_mean = np.array(AVERAGED_DATA["mean"])
     y_std = np.array(AVERAGED_DATA["std"])
     x2 = np.array(BILLION_ENV_STEPS)
@@ -172,27 +188,92 @@ def plot_combined_figure():
         x2,
         y_mean,
         yerr=y_std,
-        color=color2,
-        marker="o",
-        capsize=4,
-        capthick=1.5,
-        label="Averaged across 6 object categories",
+        color=color_ours,
+        marker="o",  # Circle marker
+        markersize=4,
+        capsize=2,
+        capthick=0.8,
+        zorder=10,
     )
 
-    ax2.set_title("(Test) Performance on DexToolBench", fontweight="bold")
     ax2.set_ylim(0, 105)
+    ax2.set_yticks([0, 20, 40, 60, 80, 100])
     ax2.set_xlim(min(BILLION_ENV_STEPS) - 5, max(BILLION_ENV_STEPS) + 5)
-    ax2.grid(True, linestyle="--")
+    
+    # Clean spines
     ax2.spines["top"].set_visible(False)
     ax2.spines["right"].set_visible(False)
-    ax2.set_xticks(BILLION_ENV_STEPS)
-    ax2.set_ylabel("Task Progress (%)")
-    ax2.set_xlabel("Training Steps on Primitive Objects (Billions)")
-    # ax2.legend(loc="lower right")  # Moved to figure caption
+    ax2.spines["left"].set_linewidth(0.8)
+    ax2.spines["bottom"].set_linewidth(0.8)
+    ax2.spines["left"].set_color("#333333")
+    ax2.spines["bottom"].set_color("#333333")
+    
+    ax2.set_xticks([40, 80, 120])
+    ax2.set_ylabel("Task Progress (%)", labelpad=0, fontsize=8)
+    ax2.set_xlabel("Env Steps (B)", labelpad=2, fontsize=8)
+    ax2.tick_params(axis="both", which="major", length=3, width=0.8, colors="#333333")
+
+    # ============ Add inset images showing train vs test tools ============
+    # Load the original combined image for the right half (real tools)
+    tools_img_path = Path(__file__).parent / "plot_drafts" / "final_figures" / "Primitives_vs_DexToolBench (1).png"
+    # Load the new primitives image
+    primitives_img_path = Path(__file__).parent / "plot_drafts" / "final_figures" / "Primitive_Objects.png"
+    
+    if tools_img_path.exists() and primitives_img_path.exists():
+        tools_img = mpimg.imread(tools_img_path)
+        primitives_img = mpimg.imread(primitives_img_path)
+        
+        h, w = tools_img.shape[:2]
+        
+        # Get the right half (real tools) from original image
+        right_half = tools_img[:, w//2:]
+        
+        # Calculate aspect ratio of original left half to match
+        left_half_h, left_half_w = h, w // 2
+        target_aspect = left_half_w / left_half_h
+        
+        # Crop new primitives image to match the aspect ratio of original left half
+        prim_h, prim_w = primitives_img.shape[:2]
+        current_aspect = prim_w / prim_h
+        
+        if current_aspect > target_aspect:
+            # New image is wider, crop width
+            new_w = int(prim_h * target_aspect)
+            start_x = (prim_w - new_w) // 2
+            left_half = primitives_img[:, start_x:start_x + new_w]
+        else:
+            # New image is taller, crop height
+            new_h = int(prim_w / target_aspect)
+            start_y = (prim_h - new_h) // 2
+            left_half = primitives_img[start_y:start_y + new_h, :]
+        
+        # Add inset for training tools (primitives) - bottom right of left plot
+        ax1_inset = inset_axes(ax1, width=0.5643, height=0.47025, 
+                               bbox_to_anchor=(0.98, -0.03), bbox_transform=ax1.transAxes, loc="lower right")
+        ax1_inset.imshow(left_half)
+        ax1_inset.axis("off")
+        ax1_inset.set_zorder(0)  # Draw below the line plot
+        
+        # Add inset for test tools (real) - bottom right of right plot
+        ax2_inset = inset_axes(ax2, width=0.5643, height=0.47025, 
+                               bbox_to_anchor=(0.98, -0.03), bbox_transform=ax2.transAxes, loc="lower right")
+        ax2_inset.imshow(right_half)
+        ax2_inset.axis("off")
+        ax2_inset.set_zorder(0)  # Draw below the line plot
 
     # Save figure to file
-    output_path = Path(__file__).parent / "plot_drafts" / "sim_tp_and_reward_vs_env_steps.png"
-    plt.savefig(output_path, dpi=150, bbox_inches="tight")
+    output_dir = Path(__file__).parent / "plot_drafts" / "final_figures"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_path = output_dir / "sim_tp_and_reward_vs_env_steps.png"
+    plt.savefig(
+        output_path,
+        dpi=600,
+        bbox_inches="tight",
+        pad_inches=0.02,
+        facecolor="white",
+        edgecolor="none",
+    )
+    plt.close()
     print(f"Figure saved to: {output_path}")
 
 

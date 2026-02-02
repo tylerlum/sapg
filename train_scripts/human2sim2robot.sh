@@ -5,8 +5,11 @@ forceScale=2
 torqueScale=0
 objectAngVelPenaltyScale=0.0
 
-CUSTOM_EXPERIMENT_NAME="NoChanges"
-WANDB_GROUP="2x_HAMMER_DOWN_SWING"
+object_type="staples_open"
+fixedGoalStatesJsonPath="/share/portal/kk837/sapg/dex_tool_bench/evaluation_trajectories/marker/staples_open/write_smiley_world_frame_min_z_0.6_downsampled_10.json"
+
+CUSTOM_EXPERIMENT_NAME="${object_type}"
+WANDB_GROUP="1x"
 
 WANDB_ENTITY="kk837"
 WANDB_PROJECT="Human2Sim2Robot"
@@ -48,7 +51,7 @@ task.env.forceConsecutiveNearGoalSteps=${forceConsecutiveNearGoalSteps} \
 task.env.forceScale=${forceScale} \
 task.env.torqueScale=${torqueScale} \
 task.env.objectAngVelPenaltyScale=${objectAngVelPenaltyScale} \
-task.env.object_type="hammer_2" \
+task.env.object_type=${object_type} \
 task.env.use_fixed_set_of_goal_states=True \
-task.env.fixedGoalStatesJsonPath="/share/portal/kk837/sapg/dex_tool_bench/evaluation_trajectories/hammer/hammer_2/down_swing_world_frame_min_z_0.6_downsampled_10.json" \
+task.env.fixedGoalStatesJsonPath=${fixedGoalStatesJsonPath} \
 checkpoint=${CHECKPOINT} \

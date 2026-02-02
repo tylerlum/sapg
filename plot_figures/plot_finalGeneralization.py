@@ -27,6 +27,48 @@ OBJECT_INSTANCES = {
     "spatula": ["black_spatula", "spoon_spatula"],
 }
 
+# Short display names for object instances (edit these as needed)
+INSTANCE_DISPLAY_NAMES = {
+    "toy_hammer": "Claw",
+    "mallet": "Mallet",
+    "sharpie_closed": "Sharpie",
+    "staples_open": "Staples",
+    "anvil_eraser": "Handle",
+    "expo_eraser": "Flat",
+    "red_brush": "Red",
+    "anvil_brush": "Blue",
+    "black_spatula": "Flat",
+    "spoon_spatula": "Spoon",
+    "red_screwdriver": "Short",
+    "real_flat_screwdriver": "Long",
+}
+
+# TASK_SUCCESS_RATES = {
+#     "eraser": {
+#         "anvil_eraser": {"wipe_smile": 100.0, "wipe_c": 100.0},
+#         "expo_eraser": {"wipe_smile": 100.0, "wipe_c": 100.0},
+#     },
+#     "marker": {
+#         "sharpie_closed": {"draw_smile": 80.0, "write_c": 77.6},
+#         "staples_open": {"draw_smile": 90.6, "write_c": 66.2},
+#     },
+#     "brush": {
+#         "red_brush": {"sweep_fwd": 82.7, "sweep_right": 61.4},
+#         "anvil_brush": {"sweep_fwd": 51.1, "sweep_right": 100.0},
+#     },
+#     "spatula": {
+#         "black_spatula": {"serve_plate": 77.5, "flip_over": 46.1},
+#         "spoon_spatula": {"serve_plate": 85.0, "flip_over": 95.5},
+#     },
+#     "screwdriver": {
+#         "red_screwdriver": {"spin_vert": 37.9, "spin_horiz": 75.6},
+#         "real_flat_screwdriver": {"spin_vert": 55.8, "spin_horiz": 61.7},
+#     },
+#     "hammer": {
+#         "toy_hammer": {"swing_down": 100.0, "swing_side": 95.5},
+#         "mallet": {"swing_down": 84.4, "swing_side": 77.5},
+#     },
+# }
 TASK_SUCCESS_RATES = {
     "eraser": {
         "anvil_eraser": {"wipe_smile": 100.0, "wipe_c": 100.0},
@@ -104,10 +146,13 @@ INSTANCE_COLORS = {
 # 2. HELPER FUNCTIONS
 # ==========================================
 
-def add_icon_below_axis(ax, x_pos, icon_path, y_offset=-0.12, zoom=0.045):
+def add_icon_below_axis(ax, x_pos, icon_path, y_offset=-0.12, zoom=0.045, flip=False):
     """Add an icon below the x-axis at the specified position."""
     try:
         img = mpimg.imread(icon_path)
+        # Flip horizontally and vertically if requested
+        if flip:
+            img = img[::-1, ::-1]
         imagebox = OffsetImage(img, zoom=zoom)
         ab = AnnotationBbox(
             imagebox,
@@ -128,139 +173,19 @@ def add_icon_below_axis(ax, x_pos, icon_path, y_offset=-0.12, zoom=0.045):
 
 def draw_category_bracket(ax, x_start, x_end, category, color):
     """Draw a subtle bracket and label under each category group."""
-    y_base = -0.28  # In axes fraction
-    
-    # Category label
-    ax.annotate(
+    # Category label - positioned below instance names
+    ax.text(
+        (x_start + x_end) / 2 - 0.08, -0.29,
         category.upper(),
-        xy=((x_start + x_end) / 2, 0),
-        xytext=(0, y_base * 100 - 8),
-        xycoords=("data", "axes fraction"),
-        textcoords="offset points",
+        transform=ax.get_xaxis_transform(),
         ha="center",
         va="top",
-        fontsize=8,
-        fontweight="600",
+        fontsize=9,
+        fontweight="bold",
         color=color,
-        annotation_clip=False,
+        clip_on=False,
         fontfamily="sans-serif",
     )
-
-
-# ==========================================
-# 3. MAIN PLOTTING FUNCTIONS
-# ==========================================
-
-def plot_uniform_colors(categories, output_name, figsize=(6, 4)):
-    """
-    Version 1: Same color for all bars within each category.
-    No light/dark distinction between tasks - uniform category color.
-    """
-    
-    plt.rcParams.update({
-        "font.family": "sans-serif",
-        "font.sans-serif": ["Helvetica Neue", "Helvetica", "Arial", "DejaVu Sans"],
-        "font.size": 9,
-        "axes.labelsize": 10,
-        "axes.titlesize": 11,
-        "xtick.labelsize": 8,
-        "ytick.labelsize": 9,
-        "legend.fontsize": 8,
-        "figure.facecolor": "#FAFBFC",
-        "axes.facecolor": "#FFFFFF",
-        "axes.edgecolor": "#E5E7EB",
-        "axes.linewidth": 0.8,
-        "grid.color": "#E5E7EB",
-        "grid.linewidth": 0.5,
-    })
-    
-    fig, ax = plt.subplots(figsize=figsize)
-    fig.patch.set_facecolor("#FAFBFC")
-    
-    bar_width = 0.22
-    task_gap = 0.03
-    instance_gap = 0.18
-    category_gap = 0.40
-    instance_width = 2 * bar_width + task_gap
-    
-    icon_positions = []
-    category_spans = []
-    x_cursor = 0.0
-    
-    for cat_idx, category in enumerate(categories):
-        colors = CATEGORY_COLORS[category]
-        cat_start = x_cursor
-        
-        def get_avg(inst):
-            tasks = TASK_SUCCESS_RATES.get(category, {}).get(inst, {})
-            task_values = list(tasks.values())
-            if len(task_values) >= 2:
-                return (task_values[0] + task_values[1]) / 2.0
-            return 0.0
-        
-        sorted_instances = sorted(OBJECT_INSTANCES[category], key=get_avg, reverse=True)
-        
-        for inst_idx, obj_instance in enumerate(sorted_instances):
-            obj_tasks = TASK_SUCCESS_RATES.get(category, {}).get(obj_instance, {})
-            task_names = list(obj_tasks.keys())
-            task_values = list(obj_tasks.values())
-            
-            v1 = float(task_values[0]) if len(task_values) > 0 else 0.0
-            v2 = float(task_values[1]) if len(task_values) > 1 else 0.0
-            
-            x1 = x_cursor
-            x2 = x_cursor + bar_width + task_gap
-            
-            task1_name = task_names[0] if len(task_names) > 0 else ""
-            task2_name = task_names[1] if len(task_names) > 1 else ""
-            
-            # UNIFORM COLOR: Use base color for all bars
-            ax.bar(x1, v1, bar_width, color=colors["base"], edgecolor=colors["dark"],
-                   linewidth=0.7, zorder=3)
-            ax.text(x1, v1 + 2, task1_name.replace("_", "\n"), ha="center", va="bottom",
-                    fontsize=6, fontweight="500", color="#374151", zorder=4)
-            
-            ax.bar(x2, v2, bar_width, color=colors["base"], edgecolor=colors["dark"],
-                   linewidth=0.7, zorder=3)
-            ax.text(x2, v2 + 2, task2_name.replace("_", "\n"), ha="center", va="bottom",
-                    fontsize=6, fontweight="500", color="#374151", zorder=4)
-            
-            icon_x = (x1 + x2) / 2
-            icon_positions.append({"x": icon_x, "instance": obj_instance})
-            x_cursor += instance_width + instance_gap
-        
-        cat_end = x_cursor - instance_gap
-        category_spans.append((cat_start, cat_end, category, colors["dark"]))
-        x_cursor += category_gap - instance_gap
-    
-    ax.set_ylabel("Task Progress (%)", fontweight="500", color="#374151")
-    ax.set_ylim(0, 125)
-    ax.set_yticks([0, 25, 50, 75, 100])
-    ax.set_xticks([])
-    ax.set_xlim(-0.15, x_cursor - category_gap + instance_gap + 0.15)
-    
-    ax.yaxis.grid(True, linestyle="-", alpha=0.6, zorder=0)
-    ax.xaxis.grid(False)
-    ax.set_axisbelow(True)
-    
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.spines["bottom"].set_color("#9CA3AF")
-    ax.spines["left"].set_color("#9CA3AF")
-    
-    for icon_info in icon_positions:
-        icon_path = PATH_TO_INSTANCE_ICONS / f"{icon_info['instance']}.png"
-        add_icon_below_axis(ax, icon_info["x"], icon_path, y_offset=-0.16, zoom=0.065)
-    
-    for cat_start, cat_end, category, color in category_spans:
-        draw_category_bracket(ax, cat_start, cat_end, category, color)
-    
-    plt.subplots_adjust(bottom=0.22, top=0.92, left=0.10, right=0.97)
-    
-    output_path = BASE_DIR / "plot_drafts" / output_name
-    plt.savefig(output_path, dpi=300, bbox_inches="tight", facecolor=fig.get_facecolor())
-    print(f"✓ Figure saved to: {output_path}")
-    plt.close()
 
 
 def plot_instance_colors(categories, output_name, figsize=(6, 4)):
@@ -271,24 +196,18 @@ def plot_instance_colors(categories, output_name, figsize=(6, 4)):
     """
     
     plt.rcParams.update({
-        "font.family": "sans-serif",
-        "font.sans-serif": ["Helvetica Neue", "Helvetica", "Arial", "DejaVu Sans"],
+        "font.family": "serif",
+        "font.serif": ["Times New Roman", "Times", "DejaVu Serif"],
         "font.size": 9,
         "axes.labelsize": 10,
         "axes.titlesize": 11,
         "xtick.labelsize": 8,
         "ytick.labelsize": 9,
         "legend.fontsize": 8,
-        "figure.facecolor": "#FAFBFC",
-        "axes.facecolor": "#FFFFFF",
-        "axes.edgecolor": "#E5E7EB",
         "axes.linewidth": 0.8,
-        "grid.color": "#E5E7EB",
-        "grid.linewidth": 0.5,
     })
     
     fig, ax = plt.subplots(figsize=figsize)
-    fig.patch.set_facecolor("#FAFBFC")
     
     bar_width = 0.22
     task_gap = 0.03
@@ -298,7 +217,7 @@ def plot_instance_colors(categories, output_name, figsize=(6, 4)):
     
     icon_positions = []
     category_spans = []
-    x_cursor = 0.0
+    x_cursor = 0.3  # Start with some padding from y-axis
     
     for cat_idx, category in enumerate(categories):
         cat_colors = CATEGORY_COLORS[category]
@@ -358,31 +277,43 @@ def plot_instance_colors(categories, output_name, figsize=(6, 4)):
         x_cursor += category_gap - instance_gap
     
     ax.set_ylabel("Task Progress (%)", fontweight="500", color="#374151")
-    ax.set_ylim(0, 125)
+    ax.set_ylim(0, 108)
     ax.set_yticks([0, 25, 50, 75, 100])
     ax.set_xticks([])
-    ax.set_xlim(-0.15, x_cursor - category_gap + instance_gap + 0.15)
+    ax.set_xlim(0.0, x_cursor - category_gap + instance_gap - 0.1)
     
-    ax.yaxis.grid(True, linestyle="-", alpha=0.6, zorder=0)
-    ax.xaxis.grid(False)
-    ax.set_axisbelow(True)
+    ax.grid(False)
     
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
-    ax.spines["bottom"].set_color("#9CA3AF")
-    ax.spines["left"].set_color("#9CA3AF")
     
     for icon_info in icon_positions:
         icon_path = PATH_TO_INSTANCE_ICONS / f"{icon_info['instance']}.png"
-        add_icon_below_axis(ax, icon_info["x"], icon_path, y_offset=-0.16, zoom=0.065)
+        # Flip hammer icons (toy_hammer and mallet) and move them slightly down
+        is_hammer = icon_info['instance'] in ['toy_hammer', 'mallet']
+        icon_y_off = -0.175 if is_hammer else -0.16
+        add_icon_below_axis(ax, icon_info["x"], icon_path, y_offset=icon_y_off, zoom=0.065, flip=is_hammer)
+        
+        # Add instance name label below icon but above category name
+        instance_name = INSTANCE_DISPLAY_NAMES.get(icon_info['instance'], icon_info['instance'])
+        ax.text(
+            icon_info["x"], -0.21,
+            instance_name,
+            transform=ax.get_xaxis_transform(),
+            ha="center",
+            va="top",
+            fontsize=9,
+            color="#374151",
+            clip_on=False,
+        )
     
     for cat_start, cat_end, category, color in category_spans:
         draw_category_bracket(ax, cat_start, cat_end, category, color)
     
-    plt.subplots_adjust(bottom=0.22, top=0.92, left=0.10, right=0.97)
+    plt.subplots_adjust(bottom=0.30, top=0.92, left=0.10, right=0.97)
     
     output_path = BASE_DIR / "plot_drafts" / output_name
-    plt.savefig(output_path, dpi=300, bbox_inches="tight", facecolor=fig.get_facecolor())
+    plt.savefig(output_path, dpi=600, bbox_inches="tight", facecolor=fig.get_facecolor())
     print(f"✓ Figure saved to: {output_path}")
     plt.close()
 
@@ -393,26 +324,20 @@ def plot_category_subset(categories, output_name, figsize=(6, 4)):
     Each category has 2 instances, each with two bars (light/dark) for the two tasks.
     """
     
-    # Modern, clean style
+    # Modern, clean style with Times New Roman
     plt.rcParams.update({
-        "font.family": "sans-serif",
-        "font.sans-serif": ["Helvetica Neue", "Helvetica", "Arial", "DejaVu Sans"],
+        "font.family": "serif",
+        "font.serif": ["Times New Roman", "Times", "DejaVu Serif"],
         "font.size": 9,
         "axes.labelsize": 10,
         "axes.titlesize": 11,
         "xtick.labelsize": 8,
         "ytick.labelsize": 9,
         "legend.fontsize": 8,
-        "figure.facecolor": "#FAFBFC",
-        "axes.facecolor": "#FFFFFF",
-        "axes.edgecolor": "#E5E7EB",
         "axes.linewidth": 0.8,
-        "grid.color": "#E5E7EB",
-        "grid.linewidth": 0.5,
     })
     
     fig, ax = plt.subplots(figsize=figsize)
-    fig.patch.set_facecolor("#FAFBFC")
     
     # Layout parameters - two bars per instance
     bar_width = 0.22
@@ -506,39 +431,51 @@ def plot_category_subset(categories, output_name, figsize=(6, 4)):
     
     # Y-axis styling
     ax.set_ylabel("Task Progress (%)", fontweight="500", color="#374151")
-    ax.set_ylim(0, 125)
+    ax.set_ylim(0, 108)
     ax.set_yticks([0, 25, 50, 75, 100])
     
     # Remove x-axis ticks (we use icons instead)
     ax.set_xticks([])
-    ax.set_xlim(-0.15, x_cursor - category_gap + instance_gap + 0.15)
+    ax.set_xlim(0.0, x_cursor - category_gap + instance_gap + 0.15)
     
-    # Grid styling
-    ax.yaxis.grid(True, linestyle="-", alpha=0.6, zorder=0)
-    ax.xaxis.grid(False)
-    ax.set_axisbelow(True)
+    # No grid
+    ax.grid(False)
     
     # Spine styling
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
-    ax.spines["bottom"].set_color("#9CA3AF")
-    ax.spines["left"].set_color("#9CA3AF")
     
     # Add icons below axis
     for icon_info in icon_positions:
         icon_path = PATH_TO_INSTANCE_ICONS / f"{icon_info['instance']}.png"
-        add_icon_below_axis(ax, icon_info["x"], icon_path, y_offset=-0.16, zoom=0.065)
-    
+        # Flip hammer icons (toy_hammer and mallet) and move them slightly down
+        is_hammer = icon_info['instance'] in ['toy_hammer', 'mallet']
+        y_off = -0.175 if is_hammer else -0.16
+        add_icon_below_axis(ax, icon_info["x"], icon_path, y_offset=y_off, zoom=0.065, flip=is_hammer)
+        
+        # Add instance name label below icon (centered at same x as icon)
+        instance_name = INSTANCE_DISPLAY_NAMES.get(icon_info['instance'], icon_info['instance'])
+        ax.text(
+            icon_info["x"], -0.20,
+            instance_name,
+            transform=ax.get_xaxis_transform(),
+            ha="center",
+            va="top",
+            fontsize=6,
+            color="black",
+            clip_on=False,
+        )
+
     # Add category labels
     for cat_start, cat_end, category, color in category_spans:
         draw_category_bracket(ax, cat_start, cat_end, category, color)
     
     # Adjust layout to make room for icons and labels
-    plt.subplots_adjust(bottom=0.22, top=0.92, left=0.10, right=0.97)
+    plt.subplots_adjust(bottom=0.30, top=0.92, left=0.10, right=0.97)
     
     # Save
     output_path = BASE_DIR / "plot_drafts" / output_name
-    plt.savefig(output_path, dpi=300, bbox_inches="tight", facecolor=fig.get_facecolor())
+    plt.savefig(output_path, dpi=600, bbox_inches="tight", facecolor=fig.get_facecolor())
     print(f"✓ Figure saved to: {output_path}")
     plt.close()
 
@@ -557,20 +494,5 @@ def plot_verbs_with_icons():
     # Combined plot (all 6 categories)
     plot_category_subset(all_categories, "verbs_generalization_all.png", figsize=(10, 4))
 
-
-def plot_all_versions():
-    """Generate all plot versions including uniform and instance-colored variants."""
-    all_categories = CATEGORIES
-    
-    # Original version (light/dark by task within category)
-    plot_category_subset(all_categories, "verbs_generalization_original.png", figsize=(10, 4))
-    
-    # Version 1: Uniform category colors (same color for all bars in category)
-    plot_uniform_colors(all_categories, "verbs_generalization_uniform_colors.png", figsize=(10, 4))
-    
-    # Version 2: Unique colors per object instance
-    plot_instance_colors(all_categories, "verbs_generalization_instance_colors.png", figsize=(10, 4))
-
-
 if __name__ == "__main__":
-    plot_all_versions()
+    plot_instance_colors(CATEGORIES, "final_figures/verbs_generalization_instance_colors.png", figsize=(10, 4))

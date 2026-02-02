@@ -1,12 +1,12 @@
 #!/bin/bash
-objectScaleNoiseMultiplierRange=[0.9,1.1]
-forceConsecutiveNearGoalSteps=true
-forceScale=20
-torqueScale=2
+objectScaleNoiseMultiplierRange=[1.0,1.0]
+forceConsecutiveNearGoalSteps=false
+forceScale=5
+torqueScale=0.5
 objectAngVelPenaltyScale=0.0
 
-CUSTOM_EXPERIMENT_NAME="PRETRAIN_ALL_CHANGES"
-WANDB_GROUP="PRETRAIN_3x"
+CUSTOM_EXPERIMENT_NAME="PRETRAIN_NO_CHANGES"
+WANDB_GROUP="PRETRAIN_4x"
 
 WANDB_ENTITY="kk837"
 WANDB_PROJECT="PAPER_RUNS"
@@ -14,7 +14,7 @@ WANDB_PROJECT="PAPER_RUNS"
 DATETIME=$(date +"%Y-%m-%d_%H-%M-%S")
 EXPERIMENT_NAME="${CUSTOM_EXPERIMENT_NAME}_$DATETIME"
 HYDRA_RUN_DIR=./train_dir/${WANDB_PROJECT}/${WANDB_GROUP}/${EXPERIMENT_NAME}
-CHECKPOINT=/share/portal/kk837/sapg/train_dir/PAPER_RUNS/PRETRAIN_2x/PRETRAIN_ALL_CHANGES_2026-01-18_19-48-35/runs/00_PRETRAIN_ALL_CHANGES_2026-01-18_19-48-35/last/model.pth
+CHECKPOINT=/share/portal/kk837/sapg/train_dir/PAPER_RUNS/PRETRAIN_3x/PRETRAIN_NO_CHANGES_2026-01-21_17-32-56/runs/00_PRETRAIN_NO_CHANGES_2026-01-21_17-32-56/last/model.pth
 
 python -m isaacgymenvs.train \
 task/env=reorientation \

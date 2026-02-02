@@ -9,19 +9,32 @@ import numpy as np
 
 TASKS = ["Brush (easy)", "Brush (hard)"]
 
-METHODS = ["Kinematic Retargeting", "DexFunc", "Ours"]
+METHODS = ["Kinematic\nRetargeting", "Fixed\nGrasp", "SimToolReal\n(ours)"]
 
 # Values are percentages (0-100) - dummy values, replace with real data
+# RAW_DATA = {
+#     "Brush (easy)": {
+#         "Kinematic Retargeting": 0,
+#         "DexFunc": 65.7,
+#         "Ours": 100,
+#     },
+#     "Brush (hard)": {
+#         "Kinematic Retargeting": 0,
+#         "DexFunc": 7.9,
+#         "Ours": 100,
+#     },
+# }
+
 RAW_DATA = {
     "Brush (easy)": {
-        "Kinematic Retargeting": 0,
-        "DexFunc": 65.7,
-        "Ours": 100,
+        "Kinematic\nRetargeting": 8.11,
+        "Fixed\nGrasp": 61.02,
+        "SimToolReal\n(ours)": 98,
     },
     "Brush (hard)": {
-        "Kinematic Retargeting": 0,
-        "DexFunc": 7.9,
-        "Ours": 100,
+        "Kinematic\nRetargeting": 0,
+        "Fixed\nGrasp": 10.81,
+        "SimToolReal\n(ours)": 82,
     },
 }
 
@@ -31,15 +44,15 @@ RAW_DATA = {
 
 plt.rcParams.update(
     {
-        "font.family": "sans-serif",
-        "font.sans-serif": ["Arial", "DejaVu Sans", "Helvetica"],
-        "font.size": 12,
-        "axes.labelsize": 13,
-        "axes.titlesize": 14,
+        "font.family": "serif",
+        "font.serif": ["Times New Roman", "Times", "DejaVu Serif"],
+        "font.size": 16,
+        "axes.labelsize": 18,
+        "axes.titlesize": 18,
         "axes.titleweight": "bold",
-        "xtick.labelsize": 11,
-        "ytick.labelsize": 11,
-        "legend.fontsize": 11,
+        "xtick.labelsize": 15,
+        "ytick.labelsize": 15,
+        "legend.fontsize": 15,
         "lines.linewidth": 1.5,
         "grid.alpha": 0.3,
     }
@@ -49,20 +62,18 @@ plt.rcParams.update(
 def plot_bar_comparison_grid():
     # Modern, professional color palette with better contrast
     colors = {
-        "Kinematic Retargeting": "#7B68EE",  # Medium slate blue
-        "DexFunc": "#FFA07A",  # Light salmon
-        "Ours": "#20B2AA",  # Light sea green
+        "Kinematic\nRetargeting": "#7B68EE",  # Medium slate blue
+        "Fixed\nGrasp": "#FFA07A",  # Light salmon
+        "SimToolReal\n(ours)": "#20B2AA",  # Light sea green
     }
 
-    # Create figure with 2 rows, 1 column (Brush easy on top, Brush hard on bottom)
-    fig, axes = plt.subplots(2, 1, figsize=(6, 7))
-    
     n_methods = len(METHODS)
     width = 0.6
     x_positions = np.arange(n_methods)
     
+    # Create separate figures for each task
     for idx, task in enumerate(TASKS):
-        ax = axes[idx]
+        fig, ax = plt.subplots(1, 1, figsize=(5, 5))
         
         # Extract data for this task
         values = [RAW_DATA[task][method] for method in METHODS]
@@ -82,20 +93,8 @@ def plot_bar_comparison_grid():
         # Formatting
         ax.set_ylim(0, 105)
         ax.set_xticks(x_positions)
-        ax.set_xticklabels(METHODS, fontsize=11)
-        ax.set_ylabel("Task Progress (%)", fontweight="bold", labelpad=8, fontsize=13)
-        
-        # Add description to the left of the plot
-        label = "Without\nTool Rotation" if "easy" in task else "With\nTool Rotation"
-        ax.text(
-            -0.26, 0.5, label,
-            transform=ax.transAxes,
-            fontsize=20,
-            fontweight="bold",
-            va="center",
-            ha="center",
-            rotation=90,
-        )
+        ax.set_xticklabels(METHODS, fontsize=14)
+        ax.set_ylabel("Task Progress (%)", labelpad=2, fontsize=14)
         
         # Aesthetics
         ax.spines["top"].set_visible(False)
@@ -111,37 +110,20 @@ def plot_bar_comparison_grid():
         
         # Adjust tick parameters
         ax.tick_params(axis="both", which="major", length=5, width=1.2, colors="#333333")
-    
-    # Add legend at the top, centered over task progress label + bars
-    from matplotlib.patches import Patch
-    legend_handles = [Patch(facecolor=colors[method], edgecolor="white", label=method) for method in METHODS]
-    fig.legend(
-        legend_handles,
-        METHODS,
-        loc="upper center",
-        bbox_to_anchor=(0.56, 1.02),  # Centered over task progress label + bars
-        ncol=3,
-        frameon=True,
-        framealpha=0.95,
-        edgecolor="#333333",
-        fontsize=11,
-        columnspacing=1.5,
-    )
-    
-    plt.tight_layout()
-    plt.subplots_adjust(top=0.88, left=0.22, hspace=0.35)
-    
-    plt.savefig(
-        Path(__file__).parent / "plot_drafts" / "dexfunc_comparison_grid.png",
-        dpi=300,
-        bbox_inches="tight",
-        facecolor="white",
-        edgecolor="none",
-    )
-    plt.close()
-    print(
-        f"Saved figure to {Path(__file__).parent / 'plot_drafts' / 'dexfunc_comparison_grid.png'}"
-    )
+        
+        plt.tight_layout()
+        
+        # Save with task-specific filename
+        filename = "dexfunc_comparison_easy.png" if "easy" in task else "dexfunc_comparison_hard.png"
+        plt.savefig(
+            Path(__file__).parent / "plot_drafts" / filename,
+            dpi=300,
+            bbox_inches="tight",
+            facecolor="white",
+            edgecolor="none",
+        )
+        plt.close()
+        print(f"Saved figure to {Path(__file__).parent / 'plot_drafts' / filename}")
 
 
 if __name__ == "__main__":

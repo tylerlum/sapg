@@ -6,7 +6,7 @@ torqueScale=2
 objectAngVelPenaltyScale=0
 
 CUSTOM_EXPERIMENT_NAME="FT_All_Changes"
-WANDB_GROUP="FINETUNE_3x"
+WANDB_GROUP="FINETUNE_4x"
 
 WANDB_ENTITY="kk837"
 WANDB_PROJECT="PAPER_RUNS"
@@ -15,7 +15,7 @@ DATETIME=$(date +"%Y-%m-%d_%H-%M-%S")
 EXPERIMENT_NAME="${CUSTOM_EXPERIMENT_NAME}_$DATETIME"
 HYDRA_RUN_DIR=./train_dir/${WANDB_PROJECT}/${WANDB_GROUP}/${EXPERIMENT_NAME}
 
-CHECKPOINT=/share/portal/kk837/sapg/train_dir/PAPER_RUNS/FINETUNE_2x/FT_ALL_CHANGES_2026-01-18_20-00-16/runs/00_FT_ALL_CHANGES_2026-01-18_20-00-16/last/model.pth
+CHECKPOINT=/share/portal/kk837/sapg/train_dir/PAPER_RUNS/FINETUNE_3x/FT_All_Changes_2026-01-21_17-34-56/runs/00_FT_All_Changes_2026-01-21_17-34-56/last/model.pth
 
 python -m isaacgymenvs.train \
 task/env=reorientation \

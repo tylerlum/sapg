@@ -21,7 +21,7 @@ OUTPUT_DIR = Path(__file__).parent / "object_instance_icons"
 
 # Object instances to render (category -> list of object instance names)
 OBJECT_INSTANCES = {
-    "hammer": ["hammer_2", "mallet"],
+    "hammer": ["toy_hammer", "mallet"],
     "eraser": ["anvil_eraser", "expo_eraser"],
     "marker": ["sharpie_closed", "staples_open"],
     "screwdriver": ["red_screwdriver", "real_flat_screwdriver"],

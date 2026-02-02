@@ -1,8 +1,13 @@
 import pandas as pd
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 from pathlib import Path
 from typing import Optional
+
+# Configure Times New Roman font
+matplotlib.rcParams['font.family'] = 'serif'
+matplotlib.rcParams['font.serif'] = ['Times New Roman', 'Times', 'DejaVu Serif', 'Nimbus Roman', 'Liberation Serif']
 
 # ==========================================
 # 1. CONFIGURATION & DATA LOADING
@@ -153,27 +158,28 @@ def smooth_data(values: np.ndarray, window_size: int = 50) -> np.ndarray:
 # 2. PLOTTING SCRIPT
 # ==========================================
 
+# Font sizes designed for single-column figure (~3.5" wide)
 plt.rcParams.update(
     {
-        "font.family": "serif",
-        "font.serif": ["Times New Roman", "DejaVu Serif"],
-        "font.size": 12,
-        "axes.labelsize": 14,
-        "axes.titlesize": 14,
-        "xtick.labelsize": 12,
-        "ytick.labelsize": 12,
-        "legend.fontsize": 11,
-        "lines.linewidth": 2.5,
-        "lines.markersize": 8,
+        "font.size": 8,
+        "axes.labelsize": 9,
+        "axes.titlesize": 10,
+        "axes.titleweight": "normal",
+        "xtick.labelsize": 8,
+        "ytick.labelsize": 8,
+        "legend.fontsize": 7.5,
+        "lines.linewidth": 1.5,
+        "lines.markersize": 4,
         "grid.alpha": 0.3,
+        "mathtext.fontset": "stix",
     }
 )
 
-# Method display names and colors
+# Method display names and colors - Ours = Teal (consistent across all figures)
 METHOD_DISPLAY_CONFIG = {
-    "ours": {"label": "Ours", "color": "#1f77b4"},  # Deep Blue
-    "ppo": {"label": "Ours (w/o SAPG)", "color": "#d62728"},  # Red
-    "symmetric": {"label": "Ours (w/o Asymmetric Critic)", "color": "#2ca02c"},  # Green
+    "ours": {"label": "SAPG + Asymmetric Critic (Ours)", "color": "#20B2AA", "marker": "o", "zorder": 10},
+    "ppo": {"label": "PPO + Asymmetric Critic", "color": "#555555", "marker": "s", "zorder": 5},
+    "symmetric": {"label": "SAPG + Symmetric Critic", "color": "#D2691E", "marker": "^", "zorder": 4},  # Chocolate brown - more visible
 }
 
 
@@ -185,9 +191,13 @@ def plot_training_comparison(metric: str):
     all_seed_data = load_all_seeds(metric)
     interpolated_data = interpolate_to_common_steps(all_seed_data)
     
-    fig, ax = plt.subplots(1, 1, figsize=(8, 5))
+    fig, ax = plt.subplots(figsize=(3.5, 1.75))
     
-    for method_name, display_config in METHOD_DISPLAY_CONFIG.items():
+    # Plot in order: ours first for legend ordering
+    method_order = ["ours", "ppo", "symmetric"]
+    
+    for method_name in method_order:
+        display_config = METHOD_DISPLAY_CONFIG[method_name]
         if method_name not in interpolated_data:
             continue
         
@@ -213,7 +223,8 @@ def plot_training_comparison(metric: str):
             mean_values,
             color=display_config["color"],
             label=display_config["label"],
-            linewidth=2.5,
+            linewidth=1.5,
+            zorder=display_config["zorder"],
         )
         
         # Plot shaded region for ±1 std
@@ -223,35 +234,58 @@ def plot_training_comparison(metric: str):
             mean_values + std_values,
             color=display_config["color"],
             alpha=0.2,
+            edgecolor="none",
+            zorder=display_config["zorder"] - 1,
         )
     
-    ax.set_title(config["title"], fontweight="bold")
-    ax.set_xlabel("Environment Steps")
-    ax.set_ylabel(config["ylabel"])
-    ax.set_ylim(0, None)  # Start from 0
+    ax.set_xlabel("Env Steps (B)", labelpad=2)
+    ax.set_ylabel(config["ylabel"], labelpad=4)
     ax.set_xlim(0, 9e9)  # End at 9B steps
-    ax.grid(True, linestyle="--")
+    
+    # Y-axis formatting
+    if metric == "reward":
+        ax.set_ylim(0, 8500)
+        ax.set_yticks([0, 2000, 4000, 6000, 8000])
+        ax.set_yticklabels(["0", "2k", "4k", "6k", "8k"])
+    else:
+        ax.set_ylim(0, None)
+    
+    # Clean spines (no grid, matching other plots)
+    ax.grid(False)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
-    ax.legend(loc="upper left")
+    ax.spines["left"].set_linewidth(0.8)
+    ax.spines["bottom"].set_linewidth(0.8)
+    ax.spines["left"].set_color("#333333")
+    ax.spines["bottom"].set_color("#333333")
     
-    # Format x-axis with "B" suffix for billions
-    def format_billions(x, p):
-        if x >= 1e9:
-            return f"{x/1e9:.0f}B"
-        elif x >= 1e6:
-            return f"{x/1e6:.0f}M"
-        elif x >= 1e3:
-            return f"{x/1e3:.0f}k"
-        return f"{x:.0f}"
-    ax.xaxis.set_major_formatter(plt.FuncFormatter(format_billions))
+    ax.tick_params(axis="both", which="major", length=3, width=0.8, colors="#333333")
     
-    plt.tight_layout()
+    # X-axis ticks in billions (0, 1B, 2B, ..., 9B)
+    ax.set_xticks([i * 1e9 for i in range(10)])
+    ax.set_xticklabels(["0"] + [f"{i}" for i in range(1, 10)])
+    
+    # Legend - inside plot, top left
+    ax.legend(
+        loc="upper left",
+        ncol=1,
+        frameon=False,
+        handlelength=1.5,
+        handletextpad=0.5,
+    )
     
     # Save figure to file
-    output_path = Path(__file__).parent / "plot_drafts" / config["output_file"]
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    plt.savefig(output_path, dpi=150, bbox_inches="tight")
+    output_dir = Path(__file__).parent / "plot_drafts" / "final_figures"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_path = output_dir / config["output_file"]
+    plt.savefig(
+        output_path,
+        dpi=600,
+        bbox_inches="tight",
+        pad_inches=0.02,
+        facecolor="white",
+        edgecolor="none",
+    )
     plt.close()
     print(f"Figure saved to: {output_path}")
 

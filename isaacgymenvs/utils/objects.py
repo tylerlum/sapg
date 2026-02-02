@@ -107,7 +107,7 @@ HAMMER_NAME_TO_OBJECT = {
         # ),
         scale=rescale_by_factor((0.25, 0.03, 0.02), factor=25),
         # need_vhacd=True,
-        need_vhacd=False,
+        need_vhacd=True,
     ),
     "toy_hammer": Object(
         filepath=(
