@@ -268,17 +268,17 @@ def main():
     # trajectory_name = "wipe_higher"
     # trajectory_name = "wipe_lower"
 
-    # object_type = "marker"
+    object_type = "marker"
     # object_name = "040_large_marker"
     # object_name = "sharpie_closed"
-    # object_name = "staples_open"
-    # trajectory_name = "write_smiley"
+    object_name = "staples_open"
+    trajectory_name = "write_smiley"
     # trajectory_name = "write_c"
 
-    object_type = "brush"
+    # object_type = "brush"
     # object_name = "anvil_brush"
-    object_name = "red_brush"
-    trajectory_name = "sweep_forward"
+    # object_name = "red_brush"
+    # trajectory_name = "sweep_forward"
     # trajectory_name = "sweep_right"
     # trajectory_name = "sweep_forward_easy"
     # trajectory_name = "sweep_forward_right"
@@ -299,8 +299,7 @@ def main():
     goals_robot_frame = [[x, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
 
     # Additional offsets
-    # goals_robot_frame = [[x - 0.05, y - 0.1, z - 0.02, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_robot_frame]
-    goals_robot_frame = [[x - 0.05, y - 0.05, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_robot_frame]
+    goals_robot_frame = [[x - 0.05, y, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_robot_frame]
 
     DOWNSAMPLE_FACTOR = 10
     # DOWNSAMPLE_FACTOR = 1
@@ -315,8 +314,9 @@ def main():
         if i >= EDIT_AFTER_N_POINTS:
             goals_robot_frame[i][2] += EDIT_Z_OFFSET
 
-    KEEP_ONLY_FIRST_N_GOALS = 19
-    goals_robot_frame = goals_robot_frame[:KEEP_ONLY_FIRST_N_GOALS]
+    # HACK: Keep only the first 19 goals
+    # KEEP_ONLY_FIRST_N_GOALS = 19
+    # goals_robot_frame = goals_robot_frame[:KEEP_ONLY_FIRST_N_GOALS]
 
     tmp_file = Path("tmp.json")
     with open(tmp_file, "w") as f:
