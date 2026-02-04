@@ -285,8 +285,8 @@ def main():
 
     # APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.6_downsampled_10"
     # APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.6"
-    APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.65"
-    # APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.7"
+    # APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.65"
+    APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.7"
     trajectory_name = f"{trajectory_name}{APPEND_TO_TRAJECTORY_NAMES}"
 
     trajectory_path = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
@@ -299,7 +299,7 @@ def main():
     goals_robot_frame = [[x, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
 
     # Additional offsets
-    goals_robot_frame = [[x - 0.05, y - 0.05, z - 0.03, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_robot_frame]
+    goals_robot_frame = [[x - 0.05, y - 0.1, z - 0.02, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_robot_frame]
 
     DOWNSAMPLE_FACTOR = 10
     # DOWNSAMPLE_FACTOR = 1
