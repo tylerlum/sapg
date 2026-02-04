@@ -284,6 +284,15 @@ MARKER_NAME_TO_OBJECT = {
         scale=rescale_by_factor((0.12, 0.018, 0.018), factor=25),
         need_vhacd=True,
     ),
+    "sharpie_open": Object(
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/dex_tool_bench/marker/sharpie_open/sharpie_open.urdf"
+        ),
+        coacd_filepaths=None,
+        scale=rescale_by_factor((0.085, 0.022, 0.022), factor=25),
+        need_vhacd=True,
+    ),
 }
 #overwrite NAME_TO_OBJECT with MARKER_NAME_TO_OBJECT even if they share keys
 NAME_TO_OBJECT.update(MARKER_NAME_TO_OBJECT)
