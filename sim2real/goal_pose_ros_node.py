@@ -16,7 +16,7 @@ import rospy
 from geometry_msgs.msg import PoseStamped, Pose
 from termcolor import colored
 
-FORCE_FIXED_ORIENTATION = False
+FORCE_FIXED_ORIENTATION = True
 
 def info(message: str):
     print(colored(message, "green"))

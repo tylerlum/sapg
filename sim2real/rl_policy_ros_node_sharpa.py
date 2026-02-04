@@ -27,7 +27,7 @@ from isaacgymenvs.utils.objects import (
     NAME_TO_OBJECT,
 )
 
-FORCE_FIXED_ORIENTATION = False
+FORCE_FIXED_ORIENTATION = True
 
 
 T_W_R = np.eye(4)
