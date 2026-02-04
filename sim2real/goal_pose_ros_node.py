@@ -278,14 +278,14 @@ def main():
     object_type = "brush"
     # object_name = "anvil_brush"
     object_name = "red_brush"
-    # trajectory_name = "sweep_forward"
+    trajectory_name = "sweep_forward"
     # trajectory_name = "sweep_right"
-    trajectory_name = "sweep_forward_easy"
+    # trajectory_name = "sweep_forward_easy"
     # trajectory_name = "sweep_forward_right"
 
     # APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.6_downsampled_10"
-    APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.6"
-    # APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.65"
+    # APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.6"
+    APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.65"
     # APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.7"
     trajectory_name = f"{trajectory_name}{APPEND_TO_TRAJECTORY_NAMES}"
 
@@ -310,6 +310,9 @@ def main():
     for i in range(len(goals_robot_frame)):
         if i >= EDIT_AFTER_N_POINTS:
             goals_robot_frame[i][2] += EDIT_Z_OFFSET
+
+    KEEP_ONLY_FIRST_N_GOALS = 19
+    goals_robot_frame = goals_robot_frame[:KEEP_ONLY_FIRST_N_GOALS]
 
     tmp_file = Path("tmp.json")
     with open(tmp_file, "w") as f:
@@ -346,10 +349,10 @@ def main():
             # success_threshold=0.0,
             # success_threshold=0.02,
             # success_threshold=0.03,
-            success_threshold=0.05,
-            success_steps=1,
-            # success_threshold=10.0,
-            # success_steps=30,
+            # success_threshold=0.05,
+            # success_steps=1,
+            success_threshold=10.0,
+            success_steps=30,
         )
         node.run()
     except rospy.ROSInterruptException:

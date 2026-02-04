@@ -30,8 +30,8 @@ T_R_C = np.array([
 ])
 T_W_C = T_W_R @ T_R_C
 
-AXES_LENGTH = 0.0
-AXES_RADIUS = 0.0
+AXES_LENGTH = 0.1
+AXES_RADIUS = 0.005
 
 def info(message: str) -> None:
     print(colored(message, "green"))
