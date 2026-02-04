@@ -97,20 +97,42 @@ def var_to_is_none_str(var) -> str:
 def pose_msg_to_T(msg: Pose) -> np.ndarray:
     T = np.eye(4)
     T[:3, 3] = np.array([msg.position.x, msg.position.y, msg.position.z])
-    T[:3, :3] = R.from_quat(
+
+    # Get the original rotation matrix
+    R_original = R.from_quat(
         [msg.orientation.x, msg.orientation.y, msg.orientation.z, msg.orientation.w]
     ).as_matrix()
 
     if FORCE_FIXED_ORIENTATION:
-        # HACK: Overwite with fixed orientation
-        # x: 0.062478514383575996
-        # y: -0.028937932653575582
-        # z: 0.0324696930013384
-        # w: 0.997098164841635
-
-        T[:3, :3] = R.from_quat(
-            [0, 0, 0, 1]
-        ).as_matrix()
+        # 1. Keep the original local X axis (we trust this direction)
+        x_local = R_original[:, 0]
+        
+        # 2. Define the desired "Up" direction (Global Z)
+        z_global = np.array([0, 0, 1])
+        
+        # 3. Project Global Z onto the plane perpendicular to x_local
+        # Formula: v_perp = v - (v dot u) * u
+        # This makes z_new perpendicular to x_local while staying closest to z_global
+        proj_factor = np.dot(z_global, x_local)
+        z_new_raw = z_global - (proj_factor * x_local)
+        
+        # Normalize to get the unit vector for the new local Z
+        # (Add small epsilon to avoid div by zero if x_local is pointing perfectly up/down)
+        if np.linalg.norm(z_new_raw) < 0.001:
+            print(f"z_new_raw: {z_new_raw}")
+            breakpoint()
+        z_new = z_new_raw / (np.linalg.norm(z_new_raw) + 1e-6)
+        
+        # 4. Compute the new local Y using the cross product (Right-Hand Rule)
+        # z cross x = y
+        y_new = np.cross(z_new, x_local)
+        
+        # 5. Construct the new rotation matrix
+        # Columns are [x_local, y_new, z_new]
+        T[:3, :3] = np.column_stack((x_local, y_new, z_new))
+        
+    else:
+        T[:3, :3] = R_original
 
     return T
 
@@ -1157,7 +1179,8 @@ class RLPolicyNode:
 
 if __name__ == "__main__":
     try:
-        OBJECT_NAME = "sharpie_closed"
+        # OBJECT_NAME = "sharpie_closed"
+        OBJECT_NAME = "sharpie_open"
         rl_policy_node = RLPolicyNode(
             # New on tools
             # config_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed/config.yaml"),

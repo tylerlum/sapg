@@ -285,8 +285,8 @@ def main():
 
     # APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.6_downsampled_10"
     # APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.6"
-    # APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.65"
-    APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.7"
+    APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.65"
+    # APPEND_TO_TRAJECTORY_NAMES = "_world_frame_min_z_0.7"
     trajectory_name = f"{trajectory_name}{APPEND_TO_TRAJECTORY_NAMES}"
 
     trajectory_path = get_repo_root_dir() / "dex_tool_bench/evaluation_trajectories" / object_type / object_name / f"{trajectory_name}.json"
@@ -301,7 +301,10 @@ def main():
     # Additional offsets
     # goals_robot_frame = [[x - 0.0125, y, z - 0.015, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_robot_frame]
     # goals_robot_frame = [[x - 0.01, y, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_robot_frame]
-    goals_robot_frame = [[x + 0.02, y, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_robot_frame]
+    # goals_robot_frame = [[x + 0.02, y, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_robot_frame]
+
+    # goals_robot_frame = [[x - 0.03, y, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_robot_frame]
+    goals_robot_frame = [[x - 0.01, y, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_robot_frame]
 
     DOWNSAMPLE_FACTOR = 10
     # DOWNSAMPLE_FACTOR = 1
@@ -353,12 +356,12 @@ def main():
             # object_scales=np.array([0.12965531, 0.0337145 , 0.06038587]) * 25,  # whiteboard eraser
             # object_scales=np.array([0.15954332, 0.0777093 , 0.01231273]) * 25,  # iphone15pro
             # success_threshold=0.0,
-            # success_threshold=0.01,
-            success_threshold=0.02,
+            success_threshold=0.01,
+            # success_threshold=0.02,
             # success_threshold=0.03,
             # success_threshold=0.05,
-            # success_steps=1,
-            success_steps=10,
+            success_steps=1,
+            # success_steps=10,
             # success_threshold=10.0,
             # success_steps=30,
         )
