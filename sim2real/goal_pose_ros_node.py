@@ -296,7 +296,10 @@ def main():
 
     # Account for robot to world frame
     goals_world_frame = traj_data["goals"]
-    goals_robot_frame = [[x - 0.05, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
+    goals_robot_frame = [[x, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
+
+    # Additional offsets
+    goals_robot_frame = [[x - 0.05, y - 0.05, z - 0.03, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_robot_frame]
 
     DOWNSAMPLE_FACTOR = 10
     # DOWNSAMPLE_FACTOR = 1
