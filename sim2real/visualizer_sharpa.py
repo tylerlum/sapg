@@ -325,7 +325,8 @@ class ViserVisualizationNode:
             # DEFAULT_OBJECT_NAME = "expo_eraser"
             # DEFAULT_OBJECT_NAME = "anvil_eraser"
             # DEFAULT_OBJECT_NAME = "anvil_brush"
-            DEFAULT_OBJECT_NAME = "staples_open"
+            # DEFAULT_OBJECT_NAME = "staples_open"
+            DEFAULT_OBJECT_NAME = "sharpie_open"
             warn(f"Using default object name: {DEFAULT_OBJECT_NAME}")
             object_name = DEFAULT_OBJECT_NAME
 

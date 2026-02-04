@@ -270,8 +270,8 @@ def main():
 
     object_type = "marker"
     # object_name = "040_large_marker"
-    # object_name = "sharpie_closed"
-    object_name = "staples_open"
+    object_name = "sharpie_closed"
+    # object_name = "staples_open"
     trajectory_name = "write_smiley"
     # trajectory_name = "write_c"
 
@@ -299,7 +299,8 @@ def main():
     goals_robot_frame = [[x, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
 
     # Additional offsets
-    goals_robot_frame = [[x - 0.0125, y, z - 0.015, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_robot_frame]
+    # goals_robot_frame = [[x - 0.0125, y, z - 0.015, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_robot_frame]
+    goals_robot_frame = [[x - 0.05, y, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_robot_frame]
 
     DOWNSAMPLE_FACTOR = 10
     # DOWNSAMPLE_FACTOR = 1
