@@ -261,8 +261,8 @@ def main():
     # object_name = "real_flat_screwdriver"
     # object_name = "black_screwdriver"
     object_name = "red_screwdriver"
-    trajectory_name = "top"
-    # trajectory_name = "clockwise_top"
+    # trajectory_name = "top"
+    trajectory_name = "clockwise_top"
     # trajectory_name = "clockwise_side"
 
     # object_type = "eraser"
