@@ -16,7 +16,7 @@ import rospy
 from geometry_msgs.msg import PoseStamped, Pose
 from termcolor import colored
 
-FORCE_FIXED_ORIENTATION = True
+FORCE_FIXED_ORIENTATION = False
 
 def info(message: str):
     print(colored(message, "green"))
@@ -254,12 +254,12 @@ def main():
     # trajectory_name = "serve_plate"
     # trajectory_name = "flip_pancake"
 
-    # object_type = "screwdriver"
+    object_type = "screwdriver"
     # object_name = "real_flat_screwdriver"
     # object_name = "black_screwdriver"
-    # object_name = "red_screwdriver"
-    # trajectory_name = "top"
-    # trajectory_name = "side"
+    object_name = "red_screwdriver"
+    trajectory_name = "clockwise_top"
+    trajectory_name = "clockwise_side"
 
     # object_type = "eraser"
     # object_name = "whiteboard_eraser"
@@ -268,11 +268,11 @@ def main():
     # trajectory_name = "wipe_higher"
     # trajectory_name = "wipe_lower"
 
-    object_type = "marker"
+    # object_type = "marker"
     # object_name = "040_large_marker"
-    object_name = "sharpie_closed"
+    # object_name = "sharpie_closed"
     # object_name = "staples_open"
-    trajectory_name = "write_smiley"
+    # trajectory_name = "write_smiley"
     # trajectory_name = "write_c"
 
     # object_type = "brush"
@@ -304,7 +304,7 @@ def main():
     # goals_robot_frame = [[x + 0.02, y, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_robot_frame]
 
     # goals_robot_frame = [[x - 0.03, y, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_robot_frame]
-    goals_robot_frame = [[x - 0.015, y, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_robot_frame]
+    # goals_robot_frame = [[x - 0.015, y, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_robot_frame]
 
     DOWNSAMPLE_FACTOR = 10
     # DOWNSAMPLE_FACTOR = 1
@@ -314,7 +314,7 @@ def main():
 
     # Lower the z of the last points
     EDIT_AFTER_N_POINTS = 10
-    EDIT_Z_OFFSET = 0.0
+    EDIT_Z_OFFSET = 0.03
     for i in range(len(goals_robot_frame)):
         if i >= EDIT_AFTER_N_POINTS:
             goals_robot_frame[i][2] += EDIT_Z_OFFSET
