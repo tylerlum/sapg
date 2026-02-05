@@ -330,7 +330,7 @@ def main():
     goals_robot_frame = goals_robot_frame[::DOWNSAMPLE_FACTOR]
 
     # HACK: Remove first 6 goals
-    REMOVE_FIRST_N_GOALS = 8
+    REMOVE_FIRST_N_GOALS = 12
     goals_robot_frame = goals_robot_frame[REMOVE_FIRST_N_GOALS:]
 
     # Lower the z of the last points
@@ -384,8 +384,8 @@ def main():
             # success_threshold=0.02,
             # success_threshold=0.03,
             # success_threshold=0.05,
-            success_steps=1,
-            # success_steps=10,
+            success_steps=2,
+            # success_steps=5,
         )
         node.run()
     except rospy.ROSInterruptException:
