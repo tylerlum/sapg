@@ -183,6 +183,9 @@ class GoalPoseNode:
     def run(self):
         """Main loop to run the node, update simulation, and publish joint states."""
 
+        # HACK: Try to work without the current object pose
+        # self.latest_current_object_pose = Pose()
+
         # Wait for the current object pose to be received
         while not rospy.is_shutdown():
             if self.latest_current_object_pose is None:
@@ -259,7 +262,7 @@ def main():
     # object_name = "black_screwdriver"
     object_name = "red_screwdriver"
     trajectory_name = "clockwise_top"
-    trajectory_name = "clockwise_side"
+    # trajectory_name = "clockwise_side"
 
     # object_type = "eraser"
     # object_name = "whiteboard_eraser"
@@ -314,7 +317,8 @@ def main():
 
     # Lower the z of the last points
     EDIT_AFTER_N_POINTS = 10
-    EDIT_Z_OFFSET = 0.03
+    EDIT_Z_OFFSET = 0.0
+    # EDIT_Z_OFFSET = 0.03
     for i in range(len(goals_robot_frame)):
         if i >= EDIT_AFTER_N_POINTS:
             goals_robot_frame[i][2] += EDIT_Z_OFFSET
@@ -356,12 +360,14 @@ def main():
             # object_scales=np.array([0.12965531, 0.0337145 , 0.06038587]) * 25,  # whiteboard eraser
             # object_scales=np.array([0.15954332, 0.0777093 , 0.01231273]) * 25,  # iphone15pro
             # success_threshold=0.0,
-            success_threshold=0.01,
-            # success_threshold=0.02,
+            # success_threshold=0.01,
+            success_threshold=0.02,
             # success_threshold=0.03,
             # success_threshold=0.05,
             success_steps=1,
             # success_steps=10,
+
+            # Visualize the trajectory
             # success_threshold=10.0,
             # success_steps=30,
         )
