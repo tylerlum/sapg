@@ -78,7 +78,7 @@ class GoalPoseNode:
             self.latest_current_object_pose = Pose()
             self.success_threshold = 10.0
             self.keypoint_success_threshold = self.success_threshold * KEYPOINT_SCALE
-            self.success_steps = 10
+            self.success_steps = 30
 
         # Goal object pose 
         # Assumes xyzw quat convention
@@ -262,7 +262,8 @@ def main():
     # object_name = "spoon_spatula"
     # trajectory_name = "serve_strawberry_easy"
     # trajectory_name = "serve_strawberry_hard"
-    trajectory_name = "flip_bread_kushal"
+    # trajectory_name = "flip_bread_kushal"
+    trajectory_name = "flip_leek"
     # trajectory_name = "flip_pancake"
 
     # object_type = "screwdriver"
@@ -329,7 +330,7 @@ def main():
     goals_robot_frame = goals_robot_frame[::DOWNSAMPLE_FACTOR]
 
     # HACK: Remove first 6 goals
-    REMOVE_FIRST_N_GOALS = 6
+    REMOVE_FIRST_N_GOALS = 8
     goals_robot_frame = goals_robot_frame[REMOVE_FIRST_N_GOALS:]
 
     # Lower the z of the last points
