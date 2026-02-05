@@ -18,6 +18,8 @@ from termcolor import colored
 
 FORCE_FIXED_ORIENTATION = False
 
+HACK_OPEN_LOOP = False
+
 def info(message: str):
     print(colored(message, "green"))
 
@@ -70,6 +72,13 @@ class GoalPoseNode:
         self.keypoint_success_threshold = success_threshold * KEYPOINT_SCALE
         self.success_steps = success_steps
         self.current_success_steps = 0
+
+        # HACK: Try to work without the current object pose
+        if HACK_OPEN_LOOP:
+            self.latest_current_object_pose = Pose()
+            self.success_threshold = 10.0
+            self.keypoint_success_threshold = self.success_threshold * KEYPOINT_SCALE
+            self.success_steps = 10
 
         # Goal object pose 
         # Assumes xyzw quat convention
@@ -182,9 +191,6 @@ class GoalPoseNode:
 
     def run(self):
         """Main loop to run the node, update simulation, and publish joint states."""
-
-        # HACK: Try to work without the current object pose
-        # self.latest_current_object_pose = Pose()
 
         # Wait for the current object pose to be received
         while not rospy.is_shutdown():
@@ -322,8 +328,8 @@ def main():
     goals_robot_frame = goals_robot_frame[::DOWNSAMPLE_FACTOR]
 
     # Lower the z of the last points
-    EDIT_AFTER_N_POINTS = 10
-    EDIT_Z_OFFSET = 0.0
+    EDIT_AFTER_N_POINTS = 35
+    EDIT_Z_OFFSET = -0.05
     # EDIT_Z_OFFSET = 0.03
     for i in range(len(goals_robot_frame)):
         if i >= EDIT_AFTER_N_POINTS:
@@ -373,10 +379,6 @@ def main():
             # success_threshold=0.05,
             success_steps=1,
             # success_steps=10,
-
-            # Visualize the trajectory
-            # success_threshold=10.0,
-            # success_steps=30,
         )
         node.run()
     except rospy.ROSInterruptException:
