@@ -254,7 +254,8 @@ def main():
     object_type = "spatula"
     # object_name = "black_spatula"
     object_name = "spoon_spatula"
-    trajectory_name = "serve_strawberry_easy"
+    # trajectory_name = "serve_strawberry_easy"
+    trajectory_name = "serve_strawberry_hard"
     # trajectory_name = "flip_pancake"
 
     # object_type = "screwdriver"
