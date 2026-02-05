@@ -258,12 +258,13 @@ def main():
     # trajectory_name = "flip_pancake"
 
     object_type = "screwdriver"
-    # object_name = "real_flat_screwdriver"
+    object_name = "real_flat_screwdriver"
     # object_name = "black_screwdriver"
-    object_name = "red_screwdriver"
+    # object_name = "red_screwdriver"
     # trajectory_name = "top"
+    trajectory_name = "side"
     # trajectory_name = "clockwise_top"
-    trajectory_name = "clockwise_side"
+    # trajectory_name = "clockwise_side"
 
     # object_type = "eraser"
     # object_name = "whiteboard_eraser"

@@ -1179,7 +1179,7 @@ class RLPolicyNode:
 
 if __name__ == "__main__":
     try:
-        OBJECT_NAME = "red_screwdriver"
+        OBJECT_NAME = "real_flat_screwdriver"
         rl_policy_node = RLPolicyNode(
             # New on tools
             # config_path=Path("/juno/u/kedia/sapg/train_dir/latest_checkpoints/tools_slowSpeed/config.yaml"),
@@ -1197,7 +1197,8 @@ if __name__ == "__main__":
             arm_moving_average=0.1,
             hand_dof_speed_scale=1.5,
 
-            object_scales=np.array(NAME_TO_OBJECT[OBJECT_NAME].scale) * 0.9,
+            object_scales=np.array(NAME_TO_OBJECT[OBJECT_NAME].scale),
+            # object_scales=np.array(NAME_TO_OBJECT[OBJECT_NAME].scale) * 0.9,
             # save_foldername=None,
             save_foldername=f"{datetime.datetime.now().strftime('%Y-%m-%d')}_testing",
             # overwrite_targets_filepath=None,
