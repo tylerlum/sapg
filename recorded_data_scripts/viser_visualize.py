@@ -23,7 +23,7 @@ GREEN_RGBA = (0, 255, 0, 0.5)
 AXES_LENGTH = 0.2
 AXES_RADIUS = 0.01
 
-DISABLE_AXES = False
+DISABLE_AXES = True
 if DISABLE_AXES:
     AXES_LENGTH = 0.00001
     AXES_RADIUS = 0.00001
@@ -94,12 +94,13 @@ def main():
     # DEFAULT_OBJECT_NAME = "scanned_hammer_2"
     # DEFAULT_OBJECT_NAME = "real_flat_screwdriver"
     # DEFAULT_OBJECT_NAME = "hammer_2"
-    # DEFAULT_OBJECT_NAME = "red_brush"
+    DEFAULT_OBJECT_NAME = "red_brush"
     # DEFAULT_OBJECT_NAME = "whiteboard_eraser"
     # DEFAULT_OBJECT_NAME = "black_spatula"
     # DEFAULT_OBJECT_NAME = "anvil_brush"
     # DEFAULT_OBJECT_NAME = "mallet"
-    DEFAULT_OBJECT_NAME = "red_screwdriver"
+    # DEFAULT_OBJECT_NAME = "red_screwdriver"
+
     object_name = DEFAULT_OBJECT_NAME
     if recorded_data.object_name is None:
         print(f"Using default object name: {DEFAULT_OBJECT_NAME}")
