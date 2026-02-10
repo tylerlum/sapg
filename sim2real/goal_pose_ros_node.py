@@ -313,15 +313,7 @@ def main():
     goals_robot_frame = [[x, y - 0.8, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_world_frame]
 
     # Additional offsets
-    # goals_robot_frame = [[x - 0.05, y, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_robot_frame]
-    # goals_robot_frame = [[x, y - 0.05, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_robot_frame]
-
-    # goals_robot_frame = [[x - 0.0125, y, z - 0.015, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_robot_frame]
-    # goals_robot_frame = [[x - 0.01, y, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_robot_frame]
-    # goals_robot_frame = [[x + 0.02, y, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_robot_frame]
-
-    # goals_robot_frame = [[x - 0.03, y, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_robot_frame]
-    # goals_robot_frame = [[x - 0.015, y, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_robot_frame]
+    goals_robot_frame = [[x, y, z - 0.01, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_robot_frame]
 
     DOWNSAMPLE_FACTOR = 10
     # DOWNSAMPLE_FACTOR = 1
@@ -330,8 +322,8 @@ def main():
     goals_robot_frame = goals_robot_frame[::DOWNSAMPLE_FACTOR]
 
     # HACK: Remove first 6 goals
-    REMOVE_FIRST_N_GOALS = 6
-    goals_robot_frame = goals_robot_frame[REMOVE_FIRST_N_GOALS:]
+    # REMOVE_FIRST_N_GOALS = 6
+    # goals_robot_frame = goals_robot_frame[REMOVE_FIRST_N_GOALS:]
 
     # Lower the z of the last points
     EDIT_AFTER_N_POINTS = 35
