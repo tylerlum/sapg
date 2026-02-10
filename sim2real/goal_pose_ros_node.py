@@ -322,9 +322,9 @@ def main():
     # goals_robot_frame = goals_robot_frame[::DOWNSAMPLE_FACTOR][10:]
     goals_robot_frame = goals_robot_frame[::DOWNSAMPLE_FACTOR]
 
-    # HACK: Remove first 6 goals
-    # REMOVE_FIRST_N_GOALS = 6
-    # goals_robot_frame = goals_robot_frame[REMOVE_FIRST_N_GOALS:]
+    # HACK: Remove first N goals
+    REMOVE_FIRST_N_GOALS = 8
+    goals_robot_frame = goals_robot_frame[REMOVE_FIRST_N_GOALS:]
 
     # Lower the z of the last points
     EDIT_AFTER_N_POINTS = 35
@@ -335,7 +335,7 @@ def main():
         if i >= EDIT_AFTER_N_POINTS:
             goals_robot_frame[i][2] += EDIT_Z_OFFSET
 
-    # HACK: Keep only the first 19 goals
+    # HACK: Keep only the first N goals
     # KEEP_ONLY_FIRST_N_GOALS = 19
     # goals_robot_frame = goals_robot_frame[:KEEP_ONLY_FIRST_N_GOALS]
 
