@@ -73,13 +73,6 @@ class GoalPoseNode:
         self.success_steps = success_steps
         self.current_success_steps = 0
 
-        # HACK: Try to work without the current object pose
-        if HACK_OPEN_LOOP:
-            self.latest_current_object_pose = Pose()
-            self.success_threshold = 10.0
-            self.keypoint_success_threshold = self.success_threshold * KEYPOINT_SCALE
-            self.success_steps = 30
-
         # Goal object pose 
         # Assumes xyzw quat convention
         assert goal_object_pose_file.exists(), f"File does not exist: {goal_object_pose_file}"
@@ -122,6 +115,13 @@ class GoalPoseNode:
         self.rate_hz = 60
         self.dt = 1 / self.rate_hz
         self.rate = rospy.Rate(self.rate_hz)
+
+        # HACK: Try to work without the current object pose
+        if HACK_OPEN_LOOP:
+            self.latest_current_object_pose = Pose()
+            self.success_threshold = 10.0
+            self.keypoint_success_threshold = self.success_threshold * KEYPOINT_SCALE
+            self.success_steps = 30
 
     def current_object_pose_callback(self, msg: PoseStamped):
         """Callback to update the current object pose."""
