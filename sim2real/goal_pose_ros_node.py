@@ -16,7 +16,7 @@ import rospy
 from geometry_msgs.msg import PoseStamped, Pose
 from termcolor import colored
 
-FORCE_FIXED_ORIENTATION = False
+FORCE_FIXED_ORIENTATION = True
 
 HACK_OPEN_LOOP = False
 
@@ -282,11 +282,11 @@ def main():
     # trajectory_name = "wipe_higher"
     # trajectory_name = "wipe_lower"
 
-    # object_type = "marker"
+    object_type = "marker"
     # object_name = "040_large_marker"
-    # object_name = "sharpie_closed"
+    object_name = "sharpie_closed"
     # object_name = "staples_open"
-    # trajectory_name = "write_smiley"
+    trajectory_name = "write_smiley"
     # trajectory_name = "write_c"
 
     # object_type = "brush"
@@ -314,7 +314,7 @@ def main():
 
     # Additional offsets
     # goals_robot_frame = [[x, y, z - 0.01, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_robot_frame]
-    goals_robot_frame = [[x, y, z - 0.02, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_robot_frame]
+    goals_robot_frame = [[x - 0.05, y, z, qx, qy, qz, qw] for x, y, z, qx, qy, qz, qw in goals_robot_frame]
 
     DOWNSAMPLE_FACTOR = 10
     # DOWNSAMPLE_FACTOR = 1
@@ -323,8 +323,8 @@ def main():
     goals_robot_frame = goals_robot_frame[::DOWNSAMPLE_FACTOR]
 
     # HACK: Remove first N goals
-    REMOVE_FIRST_N_GOALS = 8
-    goals_robot_frame = goals_robot_frame[REMOVE_FIRST_N_GOALS:]
+    # REMOVE_FIRST_N_GOALS = 8
+    # goals_robot_frame = goals_robot_frame[REMOVE_FIRST_N_GOALS:]
 
     # Lower the z of the last points
     EDIT_AFTER_N_POINTS = 35
