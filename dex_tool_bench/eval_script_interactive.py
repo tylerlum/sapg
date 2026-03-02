@@ -191,7 +191,7 @@ class EvalRunner:
     """Runs policy evaluation with viser visualization."""
 
     def __init__(self, env, config_path: Path, checkpoint_path: Path,
-                 object_name: str, trajectory_name: str, table_urdf: str, output_dir: Optional[Path] = None):
+                 object_name: str, trajectory_name: str, table_urdf: str, output_dir: Optional[Path] = None, port: int = 8080):
         self.env = env
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.n_act = 29
@@ -226,6 +226,7 @@ class EvalRunner:
             num_keypoints=env.num_keypoints,
             table_urdf=table_urdf,
             policy_name=policy_name,
+            port=port,
         )
         self.obs = self._reset()
 

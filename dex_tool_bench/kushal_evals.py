@@ -13,12 +13,11 @@ DATE_STR = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
 object_type_to_object_names = {
     "hammer": ["hammer_2", "mallet"],
-    # "spatula": ["black_spatula", "spoon_spatula"],
-    # "eraser": ["anvil_eraser", "expo_eraser", "amazon_eraser"],
-    # "screwdriver": ["real_flat_screwdriver", "black_screwdriver", "red_screwdriver"],
-    # "marker": ["040_large_marker", "sharpie_closed", "staples_open"],
-    # "brush": ["red_brush", "anvil_brush"],
-    # "brush": ["anvil_brush"],
+    "spatula": ["black_spatula", "spoon_spatula"],
+    "eraser": ["anvil_eraser", "expo_eraser"],
+    "screwdriver": ["real_flat_screwdriver", "red_screwdriver"],
+    "marker": ["sharpie_closed", "staples_open"],
+    "brush": ["red_brush", "anvil_brush"],
 
     # "Easy"
     # "spatula": ["black_spatula"],
@@ -28,11 +27,11 @@ object_type_to_object_names = {
 
 object_type_to_trajectory_names = {
     "hammer": ["down_swing", "side_swing"],
-    # "spatula": ["serve_plate", "flip_pancake"],
-    # "eraser": ["wipe_higher", "wipe_lower"],
-    # "screwdriver": ["top", "side"],
-    # "marker": ["write_smiley", "write_c"],
-    # "brush": ["sweep_forward", "sweep_forward_right"],
+    "spatula": ["serve_plate", "flip_pancake"],
+    "eraser": ["wipe_higher", "wipe_lower"],
+    "screwdriver": ["top", "side"],
+    "marker": ["write_smiley", "write_c"],
+    "brush": ["sweep_forward", "sweep_forward_right"],
 
     # "Easy"
     # "spatula": ["flip_pancake_easy"],
