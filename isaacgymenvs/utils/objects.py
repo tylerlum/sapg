@@ -338,6 +338,19 @@ BRUSH_NAME_TO_OBJECT = {
 #overwrite NAME_TO_OBJECT with BRUSH_NAME_TO_OBJECT even if they share keys
 NAME_TO_OBJECT.update(BRUSH_NAME_TO_OBJECT)
 
+
+NAME_TO_OBJECT.update({
+    "fabrica_beam_0": Object(
+        filepath=(
+            get_repo_root_dir()
+            / "assets/urdf/dex_tool_bench/beam/fabrica_beam_0/fabrica_beam_0.urdf"
+        ),
+        coacd_filepaths=None,
+        scale=rescale_by_factor((0.1, 0.02, 0.02), factor=25),
+        need_vhacd=False,
+    ),
+})
+
 from dex_tool_bench.generate_tools import TOOL_CONFIGS
 for tool_config in TOOL_CONFIGS:
     NAME_TO_OBJECT[tool_config.name] = Object(

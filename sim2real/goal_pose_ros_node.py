@@ -16,9 +16,9 @@ import rospy
 from geometry_msgs.msg import PoseStamped, Pose
 from termcolor import colored
 
-FORCE_FIXED_ORIENTATION = True
+FORCE_FIXED_ORIENTATION = False
 
-HACK_OPEN_LOOP = False
+HACK_OPEN_LOOP = True
 
 def info(message: str):
     print(colored(message, "green"))
@@ -275,18 +275,18 @@ def main():
     # trajectory_name = "clockwise_top"
     # trajectory_name = "clockwise_side"
 
-    # object_type = "eraser"
+    object_type = "eraser"
     # object_name = "whiteboard_eraser"
-    # object_name = "anvil_eraser"
+    object_name = "anvil_eraser"
     # object_name = "expo_eraser"
-    # trajectory_name = "wipe_higher"
+    trajectory_name = "wipe_higher"
     # trajectory_name = "wipe_lower"
 
-    object_type = "marker"
+    # object_type = "marker"
     # object_name = "040_large_marker"
-    object_name = "sharpie_closed"
+    # object_name = "sharpie_closed"
     # object_name = "staples_open"
-    trajectory_name = "write_smiley"
+    # trajectory_name = "write_smiley"
     # trajectory_name = "write_c"
 
     # object_type = "brush"
